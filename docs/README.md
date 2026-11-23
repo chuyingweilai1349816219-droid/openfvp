@@ -3,7 +3,7 @@
 这里的文档是**结构分析与实现过程中的工作记录**：格式怎么来、结论怎么验证、哪里还没做对。
 写作原则是「只写验证过的，猜想单独标注」（各文档内部都会明确区分）。
 
-一共 14 份专题文档 + 本索引。建议阅读顺序：先 [00-engine.md](00-engine.md) 建立全局印象，
+一共 19 份专题文档 + 本索引。建议阅读顺序：先 [00-engine.md](00-engine.md) 建立全局印象，
 再按你关心的方向跳到对应分组。
 
 > 关于路径：文档里引用的 `work/`、`out/`、`extract/` 是**本地工作目录，不进仓库**
@@ -32,12 +32,15 @@
 | [vm-commands.md](vm-commands.md) | 从静态分析得出的 syscall 分发机制，以及 148 条命令的 id / 名字 / argc / 已知语义 |
 | [05-threads.md](05-threads.md) | 线程与时间模型研究笔记：已确认的线程槽布局与 `Thread*` / `Timer*` 命令语义、`initstack` 第二个操作数的发现，以及尚未实现调度/时间模型的失败记录 |
 | [cn-script-rebuild.md](cn-script-rebuild.md) | 被汉化补丁打坏的 GBK `.hcb` 如何以日文版为骨架重建，含字节账、重定位与校验方法 |
+| [06-cross-validation.md](06-cross-validation.md) | 用第二部 FVP 作品做交叉验证：包名、命令表（148 条逐条相同）、opcode、VM 行为的对比结果 |
+| [save-format.md](save-format.md) | 存档格式：槽文件的时间戳 / 三组字符串 / 裸 BGRA 缩略图、`save.bin` 的 20 字节头与已读位图 |
 
 ## 渲染
 
 | 文档 | 讲什么 |
 |---|---|
 | [render-model.md](render-model.md) | 渲染层模型（Python 原型）：图元 / 图层 / 文本排版 / 合成顺序，以及第 7 节的**已知偏差与未实现语义** |
+| [c-gfx.md](c-gfx.md) | C 渲染层：接口、与原型逐项对应、GFXF 场景格式、syscall 接线表、像素比对结果与性能 |
 
 ## 音频
 
@@ -50,12 +53,14 @@
 | 文档 | 讲什么 |
 |---|---|
 | [c-assets.md](c-assets.md) | C 资源层（BIN / inflate / HZC1）的实现、API、限制，以及逐字节 / 逐像素的验收方法 |
+| [testing.md](testing.md) | 测试矩阵：等价性基准、资源层验收、27,300 次 HCB 变异、339 个资产畸形用例、43 个 VM 边界用例，以及自建的内存检查方案 |
 
 ## 移植
 
 | 文档 | 讲什么 |
 |---|---|
-| [android-shell.md](android-shell.md) | Android 外壳与构建流水线（进行中，非当前主线） |
+| [win32-shell.md](win32-shell.md) | Win32 桌面运行器：用法、按键、帧循环与上屏路径、性能与已知限制 |
+| [android-shell.md](android-shell.md) | Android 外壳与构建流水线（能装能跑，渲染仍是占位，非当前主线） |
 | [roadmap.md](roadmap.md) | 阶段划分、阶段 0 的结论、关键技术风险与版本目标 |
 
 ---
