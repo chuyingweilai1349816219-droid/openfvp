@@ -1208,6 +1208,29 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             fvp_flag_set(vm->flags, (int)args[0].i, on);
         }
         return;
+    /* 112 TextColor(twIdx, R, G, B) / 126 TextSize(twIdx, w, h) /
+     * 129 TextSpeed(twIdx, ms)：只记录到 VM 的 32 个窗口属性里，按引擎的
+     * 范围钳制（docs/vm-commands.md §5）。渲染层暂时不消费，所以已验收的帧不变。 */
+    case 112:
+        if (argc >= 4) {
+            fvp_textattr_set_color(vm->textattr, FVP_TEXT_WINDOWS,
+                                   (int)args[0].i, (int)args[1].i,
+                                   (int)args[2].i, (int)args[3].i);
+        }
+        return;
+    case 126:
+        if (argc >= 3) {
+            fvp_textattr_set_size(vm->textattr, FVP_TEXT_WINDOWS,
+                                  (int)args[0].i, (int)args[1].i,
+                                  (int)args[2].i);
+        }
+        return;
+    case 129:
+        if (argc >= 2) {
+            fvp_textattr_set_speed(vm->textattr, FVP_TEXT_WINDOWS,
+                                   (int)args[0].i, (int)args[1].i);
+        }
+        return;
     case 15:  /* DissolveWait: already finished */
     case 44:  /* MotionAlphaTest */
     case 47:  /* MotionAnimTest */

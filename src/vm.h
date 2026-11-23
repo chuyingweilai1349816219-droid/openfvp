@@ -10,6 +10,7 @@
 #include "fvp.h"
 #include "hcb.h"
 #include "snd.h"
+#include "textattr.h"
 
 typedef struct FvpFrame {
     uint32_t ret;
@@ -214,6 +215,8 @@ typedef struct FvpVM {
     /* 全局 flag 位图（FlagGet/FlagSet, id 0..0x7FF）。save/save.bin 里那 256
      * 字节就是它的原始拷贝，见 src/flags.h 与 docs/save-format.md §3.5。 */
     unsigned char flags[FVP_FLAG_BYTES];
+    /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
+    FvpTextAttr textattr[FVP_TEXT_WINDOWS];
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);

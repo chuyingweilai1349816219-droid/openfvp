@@ -169,6 +169,8 @@ static void fvp_print_summary(const FvpVM *vm)
     printf("steps      %llu\n", (unsigned long long)vm->steps);
     printf("text lines %llu\n", (unsigned long long)vm->ntext);
     printf("threads    %llu\n", (unsigned long long)vm->nthreads);
+    printf("text attrs %d window(s) configured\n",
+           fvp_textattr_configured_count(vm->textattr, FVP_TEXT_WINDOWS));
     printf("unknown cmds: ");
     if (vm->nunknown == 0) {
         printf("\n");

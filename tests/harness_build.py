@@ -129,6 +129,7 @@ def public_tools():
         'test_save': os.path.join(FVP, 'bin', 'test_save.exe'),
         'test_save_vm': os.path.join(FVP, 'bin', 'test_save_vm.exe'),
         'test_flags': os.path.join(FVP, 'bin', 'test_flags.exe'),
+        'test_textattr': os.path.join(FVP, 'bin', 'test_textattr.exe'),
     }
 
 

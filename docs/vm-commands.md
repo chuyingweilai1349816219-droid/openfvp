@@ -352,7 +352,7 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | 121 | TextPause | 2 | (twIdx, bool)：bool→`tw+0x5da`；arg2 为 null → 返回 int = `tw+0x5da` 并置线程文本状态 2 |
 | 122 | TextPos | 3 | (twIdx, x, y)：u16 写 `tw+0x5e8`(x)/`tw+0x5ea`(y) |
 | 124 | TextRepaint | 0 | 强制重绘文本：`0x441790(engine)` |
-| 126 | TextSize | 3 | (twIdx, w 12..64, h 8..32)：字节写 `tw+0x592`(w)/`tw+0x594`(h) |
+| 126 | TextSize | 3 | (twIdx, w 12..64, h 8..32)：字节写 `tw+0x592`(w)/`tw+0x594`(h)。**已实现**：存进 `FvpTextAttr`，按范围钳制 |
 | 127 | TextSkip | 2 | (twIdx, mode 0..3)：字节写 `tw+0x5d7` |
 | 129 | TextSpeed | 2 | (twIdx, speed 0..300000)：dword 写 `tw+0x5e0`（每字毫秒） |
 | 135 | ThreadSleep | 1 | (ms)：线程 flags |=4，`ctx+0x80c = ms`，`ctx+0x810 = 1`（挂起） |

@@ -204,6 +204,17 @@ def build_steps(args):
                               skip_reason='no save/save.bin under the game '
                                           'directory'))
 
+    # 4e. text window attributes (TextColor/TextSize/TextSpeed storage)
+    test_textattr = tools['test_textattr']
+    if not os.path.isfile(test_textattr):
+        steps.append(Step('test_textattr', None, 0,
+                          skip_reason='bin/test_textattr.exe missing '
+                                      '(run: make test_textattr)'))
+    else:
+        steps.append(Step('test_textattr', [test_textattr], 120,
+                          note='colour/size/speed clamping, window bounds, '
+                               'configured count'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

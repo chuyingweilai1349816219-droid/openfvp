@@ -4,7 +4,23 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
-## [0.2.0] — 未发布：音频接运行时 + 存档读写落地 + 全局 flag
+## [未发布] — 0.2.x 后续
+
+### 新增
+
+- **文本窗口属性存储（`src/textattr.c` / `src/textattr.h`）**：`TextColor`（命令 112）、
+  `TextSize`（126）、`TextSpeed`（129）不再落到兜底桩，而是按静态分析的范围钳制后存进
+  VM 的 32 个窗口属性里（颜色 0..255、字号 12..64 × 8..32、速度 0..300000，窗口号 0..31）
+  - 真实脚本 900k 步实测：`text attrs 4 window(s) configured`
+  - 渲染层暂不消费这些值，所以**已验收的帧与逐字节文本基线都不变**（`compare` 仍 6,496 B 一致）
+  - 验收：`tests/test_textattr.c` **29 项**（默认值、钳制两个方向、越界拒绝、configured 计数、reset）
+
+### 变更
+
+- `fvm` 汇总多一行 `text attrs N window(s) configured`；`make test_textattr`；
+  `tests/run_all.py` → **15/15 PASS / 58.1 s**
+
+## [0.2.0] — 已打 tag（v0.2.0 → `4c80b0e`）：音频接运行时 + 存档读写落地 + 全局 flag
 
 0.2 的目标是「音频、存档可用」。当前状态：**音频已接运行时；存档到了「能读、能播种、能原样重写」
 的程度；游戏内存档 UI 与槽内引擎状态语义仍未完成**。版本号直接从 0.1.1 跳到 0.2.0，

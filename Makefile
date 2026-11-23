@@ -1,6 +1,6 @@
 # FVP 引擎（C 实现）
 #
-#   make            构建 bin/fvm.exe（脚本 VM，已通过逐字节等价验证）
+#   make             构建 bin/fvm.exe（脚本 VM，已通过逐字节等价验证）
 #   make lib        构建 bin/libfvp.a（含音频层，给 Android / 桌面壳链接）
 #   make test       构建测试程序（音频解码自检）
 #   make clean
@@ -22,10 +22,12 @@ RES_SRC  = src/bin.c src/inflate.c src/hzc1.c
 SAVE_OBJ = src/save.o
 SAVEVM_OBJ = src/save_vm.o
 FLAGS_OBJ  = src/flags.o
+TEXTATTR_OBJ = src/textattr.o
 
-OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ)
+OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ) \
+           $(TEXTATTR_OBJ)
 LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ) \
-           $(SAVEVM_OBJ) $(FLAGS_OBJ)
+           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ)
 
 BIN = bin/fvm$(EXE)
 LIB = bin/libfvp.a
@@ -70,7 +72,7 @@ clean:
 # ---------------------------------------------------------------------------
 # Win32 桌面壳（用法与限制见 docs/win32-shell.md）
 #
-#   make win32                   构建 bin\fvp.exe
+#   make win32                    构建 bin\fvp.exe
 #   make win32 GFX_FORCE_STUB=1  强制链接 tests/stub_gfx.c 的测试图案
 #
 # 只追加本节，不改变 all / lib / test 的语义。src/gfx.c 一旦落地就自动编进
@@ -78,9 +80,9 @@ clean:
 # ---------------------------------------------------------------------------
 WIN32_DIR   = src/platform/win32
 WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
-              $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
+               $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
-              src/save.c src/save_vm.c src/flags.c
+               src/save.c src/save_vm.c src/flags.c src/textattr.c
 WIN32_RES   = src/bin.c src/hzc1.c src/inflate.c
 WIN32_GFX_H = $(wildcard src/gfx.h)
 
@@ -140,9 +142,9 @@ clean-gfx:
 # ---------------------------------------------------------------------------
 # 存档层（追加节，不改 all / lib / test 的语义；详见 docs/save-format.md §7）
 #   make test_save     构建 bin/test_save.exe
-#   bin/test_save.exe                                 自检（合成数据）
+#   bin/test_save.exe                                   自检（合成数据）
 #   bin/test_save.exe --savebin <dir>/save.bin <dir>/save/sNNN.bin ...
-#                                                     真实样本逐字节回环
+#                                                         真实样本逐字节回环
 # ---------------------------------------------------------------------------
 SAVE_TEST = bin/test_save$(EXE)
 
@@ -166,7 +168,7 @@ $(SAVEVM_TEST): tests/test_save_vm.c src/save_vm.c src/save.c src/save_vm.h \
         src/save.h | bin
 	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_save_vm.c src/save_vm.c src/save.c $(LDFLAGS)
 
-.PHONY: test_save test_save_vm test_flags
+.PHONY: test_save test_save_vm test_flags test_textattr
 
 # ---------------------------------------------------------------------------
 # 全局 flag 位图（FlagGet/FlagSet 的存储层 + save.bin 播种，见 docs/vm-commands.md）
@@ -190,3 +192,22 @@ clean-save:
 	    $(FLAGS_TEST) bin/libfvp_save.a
 
 .PHONY: clean-save
+
+# ---------------------------------------------------------------------------
+# 文本窗口属性（TextColor/TextSize/TextSpeed 的存储层）
+#   make test_textattr
+# ---------------------------------------------------------------------------
+TEXTATTR_TEST = bin/test_textattr$(EXE)
+
+test_textattr: $(TEXTATTR_TEST)
+
+$(TEXTATTR_TEST): tests/test_textattr.c src/textattr.c src/textattr.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_textattr.c src/textattr.c $(LDFLAGS)
+
+$(TEXTATTR_OBJ): src/textattr.c src/textattr.h | src
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+.PHONY: clean-textattr
+
+clean-textattr:
+	-rm -f $(TEXTATTR_OBJ) $(TEXTATTR_TEST)

@@ -1,0 +1,89 @@
+/* 文本窗口属性（TextColor / TextSize / TextSpeed）存储层测试。 */
+#include <stdio.h>
+#include <string.h>
+
+#include "../src/textattr.h"
+
+static int g_fail = 0;
+static int g_pass = 0;
+
+#define CHECK(cond, ...)                                                      \
+    do {                                                                      \
+        if (cond) {                                                           \
+            ++g_pass;                                                         \
+        } else {                                                              \
+            ++g_fail;                                                         \
+            printf("FAIL %s:%d: ", __FILE__, __LINE__);                       \
+            printf(__VA_ARGS__);                                              \
+            printf("\n");                                                     \
+        }                                                                     \
+    } while (0)
+
+int main(void)
+{
+    FvpTextAttr a[FVP_TEXT_WINDOWS];
+
+    /* 1. 默认值。 */
+    fvp_textattr_reset(a, FVP_TEXT_WINDOWS);
+    CHECK(a[0].r == 255 && a[0].g == 255 && a[0].b == 255, "default colour");
+    CHECK(a[0].w == 12 && a[0].h == 12, "default size %dx%d", a[0].w, a[0].h);
+    CHECK(a[0].speed_ms == 0, "default speed %d", a[0].speed_ms);
+    CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 0,
+          "fresh count=%d", fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS));
+
+    /* 2. 颜色：正常 + 钳制。 */
+    CHECK(fvp_textattr_set_color(a, FVP_TEXT_WINDOWS, 3, 12, 34, 56) == 1,
+          "set_color");
+    CHECK(a[3].r == 12 && a[3].g == 34 && a[3].b == 56, "colour %d,%d,%d",
+          a[3].r, a[3].g, a[3].b);
+    CHECK((a[3].set_mask & FVP_TEXTATTR_COLOR) != 0u, "colour mask");
+    CHECK(fvp_textattr_set_color(a, FVP_TEXT_WINDOWS, 4, -5, 300, 1) == 1,
+          "set_color clamps");
+    CHECK(a[4].r == 0 && a[4].g == 255 && a[4].b == 1, "clamped %d,%d,%d",
+          a[4].r, a[4].g, a[4].b);
+
+    /* 3. 字号：区间 12..64 / 8..32。 */
+    CHECK(fvp_textattr_set_size(a, FVP_TEXT_WINDOWS, 1, 24, 16) == 1, "set_size");
+    CHECK(a[1].w == 24 && a[1].h == 16, "size %dx%d", a[1].w, a[1].h);
+    CHECK(fvp_textattr_set_size(a, FVP_TEXT_WINDOWS, 1, 1, 1) == 1, "size low");
+    CHECK(a[1].w == FVP_TEXT_W_MIN && a[1].h == FVP_TEXT_H_MIN, "size low=%dx%d",
+          a[1].w, a[1].h);
+    CHECK(fvp_textattr_set_size(a, FVP_TEXT_WINDOWS, 1, 999, 999) == 1,
+          "size high");
+    CHECK(a[1].w == FVP_TEXT_W_MAX && a[1].h == FVP_TEXT_H_MAX, "size high=%dx%d",
+          a[1].w, a[1].h);
+
+    /* 4. 速度：0..300000。 */
+    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, 40) == 1, "set_speed");
+    CHECK(a[2].speed_ms == 40, "speed %d", a[2].speed_ms);
+    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, -7) == 1, "speed low");
+    CHECK(a[2].speed_ms == 0, "speed low=%d", a[2].speed_ms);
+    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, 500000) == 1,
+          "speed high");
+    CHECK(a[2].speed_ms == FVP_TEXT_SPEED_MAX, "speed high=%d", a[2].speed_ms);
+
+    /* 5. 窗口号越界：拒绝，且不改任何窗口。 */
+    CHECK(fvp_textattr_set_color(a, FVP_TEXT_WINDOWS, 32, 1, 2, 3) == 0,
+          "idx 32 rejected");
+    CHECK(fvp_textattr_set_size(a, FVP_TEXT_WINDOWS, -1, 20, 20) == 0,
+          "idx -1 rejected");
+    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, FVP_TEXT_WINDOWS, 5) == 0,
+          "idx == count rejected");
+    CHECK(fvp_textattr_set_color(NULL, FVP_TEXT_WINDOWS, 0, 1, 2, 3) == 0,
+          "NULL rejected");
+
+    /* 6. configured_count 只数设过的窗口（本例 1,2,3,4）。 */
+    CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 4,
+          "configured=%d", fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS));
+    CHECK(fvp_textattr_configured_count(NULL, FVP_TEXT_WINDOWS) == 0,
+          "configured(NULL)=0");
+
+    /* 7. reset 清掉一切。 */
+    fvp_textattr_reset(a, FVP_TEXT_WINDOWS);
+    CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 0,
+          "reset count=%d", fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS));
+    CHECK(a[3].r == 255 && a[3].set_mask == 0u, "reset colour/mask");
+
+    printf("\ntest_textattr: %d passed, %d failed\n", g_pass, g_fail);
+    return g_fail == 0 ? 0 : 1;
+}
