@@ -35,6 +35,7 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --eol crlf|lf    line endings for --text-out (default crlf)\n"
             "  --pctrace FILE   log executed pc values (debug aid)\n"
             "  --savebin FILE   seed globals from a save/save.bin\n"
+            "  --timeline       use the virtual clock (ThreadSleep/ThreadWait wake by ms)\n"
             "  --dump-globals FILE  write \"index value\" lines for set globals\n",
             prog);
 }
@@ -169,6 +170,7 @@ static void fvp_print_summary(const FvpVM *vm)
     printf("steps      %llu\n", (unsigned long long)vm->steps);
     printf("text lines %llu\n", (unsigned long long)vm->ntext);
     printf("threads    %llu\n", (unsigned long long)vm->nthreads);
+    printf("virtual ms %llu\n", (unsigned long long)vm->virtual_ms);
     printf("text attrs %d window(s) configured\n",
            fvp_textattr_configured_count(vm->textattr, FVP_TEXT_WINDOWS));
     printf("save state slot=%d str=%d/%d/%d thumb=%dx%d\n", vm->save_slot,
@@ -319,6 +321,7 @@ int main(int argc, char **argv)
     int64_t cx = 960;
     int64_t cy = 540;
     int quiet = 0;
+    int timeline = 0;
     int crlf = 1;
     int i;
     FvpEncoding enc;
@@ -375,6 +378,8 @@ int main(int argc, char **argv)
                 return 2;
             }
             pctrace_path = argv[++i];
+        } else if (strcmp(a, "--timeline") == 0) {
+            timeline = 1;
         } else if (strcmp(a, "--savebin") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "fvm: missing --savebin value\n");
@@ -434,6 +439,7 @@ int main(int argc, char **argv)
     }
 
     fvp_vm_init(&vm, &hcb, quiet);
+    vm.timeline_on = timeline;
     if (savebin_path != NULL && !fvp_seed_globals(savebin_path, &vm)) {
         fvp_vm_free(&vm);
         fvp_hcb_free(&hcb);

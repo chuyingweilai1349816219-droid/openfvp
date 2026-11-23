@@ -1081,12 +1081,50 @@ void fvp_vm_start(FvpVM *vm)
     vm->cur = t;
 }
 
+/* 时间模型：当所有线程都被定时阻塞时，把虚拟时钟推到最早的
+ * 唤醒时刻并叫醒到期线程。返回 1 = 推进成功，0 = 没有可推进的目标（应结束）。 */
+static int timeline_advance(FvpVM *vm)
+{
+    size_t i;
+    int have = 0;
+    uint64_t next = 0;
+
+    for (i = 0; i < vm->nthreads; ++i) {
+        FvpThread *t = vm->threads[i];
+
+        if (!t->alive || !t->timed || t->wake_ms <= vm->virtual_ms) {
+            continue;
+        }
+        if (!have || t->wake_ms < next) {
+            next = t->wake_ms;
+            have = 1;
+        }
+    }
+    if (!have) {
+        return 0;
+    }
+    vm->virtual_ms = next;
+    for (i = 0; i < vm->nthreads; ++i) {
+        FvpThread *t = vm->threads[i];
+
+        if (t->alive && t->timed && t->wake_ms <= vm->virtual_ms) {
+            t->timed = 0;
+            t->blocked = 0;
+            t->wait = 0;
+        }
+    }
+    return 1;
+}
+
 uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps)
 {
     vm->max_steps = max_steps;
+    {
+    int blocked_run = 0;
     while (vm->nthreads > 0 && vm->steps < vm->max_steps) {
         FvpThread *t = vm->threads[0];
         size_t i;
+        int stepped = 0;
         /* pop(0) */
         for (i = 0; i + 1u < vm->nthreads; ++i) {
             vm->threads[i] = vm->threads[i + 1u];
@@ -1106,6 +1144,17 @@ uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps)
         vm->nthreads += 1u;
         vm->cur = t;
         if (t->blocked) {
+            if (vm->timeline_on && t->timed) {
+                /* 这个线程在等虚拟时钟。如果轮了一圈都没人跑，就推进时钟。 */
+                blocked_run += 1;
+                if (blocked_run >= (int)vm->nthreads) {
+                    blocked_run = 0;
+                    if (!timeline_advance(vm)) {
+                        break;
+                    }
+                }
+                continue;
+            }
             t->wait += 1;
             if (t->wait < 2) {
                 continue;
@@ -1113,7 +1162,11 @@ uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps)
             t->blocked = 0;
             t->wait = 0;
         }
+        blocked_run = 0;
+        stepped = 1;
+        (void)stepped;
         fvp_step(vm, t);
+    }
     }
     return vm->steps;
 }

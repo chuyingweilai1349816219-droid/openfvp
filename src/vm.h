@@ -33,6 +33,8 @@ typedef struct FvpThread {
     int alive;
     int blocked;
     int32_t wait;
+    uint64_t wake_ms; /* 时间模型：该线程到这个虚拟时刻醒 */
+    int timed;        /* 1 = 按 wake_ms 定时唤醒（非旧的 yield 行为） */
     FvpValue temp;
 } FvpThread;
 
@@ -225,6 +227,9 @@ typedef struct FvpVM {
     int save_thumb_h;
     /* 鼠标滚轮累计量（120 = 一格）。外壳/测试往里加，脚本用 InputGetWheel 取走。 */
     int wheel_delta;
+    /* 虚拟时钟（毫秒）。timeline_on = 0 时不会推进，ThreadSleep/Wait 保持旧行为。 */
+    uint64_t virtual_ms;
+    int timeline_on;
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);

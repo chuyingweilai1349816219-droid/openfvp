@@ -1343,7 +1343,24 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         t->temp = fvp_make_int(0);
         return;
     case 133: /* ThreadNext: yield to the scheduler */
-    case 137: /* ThreadWait: yield to the scheduler */
+        t->blocked = 1;
+        return;
+    /* 135 ThreadSleep(ms) / 137 ThreadWait(ms)：
+     * 时间模型开启时按虚拟时钟定时唤醒，否则保持旧的 yield 语义。 */
+    case 135:
+    case 137:
+        if (vm->timeline_on && argc >= 1) {
+            int64_t ms = args[0].i;
+
+            if (ms < 0) {
+                ms = 0;
+            }
+            if (ms > 300000) {
+                ms = 300000;
+            }
+            t->timed = 1;
+            t->wake_ms = vm->virtual_ms + (uint64_t)ms;
+        }
         t->blocked = 1;
         return;
     case 13: /* Debmess */
