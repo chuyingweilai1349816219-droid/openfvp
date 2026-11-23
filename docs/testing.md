@@ -27,6 +27,8 @@
 | INFLATE | `c_assets_guard.exe inflate/rawinflate` + `c_assets fuzz` | 子进程/进程内 | 输出缓冲边界（expect 小于/大于真实长度）+ 40,000 次随机/变异流（带前后守卫页） | 输出缓冲过小必须报错而不是写越界；`guard_violations=0` |
 | 音频 | `fuzz_snd.c`（→ `fuzz_snd.exe`，页保护） | 子进程 | 126 个变异：截断 WAV/Ogg、非法 fmt chunk、bits/channels/rate 伪造、data 长度说谎、Ogg 页头破坏、前缀/全文件翻转、随机垃圾 | 解码成功或拒绝；解码后混音固定 2048 帧；0 崩溃/越界/挂死 |
 | 既有验收（回归） | `compare.py --run`、`verify_assets.py --quick`、`bin/test_snd.exe` | 原样调用 | 真实脚本与资源 | 与现状一致（PASS） |
+| **动画（静态门）** | `verify_gfx.ps1 -SkipDump` | `bin/test_gfx.exe` 回放 528k 步场景 | 真实资产 | 动画默认关闭时参考帧指标必须**一分不变**：24/24 图元位置误差 **0 px**、像素差 **293 (0.0141%)**、PSNR **49.94 dB**、SSIM **0.99971**（2026-11 实测仍 PASS） |
+| **动画（动态门）** | `verify_motion.ps1` | `render_vm --motion`（固定步数 + 固定 dt） | 真实脚本 | ① 关动画两次同参数帧一致（harness 确定）② 1,000 步 开=关（t≈0 不漂移）③ 60,000 步 开≠关（动画可见） |
 | 检测器自检 | `fuzz_selftest.c` | 两个分配器构建 | 故意在 32 字节块后写 1 字节 | 页保护构建必须以访问违例退出，金丝雀构建必须以 72 退出——否则「0 故障」没有意义 |
 
 一次完整运行（默认参数）：
