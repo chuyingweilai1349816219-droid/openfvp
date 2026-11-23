@@ -1,5 +1,7 @@
 # 中文脚本 `.hcb` 重建报告
 
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
 目标：把被汉化补丁打坏的 `.iroseka.hcb`（简体中文，GBK）重建为**结构合法、VM 可完整执行、台词为中文**的独立脚本。
 产物是两个文件：`fvp/out/cn/iroseka_zh.hcb`（数据）与 `fvp/work/cn_rebuild.py`（可复现重建脚本）。
 

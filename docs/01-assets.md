@@ -1,5 +1,7 @@
 # 资源清单
 
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
 `C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD` 下的资源包构成。
 所有包都是同一套 BIN 格式（见 `00-engine.md`），条目名是 Shift-JIS，**不带扩展名**，格式靠魔数判断。
 

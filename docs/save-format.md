@@ -1,5 +1,7 @@
 # FVP 存档格式（`save/save.bin` 与 `save/sNNN.bin`）
 
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
 目标：`いろとりどりのセカイ HD Re:GENERATION`（`iroseka_HD.exe` 1.0.0.95，i386）。
 样本：`C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD\save\`（`save.bin` + 6 个槽文件，2023-03-19）。
 

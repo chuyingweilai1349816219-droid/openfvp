@@ -1,5 +1,7 @@
 # 变更记录
 
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
 ## [0.1.1] — 存档文件层 + 音频接入运行时

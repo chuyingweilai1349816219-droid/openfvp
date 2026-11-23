@@ -1,5 +1,7 @@
 # FVP (FAVORITE VIEW POINT SYSTEM) — VM 分发机制与命令语义
 
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
 目标：`iroseka_HD.exe`（PE32 i386，ImageBase 0x400000）+ `iroseka.hcb`（五彩斑斓的世界 HD / いろとりどりのセカイ HD Re:GENERATION）。
 本文所有地址均为 VA，静态分析取自 `objdump -d` 输出 `fvp/work/iroseka_HD.asm`。
 

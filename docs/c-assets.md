@@ -7,6 +7,8 @@
 > 相关文档：`docs/00-engine.md`（BIN/HCB 格式）、`docs/hzc1-format.md`（HZC1 格式）、
 > `docs/01-assets.md`（资源包清单）。
 
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
 ## 0. 结论速览
 
 | 项 | 结果 |

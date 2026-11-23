@@ -1,5 +1,7 @@
 # FVP 引擎侦查报告（阶段 0）
 
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
 目标游戏：`いろとりどりのセカイ HD Re:GENERATION` / 《五彩斑斓的世界 HD》
 样本：`C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD`（9.36 GB，73 个文件）
 

@@ -1,5 +1,7 @@
 # C 渲染层 `gfx`（src/gfx.c / src/gfx.h）
 
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
 把已经逐像素验证过的 Python 渲染原型（`work/render.py`，规格见
 `docs/render-model.md`）移植成 C 引擎的渲染模块，并用**像素级比对**证明移植正确。
 
