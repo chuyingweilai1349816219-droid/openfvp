@@ -147,7 +147,7 @@ int fvp_hcb_load(FvpHcb *hcb, const char *path, FvpEncoding enc,
         for (; *fmt != '\0' && !bad; ++fmt) {
             switch (*fmt) {
             case 'b':
-                if (pos + 1u > hcb->data_len) {
+                if (pos + 1u > (size_t)hcb->script_len) {
                     bad = 1;
                     break;
                 }
@@ -160,7 +160,7 @@ int fvp_hcb_load(FvpHcb *hcb, const char *path, FvpEncoding enc,
                 pos += 1u;
                 break;
             case 'w':
-                if (pos + 2u > hcb->data_len) {
+                if (pos + 2u > (size_t)hcb->script_len) {
                     bad = 1;
                     break;
                 }
@@ -169,7 +169,7 @@ int fvp_hcb_load(FvpHcb *hcb, const char *path, FvpEncoding enc,
                 pos += 2u;
                 break;
             case 'd':
-                if (pos + 4u > hcb->data_len) {
+                if (pos + 4u > (size_t)hcb->script_len) {
                     bad = 1;
                     break;
                 }
@@ -181,13 +181,13 @@ int fvp_hcb_load(FvpHcb *hcb, const char *path, FvpEncoding enc,
                 size_t avail;
                 size_t take;
                 size_t body;
-                if (pos + 1u > hcb->data_len) {
+                if (pos + 1u > (size_t)hcb->script_len) {
                     bad = 1;
                     break;
                 }
                 n = hcb->data[pos];
                 pos += 1u;
-                avail = hcb->data_len - pos;
+                avail = (size_t)hcb->script_len > pos ? (size_t)hcb->script_len - pos : 0u;
                 take = (size_t)n < avail ? (size_t)n : avail;
                 body = take > 0u ? take - 1u : 0u;
                 ins.str = fvp_decode(&hcb->strings, hcb->enc,

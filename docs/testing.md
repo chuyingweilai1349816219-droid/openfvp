@@ -256,7 +256,11 @@ $ gcc -print-file-name=libubsan   ->  libubsan（原样返回，未找到）
 
 这些不是 bug，但在评估「测试覆盖率」时应知道：
 
-1. **`hcb.c` 的 `truncated instruction` 诊断当前不可达。**
+1. ~~**`hcb.c` 的 `truncated instruction` 诊断当前不可达。**~~
+   **已于 0.1.0 修复**：边界检查从 `data_len`（文件长度）改为 `script_len`（脚本区长度），
+   该诊断恢复生效。用 `out/fuzz/repro/hcb_operand_past_script_len.hcb` 复现，现在输出
+   `fvm: truncated instruction 0x2 at 0x4`；两条逐字节基准（195 行 / 450 行）仍 PASS。
+   以下为修复前的描述，留作记录：
    加载器要求 `script_len + 4 <= data_len`，而最长操作数只有 4 字节
    （`d`）；`pos <= script_len` 时 `pos + 4 <= script_len + 4 <= data_len`
    恒成立，所以「操作数越界」分支永远不触发。见第 8 节第 2 条：操作数
