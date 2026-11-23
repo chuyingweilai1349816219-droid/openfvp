@@ -73,6 +73,25 @@ def common_suffix(a, b):
     return i
 
 
+def runs_report(b, label, limit=24):
+    """把一段字节按「全零段 / 非零段」切分，打印前 limit 段。"""
+    out = []
+    i = 0
+    n = len(b)
+    while i < n and len(out) < limit:
+        j = i
+        while j < n and b[j] == b[i] and (b[j] == 0) == (b[i] == 0):
+            j += 1
+        kind = 'ZERO' if b[i] == 0 else 'DATA'
+        out.append((kind, i, j - i))
+        i = j
+    print('  %s: %d run(s) shown (len=%d)' % (label, len(out), n))
+    for kind, off, ln in out:
+        print('    +%-7d %-4s %6d' % (off, kind, ln))
+    if i < n:
+        print('    ... %d more bytes' % (n - i))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('save_dir')
@@ -120,6 +139,28 @@ def main(argv=None):
     print('  prefix > 0 说明尾段开头是定长常量段（可先按长度跳过）')
     print('  suffix > 0 说明尾段结尾是常量（docs 说末两字节 01 01）')
     print('  nonzero 远小于 tail 长度说明大段是零填充，字段稀疏')
+
+    # ---- 常量尾/常量头的内部结构（只在「所有槽都相同」的区间里做才有意义）----
+    n_tail = len(slots)
+    min_prefix = min(common_prefix(slots[i][3], slots[j][3])
+                     for i in range(n_tail) for j in range(i + 1, n_tail))
+    min_suffix = min(common_suffix(slots[i][3], slots[j][3])
+                     for i in range(n_tail) for j in range(i + 1, n_tail))
+    print('\n== 常量区（所有槽两两相同的部分）==')
+    print('  常量头 %d B, 常量尾 %d B' % (min_prefix, min_suffix))
+
+    if min_prefix > 0:
+        heads = {s[3][:min_prefix] for s in slots}
+        print('  常量头内部是否 6 槽全同: %s' % (len(heads) == 1))
+        runs_report(slots[0][3][:min_prefix], '常量头分段')
+
+    if min_suffix > 0:
+        tails = {s[3][len(s[3]) - min_suffix:] for s in slots}
+        print('  常量尾内部是否 6 槽全同: %s' % (len(tails) == 1))
+        common = slots[0][3][len(slots[0][3]) - min_suffix:]
+        print('  常量尾前 64 B: %s' % common[:64].hex(' '))
+        runs_report(common, '常量尾分段（从头数）', limit=18)
+
     return 0
 
 
