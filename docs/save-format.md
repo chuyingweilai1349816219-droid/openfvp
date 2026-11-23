@@ -564,6 +564,8 @@ python fvp/tools/saveinfo.py --config <save.bin> [-v]
 | `fvp_save_globals_apply()` | 把 `type==2` 的记录写进 `FvpValue globals[]`；输出 `total/ints/unknown/unset/skipped` 统计。`globals` 传 NULL 时只统计 |
 | `fvm --savebin FILE` | 启动 VM 前用 `save.bin` 播种全局变量，打印 `records/ints/unknown/unset` |
 | `fvm --dump-globals FILE` | 写 `index value` 行（只写非零 int），用于和独立实现比对 |
+| `fvp_save_find_file()` / `fvp_save_bin_load_file()` | 按 `<game>/save/save.bin`、`<game>/save.bin` 顺序找文件并解析；路径按 UTF-8 处理，Windows 上走 `_wfopen`（UTF-8 失败则退回 ANSI，兼容从 argv 拿到的路径） |
+| 桌面外壳启动 | `fvp.exe` 在 `fvp_vm_start()` 前调用上面两个函数播种全局变量，日志见 `docs/win32-shell.md` §3 |
 
 **类型编号陷阱**：存档里的 `2` 表示 int，而 VM 的 `FvpType` 里 int 是 `0`
 （`INT=0/FLOAT=1/STR=2`）。两套枚举不能混用，否则会把字符串槽当成整数读。

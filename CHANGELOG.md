@@ -4,6 +4,40 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [0.1.2] — 未发布：存档全局变量桥 + 桌面外壳读档
+
+v0.1.1 之后的进展。核心一句话：`save/save.bin` 不再只是「能解析的文件」，而是**桌面外壳启动时真的会被读进 VM**。
+
+### 新增
+
+- **全局变量桥（`src/save_vm.c`）**：把 `save.bin` 里 `type==2` 的 145 条 int 全局变量灌进 VM 的
+  `globals[]`；`type==1` 的 846 条语义未解，跳过并报数。处理了类型编号陷阱（存档 `2`=int，
+  VM `FvpType` 里 int 是 `0`）与 `u32 → int32` 回绕
+- **桌面外壳读档**：`fvp.exe` 在 `fvp_vm_start()` 之前查找 `<game>/save/save.bin`
+  （退一步 `<game>/save.bin`），解析并播种全局变量；实测日志
+  `save: .../save/save.bin -> 145/1471 globals applied (145 int, 846 unknown type1, 480 unset), thumb 200x113, readmap 1048576 bytes`
+- **文件级便利函数**：`fvp_save_find_file()` / `fvp_save_bin_load_file()`；Windows 上路径按
+  UTF-8 → 宽字符开文件，UTF-8 解码失败自动退回 ANSI 代码页（兼容 argv 来的路径）
+- 新 CLI：`fvm --savebin FILE`、`fvm --dump-globals FILE`（退出码 5 = 读 savebin 失败）
+
+### 验收
+
+- `tests/test_save_vm.c`：**19 项**合成用例 + 真实 `save.bin` **13 项**
+  （`1471 = 145 int + 846 unknown + 480 unset`，值序列与 `docs/save-format.md` §3.3 逐个吻合）
+- `tests/test_save.c` 增加文件级函数用例：真实目录能找到 `save/save.bin`、缺失目录返回 NULL、
+  缺失路径解析失败 → 真实样本合计 **49 项**
+- `tests/run_all.py` → **12/12 PASS / 56.2 s**
+- `compare.py --run` 仍**逐字节一致**（6,496 字节 / 195 行 / `7F9837FF…`），CLI 改动没有影响默认输出
+- `make -B all lib test test_save test_save_vm win32` **0 警告 0 错误**
+
+### 变更
+
+- 所有交付文档顶部统一加 `> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿`，
+  并由 `scripts/check-docs.py` 强制检查（前 20 行内必须出现中/英任一写法，`ref/` 豁免）；
+  CI 已在跑该脚本，漏写会直接挂
+- `docs/win32-shell.md` §3 增加「启动时读取全局存档」小节；`docs/c-vm.md` 选项表补 `--savebin` /
+  `--dump-globals`；`docs/save-format.md` §7.1 补全局变量桥与外壳接线
+
 ## [0.1.1] — 存档文件层 + 音频接入运行时
 
 这一版没有新玩法，只有两件事：**音频真的接到虚拟机了**，以及**存档格式从「结构分析结论」变成「可执行代码」**。

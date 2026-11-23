@@ -1,8 +1,13 @@
 /* FVP 存档层实现。见 save.h 顶部的设计原则。 */
 #include "save.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 /* ------------------------------------------------------------ 小工具 */
 
@@ -401,4 +406,117 @@ size_t fvp_save_bin_store(const FvpSaveBin *b, unsigned char *out, size_t cap)
     out[pos] = 0x00; /* NUL 结尾 */
     pos += 1u;
     return pos;
+}
+
+/* ------------------------------------------------- 文件级便利函数 */
+
+/* 路径按 UTF-8 处理（游戏目录常带中日文，Win32 上必须转宽字符再开文件）。
+ * 但调用者也可能拿到 ANSI 路径（例如从 argv 直接来的），所以先按 UTF-8 严格解码，
+ * 失败再退回当前 ANSI 代码页——两条路都能开，不至于因为编码猜错就找不到存档。 */
+static FILE *fopen_utf8_read(const char *path)
+{
+#ifdef _WIN32
+    wchar_t wpath[1024];
+    int n;
+
+    if (path == NULL) {
+        return NULL;
+    }
+    n = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wpath,
+                            (int)(sizeof(wpath) / sizeof(wpath[0])));
+    if (n <= 0) {
+        n = MultiByteToWideChar(CP_ACP, 0, path, -1, wpath,
+                                (int)(sizeof(wpath) / sizeof(wpath[0])));
+    }
+    if (n <= 0) {
+        return NULL;
+    }
+    return _wfopen(wpath, L"rb");
+#else
+    if (path == NULL) {
+        return NULL;
+    }
+    return fopen(path, "rb");
+#endif
+}
+
+int fvp_save_bin_load_file(FvpSaveBin *b, const char *path)
+{
+    FILE *f;
+    long n;
+    unsigned char *buf;
+    int ok;
+
+    if (b == NULL) {
+        return 0;
+    }
+    memset(b, 0, sizeof(*b));
+    f = fopen_utf8_read(path);
+    if (f == NULL) {
+        return 0;
+    }
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return 0;
+    }
+    n = ftell(f);
+    if (n <= 0) {
+        fclose(f);
+        return 0;
+    }
+    rewind(f);
+    buf = (unsigned char *)malloc((size_t)n);
+    if (buf == NULL) {
+        fclose(f);
+        return 0;
+    }
+    if (fread(buf, 1, (size_t)n, f) != (size_t)n) {
+        free(buf);
+        fclose(f);
+        return 0;
+    }
+    fclose(f);
+    ok = fvp_save_bin_load(b, buf, (size_t)n);
+    free(buf);
+    return ok;
+}
+
+static int file_exists(const char *path)
+{
+    FILE *f = fopen_utf8_read(path);
+
+    if (f == NULL) {
+        return 0;
+    }
+    fclose(f);
+    return 1;
+}
+
+char *fvp_save_find_file(const char *game_dir)
+{
+    size_t need;
+    char *buf;
+    const char *candidates[] = {"save/save.bin", "save.bin", "save\\save.bin"};
+    size_t i;
+
+    if (game_dir == NULL || game_dir[0] == '\0') {
+        return NULL;
+    }
+    need = strlen(game_dir) + 32u;
+    buf = (char *)malloc(need);
+    if (buf == NULL) {
+        return NULL;
+    }
+    for (i = 0; i < sizeof(candidates) / sizeof(candidates[0]); ++i) {
+        int r = snprintf(buf, need, "%s/%s", game_dir, candidates[i]);
+
+        if (r < 0 || (size_t)r >= need) {
+            continue;
+        }
+        if (file_exists(buf)) {
+            return buf;
+        }
+    }
+    free(buf);
+    return NULL;
 }

@@ -104,6 +104,21 @@ fvp.exe --game <游戏目录> [选项]
 | 音频 | `waveOut` 48000 Hz / 2ch / PCM16 / 3×480 帧（30 ms），10 秒提交 759 个缓冲、完成 756、underrun 0 |
 | 退出 | ESC / 关闭按钮 / `--run-seconds` 都是退出码 0，无残留进程 |
 
+### 启动时读取全局存档
+
+外壳在 `fvp_vm_start()` 之前会找 `<game>/save/save.bin`（退一步找 `<game>/save.bin`），
+命中就解析并把其中**已确证的 `type==2` 整型全局变量**灌进 VM；其余段落只报数不解释
+（`docs/save-format.md` §7.1）。实测日志：
+
+```
+[    0.025] save: C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD/save/save.bin ->
+            145/1471 globals applied (145 int, 846 unknown type1, 480 unset),
+            thumb 200x113, readmap 1048576 bytes
+```
+
+找不到存档时打一行 `save: no save/save.bin under the game directory (starting from
+defaults)`，不阻塞启动；文件损坏时打 `save: ... is not a valid save.bin (ignored)`。
+
 > 测试机当时在后台解压一个 15 GB 压缩包，偶尔出现 100–200 ms 的整帧尖峰；同一时刻
 > `gdi present` 的 max 仍只有 ~9 ms，说明尖峰来自系统负载/调度，不是壳里的 GDI 抖动。
 > 空闲桌面下连续 4–6 秒的跑分都是 60.00 fps、0 个慢帧。

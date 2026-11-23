@@ -325,6 +325,55 @@ static int run_files(const char *savebin_path, char **slots, int nslots)
         }
     }
 
+    /* 文件级便利函数：目录查找 + 直接读文件（桌面外壳启动时用这两个）。 */
+    if (savebin_path != NULL) {
+        char game_dir[1024];
+        char *found;
+        const char *cut = NULL;
+        const char *p;
+
+        for (p = savebin_path; *p != '\0'; ++p) {
+            if (*p == '/' || *p == '\\') {
+                cut = p;
+            }
+        }
+        if (cut != NULL) {
+            size_t n = (size_t)(cut - savebin_path);
+
+            if (n + 1u < sizeof(game_dir)) {
+                memcpy(game_dir, savebin_path, n);
+                game_dir[n] = '\0';
+                /* 丢掉末尾的 save/ 这一段 */
+                cut = NULL;
+                for (p = game_dir; *p != '\0'; ++p) {
+                    if (*p == '/' || *p == '\\') {
+                        cut = p;
+                    }
+                }
+                if (cut != NULL) {
+                    game_dir[(size_t)(cut - game_dir)] = '\0';
+                }
+                found = fvp_save_find_file(game_dir);
+                CHECK(found != NULL, "find_file(%s) = NULL", game_dir);
+                if (found != NULL) {
+                    FvpSaveBin c;
+
+                    CHECK(fvp_save_bin_load_file(&c, found),
+                          "load_file(%s) failed", found);
+                    CHECK(c.nglobals == b.nglobals,
+                          "load_file globals %u != %u", c.nglobals,
+                          b.nglobals);
+                    fvp_save_bin_free(&c);
+                    free(found);
+                }
+            }
+        }
+        CHECK(fvp_save_find_file("Z:\\definitely\\missing\\dir") == NULL,
+              "find_file on a missing dir should be NULL");
+        CHECK(!fvp_save_bin_load_file(&b, "Z:\\missing\\save.bin"),
+              "load_file on a missing path should fail");
+    }
+
     for (i = 0; i < nslots; ++i) {
         unsigned char *buf;
         unsigned char *out;

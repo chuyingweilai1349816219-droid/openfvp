@@ -30,6 +30,8 @@
 
 #include "encoding.h"
 #include "hcb.h"
+#include "save.h"
+#include "save_vm.h"
 #include "snd.h"
 #include "vm.h"
 
@@ -1441,6 +1443,44 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
     memset(&vm, 0, sizeof(vm));
     fvp_vm_init(&vm, &hcb, 1);
+
+    /* 全局存档 save/save.bin 里存的是设置 / flag / 已读文本位图，属于运行时状态，
+     * 必须在脚本跑起来之前灌进 VM。只灌已确证的 type==2 整型（docs/save-format.md §7.1）。 */
+    {
+        char *save_path = fvp_save_find_file(game_u8);
+
+        if (save_path == NULL) {
+            fvp_logf("save: no save/save.bin under the game directory "
+                     "(starting from defaults)");
+        } else {
+            FvpSaveBin sb;
+
+            if (fvp_save_bin_load_file(&sb, save_path)) {
+                FvpSaveGlobalsStats st;
+                unsigned int tw = (unsigned int)sb.hdr[12] |
+                                  ((unsigned int)sb.hdr[13] << 8) |
+                                  ((unsigned int)sb.hdr[14] << 16) |
+                                  ((unsigned int)sb.hdr[15] << 24);
+                unsigned int th = (unsigned int)sb.hdr[16] |
+                                  ((unsigned int)sb.hdr[17] << 8) |
+                                  ((unsigned int)sb.hdr[18] << 16) |
+                                  ((unsigned int)sb.hdr[19] << 24);
+                int applied = fvp_save_globals_apply(&sb, vm.globals,
+                                                     FVP_GLOBAL_COUNT, &st);
+
+                fvp_logf("save: %s -> %d/%d globals applied (%d int, "
+                         "%d unknown type1, %d unset), thumb %ux%u, "
+                         "readmap %u bytes",
+                         save_path, applied, st.total, st.ints, st.unknown,
+                         st.unset, tw, th, FVP_SAVE_READMAP_SIZE);
+                fvp_save_bin_free(&sb);
+            } else {
+                fvp_logf("save: %s is not a valid save.bin (ignored)",
+                         save_path);
+            }
+            free(save_path);
+        }
+    }
     fvp_vm_start(&vm);
     fvp_logf("vm: started at pc=0x%x (quiet text capture)", hcb.main_start);
 

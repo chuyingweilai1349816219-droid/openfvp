@@ -100,6 +100,18 @@ size_t fvp_save_bin_store(const FvpSaveBin *b, unsigned char *out, size_t cap);
 
 void fvp_save_bin_free(FvpSaveBin *b);
 
+/* ------------------------------------------------- 文件级便利函数 */
+
+/* 读文件并解析 save.bin。成功返回 1；失败返回 0（b 已清空）。
+ * 与 fvp_save_bin_load() 的区别：这个自己 fopen/fread，调用者不用管缓冲。 */
+int fvp_save_bin_load_file(FvpSaveBin *b, const char *path);
+
+/* 在一个游戏目录下找全局存档，返回 malloc 出来的路径（调用者 free），
+ * 找不到返回 NULL。查找顺序：<game>/save/save.bin、<game>/save.bin。
+ * 原版引擎的写死路径是 `%s/save/save.bin`（docs/save-format.md §1），
+ * 第二个位置只是给解包过 / 便携版的目录兜底。 */
+char *fvp_save_find_file(const char *game_dir);
+
 #ifdef __cplusplus
 }
 #endif

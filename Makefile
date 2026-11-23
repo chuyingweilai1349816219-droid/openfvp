@@ -78,7 +78,8 @@ clean:
 WIN32_DIR   = src/platform/win32
 WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
               $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
-WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c
+WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
+              src/save.c src/save_vm.c
 WIN32_RES   = src/bin.c src/hzc1.c src/inflate.c
 WIN32_GFX_H = $(wildcard src/gfx.h)
 
