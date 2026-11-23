@@ -484,6 +484,8 @@ struct Gfx {
     int ndraw;
     int cap_draw;
     int group_xform;
+    size_t tex_bytes; /* 缓存中图像的 RGBA 字节数 */
+    int tex_count;
     FvpMotion motion; /* 动画补间表；motion_on = 0 时只走时间轴、不动图元 */
     int motion_on;
     char err[256];
@@ -672,6 +674,19 @@ static void tex_unref(Gfx *g, GfxTex *t)
             pp = &(*pp)->next;
         }
     }
+    {
+        size_t bytes = (size_t)t->img.w * (size_t)t->img.h * 4u *
+                       (size_t)(t->img.frames > 0 ? t->img.frames : 1);
+
+        if (g->tex_bytes >= bytes) {
+            g->tex_bytes -= bytes;
+        } else {
+            g->tex_bytes = 0;
+        }
+        if (g->tex_count > 0) {
+            g->tex_count -= 1;
+        }
+    }
     if (g->host.free_image != NULL) {
         g->host.free_image(g->host.ud, &t->img);
     } else {
@@ -719,6 +734,9 @@ static GfxTex *tex_ref(Gfx *g, const char *name)
     }
     strcpy(t->name, name);
     t->refs = 1;
+    g->tex_bytes += (size_t)t->img.w * (size_t)t->img.h * 4u *
+                    (size_t)(t->img.frames > 0 ? t->img.frames : 1);
+    g->tex_count += 1;
     {
         unsigned b = tex_hash(name) % GFX_TEX_BUCKETS;
         t->next = g->tex_hash[b];
@@ -3188,3 +3206,12 @@ void gfx_archive_host_destroy(GfxArchiveHost *h)
     free(h);
 }
 
+size_t gfx_tex_bytes(const Gfx *g)
+{
+    return (g != NULL) ? g->tex_bytes : 0;
+}
+
+int gfx_tex_count(const Gfx *g)
+{
+    return (g != NULL) ? g->tex_count : 0;
+}

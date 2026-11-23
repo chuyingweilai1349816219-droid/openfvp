@@ -1411,6 +1411,12 @@ static void perf_add(PerfStats *p, double present_ms, double frame_ms)
     }
 }
 
+/* 窗口统计清零：周期报告用的是「本窗口」的累计值，不是全程累计值。 */
+static void perf_clear(PerfStats *p)
+{
+    memset(p, 0, sizeof(*p));
+}
+
 static double perf_percentile(const PerfStats *p, double pct)
 {
     unsigned long long total = 0;
@@ -1492,6 +1498,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int exit_script = 0;
     double last_report = 0.0;
     PerfStats perf;
+    PerfStats wperf; /* 本周期 5 s 窗口内的统计（周期报告用，见 perf_clear） */
     unsigned long long steps_at_report = 0;
     double run_started = 0.0;
     int verbose;
@@ -1810,6 +1817,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
     /* ---------------- frame loop ---------------- */
     memset(&perf, 0, sizeof(perf));
+    perf_clear(&wperf);
     last_frame_time = now_sec();
     next_frame = last_frame_time;
     fps_t0 = last_frame_time;
@@ -2045,6 +2053,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         /* 动画补间：默认关闭时只走时间轴，不改图元字段。 */
         gfx_motion_advance(gfx, (int)(frame_dt * 1000.0));
         perf_add(&perf, present_ms, frame_dt * 1000.0);
+        perf_add(&wperf, present_ms, frame_dt * 1000.0);
         frame += 1;
         (void)frame; /* consumed by the stub renderer only */
         fps_frames += 1;
@@ -2073,7 +2082,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
         if (now - last_report >= 5.0) {
             double secs = now - last_report;
-            unsigned long frames = perf.frames;
+            unsigned long frames = wperf.frames;
             unsigned long long steps = vm.steps - steps_at_report;
             int a_ok = 0;
             int a_sub = 0;
@@ -2084,15 +2093,18 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             fvp_logf("perf: fps=%.1f frame_avg=%.2fms frame_max=%.2fms "
                      "present_avg=%.2fms present_max=%.2fms slow=%lu",
                      (double)frames / secs,
-                     frames > 0 ? perf.frame_sum / (double)frames : 0.0,
-                     perf.frame_max,
-                     frames > 0 ? perf.present_sum / (double)frames : 0.0,
-                     perf.present_max, perf.slow_frames);
+                     frames > 0 ? wperf.frame_sum / (double)frames : 0.0,
+                     wperf.frame_max,
+                     frames > 0 ? wperf.present_sum / (double)frames : 0.0,
+                     wperf.present_max, wperf.slow_frames);
             fvp_logf("vm:   %llu steps (%.0f steps/s), text lines %llu, "
                      "threads %llu",
                      (unsigned long long)steps, (double)steps / secs,
                      (unsigned long long)vm.ntext,
                      (unsigned long long)vm.nthreads);
+            fvp_logf("tex: %d image(s), %.1f MiB cached",
+                     gfx_tex_count(gfx),
+                     (double)gfx_tex_bytes(gfx) / (1024.0 * 1024.0));
             fvp_logf("time: virtual %llu ms (timeline %s)",
                      (unsigned long long)vm.virtual_ms,
                      opts.timeline ? "on" : "off");
@@ -2110,6 +2122,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             }
             last_report = now;
             steps_at_report = vm.steps;
+            perf_clear(&wperf); /* 下一个窗口重新计数 */
         }
         if (vm.nthreads == 0 && !exit_script) {
             exit_script = 1;

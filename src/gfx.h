@@ -152,6 +152,10 @@ void gfx_render(Gfx *g);
 /* The composed canvas, valid until the next gfx_render()/gfx_destroy().
  * Do not free.  Returns NULL for w == NULL misuse.  Either w/h may be NULL. */
 const uint32_t *gfx_canvas(Gfx *g, int *w, int *h);
+
+/* 诊断：文理缓存占用（字节）与引擎中的图像条数。 */
+size_t gfx_tex_bytes(const Gfx *g);
+int gfx_tex_count(const Gfx *g);
 const uint8_t *gfx_canvas_rgba(Gfx *g, int *w, int *h);
 
 /* ---- primitive table ------------------------------------------------- */
