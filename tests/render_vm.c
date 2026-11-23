@@ -578,7 +578,7 @@ static void usage(const char *prog)
     fprintf(stderr,
             "usage: %s <script.hcb> [--game DIR] [--steps N] [--click N]\n"
             "       [--enc cp932|gbk] [--frame-steps N] [--out DIR]\n"
-            "       [--hold-text N] [--no-png] [--quiet]\n",
+            "       [--hold-text N] [--motion] [--motion-dt MS] [--no-png] [--quiet]\n",
             prog);
 }
 
@@ -592,6 +592,8 @@ int main(int argc, char **argv)
     uint64_t frame_steps = 1000;
     int64_t click = 4000;
     int hold_window = 30000;
+    int motion = 0;
+    int motion_dt = 16;
     int no_png = 0;
     int quiet = 0;
     int i;
@@ -646,6 +648,10 @@ int main(int argc, char **argv)
             hold_window = (int)strtol(argv[++i], NULL, 10);
         } else if (strcmp(a, "--no-png") == 0) {
             no_png = 1;
+        } else if (strcmp(a, "--motion") == 0) {
+            motion = 1;
+        } else if (strcmp(a, "--motion-dt") == 0 && i + 1 < argc) {
+            motion_dt = (int)strtol(argv[++i], NULL, 10);
         } else if (strcmp(a, "--quiet") == 0) {
             quiet = 1;
         } else if (strcmp(a, "--help") == 0 || strcmp(a, "-h") == 0) {
@@ -755,6 +761,7 @@ int main(int argc, char **argv)
     fvp_vm_init(&vm, &hcb, 1);
     vm.click_period = click;
     fvp_vm_attach_gfx(&vm, g);
+    gfx_motion_set_enabled(g, motion);
     shadow.vm = &vm;
     if (vm.gfx_bridge != NULL) {
         vm.gfx_bridge->on_text = shadow_on_text;
@@ -775,6 +782,7 @@ int main(int argc, char **argv)
         if (vm.steps == before) {
             break; /* no runnable thread left */
         }
+        gfx_motion_advance(g, motion_dt);
         nheld = shadow_hold_apply(&shadow, held);
         r0 = now_ms();
         gfx_render(g);
