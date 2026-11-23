@@ -73,7 +73,8 @@ What it is **not**:
 | Renderer ↔ VM wiring (**accepted**) | `syscall` drives `gfx` directly; 528,000 steps with per-frame rendering reproduce the reference frame with the **same numbers as the renderer-only baseline**, while `fvm.exe` output stays **byte-identical** | [`src/syscall.c`](src/syscall.c) · [`tests/render_vm.c`](tests/render_vm.c) · [`docs/c-gfx.md`](docs/c-gfx.md) §9 |
 | Win32 desktop shell (**accepted**) | window ready in **130–230 ms**, **60.00 fps**, GDI present avg 3.4–3.6 ms (0 slow frames), waveOut 0 underruns over 10 s, injected clicks consumed by `InputGetDown` | [`src/platform/win32/main_win32.c`](src/platform/win32/main_win32.c) · [`docs/win32-shell.md`](docs/win32-shell.md) |
 | **Cross-title validation** | a second FVP title (*Hoshizora no Memoria HD*) runs unmodified: **148 command entries, identical entry by entry**, same opcode set, **164 correct dialogue lines** without touching the engine | [`docs/06-cross-validation.md`](docs/06-cross-validation.md) · [`tools/fvpprobe.py`](tools/fvpprobe.py) |
-| Robustness suite | **27,300** mutated HCB executions (0 crashes / 0 overruns), **339** malformed asset cases, **43** VM edge cases; `tests/run_all.py` → **8/8 PASS / 78 s** | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
+| Save layer (**file format implemented**) | `save/sNNN.bin` + `save/save.bin` parse and re-serialise: **6 real slots round-trip byte-identically**; `save.bin` yields **1471** globals, the 200×113 thumbnail size and the `メイリオ` font name; 50 synthetic checks including malformed-input rejection. The engine-state snapshot inside a slot is passed through opaquely (semantics unsolved, see doc §4) | [`src/save.c`](src/save.c) · [`docs/save-format.md`](docs/save-format.md) §7 · [`tests/verify_save.ps1`](tests/verify_save.ps1) |
+| Robustness suite | **27,300** mutated HCB executions (0 crashes / 0 overruns), **339** malformed asset cases, **43** VM edge cases; `tests/run_all.py` → **10/10 PASS** (includes the 50 + 44 save-layer checks) | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
 | Chinese script rebuild (method verified) | a GBK script damaged by a translation patch rebuilt to a structurally valid 3,712,944-byte `.hcb` with all 948,219 instructions and a matching command table (artifact not in repo) | [`docs/cn-script-rebuild.md`](docs/cn-script-rebuild.md) |
 | Android shell (design, in progress) | APK pipeline, JNI, EGL native window, touch input, asset layout; not the current main line, and the shell is not in this repository | [`docs/android-shell.md`](docs/android-shell.md) |
 
@@ -105,7 +106,9 @@ to pass — see [`scripts/ci-compare.py`](scripts/ci-compare.py).
    FVP titles from 2004–2008 are untested.
 8. **Four opcode semantics are unconfirmed** (`0x11` / `0x12` / `0x17` / `0x18`, 0.18% of
    instructions in this title).
-9. No save-format writing, no options menu, no Android backend in-tree.
+9. **Save support stops at the file layer.** `save/sNNN.bin` and `save/save.bin` parse and re-serialise
+   losslessly (6 real slots byte-identical), but the engine-state snapshot inside a slot is not yet
+   understood field by field, so **in-game save/load does not work yet**. No options menu, no Android backend.
 10. The Python prototypes in `work/` are **not** committed, so the Python reference decoder
     cannot be re-run from a fresh clone; the C acceptance tools in
     [`tests/verify_assets.ps1`](tests/verify_assets.ps1) can.

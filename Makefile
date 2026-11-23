@@ -19,9 +19,10 @@ CORE_SRC = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/main.c
 SRC      = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c
 SND_SRC  = src/snd.c
 RES_SRC  = src/bin.c src/inflate.c src/hzc1.c
+SAVE_OBJ = src/save.o
 
 OBJ      = $(CORE_SRC:.c=.o)
-LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o)
+LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ)
 
 BIN = bin/fvm$(EXE)
 LIB = bin/libfvp.a
@@ -131,3 +132,27 @@ clean-gfx:
 	-rm -f $(GFX_OBJ) $(GFX_LIB) $(GFX_TEST)
 
 .PHONY: clean-gfx
+
+# ---------------------------------------------------------------------------
+# 存档层（追加节，不改 all / lib / test 的语义；详见 docs/save-format.md §7）
+#   make test_save     构建 bin/test_save.exe
+#   bin/test_save.exe                                 自检（合成数据）
+#   bin/test_save.exe --savebin <dir>/save.bin <dir>/save/sNNN.bin ...
+#                                                     真实样本逐字节回环
+# ---------------------------------------------------------------------------
+SAVE_TEST = bin/test_save$(EXE)
+
+test_save: $(SAVE_TEST)
+
+$(SAVE_TEST): tests/test_save.c src/save.c src/save.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_save.c src/save.c $(LDFLAGS)
+
+$(SAVE_OBJ): src/save.c src/save.h | src
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+.PHONY: test_save
+
+clean-save:
+	-rm -f $(SAVE_OBJ) $(SAVE_TEST) bin/libfvp_save.a
+
+.PHONY: clean-save

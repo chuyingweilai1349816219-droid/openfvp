@@ -2,6 +2,37 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [0.1.1] — 存档文件层 + 音频接入运行时
+
+这一版没有新玩法，只有两件事：**音频真的接到虚拟机了**，以及**存档格式从「结构分析结论」变成「可执行代码」**。
+
+### 新增
+
+- **存档层（`src/save.c` / `src/save.h`）**：`save/sNNN.bin` 与 `save/save.bin` 的解析与重写
+  - 槽文件：7 字节时间戳、三条 `u16` 长度前缀字符串、`w*h*4` 裸 BGRA 缩略图、尾段引擎状态
+    **原样透传**（语义未解的部分不解释、不重排）
+  - `save.bin`：**从文件尾反推布局**，不依赖计数器 → 1471 条全局变量、20 字节设置头、
+    1 MB 已读位图、256 B Flag 位图、字体名 `メイリオ`
+  - 字符串保留原始字节（CP932 / GBK 混合，不转码）
+- **验收**：`tests/verify_save.ps1` + `tests/test_save.c`
+  - 自检 **50 项**：空槽、超长字符串、截断 / 畸形输入拒绝、alpha 尺寸推断、`save.bin` 幂等回环
+  - **6 个真实存档槽逐字节回环一致**（44 项断言），时间戳 / 章节名 / 对话行 / 缩略图尺寸全对得上
+- `make test_save` 目标；`src/save.o` 已并入 `bin/libfvp.a`
+- `tests/run_all.py` 增加两步存档验收 → **10/10 PASS**
+
+### 变更
+
+- 音频层状态从「完成（未接运行时）」改为「已接运行时」：`fvp_vm_attach_snd()` 让
+  `AudioPlay` / `AudioLoad` 等命令直接驱动解码与混音，窗口内日志出现
+  `snd: attached to vm (6 audio archive(s) registered)`
+- `docs/roadmap.md` 阶段 4 / 6 / 9 状态按实测更新；`docs/save-format.md` 增加 §7 实现章节
+
+### 已修复
+
+- 存档解析里"缩略图与尾段边界"的两种误解：尺寸必须来自 `save.bin` 头或 alpha 推断，
+  否则会把尾段首字节吃进图里；`save.bin` 的字体名长度是 `i16 含 NUL` 且**紧贴文件尾**，
+  因此偏移必须算作 `len - font_len - 3`
+
 ## [0.1.0] — 首个可用预览
 
 第一次「能在桌面跑起来」的版本。核心目标不是功能齐全，而是**每一条结论都有可复现的验证**。
@@ -60,4 +91,5 @@
   改为按 `script_len` 检查后，`truncated instruction` 诊断重新生效
 - `snd.c` 的重采样未限制采样率比例，畸形 WAV 可触发 168 MB 单次分配（已加范围与帧数上限）
 
-[0.1.0]: https://github.com/USERNAME/openfvp/releases/tag/v0.1.0
+[0.1.1]: https://github.com/chuyingweilai1349816219-droid/openfvp/releases/tag/v0.1.1
+[0.1.0]: https://github.com/chuyingweilai1349816219-droid/openfvp/releases/tag/v0.1.0

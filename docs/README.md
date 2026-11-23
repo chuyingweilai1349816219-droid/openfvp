@@ -33,7 +33,7 @@
 | [05-threads.md](05-threads.md) | 线程与时间模型研究笔记：已确认的线程槽布局与 `Thread*` / `Timer*` 命令语义、`initstack` 第二个操作数的发现，以及尚未实现调度/时间模型的失败记录 |
 | [cn-script-rebuild.md](cn-script-rebuild.md) | 被汉化补丁打坏的 GBK `.hcb` 如何以日文版为骨架重建，含字节账、重定位与校验方法 |
 | [06-cross-validation.md](06-cross-validation.md) | 用第二部 FVP 作品做交叉验证：包名、命令表（148 条逐条相同）、opcode、VM 行为的对比结果 |
-| [save-format.md](save-format.md) | 存档格式：槽文件的时间戳 / 三组字符串 / 裸 BGRA 缩略图、`save.bin` 的 20 字节头与已读位图 |
+| [save-format.md](save-format.md) | 存档格式：槽文件的时间戳 / 三组字符串 / 裸 BGRA 缩略图、`save.bin` 的 20 字节头与已读位图；§7 是 C 实现与逐字节回环验收 |
 
 ## 渲染
 

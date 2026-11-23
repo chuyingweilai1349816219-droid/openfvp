@@ -136,6 +136,34 @@ def build_steps(args):
             steps.append(Step(label, [test_snd, path, out_wav], 300,
                               note='decode + mix on the real corpus'))
 
+    # 4b. save layer: synthetic self-test, then real slots (byte-identical)
+    test_save = tools['test_save']
+    if not os.path.isfile(test_save):
+        steps.append(Step('test_save (selftest)', None, 0,
+                          skip_reason='bin/test_save.exe missing '
+                                      '(run: make test_save)'))
+    else:
+        steps.append(Step('test_save (selftest)', [test_save], 120,
+                          note='synthetic slot/save.bin round-trip + malformed '
+                               'input rejection'))
+        save_dir = os.path.join(game, 'save') if game else None
+        sbin = os.path.join(save_dir, 'save.bin') if save_dir else None
+        slots = []
+        if save_dir and os.path.isdir(save_dir):
+            for n in sorted(os.listdir(save_dir)):
+                if (len(n) == 8 and n[0] == 's' and n[1:4].isdigit() and
+                        n.endswith('.bin')):
+                    slots.append(os.path.join(save_dir, n))
+        if sbin and os.path.isfile(sbin) and slots:
+            steps.append(Step('test_save (real slots)',
+                              [test_save, '--savebin', sbin] + slots, 300,
+                              note='%d slots: byte-identical re-serialisation '
+                                   'against docs/save-format.md' % len(slots)))
+        else:
+            steps.append(Step('test_save (real slots)', None, 0,
+                              skip_reason='no save/save.bin + save/sNNN.bin '
+                                          'under the game directory'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

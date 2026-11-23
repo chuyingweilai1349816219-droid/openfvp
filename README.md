@@ -67,8 +67,9 @@
 | 渲染层（C，**已验收**） | 1920×1080 合成：图元 **24/24 位置误差 0 像素**；像素差异 **293 / 2,073,600 = 0.0141%**（PSNR 49.94 dB、SSIM 0.99971）；热帧 **9.0–9.5 ms** | [`src/gfx.c`](src/gfx.c) · [`docs/c-gfx.md`](docs/c-gfx.md) · [`tests/verify_gfx.ps1`](tests/verify_gfx.ps1) |
 | 渲染 ↔ VM 接线（**已验收**） | `syscall` 直接驱动 gfx 后，跑 528,000 步 + 每帧渲染，与参考帧**每个数字与纯渲染基线完全相同**（0 像素 / 0.0141%）；同时 `fvm.exe` 输出**逐字节不变** | [`src/syscall.c`](src/syscall.c) · [`tests/render_vm.c`](tests/render_vm.c) · [`docs/c-gfx.md`](docs/c-gfx.md) §9 |
 | Win32 桌面外壳（**已验收**） | 启动到窗口 **130–230 ms**、**60.00 fps**、GDI 上屏 avg 3.4–3.6 ms（慢帧 0）、waveOut 10 秒 underrun 0、点击注入被 `InputGetDown` 消费 | [`src/platform/win32/main_win32.c`](src/platform/win32/main_win32.c) · [`docs/win32-shell.md`](docs/win32-shell.md) |
+| 存档层（**文件格式已实现**） | `save/sNNN.bin` 与 `save/save.bin` 的解析 + 重写：**6 个真实存档槽逐字节回环一致**；`save.bin` 解出 **1471 条**全局变量、200×113 缩略图尺寸、字体名 `メイリオ`；50 项合成用例含畸形输入拒绝。槽内部的引擎状态快照按不透明字节原样透传（语义未解，见文档 §4） | [`src/save.c`](src/save.c) · [`docs/save-format.md`](docs/save-format.md) §7 · [`tests/verify_save.ps1`](tests/verify_save.ps1) |
 | **跨作品验证** | 第二部作品《星空のメモリア HD》同样跑通：命令表 **148 条逐条完全相同**、opcode 同套、VM **零修改**输出 164 行正确台词 | [`docs/06-cross-validation.md`](docs/06-cross-validation.md) · [`tools/fvpprobe.py`](tools/fvpprobe.py) |
-| 健壮性测试 | **27,300 次** HCB 变异（0 崩溃 / 0 越界）、**339 个**资产畸形用例、**43 个** VM 边界用例；`tests/run_all.py` 一键 **8/8 PASS / 78 s** | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
+| 健壮性测试 | **27,300 次** HCB 变异（0 崩溃 / 0 越界）、**339 个**资产畸形用例、**43 个** VM 边界用例；`tests/run_all.py` 一键 **10/10 PASS**（含存档层 50 + 44 项检查） | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
 | 中文脚本重建（方法已验证） | 被汉化补丁打坏的 GBK 脚本重建为 3,712,944 字节、948,219 条指令、命令表与冻结表一致的结构合法 `.hcb`（产物不入库） | [`docs/cn-script-rebuild.md`](docs/cn-script-rebuild.md) |
 | Android 外壳（设计，进行中） | APK 流水线 / JNI / EGL 原生窗口 / 触摸 / 资产目录的设计（非当前主线）；外壳不在本仓库 | [`docs/android-shell.md`](docs/android-shell.md) · [`docs/roadmap.md`](docs/roadmap.md) |
 
@@ -102,7 +103,9 @@
    （2004–2008 年的作品）**未测试**，格式是否仍然一致未知。
 8. **4 个 opcode 语义未确认**（`0x11` / `0x12` / `0x17` / `0x18`，占本作指令 0.18%），
    按数组读写实现，未做定向验证 —— 见 [`docs/roadmap.md`](docs/roadmap.md)。
-9. **没有存档格式兼容、没有选项菜单、没有 Android 后端在库内。**
+9. **存档只做到文件层。** `save/sNNN.bin` 与 `save/save.bin` 能完整解析并原样重写
+   （6 个真实存档逐字节回环一致），但槽文件里那段引擎状态快照的字段语义还没解完，
+   所以**游戏内还不能真的存档/读档**；也没有选项菜单与 Android 后端。
 10. **`work/` 里的 Python 原型没有入库**（体积大、含大量一次性侦查脚本）。
     因此「重新生成渲染帧」「重跑 HZC1 参考解码」这类操作在克隆出来的仓库里做不了，
     只能用仓库内的 C 工具（[`tests/verify_assets.ps1`](tests/verify_assets.ps1)）做验收。
