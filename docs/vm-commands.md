@@ -346,8 +346,8 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 |---|---|---|---|
 | 0 | AudioLoad | 2 | 音频资源加载：engine+0x6a7e34 为音频子系统；arg1=0..3 通道。0x439c80 起 |
 | 1 | AudioPlay | 2 | arg1 = 通道 0..3；从 `engine->[0x6a7e34]->[0x94+ch*4]` 取通道对象；arg2 为 null(type0) → 0x4410b0(chan,0,0)，否则 (chan,1,0)（播放/停止） |
-| 18 | FlagGet | 1 | (flagIdx 0..0x7FF)：**返回 bool**，读全局 flag 位图 `engine+0x6a48c0` 的 bit；`setne → 0x814` |
-| 19 | FlagSet | 2 | (flagIdx 0..0x7FF, bool)：置/清 `engine+0x6a48c0` 的 bit（arg2 type==0 → 清位，否则置位） |
+| 18 | FlagGet | 1 | (flagIdx 0..0x7FF)：**返回 bool**，读全局 flag 位图 `engine+0x6a48c0` 的 bit；`setne → 0x814`。**已实现**：`src/flags.c`，越界返回 0 |
+| 19 | FlagSet | 2 | (flagIdx 0..0x7FF, bool)：置/清 `engine+0x6a48c0` 的 bit（arg2 type==0 → 清位，否则置位）。**已实现**：arg2 为 int 0 即清位，越界是 no-op |
 | 110 | TextBuff | 3 | (twIdx, buffNo?, buffSize?)：`0x430ea0(tw, arg2(默认8), arg3(默认8))`，文本缓冲配置 |
 | 121 | TextPause | 2 | (twIdx, bool)：bool→`tw+0x5da`；arg2 为 null → 返回 int = `tw+0x5da` 并置线程文本状态 2 |
 | 122 | TextPos | 3 | (twIdx, x, y)：u16 写 `tw+0x5e8`(x)/`tw+0x5ea`(y) |

@@ -113,7 +113,7 @@ fvp.exe --game <游戏目录> [选项]
 ```
 [    0.025] save: C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD/save/save.bin ->
             145/1471 globals applied (145 int, 846 unknown type1, 480 unset),
-            thumb 200x113, readmap 1048576 bytes
+            0 flags bit(s) set, thumb 200x113, readmap 1048576 bytes
 ```
 
 找不到存档时打一行 `save: no save/save.bin under the game directory (starting from

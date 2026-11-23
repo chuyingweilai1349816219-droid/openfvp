@@ -184,6 +184,26 @@ def build_steps(args):
                               skip_reason='no save/save.bin under the game '
                                           'directory'))
 
+    # 4d. global flag bitmap (FlagGet/FlagSet storage + save.bin seeding)
+    test_flags = tools['test_flags']
+    if not os.path.isfile(test_flags):
+        steps.append(Step('test_flags (selftest)', None, 0,
+                          skip_reason='bin/test_flags.exe missing '
+                                      '(run: make test_flags)'))
+    else:
+        steps.append(Step('test_flags (selftest)', [test_flags], 120,
+                          note='2048-bit map: get/set/clear, bounds, popcount, '
+                               'NULL safety'))
+        if sbin and os.path.isfile(sbin):
+            steps.append(Step('test_flags (real save.bin)',
+                              [test_flags, sbin], 300,
+                              note='save.bin flag bitmap equals the seeded map '
+                                   '(docs §3.5: 0 bits in this title)'))
+        else:
+            steps.append(Step('test_flags (real save.bin)', None, 0,
+                              skip_reason='no save/save.bin under the game '
+                                          'directory'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

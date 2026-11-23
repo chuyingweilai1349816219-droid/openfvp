@@ -92,7 +92,7 @@ try {
         Write-Host '[2/5] building bin\render_vm.exe (direct gcc, no Makefile change) ...'
         & gcc -std=c99 -O2 -Wall -Wextra -Wpedantic -fwrapv -Isrc `
             -o $renderExe tests\render_vm.c `
-            src\fvp.c src\encoding.c src\hcb.c src\vm.c src\syscall.c `
+            src\fvp.c src\encoding.c src\hcb.c src\vm.c src\syscall.c src\flags.c `
             src\gfx.c src\bin.c src\hzc1.c src\inflate.c -lm
         if ($LASTEXITCODE -ne 0) { throw 'building render_vm.exe failed' }
     }

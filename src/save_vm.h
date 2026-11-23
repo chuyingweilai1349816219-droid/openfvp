@@ -36,6 +36,10 @@ typedef struct FvpSaveGlobalsStats {
 int fvp_save_globals_apply(const FvpSaveBin *b, FvpValue *globals, int n,
                            FvpSaveGlobalsStats *stats);
 
+/* 把 save.bin 的 256 字节 flag 位图拷进 flags（容量 cap 字节）。
+ * 返回拷贝的字节数（0 表示参数不对）。置位数通过 fvp_flag_count() 另取。 */
+int fvp_save_flags_apply(const FvpSaveBin *b, unsigned char *flags, size_t cap);
+
 #ifdef __cplusplus
 }
 #endif

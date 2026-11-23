@@ -13,10 +13,11 @@
 目标：让 FAVORITE 社的 FVP 视觉小说（《いろとりどりのセカイ HD》系列、《星空のメモリア》、
 《アストラエアの白き永遠》等）能在现代平台运行，首要目标是 Android。
 
-> **状态：0.1.0 原型。** 脚本虚拟机（VM）与冻结的 Python 基准逐字节对齐；
-> 资源层（BIN / inflate / HZC1）、渲染层（gfx）、音频层（Ogg / WAV / 混音）都已有验收数字；
-> Win32 桌面外壳能跑出 60 fps 并显示真实游戏画面；
-> 命令语义（动画/存档/设置）、线程与时间模型、Android 后端**仍未完成**。
+> **状态：0.2.0 进行中。** 脚本虚拟机（VM）与冻结的 Python 基准逐字节对齐；
+> 资源层（BIN / inflate / HZC1）、渲染层（gfx）都已有全量验收数字；
+> 音频层已接进 VM（BGM 真实出声），存档文件层 + 全局变量桥 + flag 位图已落地，
+> Win32 桌面外壳能跑出 60 fps、显示真实画面并在启动时读 `save/save.bin`；
+> 游戏内存/读档、命令语义（动画/设置）、线程与时间模型、Android 后端**仍未完成**。
 > 下面的「能做什么 / 不能做什么」是逐条可核对的清单，不含宣传词。
 
 本仓库**不含任何游戏数据**：没有 `.bin`、`.hcb`、音频、图像、台词。要跑起来必须自备正版游戏，
@@ -69,9 +70,10 @@
 | 渲染层（C，**已验收**） | 1920×1080 合成：图元 **24/24 位置误差 0 像素**；像素差异 **293 / 2,073,600 = 0.0141%**（PSNR 49.94 dB、SSIM 0.99971）；热帧 **9.0–9.5 ms** | [`src/gfx.c`](src/gfx.c) · [`docs/c-gfx.md`](docs/c-gfx.md) · [`tests/verify_gfx.ps1`](tests/verify_gfx.ps1) |
 | 渲染 ↔ VM 接线（**已验收**） | `syscall` 直接驱动 gfx 后，跑 528,000 步 + 每帧渲染，与参考帧**每个数字与纯渲染基线完全相同**（0 像素 / 0.0141%）；同时 `fvm.exe` 输出**逐字节不变** | [`src/syscall.c`](src/syscall.c) · [`tests/render_vm.c`](tests/render_vm.c) · [`docs/c-gfx.md`](docs/c-gfx.md) §9 |
 | Win32 桌面外壳（**已验收**） | 启动到窗口 **130–230 ms**、**60.00 fps**、GDI 上屏 avg 3.4–3.6 ms（慢帧 0）、waveOut 10 秒 underrun 0、点击注入被 `InputGetDown` 消费 | [`src/platform/win32/main_win32.c`](src/platform/win32/main_win32.c) · [`docs/win32-shell.md`](docs/win32-shell.md) |
-| 存档层（**文件格式已实现**） | `save/sNNN.bin` 与 `save/save.bin` 的解析 + 重写：**6 个真实存档槽逐字节回环一致**；`save.bin` 解出 **1471 条**全局变量（**145 int + 846 未解 + 480 未设**）、200×113 缩略图尺寸、字体名 `メイリオ`；**全局变量桥**把 145 条 int 灌进 VM（`fvm --savebin`），值序列与文档逐个吻合；50 + 19 + 13 项断言含畸形输入拒绝 | [`src/save.c`](src/save.c) · [`src/save_vm.c`](src/save_vm.c) · [`docs/save-format.md`](docs/save-format.md) §7 · [`tests/verify_save.ps1`](tests/verify_save.ps1) · [`tests/verify_save_vm.ps1`](tests/verify_save_vm.ps1) |
+| 存档层（**文件格式已实现**） | `save/sNNN.bin` 与 `save/save.bin` 的解析 + 重写：**6 个真实存档槽逐字节回环一致**；`save.bin` 解出 **1471 条**全局变量（**145 int + 846 未解 + 480 未设**）、200×113 缩略图尺寸、字体名 `メイリオ`；**全局变量桥**把 145 条 int 灌进 VM（`fvm --savebin`），**桌面外壳启动时自动读档**并播种全局变量与 256 B flag 位图；50 + 49 + 19 + 13 项断言含畸形输入拒绝 | [`src/save.c`](src/save.c) · [`src/save_vm.c`](src/save_vm.c) · [`docs/save-format.md`](docs/save-format.md) §7 · [`tests/verify_save.ps1`](tests/verify_save.ps1) · [`tests/verify_save_vm.ps1`](tests/verify_save_vm.ps1) |
+| 全局 flag（**已实现**） | `FlagGet`/`FlagSet`（命令 18/19）读写 2048 bit / 256 B 位图，索引 0..0x7FF，越界安全；与 `save.bin` 里那段位图是同一张图（28 + 37 项断言） | [`src/flags.c`](src/flags.c) · [`docs/vm-commands.md`](docs/vm-commands.md) · [`tests/test_flags.c`](tests/test_flags.c) |
 | **跨作品验证** | 第二部作品《星空のメモリア HD》同样跑通：命令表 **148 条逐条完全相同**、opcode 同套、VM **零修改**输出 164 行正确台词 | [`docs/06-cross-validation.md`](docs/06-cross-validation.md) · [`tools/fvpprobe.py`](tools/fvpprobe.py) |
-| 健壮性测试 | **27,300 次** HCB 变异（0 崩溃 / 0 越界）、**339 个**资产畸形用例、**43 个** VM 边界用例；`tests/run_all.py` 一键 **12/12 PASS / 59.8 s**（含存档层 50 + 44 + 19 + 13 项检查） | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
+| 健壮性测试 | **27,300 次** HCB 变异（0 崩溃 / 0 越界）、**339 个**资产畸形用例、**43 个** VM 边界用例；`tests/run_all.py` 一键 **14/14 PASS / 60.7 s**（含存档层 50 + 49 + 19 + 13 与 flag 28 + 37 项检查） | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
 | 中文脚本重建（方法已验证） | 被汉化补丁打坏的 GBK 脚本重建为 3,712,944 字节、948,219 条指令、命令表与冻结表一致的结构合法 `.hcb`（产物不入库） | [`docs/cn-script-rebuild.md`](docs/cn-script-rebuild.md) |
 | Android 外壳（设计，进行中） | APK 流水线 / JNI / EGL 原生窗口 / 触摸 / 资产目录的设计（非当前主线）；外壳不在本仓库 | [`docs/android-shell.md`](docs/android-shell.md) · [`docs/roadmap.md`](docs/roadmap.md) |
 
@@ -191,7 +193,7 @@ python scripts/ci-compare.py        # -> RESULT: SKIPPED（仍会校验冻结基
 .
 ├── README.md              本文件（中文）
 ├── README.en.md           英文说明
-├── VERSION                版本号（0.1.0）
+├── VERSION                版本号（0.2.0）
 ├── LICENSE                GPL-2.0-only 全文
 ├── THIRD-PARTY.md         第三方代码（stb_vorbis）与生成文件的来源
 ├── CONTRIBUTING.md        报兼容问题 / 等价性验证 / 代码风格 / 提交前检查
@@ -277,7 +279,7 @@ python scripts/ci-compare.py        # -> RESULT: SKIPPED（仍会校验冻结基
 FAVORITE's titles such as *Irotoridori no Sekai HD*. It is not an emulator, not a
 Wine wrapper, and it never modifies the original game files.
 
-What works today (v0.1.0 prototype):
+What works today (v0.2.0 in progress):
 
 - the whole `.hcb` script format is parsed — **948,219 instructions** and
   **55,461 strings** in the reference title — and all **40 VM opcodes** are implemented;

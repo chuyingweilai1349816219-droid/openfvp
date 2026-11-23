@@ -16,12 +16,13 @@ FVP is the closed-source visual-novel engine behind FAVORITE's titles such as
 *Astraea no Shiroki Eien*. The goal is to make those games runnable on modern
 platforms, with **Android as the primary target**.
 
-> **Status: 0.1.0 prototype.** The script virtual machine is byte-identical to the
-> frozen Python reference. The asset layer (BIN / inflate / HZC1), the renderer (`gfx`)
-> and the audio layer (Ogg / WAV / mixing) all have acceptance numbers. The Win32
-> desktop shell runs at 60 fps and shows real game frames. Command semantics
-> (animation / save / settings), the thread/time model and the Android backend are
-> **still** missing.
+> **Status: 0.2.0 in progress.** The script virtual machine is byte-identical to the
+> frozen Python reference. The asset layer (BIN / inflate / HZC1) and the renderer (`gfx`)
+> have full acceptance numbers. Audio is now wired into the VM (BGM really plays), the save
+> file layer, the globals bridge and the flag bitmap have landed, and the Win32 desktop
+> shell runs at 60 fps, shows real game frames and reads `save/save.bin` on startup.
+> In-game save/load, command semantics (animation / settings), the thread/time model and
+> the Android backend are **still** missing.
 > Everything claimed below maps to code or documentation in this repository.
 
 This repository contains **no game data** — no `.bin`, `.hcb`, audio, images or
@@ -75,8 +76,9 @@ What it is **not**:
 | Renderer ↔ VM wiring (**accepted**) | `syscall` drives `gfx` directly; 528,000 steps with per-frame rendering reproduce the reference frame with the **same numbers as the renderer-only baseline**, while `fvm.exe` output stays **byte-identical** | [`src/syscall.c`](src/syscall.c) · [`tests/render_vm.c`](tests/render_vm.c) · [`docs/c-gfx.md`](docs/c-gfx.md) §9 |
 | Win32 desktop shell (**accepted**) | window ready in **130–230 ms**, **60.00 fps**, GDI present avg 3.4–3.6 ms (0 slow frames), waveOut 0 underruns over 10 s, injected clicks consumed by `InputGetDown` | [`src/platform/win32/main_win32.c`](src/platform/win32/main_win32.c) · [`docs/win32-shell.md`](docs/win32-shell.md) |
 | **Cross-title validation** | a second FVP title (*Hoshizora no Memoria HD*) runs unmodified: **148 command entries, identical entry by entry**, same opcode set, **164 correct dialogue lines** without touching the engine | [`docs/06-cross-validation.md`](docs/06-cross-validation.md) · [`tools/fvpprobe.py`](tools/fvpprobe.py) |
-| Save layer (**file format implemented**) | `save/sNNN.bin` + `save/save.bin` parse and re-serialise: **6 real slots round-trip byte-identically**; `save.bin` yields **1471** globals (**145 int + 846 unsolved + 480 unset**), the 200×113 thumbnail size and the `メイリオ` font name; a **globals bridge** seeds the 145 ints into the VM (`fvm --savebin`) and the value sequence matches the docs entry by entry; 50 + 19 + 13 checks including malformed-input rejection | [`src/save.c`](src/save.c) · [`src/save_vm.c`](src/save_vm.c) · [`docs/save-format.md`](docs/save-format.md) §7 · [`tests/verify_save.ps1`](tests/verify_save.ps1) · [`tests/verify_save_vm.ps1`](tests/verify_save_vm.ps1) |
-| Robustness suite | **27,300** mutated HCB executions (0 crashes / 0 overruns), **339** malformed asset cases, **43** VM edge cases; `tests/run_all.py` → **12/12 PASS / 59.8 s** (includes the 50 + 44 + 19 + 13 save-layer checks) | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
+| Save layer (**file format implemented**) | `save/sNNN.bin` + `save/save.bin` parse and re-serialise: **6 real slots round-trip byte-identically**; `save.bin` yields **1471** globals (**145 int + 846 unsolved + 480 unset**), the 200×113 thumbnail size and the `メイリオ` font name; a **globals bridge** seeds the 145 ints into the VM (`fvm --savebin`) and the **desktop shell reads the save on startup**, seeding globals and the 256-byte flag bitmap; 50 + 49 + 19 + 13 checks including malformed-input rejection | [`src/save.c`](src/save.c) · [`src/save_vm.c`](src/save_vm.c) · [`docs/save-format.md`](docs/save-format.md) §7 · [`tests/verify_save.ps1`](tests/verify_save.ps1) |
+| Global flags (**implemented**) | `FlagGet`/`FlagSet` (commands 18/19) on a 2048-bit / 256-byte bitmap, indices 0..0x7FF, out-of-range safe; it is the same bitmap stored in `save.bin` (28 + 37 checks) | [`src/flags.c`](src/flags.c) · [`docs/vm-commands.md`](docs/vm-commands.md) · [`tests/test_flags.c`](tests/test_flags.c) |
+| Robustness suite | **27,300** mutated HCB executions (0 crashes / 0 overruns), **339** malformed asset cases, **43** VM edge cases; `tests/run_all.py` → **14/14 PASS / 60.7 s** (includes the 50 + 49 + 19 + 13 save-layer and 28 + 37 flag checks) | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
 | Chinese script rebuild (method verified) | a GBK script damaged by a translation patch rebuilt to a structurally valid 3,712,944-byte `.hcb` with all 948,219 instructions and a matching command table (artifact not in repo) | [`docs/cn-script-rebuild.md`](docs/cn-script-rebuild.md) |
 | Android shell (design, in progress) | APK pipeline, JNI, EGL native window, touch input, asset layout; not the current main line, and the shell is not in this repository | [`docs/android-shell.md`](docs/android-shell.md) |
 
@@ -185,7 +187,7 @@ python scripts/ci-compare.py     # -> RESULT: SKIPPED (still verifies frozen ref
 ```
 .
 ├── README.md / README.en.md   project overview (Chinese / English)
-├── VERSION                    0.1.0
+├── VERSION                    0.2.0
 ├── LICENSE                    GPL-2.0-only
 ├── THIRD-PARTY.md             third-party code and generated files
 ├── CONTRIBUTING.md            bug reports, equivalence testing, style, pre-commit checks

@@ -1467,12 +1467,16 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                                   ((unsigned int)sb.hdr[19] << 24);
                 int applied = fvp_save_globals_apply(&sb, vm.globals,
                                                      FVP_GLOBAL_COUNT, &st);
+                int flag_bytes = fvp_save_flags_apply(&sb, vm.flags,
+                                                     FVP_FLAG_BYTES);
 
                 fvp_logf("save: %s -> %d/%d globals applied (%d int, "
-                         "%d unknown type1, %d unset), thumb %ux%u, "
-                         "readmap %u bytes",
+                         "%d unknown type1, %d unset), %d flags bit(s) set, "
+                         "thumb %ux%u, readmap %u bytes",
                          save_path, applied, st.total, st.ints, st.unknown,
-                         st.unset, tw, th, FVP_SAVE_READMAP_SIZE);
+                         st.unset, fvp_flag_count(vm.flags), tw, th,
+                         FVP_SAVE_READMAP_SIZE);
+                (void)flag_bytes;
                 fvp_save_bin_free(&sb);
             } else {
                 fvp_logf("save: %s is not a valid save.bin (ignored)",

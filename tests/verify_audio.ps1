@@ -91,7 +91,7 @@ try {
         Write-Host '[2/4] building bin\audio_vm.exe (direct gcc, no Makefile change) ...'
         & gcc -std=c99 -O2 -Wall -Wextra -Wpedantic -fwrapv -Isrc `
             -o $audioExe tests\audio_vm.c `
-            src\fvp.c src\encoding.c src\hcb.c src\vm.c src\syscall.c `
+            src\fvp.c src\encoding.c src\hcb.c src\vm.c src\syscall.c src\flags.c `
             src\snd.c src\bin.c -lm
         if ($LASTEXITCODE -ne 0) { throw 'building audio_vm.exe failed' }
     }

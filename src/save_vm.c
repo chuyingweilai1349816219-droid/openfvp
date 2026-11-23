@@ -56,3 +56,18 @@ int fvp_save_globals_apply(const FvpSaveBin *b, FvpValue *globals, int n,
     }
     return written;
 }
+
+int fvp_save_flags_apply(const FvpSaveBin *b, unsigned char *flags, size_t cap)
+{
+    size_t n;
+
+    if (b == NULL || flags == NULL) {
+        return 0;
+    }
+    n = sizeof(b->flags);
+    if (cap < n) {
+        return 0;
+    }
+    memcpy(flags, b->flags, n);
+    return (int)n;
+}

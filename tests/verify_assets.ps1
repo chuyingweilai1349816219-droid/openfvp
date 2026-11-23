@@ -1,4 +1,4 @@
-# verify_assets.ps1 -- build the C asset layer and run the full acceptance.
+﻿# verify_assets.ps1 -- build the C asset layer and run the full acceptance.
 #
 #   powershell -ExecutionPolicy Bypass -File fvp\tests\verify_assets.ps1
 #   powershell -ExecutionPolicy Bypass -File fvp\tests\verify_assets.ps1 -Quick

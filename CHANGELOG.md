@@ -4,39 +4,62 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
-## [0.1.2] — 未发布：存档全局变量桥 + 桌面外壳读档
+## [0.2.0] — 未发布：音频接运行时 + 存档读写落地 + 全局 flag
 
-v0.1.1 之后的进展。核心一句话：`save/save.bin` 不再只是「能解析的文件」，而是**桌面外壳启动时真的会被读进 VM**。
+0.2 的目标是「音频、存档可用」。当前状态：**音频已接运行时；存档到了「能读、能播种、能原样重写」
+的程度；游戏内存档 UI 与槽内引擎状态语义仍未完成**。版本号直接从 0.1.1 跳到 0.2.0，
+因为存档这条线是结构性新增，不是补丁。
 
 ### 新增
 
+- **全局 flag 位图（`src/flags.c` / `src/flags.h`）**：2048 bit / 256 字节，索引 0..0x7FF
+  - `FlagGet(idx)`（命令 18）返回该位；`FlagSet(idx, on)`（命令 19）arg2 为假则清位、否则置位
+  - 越界（负数 / ≥2048）一律安全：读返回 0、写是 no-op；位序小端（idx 8 → 第 1 字节 bit0）
+  - `save/save.bin` 里那 256 字节就是这张位图的原始拷贝，启动时直接播种（`fvp_save_flags_apply`）
+  - 验收：`tests/test_flags.c` **28 项**合成用例 + 真实 `save.bin` **37 项**（含容量不足 / NULL 拒绝）
 - **全局变量桥（`src/save_vm.c`）**：把 `save.bin` 里 `type==2` 的 145 条 int 全局变量灌进 VM 的
   `globals[]`；`type==1` 的 846 条语义未解，跳过并报数。处理了类型编号陷阱（存档 `2`=int，
   VM `FvpType` 里 int 是 `0`）与 `u32 → int32` 回绕
 - **桌面外壳读档**：`fvp.exe` 在 `fvp_vm_start()` 之前查找 `<game>/save/save.bin`
-  （退一步 `<game>/save.bin`），解析并播种全局变量；实测日志
-  `save: .../save/save.bin -> 145/1471 globals applied (145 int, 846 unknown type1, 480 unset), thumb 200x113, readmap 1048576 bytes`
+  （退一步 `<game>/save.bin`），解析并播种全局变量 + flag 位图；实测日志
+  `save: .../save/save.bin -> 145/1471 globals applied (145 int, 846 unknown type1, 480 unset), 0 flags bit(s) set, thumb 200x113, readmap 1048576 bytes`
+- **存档文件层（`src/save.c`）**：槽文件（7 字节时间戳 / 三条长度前缀字符串 / 裸 BGRA 缩略图 /
+  尾段原样透传）与 `save.bin`（从文件尾反推布局）的解析与重写；6 个真实存档槽**逐字节回环一致**
 - **文件级便利函数**：`fvp_save_find_file()` / `fvp_save_bin_load_file()`；Windows 上路径按
   UTF-8 → 宽字符开文件，UTF-8 解码失败自动退回 ANSI 代码页（兼容 argv 来的路径）
 - 新 CLI：`fvm --savebin FILE`、`fvm --dump-globals FILE`（退出码 5 = 读 savebin 失败）
 
-### 验收
-
-- `tests/test_save_vm.c`：**19 项**合成用例 + 真实 `save.bin` **13 项**
-  （`1471 = 145 int + 846 unknown + 480 unset`，值序列与 `docs/save-format.md` §3.3 逐个吻合）
-- `tests/test_save.c` 增加文件级函数用例：真实目录能找到 `save/save.bin`、缺失目录返回 NULL、
-  缺失路径解析失败 → 真实样本合计 **49 项**
-- `tests/run_all.py` → **12/12 PASS / 56.2 s**
-- `compare.py --run` 仍**逐字节一致**（6,496 字节 / 195 行 / `7F9837FF…`），CLI 改动没有影响默认输出
-- `make -B all lib test test_save test_save_vm win32` **0 警告 0 错误**
-
 ### 变更
 
+- **音频层接运行时**：`fvp_vm_attach_snd()` 让 `AudioPlay` / `AudioLoad` 等 14 条命令直接解码并混音；
+  窗口内日志 `snd: attached to vm (6 audio archive(s) registered)`，`submitted` 递增、`underruns=0`
 - 所有交付文档顶部统一加 `> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿`，
-  并由 `scripts/check-docs.py` 强制检查（前 20 行内必须出现中/英任一写法，`ref/` 豁免）；
-  CI 已在跑该脚本，漏写会直接挂
-- `docs/win32-shell.md` §3 增加「启动时读取全局存档」小节；`docs/c-vm.md` 选项表补 `--savebin` /
-  `--dump-globals`；`docs/save-format.md` §7.1 补全局变量桥与外壳接线
+  由 `scripts/check-docs.py` 强制检查（前 20 行内中/英任一写法，`ref/` 豁免），CI 已在跑
+- `docs/win32-shell.md` §3 增加「启动时读取全局存档」小节；`docs/c-vm.md` 选项表补
+  `--savebin` / `--dump-globals`；`docs/save-format.md` §7 补 C 实现、§7.1 补全局变量桥与 flag 播种
+- `tests/run_all.py` 从 8 步扩到 **14 步**
+
+### 已修复
+
+- 存档解析里的两处边界误解：缩略图尺寸必须来自 `save.bin` 头或 alpha 连续长度推断；
+  `save.bin` 的字体名长度是 `i16 含 NUL` 且**紧贴文件尾**，偏移按 `len - font_len - 3` 算
+- **fuzz 的 E2E 阶段静默失效**：`syscall.c` 开始调用 `fvp_flag_*` 后，`harness_build.py` 的
+  `CORE_SRC` 没有加 `flags.c`，导致 fuzz 测试二进制链接失败、`in-process / e2e` 两个阶段被跳过，
+  而脚本仍打印 PASS（`mutant executions: 0`）。已补上源码并让 `verify_render_vm.ps1` /
+  `verify_audio.ps1` 的编译行同步；现在恢复为 **27,000 次（含 fvm.exe 4,000）**
+
+### 验收
+
+| 项 | 结果 |
+|---|---|
+| `tests/run_all.py` | **14/14 PASS / 60.7 s**（新增 `test_flags` 自检 + 真实 `save.bin` 两步） |
+| `test_save.c` | 自检 **50 项** + 真实样本 **49 项** |
+| `test_save_vm.c` | 合成 **19 项** + 真实 **13 项** |
+| `test_flags.c` | 合成 **28 项** + 真实 **37 项** |
+| `compare.py --run` | **逐字节一致**（6,496 B / 195 行 / `7F9837FF…`） |
+| `verify_render_vm.ps1` | PASS：端到端帧与参考一致；900k / 2M 步文本**逐字节一致**（`7F9837FF…` / `32D7D4E2…`） |
+| `verify_audio.ps1` | PASS：BGM 出声、混音非静音、逐字节用例不变 |
+| 编译 | `make -B all lib test test_save test_save_vm test_flags win32` **0 警告 0 错误** |
 
 ## [0.1.1] — 存档文件层 + 音频接入运行时
 

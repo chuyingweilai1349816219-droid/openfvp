@@ -1194,6 +1194,20 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     case 28: /* InputGetCursIn */
         t->temp = fvp_make_int(1);
         return;
+    /* 18 FlagGet(flagIdx 0..0x7FF): 返回全局 flag 位图的一位（bool）。
+     * 位图位置/长度见 docs/save-format.md §3.5；save.bin 里那 256 字节就是它。 */
+    case 18:
+        t->temp = fvp_make_int(
+            fvp_flag_get(vm->flags, argc > 0 ? (int)args[0].i : -1));
+        return;
+    /* 19 FlagSet(flagIdx, on): arg2 为假（int 0）则清位，否则置位。 */
+    case 19:
+        if (argc >= 2) {
+            int on = !(args[1].type == (uint8_t)FVP_INT && args[1].i == 0);
+
+            fvp_flag_set(vm->flags, (int)args[0].i, on);
+        }
+        return;
     case 15:  /* DissolveWait: already finished */
     case 44:  /* MotionAlphaTest */
     case 47:  /* MotionAnimTest */

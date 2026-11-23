@@ -21,10 +21,11 @@ SND_SRC  = src/snd.c
 RES_SRC  = src/bin.c src/inflate.c src/hzc1.c
 SAVE_OBJ = src/save.o
 SAVEVM_OBJ = src/save_vm.o
+FLAGS_OBJ  = src/flags.o
 
-OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ)
+OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ)
 LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ) \
-           $(SAVEVM_OBJ)
+           $(SAVEVM_OBJ) $(FLAGS_OBJ)
 
 BIN = bin/fvm$(EXE)
 LIB = bin/libfvp.a
@@ -79,7 +80,7 @@ WIN32_DIR   = src/platform/win32
 WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
               $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
-              src/save.c src/save_vm.c
+              src/save.c src/save_vm.c src/flags.c
 WIN32_RES   = src/bin.c src/hzc1.c src/inflate.c
 WIN32_GFX_H = $(wildcard src/gfx.h)
 
@@ -165,9 +166,27 @@ $(SAVEVM_TEST): tests/test_save_vm.c src/save_vm.c src/save.c src/save_vm.h \
         src/save.h | bin
 	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_save_vm.c src/save_vm.c src/save.c $(LDFLAGS)
 
-.PHONY: test_save test_save_vm_vm
+.PHONY: test_save test_save_vm test_flags
+
+# ---------------------------------------------------------------------------
+# 全局 flag 位图（FlagGet/FlagSet 的存储层 + save.bin 播种，见 docs/vm-commands.md）
+#   make test_flags
+#   bin/test_flags.exe [<save.bin> ...]
+# ---------------------------------------------------------------------------
+FLAGS_TEST = bin/test_flags$(EXE)
+
+test_flags: $(FLAGS_TEST)
+
+$(FLAGS_TEST): tests/test_flags.c src/flags.c src/flags.h src/save.c \
+        src/save.h src/save_vm.c src/save_vm.h src/fvp.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_flags.c src/flags.c src/save.c \
+	    src/save_vm.c $(LDFLAGS)
+
+$(FLAGS_OBJ): src/flags.c src/flags.h | src
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean-save:
-	-rm -f $(SAVE_OBJ) $(SAVEVM_OBJ) $(SAVE_TEST) $(SAVEVM_TEST) bin/libfvp_save.a
+	-rm -f $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ) $(SAVE_TEST) $(SAVEVM_TEST) \
+	    $(FLAGS_TEST) bin/libfvp_save.a
 
 .PHONY: clean-save

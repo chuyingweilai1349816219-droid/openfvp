@@ -287,9 +287,15 @@ static int fvp_seed_globals(const char *path, FvpVM *vm)
         return 0;
     }
     written = fvp_save_globals_apply(&sb, vm->globals, FVP_GLOBAL_COUNT, &st);
-    printf("save.bin: %d records, %d int applied, %d unknown(type1), "
-           "%d unset\n",
-           st.total, written, st.unknown, st.unset);
+    {
+        int flag_bytes = fvp_save_flags_apply(&sb, vm->flags, FVP_FLAG_BYTES);
+
+        printf("save.bin: %d records, %d int applied, %d unknown(type1), "
+               "%d unset, %d flags bit(s) set\n",
+               st.total, written, st.unknown, st.unset,
+               fvp_flag_count(vm->flags));
+        (void)flag_bytes;
+    }
     fvp_save_bin_free(&sb);
     free(buf);
     return 1;

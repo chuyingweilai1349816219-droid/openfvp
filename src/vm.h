@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include "encoding.h"
+#include "flags.h"
 #include "fvp.h"
 #include "hcb.h"
 #include "snd.h"
@@ -210,6 +211,9 @@ typedef struct FvpVM {
     int warned_neg_str;
     FvpGfxBridge *gfx_bridge; /* NULL = rendering commands are no-ops */
     FvpSndBridge *snd_bridge; /* NULL = audio commands are no-ops */
+    /* 全局 flag 位图（FlagGet/FlagSet, id 0..0x7FF）。save/save.bin 里那 256
+     * 字节就是它的原始拷贝，见 src/flags.h 与 docs/save-format.md §3.5。 */
+    unsigned char flags[FVP_FLAG_BYTES];
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);

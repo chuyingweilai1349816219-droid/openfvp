@@ -23,10 +23,10 @@ TESTS = os.path.join(HERE)
 OUT = os.path.join(FVP, 'out', 'fuzz')
 
 CORE_SRC = [os.path.join(SRC, n) for n in
-            ('fvp.c', 'encoding.c', 'hcb.c', 'vm.c', 'syscall.c')]
+            ('fvp.c', 'encoding.c', 'hcb.c', 'vm.c', 'syscall.c', 'flags.c')]
 CORE_HDR = [os.path.join(SRC, n) for n in
             ('fvp.h', 'encoding.h', 'hcb.h', 'vm.h', 'syscall.h',
-             'gen_cmd_table.h', 'gen_cp932.h', 'gen_gbk.h')]
+             'flags.h', 'gen_cmd_table.h', 'gen_cp932.h', 'gen_gbk.h')]
 ALLOC = os.path.join(TESTS, 'fuzz_alloc.h')
 
 BASE_FLAGS = ['-std=c99', '-O1', '-g', '-Wall', '-Wextra',
@@ -128,6 +128,7 @@ def public_tools():
         'test_snd': os.path.join(FVP, 'bin', 'test_snd.exe'),
         'test_save': os.path.join(FVP, 'bin', 'test_save.exe'),
         'test_save_vm': os.path.join(FVP, 'bin', 'test_save_vm.exe'),
+        'test_flags': os.path.join(FVP, 'bin', 'test_flags.exe'),
     }
 
 
