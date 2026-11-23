@@ -62,8 +62,11 @@ What it is **not**:
 | Asset layer: BIN / inflate / HZC1 | **21,725** package entries; **1,112/1,112** zlib streams (**2,539,861,820** bytes) match `zlib.decompress` byte for byte; **1,112 images / 3,654 frames / 727,573,943 pixels with 0 differences** (formats 0–4) | [`src/bin.c`](src/bin.c) · [`src/inflate.c`](src/inflate.c) · [`src/hzc1.c`](src/hzc1.c) · [`docs/c-assets.md`](docs/c-assets.md) |
 | Audio layer | Ogg Vorbis (stb_vorbis) + RIFF WAVE decoding, resampling to 48 kHz stereo PCM16, 8-channel mixing; measured: 48 kHz / 5,587,774 frames (116.41 s), peak=19297 rms=4385; 22.05 kHz WAV resampled 5.64 s → 5.644 s, peak=22123 | [`src/snd.c`](src/snd.c) · [`tests/test_snd.c`](tests/test_snd.c) · [`docs/04-audio.md`](docs/04-audio.md) |
 | Renderer (Python prototype, **not in repo**) | 1920×1080 compositing of background + sprites + dialogue box + text; 12 frames + 10 story checkpoints exported as PNGs; model and known deviations documented | [`docs/render-model.md`](docs/render-model.md) |
-| Renderer (C, **port in progress**) | the C renderer is being ported from the validated Python prototype and compared pixel by pixel; **not accepted yet** | [`src/gfx.c`](src/gfx.c) · [`src/gfx.h`](src/gfx.h) · [`docs/render-model.md`](docs/render-model.md) |
-| Win32 desktop shell (**under development, not accepted**) | window + GDI presentation + 60 Hz frame loop + mouse/keyboard input + waveOut output; `make win32` builds `bin/fvp.exe`, but there are **no acceptance numbers** for picture, input or audio yet | [`src/platform/win32/main_win32.c`](src/platform/win32/main_win32.c) · [`Makefile`](Makefile) |
+| Renderer (C, **accepted**) | 1920×1080 compositing; **24/24 primitives with 0 px position error**; **293 / 2,073,600 differing pixels = 0.0141%** (PSNR 49.94 dB, SSIM 0.99971); hot frame **9.0–9.5 ms** | [`src/gfx.c`](src/gfx.c) · [`docs/c-gfx.md`](docs/c-gfx.md) · [`tests/verify_gfx.ps1`](tests/verify_gfx.ps1) |
+| Renderer ↔ VM wiring (**accepted**) | `syscall` drives `gfx` directly; 528,000 steps with per-frame rendering reproduce the reference frame with the **same numbers as the renderer-only baseline**, while `fvm.exe` output stays **byte-identical** | [`src/syscall.c`](src/syscall.c) · [`tests/render_vm.c`](tests/render_vm.c) · [`docs/c-gfx.md`](docs/c-gfx.md) §9 |
+| Win32 desktop shell (**accepted**) | window ready in **130–230 ms**, **60.00 fps**, GDI present avg 3.4–3.6 ms (0 slow frames), waveOut 0 underruns over 10 s, injected clicks consumed by `InputGetDown` | [`src/platform/win32/main_win32.c`](src/platform/win32/main_win32.c) · [`docs/win32-shell.md`](docs/win32-shell.md) |
+| **Cross-title validation** | a second FVP title (*Hoshizora no Memoria HD*) runs unmodified: **148 command entries, identical entry by entry**, same opcode set, **164 correct dialogue lines** without touching the engine | [`docs/06-cross-validation.md`](docs/06-cross-validation.md) · [`tools/fvpprobe.py`](tools/fvpprobe.py) |
+| Robustness suite | **27,300** mutated HCB executions (0 crashes / 0 overruns), **339** malformed asset cases, **43** VM edge cases; `tests/run_all.py` → **8/8 PASS / 78 s** | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
 | Chinese script rebuild (method verified) | a GBK script damaged by a translation patch rebuilt to a structurally valid 3,712,944-byte `.hcb` with all 948,219 instructions and a matching command table (artifact not in repo) | [`docs/cn-script-rebuild.md`](docs/cn-script-rebuild.md) |
 | Android shell (design, in progress) | APK pipeline, JNI, EGL native window, touch input, asset layout; not the current main line, and the shell is not in this repository | [`docs/android-shell.md`](docs/android-shell.md) |
 
@@ -74,31 +77,30 @@ to pass — see [`scripts/ci-compare.py`](scripts/ci-compare.py).
 
 ## What does not work yet
 
-1. **The C renderer and the Win32 shell are not accepted.** `src/gfx.c` is a port in
-   progress with **no acceptance numbers yet**; the Win32 shell builds `bin/fvp.exe` with
-   window, frame loop, input and waveOut, but **nothing has been verified** (picture,
-   input, audio). Rendering that demonstrably produces frames is the local Python
-   prototype (`work/`, not committed).
-2. **Command semantics are stubs.** [`src/syscall.c`](src/syscall.c) handles 29 IDs
-   (`TextPrint` / `Debmess` are real; input commands return synthetic values; animation and
-   video `*Test` commands report "finished"); the other **119** fall back to the reference's
-   default policy. No drawing, saves, settings, video or animation tweening.
+1. **Only the prologue up to chapter one is watchable.** The renderer and the desktop shell
+   pass pixel-level acceptance, but **in-game UI is still a placeholder**: the dialogue box is
+   a drawn rounded rectangle (the real `main_window` texture is extracted but not wired), and
+   there is no menu, save screen or settings page. `Motion*` animation commands are still
+   no-ops, so sprites do not move.
+2. **Command semantics are mostly stubs.** 30 rendering-related commands are wired to `gfx`,
+   but animation / video / save / settings commands still fall back to the reference's
+   default policy. No movement, no fades, no transitions, no saving.
 3. **No coroutine/time model.** `ThreadNext` / `ThreadWait` only yield, `Timer*` /
    `ThreadSleep` have no virtual clock, and the 32 thread slots are not scheduled. As a
    consequence roughly 50 dialogue lines per 900k steps are lost. Facts and failed attempts
    are in [`docs/05-threads.md`](docs/05-threads.md).
-4. **Audio is not wired to the VM.** Decoding, resampling and mixing work, and the Win32
-   shell has a waveOut output backend, but **no syscall triggers playback**; there is no
+4. **Audio is not wired to the VM yet.** Decoding, resampling and mixing work, and the Win32
+   shell has a waveOut output backend, but **no syscall triggers playback** yet; there is no
    A/V sync or volume model, and no Android audio backend.
 5. **WMV video is skipped** (`Movie` / `MovieState` report "already finished").
 6. **The Chinese version is not playable end to end** (no renderer/audio, no per-scene checks).
-7. **Only one title was tested** (`いろとりどりのセカイ HD Re:GENERATION`,
-   `iroseka_HD.exe` 1.0.0.95). Other FVP titles are untested.
+7. **Only two titles were tested** (`いろとりどりのセカイ HD` and *Hoshizora no Memoria HD*).
+   FVP titles from 2004–2008 are untested.
 8. **Four opcode semantics are unconfirmed** (`0x11` / `0x12` / `0x17` / `0x18`, 0.18% of
    instructions in this title).
-9. No save-format compatibility, no options menu, no Android backend in-tree.
-10. The Python prototypes in `work/` are **not** committed, so rendering/HZC1 reference
-    decoding cannot be re-run from a fresh clone; the C acceptance tools in
+9. No save-format writing, no options menu, no Android backend in-tree.
+10. The Python prototypes in `work/` are **not** committed, so the Python reference decoder
+    cannot be re-run from a fresh clone; the C acceptance tools in
     [`tests/verify_assets.ps1`](tests/verify_assets.ps1) can.
 
 ---

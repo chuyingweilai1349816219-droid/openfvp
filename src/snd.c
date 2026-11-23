@@ -6,6 +6,7 @@
  */
 #include "snd.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,14 +86,31 @@ static int chan_assign(Snd *s, int ch, int16_t *pcm, int frames, int loop, float
     return 0;
 }
 
-/* 线性插值重采样到引擎采样率；src 为交错立体声 */
+/* 重采样参数的硬限制：
+ *   - 采样率必须落在 1000..384000 Hz（真实素材是 22.05k/44.1k/48k）；
+ *   - 输出时长不得超过 30 分钟。
+ * 没有这两条限制时，一个 1 Hz 的 WAV（1000 帧）会被放大成 4800 万帧、
+ * 单次 malloc 约 190 MB，足够让 32 位进程直接失败（fuzz 用例
+ * out/fuzz/repro/wav_rate1_amplification.wav 就是这个）。超出限制时
+ * 拒绝加载，调用方拿到失败返回值。 */
+#define SND_RATE_MIN 1000
+#define SND_RATE_MAX 384000
+#define SND_MAX_SECONDS (30 * 60)
+
 static int16_t *resample_to_rate(const int16_t *src, int frames, int src_rate, int dst_rate, int *out_frames)
 {
     int16_t *dst;
     double step;
+    double limit;
+    double dn;
     int n, i;
 
     if (src_rate <= 0 || dst_rate <= 0 || frames <= 0) return NULL;
+    if (src_rate < SND_RATE_MIN || src_rate > SND_RATE_MAX) return NULL;
+    if (dst_rate < SND_RATE_MIN || dst_rate > SND_RATE_MAX) return NULL;
+    limit = (double)dst_rate * (double)SND_MAX_SECONDS;
+    if ((double)frames > limit) return NULL; /* 源本身已超过 30 分钟 */
+
     if (src_rate == dst_rate) {
         dst = (int16_t *)malloc((size_t)frames * 2 * sizeof(int16_t));
         if (!dst) return NULL;
@@ -102,8 +120,9 @@ static int16_t *resample_to_rate(const int16_t *src, int frames, int src_rate, i
     }
 
     step = (double)src_rate / (double)dst_rate;
-    n = (int)(frames / step);
-    if (n < 1) n = 1;
+    dn = (double)frames / step;
+    if (!(dn >= 1.0) || dn > limit) return NULL; /* 放大后超过 30 分钟 */
+    n = (int)dn;
     dst = (int16_t *)malloc((size_t)n * 2 * sizeof(int16_t));
     if (!dst) return NULL;
 
@@ -185,6 +204,8 @@ int snd_play_wav(Snd *s, int ch, const uint8_t *mem, size_t len, int loop, float
         p += sz + (sz & 1);
     }
     if (!data || channels <= 0) return -1;
+    /* int 帧数上限：data 长度来自 u32，2 GB 的 data 除以 2 会溢出 int */
+    if (data_len / (size_t)(2 * channels) > (size_t)INT_MAX) return -1;
 
     frames = (int)(data_len / (size_t)(2 * channels));
     if (frames <= 0) return -1;

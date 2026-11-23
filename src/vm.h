@@ -8,6 +8,7 @@
 #include "encoding.h"
 #include "fvp.h"
 #include "hcb.h"
+#include "snd.h"
 
 typedef struct FvpFrame {
     uint32_t ret;
@@ -85,6 +86,98 @@ typedef struct FvpGfxBridge {
     void (*on_text)(void *ud, int layer, const char *text, int clear);
     void *text_ud;
 } FvpGfxBridge;
+
+/* ------------------------------------------------------------------ */
+/* Optional audio attachment (src/snd.c + src/bin.c)                   */
+/*                                                                     */
+/* fvm.exe never attaches one: every Audio*/Sound* command in syscall.c */
+/* then takes the exact same code path as before (unimplemented/stub).  */
+/* A window shell or fvp/tests/audio_vm.c attaches an Snd context so    */
+/* AudioLoad/AudioPlay/... really play.  Resource names from the script */
+/* ("bgm/001", "voice/01001530", "se/201", ...) are resolved lazily    */
+/* from the game's BIN packages (src/bin.c) and decoded at play time   */
+/* by src/snd.c -- never at load time, an Ogg BGM is ~22 MB decoded.    */
+/* ------------------------------------------------------------------ */
+
+struct Snd;
+struct BinArchive;
+
+#define FVP_SND_ARCHIVE_MAX 12     /* 12 packages shipped with the game */
+#define FVP_SND_AUDIO_SLOTS 4      /* AudioLoad/AudioPlay channel 0..3  */
+#define FVP_SND_SOUND_SLOTS 256    /* SoundLoad/SoundPlay index 0..255  */
+#define FVP_SND_TYPES 10           /* AudioType/SoundType value 0..9    */
+
+typedef enum FvpSndCategory {
+    FVP_SND_CAT_UNKNOWN = -1,
+    FVP_SND_CAT_BGM = 0,
+    FVP_SND_CAT_VOICE = 1,
+    FVP_SND_CAT_SE = 2
+} FvpSndCategory;
+
+typedef struct FvpSndArchive {
+    char *path;               /* archive path (malloc'd)                  */
+    struct BinArchive *bin;   /* opened lazily; NULL = not tried/failed   */
+    int tried;                /* open was attempted (bin may still be NULL) */
+} FvpSndArchive;
+
+/* One Audio* channel slot (0..3) or one legacy Sound* slot (0..255). */
+typedef struct FvpSndSlot {
+    char *name;      /* resource name from the last Load (malloc'd)     */
+    int type;        /* AudioType/SoundType raw 0..9, -1 = unset        */
+    int volume;      /* 0..100                                          */
+    int loop;        /* loop flag of the last play                      */
+    int silent;      /* AudioSilentOn                                   */
+    int playing;     /* last play succeeded and not stopped             */
+    int snd_chan;    /* SND_CH_* it plays on, -1 = none                 */
+} FvpSndSlot;
+
+/* Counters the tests / the shell can print.  Pure diagnostics. */
+typedef struct FvpSndStats {
+    uint32_t loads, plays, stops, vols, types, states, silent_on;
+    uint32_t resolved, unresolved, decode_fail;
+    uint32_t plays_bgm, plays_voice, plays_se;
+} FvpSndStats;
+
+/* Event kinds for the optional observer hook. */
+enum {
+    FVP_SND_EV_LOAD = 1,
+    FVP_SND_EV_PLAY = 2,
+    FVP_SND_EV_STOP = 3,
+    FVP_SND_EV_VOL = 4,
+    FVP_SND_EV_TYPE = 5,
+    FVP_SND_EV_SILENT = 6,
+    FVP_SND_EV_STATE = 7
+};
+
+/* One observed audio command.  `name`/`archive` point into bridge-owned
+ * memory and are only valid for the duration of the callback. */
+typedef struct FvpSndEvent {
+    int cid;         /* syscall id (0..6, 100..107)                     */
+    int kind;        /* FVP_SND_EV_*                                    */
+    int slot;        /* Audio channel or legacy Sound index             */
+    int category;    /* FvpSndCategory, -1 = unknown                    */
+    int ok;          /* resolve+decode succeeded (play/load events)     */
+    int loop;
+    int volume;      /* 0..100                                          */
+    int type;        /* raw AudioType/SoundType argument, -1 = unset    */
+    const char *name;    /* requested resource name (may be NULL)       */
+    const char *archive; /* archive basename it resolved to, or NULL    */
+} FvpSndEvent;
+
+typedef struct FvpSndBridge {
+    struct Snd *snd;
+    FvpSndArchive archives[FVP_SND_ARCHIVE_MAX];
+    int narchives;
+    FvpSndSlot audio[FVP_SND_AUDIO_SLOTS];
+    FvpSndSlot sound[FVP_SND_SOUND_SLOTS];
+    int master_vol;                    /* 0..100, default 100          */
+    int type_vol[FVP_SND_TYPES];       /* 0..100 per mixing group      */
+    int se_next;                       /* round-robin SE cursor        */
+    FvpSndSlot *chan_owner[SND_CH_COUNT]; /* who plays on each SND chan */
+    FvpSndStats stats;
+    void (*on_event)(void *ud, const FvpSndEvent *ev);
+    void *event_ud;
+} FvpSndBridge;
 
 typedef struct FvpVM {
     FvpHcb *hcb;
