@@ -131,6 +131,7 @@ def public_tools():
         'test_flags': os.path.join(FVP, 'bin', 'test_flags.exe'),
         'test_textattr': os.path.join(FVP, 'bin', 'test_textattr.exe'),
         'test_thumb': os.path.join(FVP, 'bin', 'test_thumb.exe'),
+        'test_encode': os.path.join(FVP, 'bin', 'test_encode.exe'),
     }
 
 

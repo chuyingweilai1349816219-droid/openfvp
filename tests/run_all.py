@@ -226,6 +226,17 @@ def build_steps(args):
                           note='box filter colour/alpha, 2x2 average, real '
                                '1920x1080 -> 200x113'))
 
+    # 4g. UTF-8 -> CP932 / GBK encoding (needed to write save strings)
+    test_encode = tools['test_encode']
+    if not os.path.isfile(test_encode):
+        steps.append(Step('test_encode', None, 0,
+                          skip_reason='bin/test_encode.exe missing '
+                                      '(run: make test_encode)'))
+    else:
+        steps.append(Step('test_encode', [test_encode], 120,
+                          note='UTF-8 -> CP932/GBK bytes + decode round-trip, '
+                               'unmappable -> ?'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

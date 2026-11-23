@@ -231,3 +231,23 @@ clean-thumb:
 	-rm -f $(THUMB_OBJ) $(THUMB_TEST)
 
 .PHONY: clean-thumb
+
+# ---------------------------------------------------------------------------
+# 编码方向（UTF-8 -> CP932 / GBK），写存档需要
+#   make test_encode
+# ---------------------------------------------------------------------------
+ENCODE_TEST = bin/test_encode$(EXE)
+
+test_encode: $(ENCODE_TEST)
+
+$(ENCODE_TEST): tests/test_encode.c src/encoding.c src/encoding.h src/fvp.c \
+        src/fvp.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_encode.c src/encoding.c src/fvp.c \
+	    $(LDFLAGS)
+
+clean-encode:
+	-rm -f $(ENCODE_TEST)
+
+.PHONY: clean-encode
+
+clean-thumb:

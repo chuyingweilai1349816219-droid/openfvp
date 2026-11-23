@@ -17,4 +17,10 @@ const char *fvp_encoding_name(FvpEncoding enc);
 FvpStr *fvp_decode(FvpArena *arena, FvpEncoding enc,
                    const unsigned char *data, size_t len);
 
+/* 反方向：UTF-8 -> CP932 / GBK 原始字节（写存档需要，槽里的字符串是原编码）。
+ * 表里没有的码点写成 '?'（与 Python 的 encode(enc, 'replace') 一致）。
+ * 返回的 FvpStr 的 len 是字节数，data 后仍带 NUL（arena 约定）。 */
+FvpStr *fvp_encode(FvpArena *arena, FvpEncoding enc, const char *utf8,
+                   size_t len);
+
 #endif /* FVP_ENCODING_H */

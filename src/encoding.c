@@ -122,3 +122,95 @@ FvpStr *fvp_decode(FvpArena *arena, FvpEncoding enc,
     s->data[bytes] = '\0';
     return s;
 }
+
+/* 从 UTF-8 里取出一个码点，返回消耗的字节数（非法序列按 1 字节、码点 U+FFFD）。 */
+static size_t fvp_utf8_get(const unsigned char *p, size_t len, uint32_t *cp)
+{
+    unsigned char c = p[0];
+
+    if (c < 0x80u) {
+        *cp = c;
+        return 1;
+    }
+    if ((c & 0xE0u) == 0xC0u && len >= 2u) {
+        *cp = ((uint32_t)(c & 0x1Fu) << 6) | (uint32_t)(p[1] & 0x3Fu);
+        return 2;
+    }
+    if ((c & 0xF0u) == 0xE0u && len >= 3u) {
+        *cp = ((uint32_t)(c & 0x0Fu) << 12) | ((uint32_t)(p[1] & 0x3Fu) << 6) |
+              (uint32_t)(p[2] & 0x3Fu);
+        return 3;
+    }
+    if ((c & 0xF8u) == 0xF0u && len >= 4u) {
+        *cp = ((uint32_t)(c & 0x07u) << 18) | ((uint32_t)(p[1] & 0x3Fu) << 12) |
+              ((uint32_t)(p[2] & 0x3Fu) << 6) | (uint32_t)(p[3] & 0x3Fu);
+        return 4;
+    }
+    *cp = 0xFFFDu;
+    return 1;
+}
+
+/* 码点 -> 该编码的字节序列。返回 1 或 2（写入 out）；0 = 表里没有。 */
+static int fvp_codec_encode_cp(const FvpCodec *codec, uint32_t cp,
+                               unsigned char *out)
+{
+    int b;
+
+    if (cp > 0xFFFFu) {
+        return 0;
+    }
+    for (b = 0; b < 256; ++b) {
+        if (codec->single[b] == (uint16_t)cp) {
+            out[0] = (unsigned char)b;
+            return 1;
+        }
+    }
+    for (b = 0; b < 256; ++b) {
+        uint8_t row = codec->lead_row[b];
+        int t;
+
+        if (row == 0xFFu) {
+            continue;
+        }
+        for (t = 0; t < FVP_NTRAIL; ++t) {
+            if (codec->rows[(size_t)row * FVP_NTRAIL + (size_t)t] ==
+                (uint16_t)cp) {
+                out[0] = (unsigned char)b;
+                out[1] = (unsigned char)(FVP_TRAIL_LO + t);
+                return 2;
+            }
+        }
+    }
+    return 0;
+}
+
+FvpStr *fvp_encode(FvpArena *arena, FvpEncoding enc, const char *utf8,
+                   size_t len)
+{
+    const FvpCodec *codec = &fvp_codecs[enc == FVP_ENC_GBK ? 1 : 0];
+    const unsigned char *p = (const unsigned char *)utf8;
+    size_t i = 0;
+    size_t cap = len * 2u + 1u; /* 一个 UTF-8 字符最多编成 2 字节 */
+    FvpStr *s = (FvpStr *)fvp_arena_alloc(arena, sizeof(FvpStr) + cap);
+    size_t n = 0;
+
+    while (i < len) {
+        uint32_t cp;
+        unsigned char bytes[2];
+        size_t used = fvp_utf8_get(p + i, len - i, &cp);
+        int nb = fvp_codec_encode_cp(codec, cp, bytes);
+
+        i += used;
+        if (nb == 0) {
+            s->data[n++] = '?';
+        } else {
+            s->data[n++] = (char)bytes[0];
+            if (nb == 2) {
+                s->data[n++] = (char)bytes[1];
+            }
+        }
+    }
+    s->len = (uint32_t)n;
+    s->data[n] = '\0';
+    return s;
+}

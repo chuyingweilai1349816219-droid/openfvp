@@ -1066,16 +1066,19 @@ static unsigned char *read_file_w(const wchar_t *path, size_t *len_out)
     return buf;
 }
 
-/* 返回 1 表示写出成功。字符串段不在这里改（存档里是 CP932/GBK，UTF-8 需要转码，
- * 那一步还没做），所以槽里的章节名/对话行沿用模板的内容。 */
+/* 返回 1 表示写出成功。字符串段：脚本通过 SaveCreate 准备的那几条（VM 里是 UTF-8）
+ * 会按脚本编码（CP932 / GBK）编码后写进槽里；脚本没准备就沿用模板的字符串。 */
 static int write_save_preview(const wchar_t *tmpl, const wchar_t *out_path,
-                              const unsigned char *canvas, int cw, int ch)
+                              const unsigned char *canvas, int cw, int ch,
+                              FvpVM *vm, FvpEncoding enc)
 {
     unsigned char *buf;
     size_t len = 0;
     FvpSaveSlot slot;
     SYSTEMTIME st;
     char u8[PATH_CAP * 3];
+    int i;
+    int nstr = 0;
 
     buf = read_file_w(tmpl, &len);
     if (buf == NULL) {
@@ -1110,6 +1113,34 @@ static int write_save_preview(const wchar_t *tmpl, const wchar_t *out_path,
         }
     }
 
+    /* 脚本准备的字符串（UTF-8）→ 脚本编码 → 写进槽。 */
+    if (vm != NULL) {
+        for (i = 0; i < 3; ++i) {
+            if (vm->save_str[i] == NULL || vm->save_str[i]->len == 0) {
+                continue;
+            }
+            {
+                FvpStr *enc_str = fvp_encode(&vm->arena, enc,
+                                             vm->save_str[i]->data,
+                                             vm->save_str[i]->len);
+                unsigned char *copy;
+
+                if (enc_str->len == 0 || enc_str->len > 0xFFFFu) {
+                    continue;
+                }
+                copy = (unsigned char *)malloc(enc_str->len);
+                if (copy == NULL) {
+                    continue;
+                }
+                memcpy(copy, enc_str->data, enc_str->len);
+                free(slot.str[i]);
+                slot.str[i] = copy;
+                slot.len[i] = enc_str->len;
+                nstr += 1;
+            }
+        }
+    }
+
     {
         size_t need = fvp_save_slot_size(&slot);
         unsigned char *out = need > 0 ? (unsigned char *)malloc(need) : NULL;
@@ -1131,10 +1162,11 @@ static int write_save_preview(const wchar_t *tmpl, const wchar_t *out_path,
             return 0;
         }
         fvp_logf("save-preview: wrote %s (%zu bytes, timestamp %04u-%02u-%02u "
-                 "%02u:%02u, thumbnail from the live canvas)",
+                 "%02u:%02u, %d string(s) from the script, thumbnail from the "
+                 "live canvas)",
                  w2u(out_path, u8, sizeof(u8)), need, (unsigned)st.wYear,
                  (unsigned)st.wMonth, (unsigned)st.wDay, (unsigned)st.wHour,
-                 (unsigned)st.wMinute);
+                 (unsigned)st.wMinute, nstr);
     }
     return 1;
 }
@@ -2045,7 +2077,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         if (canvas != NULL && opts.save_template[0] != L'\0' &&
             opts.save_preview[0] != L'\0') {
             write_save_preview(opts.save_template, opts.save_preview,
-                               (const unsigned char *)canvas, cw, ch);
+                               (const unsigned char *)canvas, cw, ch, &vm,
+                               opts.enc_mode == ENC_GBK ? FVP_ENC_GBK
+                                                        : FVP_ENC_CP932);
         }
     }
 
