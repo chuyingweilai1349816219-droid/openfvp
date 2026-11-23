@@ -90,7 +90,7 @@ typedef struct FvpGfxBridge {
 /* ------------------------------------------------------------------ */
 /* Optional audio attachment (src/snd.c + src/bin.c)                   */
 /*                                                                     */
-/* fvm.exe never attaches one: every Audio*/Sound* command in syscall.c */
+/* fvm.exe never attaches one: every audio (Audio/Sound) command in syscall.c */
 /* then takes the exact same code path as before (unimplemented/stub).  */
 /* A window shell or fvp/tests/audio_vm.c attaches an Snd context so    */
 /* AudioLoad/AudioPlay/... really play.  Resource names from the script */
@@ -155,6 +155,7 @@ typedef struct FvpSndEvent {
     int cid;         /* syscall id (0..6, 100..107)                     */
     int kind;        /* FVP_SND_EV_*                                    */
     int slot;        /* Audio channel or legacy Sound index             */
+    int chan;        /* SND_CH_* it plays on, -1 = not playing          */
     int category;    /* FvpSndCategory, -1 = unknown                    */
     int ok;          /* resolve+decode succeeded (play/load events)     */
     int loop;
@@ -171,7 +172,9 @@ typedef struct FvpSndBridge {
     FvpSndSlot audio[FVP_SND_AUDIO_SLOTS];
     FvpSndSlot sound[FVP_SND_SOUND_SLOTS];
     int master_vol;                    /* 0..100, default 100          */
+    int master_configured;             /* a non-zero master value arrived */
     int type_vol[FVP_SND_TYPES];       /* 0..100 per mixing group      */
+    int type_configured[FVP_SND_TYPES];
     int se_next;                       /* round-robin SE cursor        */
     FvpSndSlot *chan_owner[SND_CH_COUNT]; /* who plays on each SND chan */
     FvpSndStats stats;
@@ -206,6 +209,7 @@ typedef struct FvpVM {
     FILE *pctrace;
     int warned_neg_str;
     FvpGfxBridge *gfx_bridge; /* NULL = rendering commands are no-ops */
+    FvpSndBridge *snd_bridge; /* NULL = audio commands are no-ops */
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);
@@ -217,6 +221,25 @@ uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps);
  * layer uses it; the VM's own semantics (steps, stacks, temp values, text
  * log) are unchanged whether or not a context is attached. */
 void fvp_vm_attach_gfx(FvpVM *vm, struct Gfx *gfx);
+
+/* Attach (or detach, snd == NULL) an audio context.  Only the syscall layer
+ * uses it; without an attachment every audio command behaves exactly as it
+ * did before (unimplemented / unknown-command counting), which is what keeps
+ * bin/fvm.exe byte-identical to the reference.
+ *
+ * fvp_vm_snd_add_archive() / fvp_vm_snd_add_audio_dir() register the BIN
+ * packages the bridge resolves resource names against; they are opened and
+ * indexed lazily on the first play (a voice.bin index is ~22k names). */
+void fvp_vm_attach_snd(FvpVM *vm, struct Snd *snd);
+int fvp_vm_snd_add_archive(FvpVM *vm, const char *path);
+int fvp_vm_snd_add_audio_dir(FvpVM *vm, const char *dir);
+
+/* Resolve a script resource name to a freshly malloc'd copy of the BIN entry
+ * ("bgm/001" -> entry "001" of bgm.bin).  Returns 0 on success, -1 when the
+ * name is not found, -2 when the package layer is unavailable / unreadable.
+ * *archive_out receives the archive's base name when non-NULL. */
+int fvp_snd_bank_read(FvpSndBridge *b, const char *name, uint8_t **data,
+                      size_t *size, const char **archive_out);
 
 void fvp_vm_add_text(FvpVM *vm, const FvpValue *layer, FvpStr *text);
 void fvp_vm_count_unknown(FvpVM *vm, uint16_t cid);

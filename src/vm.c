@@ -10,7 +10,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bin.h"
 #include "syscall.h"
+
+/* Audio / resource symbols are optional for the same reason the gfx ones are
+ * (see syscall.c): bin/fvm.exe links neither src/snd.c nor src/bin.c, so a
+ * program that attaches an audio context is the only one that can reach
+ * them.  Weak undefined symbols resolve to NULL there. */
+#pragma weak bin_close
+#pragma weak bin_find
+#pragma weak bin_open
+#pragma weak bin_read_alloc
 
 /* ------------------------------------------------------------------ */
 /* Map with Python equality semantics                                  */
@@ -731,6 +741,287 @@ void fvp_vm_attach_gfx(FvpVM *vm, struct Gfx *gfx)
     vm->gfx_bridge->gfx = gfx;
 }
 
+/* ------------------------------------------------------------------ */
+/* Optional audio attachment (src/snd.c + src/bin.c)                   */
+/*                                                                     */
+/* The bridge holds the resource bank (paths only; packages are opened  */
+/* lazily) and the per-slot state the audio commands need.  The            */
+/* syscall layer (src/syscall.c) does the command forwarding and calls  */
+/* back into snd.c; this file only owns the lifetime and the name       */
+/* resolution, because both need to keep working in fvm.exe (no snd.c,  */
+/* no bin.c linked: every bin_* symbol above is weak).                  */
+/* ------------------------------------------------------------------ */
+
+static const char *fvp_snd_path_base(const char *path)
+{
+    const char *a;
+    const char *b;
+    const char *p;
+    if (path == NULL) {
+        return "";
+    }
+    a = strrchr(path, '/');
+    b = strrchr(path, '\\');
+    p = a;
+    if (b != NULL && (p == NULL || b > p)) {
+        p = b;
+    }
+    return p != NULL ? p + 1 : path;
+}
+
+static void fvp_snd_lower(char *dst, size_t cap, const char *src)
+{
+    size_t i;
+    if (cap == 0) {
+        return;
+    }
+    for (i = 0; src[i] != '\0' && i + 1u < cap; i++) {
+        char c = src[i];
+        if (c >= 'A' && c <= 'Z') {
+            c = (char)(c - 'A' + 'a');
+        }
+        dst[i] = c;
+    }
+    dst[i] = '\0';
+}
+
+/* Which audio package family does an archive path belong to?
+ * Keep in sync with add_audio_dir().  -1 = not an audio package. */
+enum {
+    FVP_SND_FAM_BGM = 0,
+    FVP_SND_FAM_BGM2 = 1,
+    FVP_SND_FAM_VOICE = 2,
+    FVP_SND_FAM_SE = 3,
+    FVP_SND_FAM_SE_ENV = 4,
+    FVP_SND_FAM_SE_SYS = 5
+};
+
+static int fvp_snd_archive_family(const char *path)
+{
+    char low[64];
+    fvp_snd_lower(low, sizeof low, fvp_snd_path_base(path));
+    if (strncmp(low, "bgm2", 4) == 0) return FVP_SND_FAM_BGM2;
+    if (strncmp(low, "bgm", 3) == 0) return FVP_SND_FAM_BGM;
+    if (strncmp(low, "voice", 5) == 0) return FVP_SND_FAM_VOICE;
+    if (strncmp(low, "se_env", 6) == 0) return FVP_SND_FAM_SE_ENV;
+    if (strncmp(low, "se_sys", 6) == 0) return FVP_SND_FAM_SE_SYS;
+    if (strncmp(low, "se", 2) == 0) return FVP_SND_FAM_SE;
+    return -1;
+}
+
+/* Family implied by the resource name prefix ("bgm/001" -> bgm.bin).
+ * Scripts use upper and lower case interchangeably ("BGM/050", "bgm/001"),
+ * so compare case-insensitively. */
+static int fvp_snd_name_family(const char *name)
+{
+    char tok[32];
+    size_t n = 0;
+    const char *p = name;
+    while (*p != '\0' && *p != '/' && *p != '\\' && n + 1u < sizeof tok) {
+        char c = *p++;
+        if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+        tok[n++] = c;
+    }
+    tok[n] = '\0';
+    if (n == 0) {
+        return -1;
+    }
+    if (strcmp(tok, "bgm2") == 0) return FVP_SND_FAM_BGM2;
+    if (strcmp(tok, "bgm") == 0) return FVP_SND_FAM_BGM;
+    if (strcmp(tok, "voice2") == 0) return FVP_SND_FAM_VOICE;
+    if (strcmp(tok, "voice") == 0) return FVP_SND_FAM_VOICE;
+    if (strcmp(tok, "se_env") == 0) return FVP_SND_FAM_SE_ENV;
+    if (strcmp(tok, "se_sys") == 0) return FVP_SND_FAM_SE_SYS;
+    if (strcmp(tok, "env") == 0) return FVP_SND_FAM_SE_ENV;
+    if (strcmp(tok, "se") == 0) return FVP_SND_FAM_SE;
+    if (strcmp(tok, "sound") == 0) return FVP_SND_FAM_SE;
+    return -1;
+}
+
+static void fvp_snd_slot_init(FvpSndSlot *sl)
+{
+    memset(sl, 0, sizeof *sl);
+    sl->type = -1;
+    sl->volume = 100;
+    sl->snd_chan = -1;
+}
+
+static void fvp_snd_slot_free(FvpSndSlot *sl)
+{
+    free(sl->name);
+    sl->name = NULL;
+}
+
+static void fvp_snd_bridge_free(FvpSndBridge *b)
+{
+    int i;
+    if (b == NULL) {
+        return;
+    }
+    for (i = 0; i < b->narchives; i++) {
+        free(b->archives[i].path);
+        if (b->archives[i].bin != NULL && bin_close != NULL) {
+            bin_close(b->archives[i].bin);
+        }
+        b->archives[i].bin = NULL;
+        b->archives[i].path = NULL;
+    }
+    for (i = 0; i < FVP_SND_AUDIO_SLOTS; i++) {
+        fvp_snd_slot_free(&b->audio[i]);
+    }
+    for (i = 0; i < FVP_SND_SOUND_SLOTS; i++) {
+        fvp_snd_slot_free(&b->sound[i]);
+    }
+    free(b);
+}
+
+void fvp_vm_attach_snd(FvpVM *vm, struct Snd *snd)
+{
+    if (vm == NULL) {
+        return;
+    }
+    if (snd == NULL) {
+        fvp_snd_bridge_free(vm->snd_bridge);
+        vm->snd_bridge = NULL;
+        return;
+    }
+    if (vm->snd_bridge == NULL) {
+        FvpSndBridge *b = (FvpSndBridge *)fvp_xcalloc(1, sizeof *b);
+        int i;
+        b->snd = snd;
+        b->master_vol = 100;
+        for (i = 0; i < FVP_SND_TYPES; i++) {
+            b->type_vol[i] = 100;
+        }
+        for (i = 0; i < FVP_SND_AUDIO_SLOTS; i++) {
+            fvp_snd_slot_init(&b->audio[i]);
+        }
+        for (i = 0; i < FVP_SND_SOUND_SLOTS; i++) {
+            fvp_snd_slot_init(&b->sound[i]);
+        }
+        vm->snd_bridge = b;
+    } else {
+        vm->snd_bridge->snd = snd;
+    }
+}
+
+int fvp_vm_snd_add_archive(FvpVM *vm, const char *path)
+{
+    FvpSndBridge *b = (vm != NULL) ? vm->snd_bridge : NULL;
+    FvpSndArchive *a;
+    if (b == NULL || path == NULL || path[0] == '\0') {
+        return -1;
+    }
+    if (b->narchives >= FVP_SND_ARCHIVE_MAX) {
+        return -1;
+    }
+    a = &b->archives[b->narchives];
+    a->path = fvp_xstrdup(path);
+    a->bin = NULL;   /* opened on first lookup */
+    a->tried = 0;
+    b->narchives += 1;
+    return 0;
+}
+
+int fvp_vm_snd_add_audio_dir(FvpVM *vm, const char *dir)
+{
+    static const char *const names[6] = {
+        "bgm.bin", "bgm2.bin", "voice.bin",
+        "se.bin", "se_env.bin", "se_sys.bin"
+    };
+    char path[1024];
+    int i;
+    int added = 0;
+    if (dir == NULL) {
+        return 0;
+    }
+    /* A directory prefix longer than this would simply be truncated by
+     * snprintf; skip such entries rather than registering a wrong path. */
+    for (i = 0; i < 6; i++) {
+        int n = snprintf(path, sizeof path, "%s/%s", dir, names[i]);
+        if (n <= 0 || (size_t)n >= sizeof path) {
+            continue;
+        }
+        if (fvp_vm_snd_add_archive(vm, path) == 0) {
+            added += 1;
+        }
+    }
+    return added;
+}
+
+/* Resolve "bgm/001" -> the bytes of entry "001" of bgm.bin.  BGM and SE
+ * share entry names ("001" exists in four packages), so the script's prefix
+ * picks the package; unknown prefixes fall back to a scan of all registered
+ * packages, and a known prefix that misses still scans the others (the name
+ * table of a 200 MB package is cheap to probe). */
+int fvp_snd_bank_read(FvpSndBridge *b, const char *name, uint8_t **data,
+                      size_t *size, const char **archive_out)
+{
+    char stem[512];
+    const char *base;
+    char *dot;
+    size_t n;
+    int family;
+    int order[FVP_SND_ARCHIVE_MAX];
+    int norder = 0;
+    int opened = 0;
+    int i;
+    int k;
+
+    if (data != NULL) *data = NULL;
+    if (size != NULL) *size = 0;
+    if (archive_out != NULL) *archive_out = NULL;
+    if (b == NULL || name == NULL || b->narchives <= 0) return -2;
+    if (bin_open == NULL || bin_find == NULL || bin_read_alloc == NULL ||
+        bin_close == NULL) {
+        return -2; /* built without src/bin.c (bin/fvm.exe) */
+    }
+
+    base = fvp_snd_path_base(name);
+    n = strlen(base);
+    if (n == 0 || n >= sizeof stem) return -1;
+    memcpy(stem, base, n + 1u);
+    dot = strrchr(stem, '.');
+    if (dot != NULL && dot != stem) {
+        *dot = '\0'; /* the archives store extension-less names */
+    }
+    if (stem[0] == '\0') return -1;
+
+    family = fvp_snd_name_family(name);
+    if (family >= 0) {
+        for (i = 0; i < b->narchives; i++) {
+            if (fvp_snd_archive_family(b->archives[i].path) == family) {
+                order[norder++] = i;
+            }
+        }
+    }
+    for (i = 0; i < b->narchives; i++) {
+        int seen = 0;
+        for (k = 0; k < norder; k++) {
+            if (order[k] == i) { seen = 1; break; }
+        }
+        if (!seen) order[norder++] = i;
+    }
+
+    for (k = 0; k < norder; k++) {
+        FvpSndArchive *a = &b->archives[order[k]];
+        int idx;
+        if (!a->tried) {
+            a->tried = 1;
+            a->bin = bin_open(a->path);
+        }
+        if (a->bin == NULL) continue;
+        opened += 1;
+        idx = bin_find(a->bin, stem);
+        if (idx < 0) continue;
+        *data = (uint8_t *)bin_read_alloc(a->bin, (uint32_t)idx, size);
+        if (*data == NULL) return -2;
+        if (archive_out != NULL) *archive_out = fvp_snd_path_base(a->path);
+        return 0;
+    }
+    return opened > 0 ? -1 : -2;
+}
+
 void fvp_vm_free(FvpVM *vm)
 {
     size_t i;
@@ -739,6 +1030,7 @@ void fvp_vm_free(FvpVM *vm)
     }
     free(vm->threads);
     free(vm->gfx_bridge);
+    fvp_snd_bridge_free(vm->snd_bridge);
     fvp_map_free(&vm->garr);
     fvp_map_free(&vm->larr);
     fvp_arena_free(&vm->arena);
