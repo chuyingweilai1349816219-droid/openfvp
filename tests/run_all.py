@@ -259,6 +259,17 @@ def build_steps(args):
                           note='lerp timeline, zero/negative duration, reap, '
                                'multi-tween, NULL safety'))
 
+    # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
+    test_gfx_motion = tools['test_gfx_motion']
+    if not os.path.isfile(test_gfx_motion):
+        steps.append(Step('test_gfx_motion', None, 0,
+                          skip_reason='bin/test_gfx_motion.exe missing '
+                                      '(run: make test_gfx_motion)'))
+    else:
+        steps.append(Step('test_gfx_motion', [test_gfx_motion], 120,
+                          note='disabled = no movement; enabled = lerp to '
+                               'midpoint/target for xy/alpha/scale'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

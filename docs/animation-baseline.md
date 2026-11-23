@@ -69,15 +69,18 @@
 
 ## 4. 落地顺序（建议）
 
-1. ✅ `src/motion.c` 补间数学 + `tests/test_motion.c`（31 项）—— 本轮完成，未接 gfx
-2. 把补间接进 `gfx`（`Motion*` 命令 → 补间表 → 每帧应用到图元），默认**关闭**，
-   `--motion` 打开；先跑通 §2.2 的三组断言
-3. 再默认打开，`verify_gfx.ps1` 改为「无动画模式比对参考帧 + 动画模式只跑自洽断言」（双模式）
-4. 时间模型进 C，先以 `--legacy-thread` 冻结旧基线，再逐步替换
-5. 拿到原版实机对照后再谈「与原版一致」这种说法
+1. ✅ `src/motion.c` 补间数学 + `tests/test_motion.c`（31 项）—— 未接 gfx
+2. 🚧 **已接 gfx，默认关闭**：`gfx_motion_add()` / `gfx_motion_advance()` / `gfx_motion_set_enabled()`，
+   关闭时只走时间轴、不动图元字段；`tests/test_gfx_motion.c` **21 项**已验证
+   「关闭 → 图元不动」「开启 → 半程中点 / 终点到位」（xy / alpha / scale）
+3. 待做：`--motion` 开关接到外壳；`verify_gfx.ps1` 改双模式
+   （无动画模式继续比对参考帧 + 动画模式只跑 §2.2 三组断言）
+4. 待做：时间模型进 C，先以 `--legacy-thread` 冻结旧基线，再逐步替换
+5. 待做：拿到原版实机对照后再谈「与原版一致」
 
 ## 5. 当前已经能跑的
 
 ```
-make test_motion      # 31 项：lerp 时间轴 / 零时长 / 负时长拒绝 / 回收 / 多补间 / NULL 安全
+make test_motion        # 31 项：lerp 时间轴 / 零时长 / 负时长拒绝 / 回收 / 多补间 / NULL 安全
+make test_gfx_motion    # 21 项：补间 → 图元字段（默认关闭时不动画面）
 ```

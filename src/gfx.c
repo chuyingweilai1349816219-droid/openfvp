@@ -15,6 +15,8 @@
  */
 #include "gfx.h"
 
+#include "motion.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -482,6 +484,8 @@ struct Gfx {
     int ndraw;
     int cap_draw;
     int group_xform;
+    FvpMotion motion; /* 动画补间表；motion_on = 0 时只走时间轴、不动图元 */
+    int motion_on;
     char err[256];
 };
 
@@ -615,6 +619,7 @@ Gfx *gfx_create(int w, int h, const GfxHost *host)
         g->tw[i].lay = gfx_layout_default(i);
     }
     g->group_xform = 1;
+    fvp_motion_init(&g->motion);
     if (host != NULL) {
         g->host = *host;
     }
@@ -2393,6 +2398,7 @@ void gfx_destroy(Gfx *g)
     for (i = 0; i < GFX_PARTS_MAX; i++) {
         tex_unref(g, g->part[i].tex);
     }
+    fvp_motion_free(&g->motion);
     for (i = 0; i < GFX_GRAPH_MAX; i++) {
         slot_release(g, i);
     }
@@ -2535,6 +2541,120 @@ int gfx_set_prim(Gfx *g, int id, int field, int v)
         return -1;
     }
     return 0;
+}
+
+int gfx_get_prim(const Gfx *g, int id, int field, int *out)
+{
+    const GfxPrim *p;
+
+    if (g == NULL || out == NULL || id < 0 || id >= GFX_PRIM_MAX ||
+        field < 0 || field >= GFX_F_COUNT) {
+        return -1;
+    }
+    p = &g->prim[id];
+    switch (field) {
+    case GFX_F_TYPE: *out = p->type; break;
+    case GFX_F_DRAW: *out = p->draw; break;
+    case GFX_F_ALPHA: *out = p->alpha; break;
+    case GFX_F_BLEND: *out = p->blend; break;
+    case GFX_F_Z: *out = p->z; break;
+    case GFX_F_X: *out = p->x; break;
+    case GFX_F_Y: *out = p->y; break;
+    case GFX_F_W: *out = p->w; break;
+    case GFX_F_H: *out = p->h; break;
+    case GFX_F_U: *out = p->u; break;
+    case GFX_F_V: *out = p->v; break;
+    case GFX_F_OP1: *out = p->op1; break;
+    case GFX_F_OP2: *out = p->op2; break;
+    case GFX_F_ANGLE: *out = p->angle; break;
+    case GFX_F_SCALE_X: *out = p->scale_x; break;
+    case GFX_F_SCALE_Y: *out = p->scale_y; break;
+    case GFX_F_GRAPH: *out = p->graph; break;
+    case GFX_F_TW: *out = p->tw; break;
+    case GFX_F_TILE: *out = p->tile; break;
+    case GFX_F_FLAGS: *out = p->flags; break;
+    default: return -1;
+    }
+    return 0;
+}
+
+/* ---- 动画补间（gfx 侧）------------------------------------------------ */
+
+int gfx_motion_add(Gfx *g, int prim_id, int kind, int from_x, int from_y,
+                   int to_x, int to_y, int dur_ms, int mode)
+{
+    if (g == NULL || prim_id < 0 || prim_id >= GFX_PRIM_MAX) {
+        return 0;
+    }
+    if (dur_ms < 0) {
+        dur_ms = 0;
+    }
+    return fvp_motion_add(&g->motion, prim_id, kind, (double)from_x,
+                          (double)from_y, (double)to_x, (double)to_y,
+                          (double)dur_ms, mode, 1);
+}
+
+void gfx_motion_set_enabled(Gfx *g, int on)
+{
+    if (g != NULL) {
+        g->motion_on = on ? 1 : 0;
+    }
+}
+
+int gfx_motion_enabled(const Gfx *g)
+{
+    return (g != NULL) ? g->motion_on : 0;
+}
+
+void gfx_motion_advance(Gfx *g, int dt_ms)
+{
+    size_t i;
+
+    if (g == NULL) {
+        return;
+    }
+    fvp_motion_advance(&g->motion, (double)(dt_ms > 0 ? dt_ms : 0));
+    if (!g->motion_on) {
+        return;
+    }
+    /* 把每条活跃补间的当前值写回图元字段（未启用时只走时间轴，不动画面）。 */
+    for (i = 0; i < g->motion.n; ++i) {
+        const FvpTween *t = &g->motion.e[i];
+        double xv = 0.0;
+        double yv = 0.0;
+
+        if (!fvp_motion_value(&g->motion, t->id, &xv, &yv)) {
+            continue;
+        }
+        switch (t->kind) {
+        case FVP_TWEEN_MOVE_XY:
+            gfx_set_prim(g, t->prim_id, GFX_F_X, (int)(xv + 0.5));
+            gfx_set_prim(g, t->prim_id, GFX_F_Y, (int)(yv + 0.5));
+            break;
+        case FVP_TWEEN_ALPHA:
+            gfx_set_prim(g, t->prim_id, GFX_F_ALPHA, (int)(xv + 0.5));
+            break;
+        case FVP_TWEEN_SCALE:
+            gfx_set_prim(g, t->prim_id, GFX_F_SCALE_X, (int)(xv + 0.5));
+            gfx_set_prim(g, t->prim_id, GFX_F_SCALE_Y, (int)(yv + 0.5));
+            break;
+        default:
+            break;
+        }
+    }
+    fvp_motion_reap(&g->motion);
+}
+
+int gfx_motion_active(const Gfx *g)
+{
+    return (g != NULL) ? (int)fvp_motion_active_count(&g->motion) : 0;
+}
+
+void gfx_motion_clear(Gfx *g)
+{
+    if (g != NULL) {
+        fvp_motion_clear(&g->motion);
+    }
 }
 
 int gfx_prim_set_clip(Gfx *g, int id, int x, int y, int w, int h)

@@ -168,6 +168,25 @@ int gfx_prim_reset(Gfx *g, int id);
  * Returns 0 on success, -1 for an id/field out of range. */
 int gfx_set_prim(Gfx *g, int id, int field, int v);
 
+/* 读回一个图元字段（主要给测试和动画断言用）。返回 0 成功、-1 越界。 */
+int gfx_get_prim(const Gfx *g, int id, int field, int *out);
+
+/* ---- 动画补间（Motion* 的 gfx 侧）------------------------------------
+ *
+ * 语义与 src/motion.c 一致：只做时间轴 + 线性插值，mode（1..5）原样保存但
+ * 不影响输出（缓动曲线未确证）。默认**不启用**：只有调用
+ * gfx_motion_set_enabled(g, 1) 之后，gfx_motion_advance() 才会真正改图元字段，
+ * 这样既有的像素级验收（参考帧）在动画关闭时逐字节不变。
+ */
+int gfx_motion_add(Gfx *g, int prim_id, int kind, int from_x, int from_y,
+                   int to_x, int to_y, int dur_ms, int mode);
+void gfx_motion_set_enabled(Gfx *g, int on);
+int gfx_motion_enabled(const Gfx *g);
+/* 推进 dt_ms；启用时把每条活跃补间的当前值写回图元字段。 */
+void gfx_motion_advance(Gfx *g, int dt_ms);
+int gfx_motion_active(const Gfx *g);
+void gfx_motion_clear(Gfx *g);
+
 /* Attachment: parent becomes a group (type 1), child is moved to the end of
  * the parent's child list (PrimGroupIn / PrimGroupOut). */
 int gfx_prim_group_in(Gfx *g, int child, int parent);

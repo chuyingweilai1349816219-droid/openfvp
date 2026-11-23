@@ -89,7 +89,7 @@ WIN32_GFX_H = $(wildcard src/gfx.h)
 
 ifneq ($(GFX_FORCE_STUB),1)
 ifneq ($(wildcard src/gfx.c),)
-WIN32_GFX_C   = src/gfx.c
+WIN32_GFX_C   = src/gfx.c src/motion.c
 WIN32_GFX_DEF =
 else
 WIN32_GFX_C   = tests/stub_gfx.c
@@ -119,7 +119,7 @@ $(WIN32_BIN): $(WIN32_SRC) $(HEADERS) $(WIN32_GFX_H) | bin
 #
 #   bin/test_gfx.exe fvp/out/c/gfx-scene.json -o fvp/out/c
 # ---------------------------------------------------------------------------
-GFX_OBJ  = src/gfx.o src/bin.o src/hzc1.o src/inflate.o
+GFX_OBJ  = src/gfx.o src/bin.o src/hzc1.o src/inflate.o src/motion.o
 GFX_LIB  = bin/libfvp_gfx.a
 GFX_TEST = bin/test_gfx$(EXE)
 
@@ -133,7 +133,7 @@ test_gfx: $(GFX_TEST)
 $(GFX_TEST): tests/test_gfx.c src/gfx.h $(GFX_OBJ) | bin
 	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_gfx.c $(GFX_OBJ) $(LDFLAGS) -lm
 
-.PHONY: gfx test_gfx
+.PHONY: gfx test_gfx test_gfx_motion
 
 clean-gfx:
 	-rm -f $(GFX_OBJ) $(GFX_LIB) $(GFX_TEST)
@@ -233,56 +233,17 @@ clean-thumb:
 .PHONY: clean-thumb
 
 # ---------------------------------------------------------------------------
-# 编码方向（UTF-8 -> CP932 / GBK），写存档需要
-#   make test_encode
+# 动画补间接线（gfx 侧：Motion* -> 图元字段，默认关闭）
+#   make test_gfx_motion
 # ---------------------------------------------------------------------------
-ENCODE_TEST = bin/test_encode$(EXE)
+GFX_MOTION_TEST = bin/test_gfx_motion$(EXE)
 
-test_encode: $(ENCODE_TEST)
+test_gfx_motion: $(GFX_MOTION_TEST)
 
-$(ENCODE_TEST): tests/test_encode.c src/encoding.c src/encoding.h src/fvp.c \
-        src/fvp.h | bin
-	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_encode.c src/encoding.c src/fvp.c \
-	    $(LDFLAGS)
+$(GFX_MOTION_TEST): tests/test_gfx_motion.c src/gfx.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_gfx_motion.c $(GFX_OBJ) $(LDFLAGS) -lm
 
-clean-encode:
-	-rm -f $(ENCODE_TEST)
+clean-gfx-motion:
+	-rm -f $(GFX_MOTION_TEST)
 
-.PHONY: clean-encode
-
-# ---------------------------------------------------------------------------
-# 鼠标滚轮（InputGetWheel 36 的累加/取走语义）
-#   make test_wheel
-# ---------------------------------------------------------------------------
-WHEEL_TEST = bin/test_wheel$(EXE)
-
-test_wheel: $(WHEEL_TEST)
-
-$(WHEEL_TEST): tests/test_wheel.c src/vm.c src/vm.h src/fvp.c src/encoding.c \
-        src/hcb.c src/syscall.c src/flags.c src/textattr.c | bin
-	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_wheel.c src/vm.c src/fvp.c \
-	    src/encoding.c src/hcb.c src/syscall.c src/flags.c src/textattr.c \
-	    $(LDFLAGS)
-
-clean-wheel:
-	-rm -f $(WHEEL_TEST)
-
-.PHONY: clean-wheel
-
-# ---------------------------------------------------------------------------
-# 动画补间核心数学（Motion* 的时间轴 + 线性插值，尚未接 gfx）
-#   make test_motion
-# ---------------------------------------------------------------------------
-MOTION_TEST = bin/test_motion$(EXE)
-
-test_motion: $(MOTION_TEST)
-
-$(MOTION_TEST): tests/test_motion.c src/motion.c src/motion.h | bin
-	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_motion.c src/motion.c $(LDFLAGS)
-
-clean-motion:
-	-rm -f $(MOTION_TEST)
-
-.PHONY: clean-motion
-
-clean-thumb:
+.PHONY: test_gfx_motion clean-gfx-motion

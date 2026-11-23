@@ -134,6 +134,7 @@ def public_tools():
         'test_encode': os.path.join(FVP, 'bin', 'test_encode.exe'),
         'test_wheel': os.path.join(FVP, 'bin', 'test_wheel.exe'),
         'test_motion': os.path.join(FVP, 'bin', 'test_motion.exe'),
+        'test_gfx_motion': os.path.join(FVP, 'bin', 'test_gfx_motion.exe'),
     }
 
 
