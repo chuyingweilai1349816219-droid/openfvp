@@ -22,6 +22,8 @@ typedef struct FvpFrame {
 } FvpFrame;
 
 typedef struct FvpThread {
+    int id;          /* 诊断用：线程编号 */
+    uint64_t ntext;  /* 诊断用：这个线程打印了多少行台词 */
     uint32_t pc;
     const char *name;
     FvpValue *stack;
@@ -207,6 +209,7 @@ typedef struct FvpVM {
     size_t ntext;
     size_t text_cap;
     uint32_t *unknown_count; /* 65536 counters */
+    int thread_ids;          /* 下一个线程编号 */
     uint16_t *unknown_order;
     size_t nunknown;
     size_t ucap;

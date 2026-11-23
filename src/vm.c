@@ -1071,6 +1071,7 @@ void fvp_vm_free(FvpVM *vm)
 void fvp_vm_start(FvpVM *vm)
 {
     FvpThread *t = fvp_thread_new(vm->hcb->main_start, "main");
+    t->id = vm->thread_ids++;
     if (vm->nthreads == vm->thread_cap) {
         vm->thread_cap = vm->thread_cap ? vm->thread_cap * 2u : 8u;
         vm->threads = (FvpThread **)fvp_xrealloc(vm->threads,
@@ -1181,6 +1182,9 @@ void fvp_vm_add_text(FvpVM *vm, const FvpValue *layer, FvpStr *text)
     vm->text[vm->ntext].layer = *layer;
     vm->text[vm->ntext].text = text;
     vm->ntext += 1u;
+    if (vm->cur != NULL) {
+        vm->cur->ntext += 1u;
+    }
     if (!vm->quiet) {
         fwrite(text->data, 1, text->len, stdout);
         fputc('\n', stdout);

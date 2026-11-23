@@ -36,6 +36,7 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --pctrace FILE   log executed pc values (debug aid)\n"
             "  --savebin FILE   seed globals from a save/save.bin\n"
             "  --timeline       use the virtual clock (ThreadSleep/ThreadWait wake by ms)\n"
+            "  --unknown-all    print every unknown command id (not just the top 15)\n"
             "  --dump-globals FILE  write \"index value\" lines for set globals\n",
             prog);
 }
@@ -160,6 +161,8 @@ typedef struct FvpUnkTop {
     uint32_t count;
 } FvpUnkTop;
 
+static int g_unknown_all;
+
 static void fvp_print_summary(const FvpVM *vm)
 {
     FvpUnkTop *top;
@@ -176,6 +179,14 @@ static void fvp_print_summary(const FvpVM *vm)
     printf("save state slot=%d str=%d/%d/%d thumb=%dx%d\n", vm->save_slot,
            vm->save_str[0] != NULL, vm->save_str[1] != NULL,
            vm->save_str[2] != NULL, vm->save_thumb_w, vm->save_thumb_h);
+    {
+        size_t ti;
+
+        for (ti = 0; ti < vm->nthreads; ++ti) {
+            printf("thread %d: text lines %llu\n", vm->threads[ti]->id,
+                   (unsigned long long)vm->threads[ti]->ntext);
+        }
+    }
     printf("unknown cmds: ");
     if (vm->nunknown == 0) {
         printf("\n");
@@ -196,7 +207,8 @@ static void fvp_print_summary(const FvpVM *vm)
         }
         top[j] = key;
     }
-    shown = vm->nunknown < 15u ? vm->nunknown : 15u;
+    shown = g_unknown_all ? vm->nunknown
+                        : (vm->nunknown < 15u ? vm->nunknown : 15u);
     for (i = 0; i < shown; ++i) {
         if (i != 0) {
             printf(", ");
@@ -380,6 +392,8 @@ int main(int argc, char **argv)
             pctrace_path = argv[++i];
         } else if (strcmp(a, "--timeline") == 0) {
             timeline = 1;
+        } else if (strcmp(a, "--unknown-all") == 0) {
+            g_unknown_all = 1;
         } else if (strcmp(a, "--savebin") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "fvm: missing --savebin value\n");
