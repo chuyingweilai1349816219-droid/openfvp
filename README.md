@@ -58,8 +58,11 @@
 | 资源层：BIN 包 / inflate / HZC1 | 12 个 `.bin` 包共 **21,725 条**索引/名字/偏移逐条一致；`graph.bin` **1,112/1,112** 个 zlib 流（**2,539,861,820 字节**）与 `zlib.decompress` 逐字节相同；**1,112 张图 / 3,654 帧 / 727,573,943 像素 0 差异**（fmt 0–4 全覆盖） | [`src/bin.c`](src/bin.c) · [`src/inflate.c`](src/inflate.c) · [`src/hzc1.c`](src/hzc1.c) · [`docs/c-assets.md`](docs/c-assets.md) · [`tests/verify_assets.ps1`](tests/verify_assets.ps1) |
 | 音频层：Ogg / WAV 解码 + 混音 | 48 kHz 立体声 PCM16 统一格式；Ogg 实测 48 kHz / 5,587,774 帧（116.41 s）、peak=19297 rms=4385；22.05 kHz WAV 重采样到 48 kHz 后时长 5.64 s→5.644 s、peak=22123，非静音 | [`src/snd.c`](src/snd.c) · [`tests/test_snd.c`](tests/test_snd.c) · [`docs/04-audio.md`](docs/04-audio.md) |
 | 渲染层（Python 原型已验证，**未入库**） | 1920×1080 合成：背景 + 立绘 + 对话框 + 文字；90 万步里导出 12 帧 + 10 张剧情检查点 PNG。图层 / 图元 / 文本 / 合成模型与已知偏差成文 | [`docs/render-model.md`](docs/render-model.md)（原型在本地 `work/`，见下） |
-| 渲染层（C，**移植中**） | C 渲染层移植中：Python 原型已验证可合成完整画面（1920×1080，背景 + 立绘 + 对话框 + 文字），C 版正在移植并与原型做像素比对，尚未验收；Win32 桌面外壳已先行开发 | [`src/gfx.c`](src/gfx.c) · [`src/gfx.h`](src/gfx.h) · [`docs/render-model.md`](docs/render-model.md) |
-| Win32 桌面外壳（**开发中，未验收**） | 窗口 + GDI 呈现 + 60 Hz 帧循环 + 鼠标/键盘输入 + waveOut 输出；`make win32` 能构建出 `bin/fvp.exe`，但**画面、输入、音频都还没有验收数字** | [`src/platform/win32/main_win32.c`](src/platform/win32/main_win32.c) · [`Makefile`](Makefile) |
+| 渲染层（C，**已验收**） | 1920×1080 合成：图元 **24/24 位置误差 0 像素**；像素差异 **293 / 2,073,600 = 0.0141%**（PSNR 49.94 dB、SSIM 0.99971）；热帧 **9.0–9.5 ms** | [`src/gfx.c`](src/gfx.c) · [`docs/c-gfx.md`](docs/c-gfx.md) · [`tests/verify_gfx.ps1`](tests/verify_gfx.ps1) |
+| 渲染 ↔ VM 接线（**已验收**） | `syscall` 直接驱动 gfx 后，跑 528,000 步 + 每帧渲染，与参考帧**每个数字与纯渲染基线完全相同**（0 像素 / 0.0141%）；同时 `fvm.exe` 输出**逐字节不变** | [`src/syscall.c`](src/syscall.c) · [`tests/render_vm.c`](tests/render_vm.c) · [`docs/c-gfx.md`](docs/c-gfx.md) §9 |
+| Win32 桌面外壳（**已验收**） | 启动到窗口 **130–230 ms**、**60.00 fps**、GDI 上屏 avg 3.4–3.6 ms（慢帧 0）、waveOut 10 秒 underrun 0、点击注入被 `InputGetDown` 消费 | [`src/platform/win32/main_win32.c`](src/platform/win32/main_win32.c) · [`docs/win32-shell.md`](docs/win32-shell.md) |
+| **跨作品验证** | 第二部作品《星空のメモリア HD》同样跑通：命令表 **148 条逐条完全相同**、opcode 同套、VM **零修改**输出 164 行正确台词 | [`docs/06-cross-validation.md`](docs/06-cross-validation.md) · [`tools/fvpprobe.py`](tools/fvpprobe.py) |
+| 健壮性测试 | **27,300 次** HCB 变异（0 崩溃 / 0 越界）、**339 个**资产畸形用例、**43 个** VM 边界用例；`tests/run_all.py` 一键 **8/8 PASS / 78 s** | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
 | 中文脚本重建（方法已验证） | 被汉化补丁打坏的 GBK 脚本重建为 3,712,944 字节、948,219 条指令、命令表与冻结表一致的结构合法 `.hcb`（产物不入库） | [`docs/cn-script-rebuild.md`](docs/cn-script-rebuild.md) |
 | Android 外壳（设计，进行中） | APK 流水线 / JNI / EGL 原生窗口 / 触摸 / 资产目录的设计（非当前主线）；外壳不在本仓库 | [`docs/android-shell.md`](docs/android-shell.md) · [`docs/roadmap.md`](docs/roadmap.md) |
 
@@ -72,27 +75,24 @@
 
 按影响从大到小，这些都是**已知未完成**，不是待办里的漂亮话：
 
-1. **C 渲染层与 Win32 外壳都还未验收。** C 渲染层（[`src/gfx.c`](src/gfx.c)）正在从 Python 原型移植，
-   目标是和原型逐像素一致，目前**没有任何验收数字**；Win32 桌面外壳
-   （[`src/platform/win32/`](src/platform/win32/main_win32.c)）能构建出 `bin/fvp.exe`，
-   窗口、帧循环、输入、waveOut 都写了，但**没有验收过**（画面正确性、输入、音频都没验证）。
-   确定能出图的是本地 Python 原型（`work/`，未入库）。
-2. **命令语义基本是桩。** [`src/syscall.c`](src/syscall.c) 只实现了 29 个 case：
-   `TextPrint` / `Debmess` 是真实现，输入类命令返回合成值，动画/视频的 `*Test` 直接报「已结束」，
-   其余 **119 条**落到兜底策略（`*Test` 返回 1、声明返回值的返回 0）。
-   **没有绘图、没有存档、没有设置、没有视频、没有真实的动画补间。**
+1. **只有开场到第一章的画面能看。** 渲染层与桌面外壳都通过了像素级验收，
+   但**游戏内 UI 还是占位**：对话框是画的圆角框（真实的 `main_window` 贴图已解出但没接），
+   没有菜单、没有存档界面、没有设置页。动画（`Motion*`）仍是空实现，所以立绘不会动。
+2. **命令语义基本是桩。** [`src/syscall.c`](src/syscall.c) 里渲染相关的 30 条已接 gfx，
+   但动画/视频/存档/设置类命令仍是兜底策略（`*Test` 返回 1、声明返回值的返回 0）。
+   **没有移动、没有淡入淡出、没有转场、没有存档。**
 3. **协程 / 时间模型没实现。** `ThreadNext` / `ThreadWait` 只是「让出」桩，
    `Timer*` / `ThreadSleep` 没有虚拟时钟，也没有 32 线程槽的调度。
    直接后果是一部分台词（协程里拼好、由文本线程打印）拿不到，90 万步里约 50 句缺失。
    已确认的事实、失败尝试与下一步在 [`docs/05-threads.md`](docs/05-threads.md)。
 4. **音频层还没接进 VM。** `src/snd.c` 能解码、重采样、混音，Win32 外壳也已有 waveOut 输出后端，
-   但**没有任何 syscall 会触发播放**，也没有音画同步与音量体系；Android 侧没有音频后端。
-5. **视频（WMV 开场）直接跳过。** 原型里 `Movie` / `MovieState` 被实现成「立即播放完毕」，
+   但**还没有 syscall 触发播放**（正在接线）；也没有音画同步与音量体系；Android 侧没有音频后端。
+5. **视频（WMV 开场）直接跳过。** `Movie` / `MovieState` 被实现成「立即播放完毕」，
    否则脚本会卡在等待循环里。
 6. **中文版不能当成品跑。** 重建脚本结构合法、VM 可执行，但没有渲染/音频，也没有逐场景校对。
-7. **只验证过一部作品。** 全部数字来自 `いろとりどりのセカイ HD Re:GENERATION`
-   （`iroseka_HD.exe` 1.0.0.95）。其他 FVP 作品（《星空のメモリア》等）**未测试**，
-   命令表 / 资源格式是否一致未知。
+7. **只验证过两部作品。** `いろとりどりのセカイ HD Re:GENERATION` 与
+   《星空のメモリア HD》都跑通了（命令表 148 条零差异），但更老的 FVP 版本
+   （2004–2008 年的作品）**未测试**，格式是否仍然一致未知。
 8. **4 个 opcode 语义未确认**（`0x11` / `0x12` / `0x17` / `0x18`，占本作指令 0.18%），
    按数组读写实现，未做定向验证 —— 见 [`docs/roadmap.md`](docs/roadmap.md)。
 9. **没有存档格式兼容、没有选项菜单、没有 Android 后端在库内。**
