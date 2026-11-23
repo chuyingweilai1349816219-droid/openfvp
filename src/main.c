@@ -171,6 +171,9 @@ static void fvp_print_summary(const FvpVM *vm)
     printf("threads    %llu\n", (unsigned long long)vm->nthreads);
     printf("text attrs %d window(s) configured\n",
            fvp_textattr_configured_count(vm->textattr, FVP_TEXT_WINDOWS));
+    printf("save state slot=%d str=%d/%d/%d thumb=%dx%d\n", vm->save_slot,
+           vm->save_str[0] != NULL, vm->save_str[1] != NULL,
+           vm->save_str[2] != NULL, vm->save_thumb_w, vm->save_thumb_h);
     printf("unknown cmds: ");
     if (vm->nunknown == 0) {
         printf("\n");

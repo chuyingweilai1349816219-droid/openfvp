@@ -719,6 +719,9 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     fvp_map_init(&vm->garr);
     fvp_map_init(&vm->larr);
     fvp_textattr_reset(vm->textattr, FVP_TEXT_WINDOWS);
+    vm->save_slot = -1;
+    vm->save_thumb_w = 96; /* 引擎初值 96x72（docs/save-format.md §2.3） */
+    vm->save_thumb_h = 72;
     vm->unknown_count = (uint32_t *)fvp_xcalloc(65536u, sizeof(uint32_t));
 }
 

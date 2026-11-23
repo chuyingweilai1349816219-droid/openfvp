@@ -1211,6 +1211,35 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     /* 112 TextColor(twIdx, R, G, B) / 126 TextSize(twIdx, w, h) /
      * 129 TextSpeed(twIdx, ms)：只记录到 VM 的 32 个窗口属性里，按引擎的
      * 范围钳制（docs/vm-commands.md §5）。渲染层暂时不消费，所以已验收的帧不变。 */
+    /* 93 SaveCreate(id, arg) / 94 SaveThumbSize(w, h)：存档暂存区。
+     * id 0/1/2 = 章节名 / 未用 / 当前对话行（docs/save-format.md §2.2），
+     * id 3 选槽号；缩略图尺寸钳制到 20..200 x 15..150（同文档 §2.3）。 */
+    case 93:
+        if (argc >= 2) {
+            int id = (int)args[0].i;
+
+            if (id >= 0 && id < 3) {
+                vm->save_str[id] = (args[1].type == (uint8_t)FVP_STR)
+                                       ? args[1].str
+                                       : NULL;
+            } else if (id == 3) {
+                vm->save_slot = (int)args[1].i;
+            }
+        }
+        return;
+    case 94:
+        if (argc >= 2) {
+            int w = (int)args[0].i;
+            int h = (int)args[1].i;
+
+            if (w < 20) w = 20;
+            if (w > 200) w = 200;
+            if (h < 15) h = 15;
+            if (h > 150) h = 150;
+            vm->save_thumb_w = w;
+            vm->save_thumb_h = h;
+        }
+        return;
     case 112:
         if (argc >= 4) {
             fvp_textattr_set_color(vm->textattr, FVP_TEXT_WINDOWS,

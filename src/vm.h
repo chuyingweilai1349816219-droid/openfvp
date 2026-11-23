@@ -217,6 +217,12 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* 存档暂存区（SaveCreate / SaveThumbSize 写入，SaveWrite 将来消费）：
+     * str[0]=章节名, str[1]=未用, str[2]=当前对话行（docs/save-format.md §2.2）。 */
+    FvpStr *save_str[3];
+    int save_slot;   /* SaveCreate(3, n) 选的槽号，-1 = 未选 */
+    int save_thumb_w;
+    int save_thumb_h;
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);
