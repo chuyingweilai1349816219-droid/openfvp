@@ -4,6 +4,8 @@
 >
 > 本项目由 **6amm** 辅助 DeepSeek 完成，其中所有代码由 DeepSeek 生成。
 >
+> 如果觉得项目还不错的话,可以通过 https://afdian.com/a/6ammm 向 6amm 赞助
+>
 > 以下 README 由 DeepSeek 生成，不一定代表作者个人意愿。
 
 **FVP（FAVORITE VIEW POINT SYSTEM）引擎的开源 C99 重实现。**
