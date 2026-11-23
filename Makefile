@@ -23,11 +23,12 @@ SAVE_OBJ = src/save.o
 SAVEVM_OBJ = src/save_vm.o
 FLAGS_OBJ  = src/flags.o
 TEXTATTR_OBJ = src/textattr.o
+THUMB_OBJ = src/thumb.o
 
 OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ) \
-           $(TEXTATTR_OBJ)
+           $(TEXTATTR_OBJ) $(THUMB_OBJ)
 LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ) \
-           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ)
+           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ)
 
 BIN = bin/fvm$(EXE)
 LIB = bin/libfvp.a
@@ -211,3 +212,22 @@ $(TEXTATTR_OBJ): src/textattr.c src/textattr.h | src
 
 clean-textattr:
 	-rm -f $(TEXTATTR_OBJ) $(TEXTATTR_TEST)
+
+# ---------------------------------------------------------------------------
+# 存档缩略图缩放（1920x1080 BGRA -> 200x113，box filter）
+#   make test_thumb
+# ---------------------------------------------------------------------------
+THUMB_TEST = bin/test_thumb$(EXE)
+
+test_thumb: $(THUMB_TEST)
+
+$(THUMB_TEST): tests/test_thumb.c src/thumb.c src/thumb.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_thumb.c src/thumb.c $(LDFLAGS)
+
+$(THUMB_OBJ): src/thumb.c src/thumb.h | src
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean-thumb:
+	-rm -f $(THUMB_OBJ) $(THUMB_TEST)
+
+.PHONY: clean-thumb

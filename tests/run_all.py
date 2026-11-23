@@ -215,6 +215,17 @@ def build_steps(args):
                           note='colour/size/speed clamping, window bounds, '
                                'configured count'))
 
+    # 4f. save thumbnail scaling (1920x1080 BGRA -> 200x113)
+    test_thumb = tools['test_thumb']
+    if not os.path.isfile(test_thumb):
+        steps.append(Step('test_thumb', None, 0,
+                          skip_reason='bin/test_thumb.exe missing '
+                                      '(run: make test_thumb)'))
+    else:
+        steps.append(Step('test_thumb', [test_thumb], 120,
+                          note='box filter colour/alpha, 2x2 average, real '
+                               '1920x1080 -> 200x113'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()
