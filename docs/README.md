@@ -36,6 +36,7 @@
 | [cn-script-rebuild.md](cn-script-rebuild.md) | 被汉化补丁打坏的 GBK `.hcb` 如何以日文版为骨架重建，含字节账、重定位与校验方法 |
 | [06-cross-validation.md](06-cross-validation.md) | 用第二部 FVP 作品做交叉验证：包名、命令表（148 条逐条相同）、opcode、VM 行为的对比结果 |
 | [save-format.md](save-format.md) | 存档格式：槽文件的时间戳 / 三组字符串 / 裸 BGRA 缩略图、`save.bin` 的 20 字节头与已读位图；§7 是 C 实现与逐字节回环验收 |
+| [save-snapshot.md](save-snapshot.md) | 槽内「引擎状态快照」专文：常量头 64 B / 中段密度地标 / 常量尾 216×6B 表 / 118,784 B 稀疏块，以及仍未解的字段与继续研究的路线 |
 
 ## 渲染
 
