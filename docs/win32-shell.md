@@ -85,7 +85,7 @@ fvp.exe --game <游戏目录> [选项]
 | 鼠标左键 | 确定 / 推进对话（按住会以 ~8 次/秒连发，等同 VN 的快速推进） |
 | Enter / 空格 | 同鼠标左键 |
 | 鼠标移动 | 换算回 1920×1080 画布坐标，写入 `InputGetCursX/Y` |
-| 滚轮 | 记录到日志（`input: wheel delta=...`）；VM 的 `InputGetWheel` syscall 还是空实现 |
+| 滚轮 | 记录到日志，**并累加到 VM**；脚本用 `InputGetWheel`（命令 36）取走（120 = 一格） |
 | F11 | 无边框全屏 / 还原（记住窗口位置） |
 | ESC | 退出（干净关闭：停音频线程 → 销毁 gfx/窗口 → 释放 VM/HCB） |
 | 关闭按钮 | 同 ESC |
@@ -178,7 +178,7 @@ defaults)`，不阻塞启动；文件损坏时打 `save: ... is not a valid save
    `--font out\c\gfx-font-32.bin`（正文层默认字号 32）、`-34`（人名层）、`-30`（标题层）
    可以显示中文/日文；这些图集可以用 `tests/gfx_dump.py` 的 `write_font()` 生成。
    图集只包含生成时给的字符集，换脚本/换语言要重新生成。
-3. **滚轮没有语义**：VM 的 `InputGetWheel` 还没实现，壳只能记录事件。
+3. **滚轮已接**：壳把累加量交给 VM，`InputGetWheel`（36）取走并清零（`tests/test_wheel.c` 有 8 项用例）；缺的是「原版引擎取走时机的对照验证」，需要脚本真的调用它。
    同理键盘只有 Enter/空格（= 左键）有语义，其它键不转发。
 4. **音频目前是静音的**：waveOut 通路、缓冲循环、`snd_mix` 都验证过在跑
    （`--audio-tone 440` 能出声），但 `syscall.c` 还没有调用 `snd_play_*`，所以游戏声音

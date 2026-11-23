@@ -250,4 +250,23 @@ clean-encode:
 
 .PHONY: clean-encode
 
+# ---------------------------------------------------------------------------
+# 鼠标滚轮（InputGetWheel 36 的累加/取走语义）
+#   make test_wheel
+# ---------------------------------------------------------------------------
+WHEEL_TEST = bin/test_wheel$(EXE)
+
+test_wheel: $(WHEEL_TEST)
+
+$(WHEEL_TEST): tests/test_wheel.c src/vm.c src/vm.h src/fvp.c src/encoding.c \
+        src/hcb.c src/syscall.c src/flags.c src/textattr.c | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_wheel.c src/vm.c src/fvp.c \
+	    src/encoding.c src/hcb.c src/syscall.c src/flags.c src/textattr.c \
+	    $(LDFLAGS)
+
+clean-wheel:
+	-rm -f $(WHEEL_TEST)
+
+.PHONY: clean-wheel
+
 clean-thumb:

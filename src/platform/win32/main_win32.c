@@ -1892,6 +1892,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         if (in->wheel_delta != 0) {
             fvp_logf("input: wheel delta=%d at canvas (%d,%d)",
                      in->wheel_delta, in->canvas_x, in->canvas_y);
+            /* 交给 VM：脚本用 InputGetWheel(36) 取走（120 = 一格）。 */
+            fvp_vm_wheel_add(&vm, in->wheel_delta);
             in->wheel_delta = 0;
         }
 

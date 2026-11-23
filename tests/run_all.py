@@ -237,6 +237,17 @@ def build_steps(args):
                           note='UTF-8 -> CP932/GBK bytes + decode round-trip, '
                                'unmappable -> ?'))
 
+    # 4h. mouse wheel accumulate/take semantics (InputGetWheel, command 36)
+    test_wheel = tools['test_wheel']
+    if not os.path.isfile(test_wheel):
+        steps.append(Step('test_wheel', None, 0,
+                          skip_reason='bin/test_wheel.exe missing '
+                                      '(run: make test_wheel)'))
+    else:
+        steps.append(Step('test_wheel', [test_wheel], 120,
+                          note='wheel accumulate / take-clears / negative / '
+                               'NULL safety'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

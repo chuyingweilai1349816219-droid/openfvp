@@ -1026,6 +1026,26 @@ int fvp_snd_bank_read(FvpSndBridge *b, const char *name, uint8_t **data,
     return opened > 0 ? -1 : -2;
 }
 
+void fvp_vm_wheel_add(FvpVM *vm, int delta)
+{
+    if (vm == NULL || delta == 0) {
+        return;
+    }
+    vm->wheel_delta += delta;
+}
+
+int fvp_vm_wheel_take(FvpVM *vm)
+{
+    int v;
+
+    if (vm == NULL) {
+        return 0;
+    }
+    v = vm->wheel_delta;
+    vm->wheel_delta = 0;
+    return v;
+}
+
 void fvp_vm_free(FvpVM *vm)
 {
     size_t i;

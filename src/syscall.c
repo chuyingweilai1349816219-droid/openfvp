@@ -1176,8 +1176,11 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             t->temp = fvp_make_int(0);
         }
         return;
-    case 36: /* InputGetUp */
+    case 35: /* InputGetUp（cmd_table: 35 = InputGetUp, 36 = InputGetWheel） */
         t->temp = fvp_make_int(0);
+        return;
+    case 36: /* InputGetWheel: 取走外壳累计的滚轮增量（120 = 一格） */
+        t->temp = fvp_make_int(fvp_vm_wheel_take(vm));
         return;
     case 29: /* InputGetCursX */
         t->temp = fvp_make_int(vm->cx);

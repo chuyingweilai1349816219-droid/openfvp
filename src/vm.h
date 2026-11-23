@@ -223,12 +223,19 @@ typedef struct FvpVM {
     int save_slot;   /* SaveCreate(3, n) 选的槽号，-1 = 未选 */
     int save_thumb_w;
     int save_thumb_h;
+    /* 鼠标滚轮累计量（120 = 一格）。外壳/测试往里加，脚本用 InputGetWheel 取走。 */
+    int wheel_delta;
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);
 void fvp_vm_free(FvpVM *vm);
 void fvp_vm_start(FvpVM *vm);
 uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps);
+
+/* 鼠标滚轮：外壳/测试累加增量（120 = 一格），脚本通过 InputGetWheel(36) 取走。
+ * fvp_vm_wheel_take() 返回累计值并把累加器清零（取走语义）。 */
+void fvp_vm_wheel_add(FvpVM *vm, int delta);
+int fvp_vm_wheel_take(FvpVM *vm);
 
 /* Attach (or detach, gfx == NULL) a rendering context.  Only the syscall
  * layer uses it; the VM's own semantics (steps, stacks, temp values, text
