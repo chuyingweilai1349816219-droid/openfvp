@@ -1505,6 +1505,21 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     fvp_logf("gfx: attached to vm (syscall -> gfx bridge active)");
 #endif
 
+    /*
+     * 把音频挂到虚拟机上：AudioPlay / AudioLoad 等命令会真的解码并混音，
+     * 由 audio 线程从 snd_mix 取数据送到 waveOut。
+     */
+    if (snd != NULL) {
+        int added;
+        fvp_vm_attach_snd(&vm, snd);
+        added = fvp_vm_snd_add_audio_dir(&vm, game_u8);
+        fvp_logf("snd: attached to vm (%d audio archive(s) registered)", added);
+        if (added <= 0) {
+            fvp_logf("snd: no audio package found in %s (BGM/voice will be silent)",
+                     game_u8);
+        }
+    }
+
     /* ---------------- window ---------------- */
     choose_window_size(&opts, &win_w, &win_h);
     if (!path_basename_w(game_dir, title_game, PATH_CAP) ||
