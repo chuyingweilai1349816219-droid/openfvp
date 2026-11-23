@@ -520,3 +520,69 @@ char *fvp_save_find_file(const char *game_dir)
     free(buf);
     return NULL;
 }
+
+/* 写文件版本（同一个 UTF-8 → 宽字符的路径规则）。 */
+static FILE *fopen_utf8_write(const char *path)
+{
+#ifdef _WIN32
+    wchar_t wpath[1024];
+    int n;
+
+    if (path == NULL) {
+        return NULL;
+    }
+    n = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wpath,
+                            (int)(sizeof(wpath) / sizeof(wpath[0])));
+    if (n <= 0) {
+        n = MultiByteToWideChar(CP_ACP, 0, path, -1, wpath,
+                                (int)(sizeof(wpath) / sizeof(wpath[0])));
+    }
+    if (n <= 0) {
+        return NULL;
+    }
+    return _wfopen(wpath, L"wb");
+#else
+    if (path == NULL) {
+        return NULL;
+    }
+    return fopen(path, "wb");
+#endif
+}
+
+size_t fvp_save_slot_write_file(const FvpSaveSlot *s, const char *path)
+{
+    size_t need;
+    size_t wrote;
+    unsigned char *buf;
+    FILE *f;
+
+    if (s == NULL || path == NULL) {
+        return 0;
+    }
+    need = fvp_save_slot_size(s);
+    if (need == 0) {
+        return 0;
+    }
+    buf = (unsigned char *)malloc(need);
+    if (buf == NULL) {
+        return 0;
+    }
+    wrote = fvp_save_slot_store(s, buf, need);
+    if (wrote != need) {
+        free(buf);
+        return 0;
+    }
+    f = fopen_utf8_write(path);
+    if (f == NULL) {
+        free(buf);
+        return 0;
+    }
+    if (fwrite(buf, 1, need, f) != need) {
+        fclose(f);
+        free(buf);
+        return 0;
+    }
+    fclose(f);
+    free(buf);
+    return need;
+}

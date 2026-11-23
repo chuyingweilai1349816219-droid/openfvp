@@ -112,6 +112,10 @@ int fvp_save_bin_load_file(FvpSaveBin *b, const char *path);
  * 第二个位置只是给解包过 / 便携版的目录兜底。 */
 char *fvp_save_find_file(const char *game_dir);
 
+/* 把槽序列化后写盘（UTF-8 路径）。成功返回写入字节数，0 = 失败。
+ * 注意：它写的是调用者给的槽内容，**不会**替你去编码那 3 条字符串。 */
+size_t fvp_save_slot_write_file(const FvpSaveSlot *s, const char *path);
+
 #ifdef __cplusplus
 }
 #endif

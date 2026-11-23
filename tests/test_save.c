@@ -140,6 +140,29 @@ static void selftest(void)
         }
     }
 
+    /* 3b. 写盘回环：序列化 → 写文件 → 读回 → 逐字节一致（存档落盘路径）。 */
+    {
+        size_t wr = fvp_save_slot_write_file(&s, "out/test_slot_tmp.bin");
+
+        CHECK(wr == need, "write_file wrote %zu, need %zu", wr, need);
+        if (wr == need) {
+            size_t rlen = 0;
+            unsigned char *rb = read_file("out/test_slot_tmp.bin", &rlen);
+
+            CHECK(rb != NULL, "cannot read back out/test_slot_tmp.bin");
+            if (rb != NULL) {
+                CHECK(rlen == need, "readback size %zu != %zu", rlen, need);
+                CHECK(memcmp(rb, buf, need) == 0, "readback bytes differ");
+                free(rb);
+            }
+            remove("out/test_slot_tmp.bin");
+        }
+        CHECK(fvp_save_slot_write_file(NULL, "out/x.bin") == 0,
+              "write_file(NULL slot) must fail");
+        CHECK(fvp_save_slot_write_file(&s, NULL) == 0,
+              "write_file(NULL path) must fail");
+    }
+
     /* 4. 修改时间戳与 str2，尾段必须原样保留。 */
     t.year = 2026;
     t.minute = 7;
