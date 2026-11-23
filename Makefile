@@ -20,9 +20,11 @@ SRC      = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c
 SND_SRC  = src/snd.c
 RES_SRC  = src/bin.c src/inflate.c src/hzc1.c
 SAVE_OBJ = src/save.o
+SAVEVM_OBJ = src/save_vm.o
 
-OBJ      = $(CORE_SRC:.c=.o)
-LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ)
+OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ)
+LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ) \
+           $(SAVEVM_OBJ)
 
 BIN = bin/fvm$(EXE)
 LIB = bin/libfvp.a
@@ -150,9 +152,21 @@ $(SAVE_TEST): tests/test_save.c src/save.c src/save.h | bin
 $(SAVE_OBJ): src/save.c src/save.h | src
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-.PHONY: test_save
+# save.bin → VM 全局变量桥（依 fvp.h 的 FvpValue，故不与 save.c 合并）
+$(SAVEVM_OBJ): src/save_vm.c src/save_vm.h src/save.h src/fvp.h | src
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+SAVEVM_TEST = bin/test_save_vm$(EXE)
+
+test_save_vm: $(SAVEVM_TEST)
+
+$(SAVEVM_TEST): tests/test_save_vm.c src/save_vm.c src/save.c src/save_vm.h \
+        src/save.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_save_vm.c src/save_vm.c src/save.c $(LDFLAGS)
+
+.PHONY: test_save test_save_vm_vm
 
 clean-save:
-	-rm -f $(SAVE_OBJ) $(SAVE_TEST) bin/libfvp_save.a
+	-rm -f $(SAVE_OBJ) $(SAVEVM_OBJ) $(SAVE_TEST) $(SAVEVM_TEST) bin/libfvp_save.a
 
 .PHONY: clean-save

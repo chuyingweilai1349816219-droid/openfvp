@@ -17,6 +17,13 @@
 - **验收**：`tests/verify_save.ps1` + `tests/test_save.c`
   - 自检 **50 项**：空槽、超长字符串、截断 / 畸形输入拒绝、alpha 尺寸推断、`save.bin` 幂等回环
   - **6 个真实存档槽逐字节回环一致**（44 项断言），时间戳 / 章节名 / 对话行 / 缩略图尺寸全对得上
+- **全局变量桥（`src/save_vm.c`）**：把 `save.bin` 里 `type==2` 的 145 条 int 全局变量
+  灌进 VM 的 `globals[]`；`type==1` 的 846 条语义未解，跳过并报数
+  - 新 CLI：`fvm --savebin FILE`（启动前播种全局变量）、`fvm --dump-globals FILE`（导出非零 int）
+  - 验收：合成用例 **19 项**（含 `u32 → int32` 回绕、容量不足、只统计模式）、
+    真实 `save.bin` **13 项**（1471 = 145 int + 846 unknown + 480 unset，值序列与文档 §3.3 逐个吻合）
+  - `tests/verify_save_vm.ps1`；`run_all.py` 再加两步 → **12/12 PASS**
+  - 命令行默认输出不变：`compare.py --run` 仍是 6,496 字节 / `7F9837FF…` 逐字节一致
 - `make test_save` 目标；`src/save.o` 已并入 `bin/libfvp.a`
 - `tests/run_all.py` 增加两步存档验收 → **10/10 PASS**
 

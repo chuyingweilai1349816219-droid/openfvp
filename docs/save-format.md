@@ -550,3 +550,26 @@ python fvp/tools/saveinfo.py --config <save.bin> [-v]
 
 > 注意：回环一致只能证明"边界切对了、没有丢字节"，**不能**证明槽内引擎状态被正确解释。
 > 真正的存/读档还需要 §4 的 `SaveData` 语义与 `countA/countB` 的权威来源。
+
+### 7.1 全局变量桥（`src/save_vm.c`）
+
+`save.bin` 里唯一能安全还原成运行时状态的就是 §3.3 的全局变量表，而且只有 `type == 2`
+（已确证的 int）那 145 条能安全灌进 VM；`type == 1` 的 846 条语义未解（§4 未解 5），
+一律跳过并报数，避免把脏值写进脚本变量。
+
+| API / 开关 | 作用 |
+|---|---|
+| `fvp_save_globals_apply()` | 把 `type==2` 的记录写进 `FvpValue globals[]`；输出 `total/ints/unknown/unset/skipped` 统计。`globals` 传 NULL 时只统计 |
+| `fvm --savebin FILE` | 启动 VM 前用 `save.bin` 播种全局变量，打印 `records/ints/unknown/unset` |
+| `fvm --dump-globals FILE` | 写 `index value` 行（只写非零 int），用于和独立实现比对 |
+
+**类型编号陷阱**：存档里的 `2` 表示 int，而 VM 的 `FvpType` 里 int 是 `0`
+（`INT=0/FLOAT=1/STR=2`）。两套枚举不能混用，否则会把字符串槽当成整数读。
+
+验收（`tests/verify_save_vm.ps1`）：
+
+| 项 | 结果 |
+|---|---|
+| 合成记录 | **19 项**：type 映射、`u32 → int32`（`0xFFFFFFF0` → `-16`）、容量不足时只统计不越界、`globals=NULL` 只统计、NULL 文件 |
+| 真实 `save.bin` | **13 项**：1471 = **145 int + 846 unknown + 480 unset**（与 §3.3 完全一致），前 14 个 int 值 = `5,5,1,0,0,180,255,128,100,90,70,70,65,100` |
+| `fvm --savebin/--dump-globals` | `--steps 0` 时导出 **114** 个非零 int（145 里 31 个为 0），前 12 行与 §3.3 逐个吻合 |

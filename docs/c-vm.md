@@ -88,8 +88,10 @@ fvp\bin\fvm.exe "C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD\.iroseka.hc
 | `--quiet` | 不向 stdout 回显文本 / debmess |
 | `--eol crlf\|lf` | 输出换行符，默认 `crlf`（POSIX 上想用 LF 时显式指定） |
 | `--pctrace FILE` | 调试：逐条记录执行的 pc |
+| `--savebin FILE` | 启动前用 `save/save.bin` 播种全局变量（只灌 `type==2` 的 int，见 `docs/save-format.md` §7.1） |
+| `--dump-globals FILE` | 运行后导出非零 int 全局变量，每行 `index value` |
 
-退出码：`0` 成功；`2` 参数错误；`3` 脚本加载/解码失败；`4` 写输出文件失败。
+退出码：`0` 成功；`2` 参数错误；`3` 脚本加载/解码失败；`4` 写输出文件失败；`5` 读 `--savebin` 失败。
 
 ---
 

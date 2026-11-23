@@ -3,7 +3,7 @@
  * CLI mirrors the Python reference prototype:
  *   fvm.exe <script.hcb> [--enc cp932|gbk] [--steps N] [--click N]
  *           [--cursor X,Y] [--text-out FILE] [--quiet] [--eol crlf|lf]
- *           [--pctrace FILE]
+ *           [--pctrace FILE] [--savebin FILE] [--dump-globals FILE]
  *
  * The text output file is byte-compatible with Python's:
  *   "[<layer>] <text>\n" per TextPrint, written with CRLF on Windows (the
@@ -18,6 +18,8 @@
 #include "encoding.h"
 #include "fvp.h"
 #include "hcb.h"
+#include "save.h"
+#include "save_vm.h"
 #include "vm.h"
 
 static void fvp_usage(FILE *f, const char *prog)
@@ -31,7 +33,9 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --text-out FILE  write \"[layer] text\" lines (CRLF) to FILE\n"
             "  --quiet          do not echo text / debmess to stdout\n"
             "  --eol crlf|lf    line endings for --text-out (default crlf)\n"
-            "  --pctrace FILE   log executed pc values (debug aid)\n",
+            "  --pctrace FILE   log executed pc values (debug aid)\n"
+            "  --savebin FILE   seed globals from a save/save.bin\n"
+            "  --dump-globals FILE  write \"index value\" lines for set globals\n",
             prog);
 }
 
@@ -196,12 +200,109 @@ static void fvp_print_summary(const FvpVM *vm)
     free(top);
 }
 
+/* 整文件读入（调用者 free）。失败返回 NULL。 */
+static unsigned char *fvp_read_whole_file(const char *path, size_t *len_out)
+{
+    FILE *f;
+    long n;
+    unsigned char *buf;
+
+    if (len_out != NULL) {
+        *len_out = 0;
+    }
+    f = fopen(path, "rb");
+    if (f == NULL) {
+        return NULL;
+    }
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
+    n = ftell(f);
+    if (n <= 0) {
+        fclose(f);
+        return NULL;
+    }
+    rewind(f);
+    buf = (unsigned char *)malloc((size_t)n);
+    if (buf == NULL) {
+        fclose(f);
+        return NULL;
+    }
+    if (fread(buf, 1, (size_t)n, f) != (size_t)n) {
+        free(buf);
+        fclose(f);
+        return NULL;
+    }
+    fclose(f);
+    if (len_out != NULL) {
+        *len_out = (size_t)n;
+    }
+    return buf;
+}
+
+/* 把非零的 int 全局变量写成 "index value" 行，便于和独立实现比对。 */
+static int fvp_dump_globals(const char *path, const FvpVM *vm)
+{
+    FILE *f;
+    int i;
+    int written = 0;
+
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    for (i = 0; i < FVP_GLOBAL_COUNT; ++i) {
+        if (vm->globals[i].type != (uint8_t)FVP_INT) {
+            continue;
+        }
+        if (vm->globals[i].i == 0) {
+            continue;
+        }
+        fprintf(f, "%d %lld\n", i, (long long)vm->globals[i].i);
+        written += 1;
+    }
+    fclose(f);
+    return written + 1; /* >0 表示成功 */
+}
+
+/* 从 save.bin 灌全局变量；返回 1 成功。 */
+static int fvp_seed_globals(const char *path, FvpVM *vm)
+{
+    unsigned char *buf;
+    size_t len = 0;
+    FvpSaveBin sb;
+    FvpSaveGlobalsStats st;
+    int written;
+
+    buf = fvp_read_whole_file(path, &len);
+    if (buf == NULL) {
+        fprintf(stderr, "fvm: cannot read %s\n", path);
+        return 0;
+    }
+    memset(&sb, 0, sizeof(sb));
+    if (!fvp_save_bin_load(&sb, buf, len)) {
+        fprintf(stderr, "fvm: %s is not a valid save.bin\n", path);
+        free(buf);
+        return 0;
+    }
+    written = fvp_save_globals_apply(&sb, vm->globals, FVP_GLOBAL_COUNT, &st);
+    printf("save.bin: %d records, %d int applied, %d unknown(type1), "
+           "%d unset\n",
+           st.total, written, st.unknown, st.unset);
+    fvp_save_bin_free(&sb);
+    free(buf);
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
     const char *script = NULL;
     const char *encname = "cp932";
     const char *text_out = NULL;
     const char *pctrace_path = NULL;
+    const char *savebin_path = NULL;
+    const char *dump_globals_path = NULL;
     uint64_t steps = 2000000u;
     int64_t click = 0;
     int64_t cx = 960;
@@ -263,6 +364,18 @@ int main(int argc, char **argv)
                 return 2;
             }
             pctrace_path = argv[++i];
+        } else if (strcmp(a, "--savebin") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "fvm: missing --savebin value\n");
+                return 2;
+            }
+            savebin_path = argv[++i];
+        } else if (strcmp(a, "--dump-globals") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "fvm: missing --dump-globals value\n");
+                return 2;
+            }
+            dump_globals_path = argv[++i];
         } else if (strcmp(a, "--quiet") == 0) {
             quiet = 1;
         } else if (strcmp(a, "--eol") == 0) {
@@ -310,6 +423,11 @@ int main(int argc, char **argv)
     }
 
     fvp_vm_init(&vm, &hcb, quiet);
+    if (savebin_path != NULL && !fvp_seed_globals(savebin_path, &vm)) {
+        fvp_vm_free(&vm);
+        fvp_hcb_free(&hcb);
+        return 5;
+    }
     vm.click_period = click;
     vm.cx = cx;
     vm.cy = cy;
@@ -326,6 +444,15 @@ int main(int argc, char **argv)
     (void)fvp_vm_run(&vm, steps);
 
     fvp_print_summary(&vm);
+    if (dump_globals_path != NULL) {
+        if (!fvp_dump_globals(dump_globals_path, &vm)) {
+            fprintf(stderr, "fvm: cannot write %s\n", dump_globals_path);
+            fvp_vm_free(&vm);
+            fvp_hcb_free(&hcb);
+            return 4;
+        }
+        printf("globals -> %s\n", dump_globals_path);
+    }
     if (text_out != NULL) {
         if (!fvp_write_text_file(text_out, &vm, crlf)) {
             fvp_vm_free(&vm);

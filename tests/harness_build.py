@@ -127,6 +127,7 @@ def public_tools():
         'c_assets': os.path.join(FVP, 'bin', 'c_assets.exe'),
         'test_snd': os.path.join(FVP, 'bin', 'test_snd.exe'),
         'test_save': os.path.join(FVP, 'bin', 'test_save.exe'),
+        'test_save_vm': os.path.join(FVP, 'bin', 'test_save_vm.exe'),
     }
 
 

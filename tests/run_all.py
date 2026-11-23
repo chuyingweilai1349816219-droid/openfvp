@@ -164,6 +164,26 @@ def build_steps(args):
                               skip_reason='no save/save.bin + save/sNNN.bin '
                                           'under the game directory'))
 
+    # 4c. save.bin -> VM globals bridge
+    test_save_vm = tools['test_save_vm']
+    if not os.path.isfile(test_save_vm):
+        steps.append(Step('test_save_vm (selftest)', None, 0,
+                          skip_reason='bin/test_save_vm.exe missing '
+                                      '(run: make test_save_vm)'))
+    else:
+        steps.append(Step('test_save_vm (selftest)', [test_save_vm], 120,
+                          note='type mapping / int32 wrap / capacity / stats '
+                               'only'))
+        if sbin and os.path.isfile(sbin):
+            steps.append(Step('test_save_vm (real save.bin)',
+                              [test_save_vm, sbin], 300,
+                              note='1471 = 145 int + 846 unknown + 480 unset, '
+                                   'values vs docs §3.3'))
+        else:
+            steps.append(Step('test_save_vm (real save.bin)', None, 0,
+                              skip_reason='no save/save.bin under the game '
+                                          'directory'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()
