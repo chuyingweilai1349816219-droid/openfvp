@@ -11,6 +11,12 @@
 
 ### 新增
 
+- **`--save-encoding cp932|gbk`：存档字符串编码可选**（默认跟随脚本编码）
+  - 实跑对照（同一句 `プロローグ`）：CP932 → `83 76 83 8d 83 8d 81 5b 83 4f`，
+    GBK → `a5 d7 a5 ed a5 ed a9 60 a5 b0`，与 Python codecs 的输出**逐字节相同**
+  - `test_save --dump-strs` 新开关：打印槽内三条字符串的 hex，便于离线比对
+  - 新增 `tests/verify_save_encoding.ps1`：真跑外壳两次（默认 / `--save-encoding gbk`）+
+    逐字节断言，**PASS**；这条补上了 0.3 测试盘里「GBK 路径端到端」的空缺
 - **存档序列化的字节布局回归钉**：一份 52 字节合成槽（时间戳 + 三条字符串 + 2×2 缩略图 +
   5 字节尾段）序列化后 FNV-1a 64 固定为 `0x55bc2d006a29f2bf`，`make test_save` 会校验
   —— 以后改序列化顺序 / 字节序 / 漏字段会立刻失败（`test_save` 自检 50 → **58 项**）

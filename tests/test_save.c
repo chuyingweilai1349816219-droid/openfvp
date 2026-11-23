@@ -13,6 +13,7 @@
 #include "../src/save.h"
 
 static int g_fail = 0;
+static int g_dump_strs = 0;
 static int g_pass = 0;
 
 #define CHECK(cond, ...)                                                      \
@@ -477,6 +478,19 @@ static int run_files(const char *savebin_path, char **slots, int nslots)
                    base, len, s.year, s.month, s.day, s.hour, s.minute,
                    s.thumb_w, s.thumb_h, s.len[0], s.len[1], s.len[2],
                    s.tail_len);
+            if (g_dump_strs) {
+                int k;
+
+                for (k = 0; k < 3; ++k) {
+                    unsigned int b;
+
+                    printf("  str%d=%u:", k, s.len[k]);
+                    for (b = 0; b < s.len[k]; ++b) {
+                        printf(" %02x", s.str[k][b]);
+                    }
+                    printf("\n");
+                }
+            }
         }
         free(out);
         fvp_save_slot_free(&s);
@@ -593,7 +607,9 @@ int main(int argc, char **argv)
         return 2;
     }
     for (i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "--savebin") == 0 && i + 1 < argc) {
+        if (strcmp(argv[i], "--dump-strs") == 0) {
+            g_dump_strs = 1;
+        } else if (strcmp(argv[i], "--savebin") == 0 && i + 1 < argc) {
             savebin = argv[++i];
         } else {
             slots[nslots++] = argv[i];

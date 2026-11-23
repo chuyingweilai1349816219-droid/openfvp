@@ -91,6 +91,7 @@ typedef struct Options {
     wchar_t save_template[PATH_CAP];
     wchar_t save_preview[PATH_CAP];
     double save_preview_every; /* >0：运行中每隔这么多秒写一次预览 */
+    wchar_t save_encoding[16]; /* "" = 跟随脚本；否则 cp932 / gbk */
     wchar_t log_path[PATH_CAP];
     wchar_t fonts[FONT_MAX][PATH_CAP];
     int nfonts;
@@ -341,6 +342,7 @@ static const wchar_t *usage_text(void)
             L"  --save-template FILE  用这个真实存档槽当模板（配 --save-preview）\n"
             L"  --save-preview FILE   退出时写出「模板 + 当前时间 + 当前画面缩略图」的槽\n"
             L"  --save-preview-every N  运行中每 N 秒写一次预览（文件名加 .1/.2 序号）\n"
+            L"  --save-encoding ENC  存档字符串编码 cp932|gbk（默认跟随脚本编码）\n"
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
@@ -556,6 +558,9 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             if (o->save_preview_every < 0.0) {
                 o->save_preview_every = 0.0;
             }
+        } else if (wcscmp(a, L"--save-encoding") == 0) {
+            NEED_VALUE();
+            wcsncpy(o->save_encoding, v, 15);
         } else if (wcscmp(a, L"--font") == 0) {
             NEED_VALUE();
             if (o->nfonts < FONT_MAX) {
@@ -1457,6 +1462,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     double t_ready;
     double t_first_frame = 0.0;
     int have_first_frame = 0;
+    FvpEncoding save_enc; /* 存档字符串用哪种编码写（默认跟随脚本） */
 
     uint64_t text_logged = 0;
     int frame = 0;
@@ -1528,6 +1534,18 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         return parsed == 1 ? 0 : 2;
     }
     verbose = opts.verbose;
+
+    /* 存档字符串编码：显式 --save-encoding 优先，否则跟随脚本编码。 */
+    save_enc = (opts.enc_mode == ENC_GBK) ? FVP_ENC_GBK : FVP_ENC_CP932;
+    if (wcscmp(opts.save_encoding, L"gbk") == 0) {
+        save_enc = FVP_ENC_GBK;
+    } else if (wcscmp(opts.save_encoding, L"cp932") == 0) {
+        save_enc = FVP_ENC_CP932;
+    } else if (opts.save_encoding[0] != L'\0') {
+        fvp_logf("save: unknown --save-encoding '%ls' (use cp932|gbk), "
+                 "following the script encoding instead",
+                 opts.save_encoding);
+    }
 
     if (opts.log_path[0] != L'\0') {
         fvp_log_close();
@@ -1824,8 +1842,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 write_save_preview(opts.save_template, numbered,
                                    (const unsigned char *)canvas2, cw2, ch2,
                                    &vm,
-                                   opts.enc_mode == ENC_GBK ? FVP_ENC_GBK
-                                                            : FVP_ENC_CP932);
+                                   save_enc);
                 last_preview_at = now;
             }
         }
@@ -2115,8 +2132,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             opts.save_preview[0] != L'\0') {
             write_save_preview(opts.save_template, opts.save_preview,
                                (const unsigned char *)canvas, cw, ch, &vm,
-                               opts.enc_mode == ENC_GBK ? FVP_ENC_GBK
-                                                        : FVP_ENC_CP932);
+                               save_enc);
         }
     }
 
