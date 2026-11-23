@@ -71,6 +71,7 @@ fvp.exe --game <游戏目录> [选项]
 | `--thumb-shot FILE` | 退出时把最后一帧按 **200×113** 缩成存档缩略图 BMP（`src/thumb.c` 的 box filter，真存档里是裸 BGRA） |
 | `--save-template FILE` | 拿一个**真实存档槽**当模板（与 `--save-preview` 配对使用） |
 | `--save-preview FILE` | 退出时写出「模板 + 当前本地时间 + 当前画面缩略图」的存档槽（字符串段沿用模板） |
+| `--save-preview-every N` | 运行中每 N 秒写一次预览，文件名追加 `.1/.2/…`（相当于「按 F5 存档」的自动化版） |
 | `--font FILE` | 加载 GFXF 字体图集，可重复；默认自动找 exe 目录的 `gfx-font-*.bin` |
 | `--no-feed-text` | 关闭壳的临时文本桥（等 syscall 层接好 gfx 后应关闭） |
 | `--log FILE` | 日志路径，默认 `<exe目录>\fvp-win32.log`（不可写时退到 %TEMP%） |

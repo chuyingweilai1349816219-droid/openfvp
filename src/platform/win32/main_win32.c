@@ -90,6 +90,7 @@ typedef struct Options {
     wchar_t thumb_shot[PATH_CAP];
     wchar_t save_template[PATH_CAP];
     wchar_t save_preview[PATH_CAP];
+    double save_preview_every; /* >0：运行中每隔这么多秒写一次预览 */
     wchar_t log_path[PATH_CAP];
     wchar_t fonts[FONT_MAX][PATH_CAP];
     int nfonts;
@@ -339,6 +340,7 @@ static const wchar_t *usage_text(void)
             L"  --thumb-shot FILE   退出时写 200x113 的存档缩略图 BMP\n"
             L"  --save-template FILE  用这个真实存档槽当模板（配 --save-preview）\n"
             L"  --save-preview FILE   退出时写出「模板 + 当前时间 + 当前画面缩略图」的槽\n"
+            L"  --save-preview-every N  运行中每 N 秒写一次预览（文件名加 .1/.2 序号）\n"
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
@@ -408,6 +410,7 @@ static void defaults(Options *o)
     o->burst_steps = 40000;
     o->text_pace_mode = TEXT_PACE_AUTO;
     o->run_seconds = 0.0;
+    o->save_preview_every = 0.0;
     o->feed_text = 1;
 }
 
@@ -547,6 +550,12 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--save-preview") == 0) {
             NEED_VALUE();
             wcsncpy(o->save_preview, v, PATH_CAP - 1);
+        } else if (wcscmp(a, L"--save-preview-every") == 0) {
+            NEED_VALUE();
+            o->save_preview_every = wcstod(v, NULL);
+            if (o->save_preview_every < 0.0) {
+                o->save_preview_every = 0.0;
+            }
         } else if (wcscmp(a, L"--font") == 0) {
             NEED_VALUE();
             if (o->nfonts < FONT_MAX) {
@@ -1462,6 +1471,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     double last_auto_click = 0.0;
     int click_flash = 0;
     int exit_auto = 0;
+    double last_preview_at = 0.0;
+    int preview_seq = 0;
     int exit_script = 0;
     double last_report = 0.0;
     PerfStats perf;
@@ -1793,6 +1804,30 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             fvp_logf("run: --run-seconds %.1f reached, exiting",
                      opts.run_seconds);
             break;
+        }
+
+        /* 运行中周期性写存档预览（相当于「按 F5 存档」的自动化版本）。 */
+        if (opts.save_preview_every > 0.0 && gfx != NULL &&
+            opts.save_template[0] != L'\0' &&
+            opts.save_preview[0] != L'\0' &&
+            now - last_preview_at >= opts.save_preview_every) {
+            int cw2 = FVP_CANVAS_W;
+            int ch2 = FVP_CANVAS_H;
+            const uint32_t *canvas2 = gfx_canvas(gfx, &cw2, &ch2);
+
+            if (canvas2 != NULL) {
+                wchar_t numbered[PATH_CAP * 2];
+
+                preview_seq += 1;
+                _snwprintf(numbered, PATH_CAP * 2 - 1, L"%s.%d",
+                           opts.save_preview, preview_seq);
+                write_save_preview(opts.save_template, numbered,
+                                   (const unsigned char *)canvas2, cw2, ch2,
+                                   &vm,
+                                   opts.enc_mode == ENC_GBK ? FVP_ENC_GBK
+                                                            : FVP_ENC_CP932);
+                last_preview_at = now;
+            }
         }
 
         /* Fixed 60 Hz pacing with a 1 ms timer resolution. */
