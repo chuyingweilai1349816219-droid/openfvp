@@ -111,7 +111,22 @@
 ### 变更
 
 - `fvm` 汇总多一行 `text attrs N window(s) configured`；`make test_textattr`；
-  `tests/run_all.py` → **15/15 PASS / 58.1 s**
+  `tests/run_all.py` 步数随新测试增加（0.3.0 收尾时 **18 步**）
+
+### 验收（0.3.0 收尾实跑）
+
+| 项 | 结果 |
+|---|---|
+| `tests/run_all.py` | **18/18 PASS / 57.0 s** |
+| `compare.py --run` | **逐字节一致**（6,496 B / 195 行 / `7F9837FF…`） |
+| `test_save` | 自检 **58 项** + 真实槽 **49 项**（含字节布局回归钉 `0x55bc2d006a29f2bf`） |
+| `test_save_vm` | 合成 19 + 真实 13 |
+| `test_flags` | 28 + 37 |
+| `test_textattr` / `test_thumb` / `test_encode` / `test_wheel` | 29 / 14 / 14 / 8 |
+| `verify_save_preview.ps1` | PASS（真跑外壳 → 4 个槽全部读回、尾段 598,950 B 不变） |
+| `verify_save_encoding.ps1` | PASS（CP932 `83 76 …` / GBK `a5 d7 …` 与 Python codecs 一致） |
+| `verify_render_vm.ps1` / `verify_audio.ps1` | PASS（端到端帧一致；BGM 出声、混音非静音） |
+| 编译 | `make -B all lib test … win32` **0 警告 0 错误** |
 
 ## [0.2.0] — 已打 tag（v0.2.0 → `4c80b0e`）：音频接运行时 + 存档读写落地 + 全局 flag
 
