@@ -1345,6 +1345,22 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     case 133: /* ThreadNext: yield to the scheduler */
         t->blocked = 1;
         return;
+    /* 136 ThreadStart(threadNo 0..31, entryOffset)：在槽 threadNo 里从
+     * entryOffset 起一个协程；threadNo==0 先把 32 个槽全部重置。关着
+     * （默认）时保持空桩。 */
+    case 136:
+        if (argc >= 2 &&
+            fvp_vm_thread_start(vm, (int)args[0].i, (uint32_t)args[1].i)) {
+            return;
+        }
+        break;
+    /* 132 ThreadExit(which)：which==0 收掉所有子线程（自己除外），否则收掉
+     * which 号槽。关着（默认）时保持空桩。 */
+    case 132:
+        if (fvp_vm_thread_exit(vm, t, argc >= 1 ? (int)args[0].i : 0)) {
+            return;
+        }
+        break;
     /* 135 ThreadSleep(ms) / 137 ThreadWait(ms)：
      * 时间模型开启时按虚拟时钟定时唤醒，否则保持旧的 yield 语义。 */
     case 135:

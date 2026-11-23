@@ -21,8 +21,11 @@ typedef struct FvpFrame {
     int pending;
 } FvpFrame;
 
+#define FVP_THREAD_SLOTS 32 /* ThreadStart/ThreadExit 的 threadNo 0..31 */
+
 typedef struct FvpThread {
     int id;          /* 诊断用：线程编号 */
+    int slot;        /* 协程槽 0..31（ThreadStart 分配）；-1 = 不在槽里（主线程） */
     uint64_t ntext;  /* 诊断用：这个线程打印了多少行台词 */
     uint32_t pc;
     const char *name;
@@ -233,6 +236,14 @@ typedef struct FvpVM {
     /* 虚拟时钟（毫秒）。timeline_on = 0 时不会推进，ThreadSleep/Wait 保持旧行为。 */
     uint64_t virtual_ms;
     int timeline_on;
+    /* 协程槽：ThreadStart(136)/ThreadExit(132) 的 threadNo 0..31 指的就是这 32
+     * 个槽（docs/vm-commands.md §5：threadNo==0 先重置全部 32 个槽）。主线程不在
+     * 槽里。threads_on == 0（默认）时这两个命令仍是空桩，已验收的基线不变。 */
+    FvpThread *thread_slots[FVP_THREAD_SLOTS];
+    int threads_on;
+    uint64_t thread_starts; /* 诊断：ThreadStart 成功创建过多少次 */
+    uint64_t thread_exits;  /* 诊断：ThreadExit 收掉过多少个线程 */
+    uint64_t thread_resets; /* 诊断：ThreadStart(0)/(无槽可回收) 触发过多少次 */
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);
@@ -271,6 +282,16 @@ int fvp_snd_bank_read(FvpSndBridge *b, const char *name, uint8_t **data,
 
 void fvp_vm_add_text(FvpVM *vm, const FvpValue *layer, FvpStr *text);
 void fvp_vm_count_unknown(FvpVM *vm, uint16_t cid);
+
+/* ---- 协程（ThreadStart / ThreadExit）---------------------------------
+ * threads_on 关着时（默认）这两个命令是空桩，逐字节基线不变。开着时：
+ *   fvp_vm_thread_start(vm, no, pc)  no 越界钳到 0..31；no==0 先把 32 个槽
+ *       全部重置（正在跑的线程除外）；槽里原有的线程标记为死、交给调度器回收。
+ *   fvp_vm_thread_exit(vm, self, which)  which==0 = 收掉除 self 外所有槽里的
+ *       线程；which!=0 = 收掉 which 号槽的线程。返回收掉的个数。
+ * 两者都返回 1 = 语义执行了，0 = threads_on 关着（调用方照旧当空桩）。 */
+int fvp_vm_thread_start(FvpVM *vm, int no, uint32_t pc);
+int fvp_vm_thread_exit(FvpVM *vm, FvpThread *self, int which);
 
 /* Stack helpers (shared with syscall.c). */
 void fvp_thread_push(FvpThread *t, FvpValue v);

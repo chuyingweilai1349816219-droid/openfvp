@@ -226,6 +226,7 @@ static FvpThread *fvp_thread_new(uint32_t pc, const char *name)
     t->pc = pc;
     t->name = name;
     t->alive = 1;
+    t->slot = -1;
     t->temp = fvp_make_int(0);
     return t;
 }
@@ -1068,10 +1069,9 @@ void fvp_vm_free(FvpVM *vm)
     memset(vm, 0, sizeof(*vm));
 }
 
-void fvp_vm_start(FvpVM *vm)
+/* 把线程追加到调度队列尾部。 */
+static void fvp_thread_enqueue(FvpVM *vm, FvpThread *t)
 {
-    FvpThread *t = fvp_thread_new(vm->hcb->main_start, "main");
-    t->id = vm->thread_ids++;
     if (vm->nthreads == vm->thread_cap) {
         vm->thread_cap = vm->thread_cap ? vm->thread_cap * 2u : 8u;
         vm->threads = (FvpThread **)fvp_xrealloc(vm->threads,
@@ -1079,6 +1079,13 @@ void fvp_vm_start(FvpVM *vm)
     }
     vm->threads[vm->nthreads] = t;
     vm->nthreads += 1;
+}
+
+void fvp_vm_start(FvpVM *vm)
+{
+    FvpThread *t = fvp_thread_new(vm->hcb->main_start, "main");
+    t->id = vm->thread_ids++;
+    fvp_thread_enqueue(vm, t);
     vm->cur = t;
 }
 
@@ -1132,6 +1139,11 @@ uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps)
         }
         vm->nthreads -= 1u;
         if (!t->alive) {
+            /* 槽里还指着它的话一并清掉，避免悬空指针。 */
+            if (t->slot >= 0 && t->slot < FVP_THREAD_SLOTS &&
+                vm->thread_slots[t->slot] == t) {
+                vm->thread_slots[t->slot] = NULL;
+            }
             fvp_thread_free(t);
             continue;
         }
@@ -1170,6 +1182,112 @@ uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps)
     }
     }
     return vm->steps;
+}
+
+/* ------------------------------------------------------------------ */
+/* 协程：ThreadStart(136) / ThreadExit(132)                            */
+/*                                                                     */
+/* 静态分析结论（docs/vm-commands.md §5）：ThreadStart(threadNo 0..31,     */
+/* entryOffset)——threadNo==0 先把 32 个槽全部重置(0x444860)，再用      */
+/* 0x4453f0(ctx, offset) 以 offset 为 PC 建线程。所以协程槽只是「按号   */
+/* 存一个执行上下文」，入口函数没有参数（新线程从空栈开始）。           */
+/*                                                                     */
+/* 主线程（fvp_vm_start 建的那个）不在 32 个槽里：否则脚本开头的         */
+/* ThreadStart(0, ...) 一重置就把自己弄死了。                          */
+/* ------------------------------------------------------------------ */
+
+/* 把一个槽里的线程标记为死；返回 1 表示确实收掉了一个活线程。 */
+static int fvp_thread_kill_slot(FvpVM *vm, int slot, FvpThread *keep)
+{
+    FvpThread *t;
+
+    if (slot < 0 || slot >= FVP_THREAD_SLOTS) {
+        return 0;
+    }
+    t = vm->thread_slots[slot];
+    if (t == NULL) {
+        return 0;
+    }
+    vm->thread_slots[slot] = NULL;
+    t->slot = -1;
+    if (t == keep || !t->alive) {
+        return 0; /* 自杀交给 fvp_vm_thread_exit 的调用方；已死的等回收 */
+    }
+    t->alive = 0;
+    vm->thread_exits += 1u;
+    return 1;
+}
+
+int fvp_vm_thread_start(FvpVM *vm, int no, uint32_t pc)
+{
+    FvpThread *t;
+    int i;
+
+    if (vm == NULL || !vm->threads_on) {
+        return 0;
+    }
+    if (no < 0) {
+        no = 0;
+    }
+    if (no >= FVP_THREAD_SLOTS) {
+        no = FVP_THREAD_SLOTS - 1;
+    }
+    if (no == 0) {
+        for (i = 0; i < FVP_THREAD_SLOTS; ++i) {
+            fvp_thread_kill_slot(vm, i, vm->cur);
+        }
+        vm->thread_resets += 1u;
+    } else {
+        fvp_thread_kill_slot(vm, no, vm->cur);
+    }
+    t = fvp_thread_new(pc, "thread");
+    t->id = vm->thread_ids++;
+    t->slot = no;
+    vm->thread_slots[no] = t;
+    fvp_thread_enqueue(vm, t);
+    vm->thread_starts += 1u;
+    if (!vm->quiet) {
+        fprintf(stdout, "[thread %d] start at 0x%x\n", no, (unsigned)pc);
+    }
+    return 1;
+}
+
+int fvp_vm_thread_exit(FvpVM *vm, FvpThread *self, int which)
+{
+    int i;
+    int n = 0;
+
+    if (vm == NULL || !vm->threads_on) {
+        return 0;
+    }
+    if (which == 0) {
+        for (i = 0; i < FVP_THREAD_SLOTS; ++i) {
+            if (vm->thread_slots[i] == self) {
+                continue;
+            }
+            n += fvp_thread_kill_slot(vm, i, self);
+        }
+    } else {
+        if (which < 0) {
+            which = 0;
+        }
+        if (which >= FVP_THREAD_SLOTS) {
+            which = FVP_THREAD_SLOTS - 1;
+        }
+        if (vm->thread_slots[which] == self) {
+            /* 线程结束自己：交给调度器在下一轮回收。 */
+            self->alive = 0;
+            self->slot = -1;
+            vm->thread_slots[which] = NULL;
+            vm->thread_exits += 1u;
+            return 1;
+        }
+        n = fvp_thread_kill_slot(vm, which, self);
+    }
+    if (!vm->quiet && n > 0) {
+        fprintf(stdout, "[thread exit] killed %d thread(s)\n", n);
+    }
+    return 1;
 }
 
 void fvp_vm_add_text(FvpVM *vm, const FvpValue *layer, FvpStr *text)
