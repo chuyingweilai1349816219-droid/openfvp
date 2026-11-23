@@ -31,6 +31,7 @@
 #include "encoding.h"
 #include "hcb.h"
 #include "save.h"
+#include "thumb.h"
 #include "save_vm.h"
 #include "snd.h"
 #include "vm.h"
@@ -86,6 +87,7 @@ typedef struct Options {
 
     double run_seconds;
     wchar_t screenshot[PATH_CAP];
+    wchar_t thumb_shot[PATH_CAP];
     wchar_t log_path[PATH_CAP];
     wchar_t fonts[FONT_MAX][PATH_CAP];
     int nfonts;
@@ -332,6 +334,7 @@ static const wchar_t *usage_text(void)
            L"  --audio-buffers N   waveOut 缓冲区数（默认 3）\n"
            L"  --run-seconds S     运行 S 秒后自动退出（回归测试用）\n"
            L"  --screenshot FILE   退出时把最后一帧写成 32 位 BMP\n"
+            L"  --thumb-shot FILE   退出时写 200x113 的存档缩略图 BMP\n"
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
@@ -531,6 +534,9 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--screenshot") == 0) {
             NEED_VALUE();
             wcsncpy(o->screenshot, v, PATH_CAP - 1);
+        } else if (wcscmp(a, L"--thumb-shot") == 0) {
+            NEED_VALUE();
+            wcsncpy(o->thumb_shot, v, PATH_CAP - 1);
         } else if (wcscmp(a, L"--font") == 0) {
             NEED_VALUE();
             if (o->nfonts < FONT_MAX) {
@@ -1871,14 +1877,41 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     }
 
     /* ---------------- screenshot ---------------- */
-    if (opts.screenshot[0] != L'\0' && gfx != NULL) {
+    if ((opts.screenshot[0] != L'\0' || opts.thumb_shot[0] != L'\0') &&
+        gfx != NULL) {
         int cw = FVP_CANVAS_W;
         int ch = FVP_CANVAS_H;
         const uint32_t *canvas;
         gfx_render(gfx);
         canvas = gfx_canvas(gfx, &cw, &ch);
-        if (canvas != NULL) {
+        if (canvas != NULL && opts.screenshot[0] != L'\0') {
             write_bmp32(opts.screenshot, canvas, cw, ch);
+        }
+        /* 存档缩略图：把当前画面按 200x113 缩出来写 BMP（通道顺序对 box filter
+         * 无所谓，写 BMP 时再按 BGR 排）。真存档里是裸 BGRA，这里只为人工对照。 */
+        if (canvas != NULL && opts.thumb_shot[0] != L'\0') {
+            const int tw = FVP_SAVE_THUMB_W_DEFAULT;
+            const int th = FVP_SAVE_THUMB_H_DEFAULT;
+            unsigned char *tmp =
+                (unsigned char *)malloc((size_t)tw * th * 4u);
+            uint32_t *pix =
+                (uint32_t *)malloc((size_t)tw * th * sizeof(uint32_t));
+
+            if (tmp != NULL && pix != NULL &&
+                fvp_thumb_scale_bgra((const unsigned char *)canvas, cw, ch, tmp,
+                                     tw, th)) {
+                memcpy(pix, tmp, (size_t)tw * th * 4u);
+                if (write_bmp32(opts.thumb_shot, pix, tw, th)) {
+                    char u8[PATH_CAP * 3];
+
+                    fvp_logf("thumb: wrote %s (%dx%d, 4 bytes per pixel)",
+                             w2u(opts.thumb_shot, u8, sizeof(u8)), tw, th);
+                }
+            } else {
+                fvp_logf("thumb: scaling failed (out of memory?)");
+            }
+            free(tmp);
+            free(pix);
         }
     }
 

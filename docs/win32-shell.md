@@ -68,6 +68,7 @@ fvp.exe --game <游戏目录> [选项]
 | `--audio-buffers N` | waveOut 缓冲区数，默认 3 |
 | `--run-seconds S` | 运行 S 秒后自动退出（回归测试用） |
 | `--screenshot FILE` | 退出时把最后一帧画布写成 32 位 BMP |
+| `--thumb-shot FILE` | 退出时把最后一帧按 **200×113** 缩成存档缩略图 BMP（`src/thumb.c` 的 box filter，真存档里是裸 BGRA） |
 | `--font FILE` | 加载 GFXF 字体图集，可重复；默认自动找 exe 目录的 `gfx-font-*.bin` |
 | `--no-feed-text` | 关闭壳的临时文本桥（等 syscall 层接好 gfx 后应关闭） |
 | `--log FILE` | 日志路径，默认 `<exe目录>\fvp-win32.log`（不可写时退到 %TEMP%） |
