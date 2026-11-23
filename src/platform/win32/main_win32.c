@@ -78,6 +78,7 @@ typedef struct Options {
 
     int no_audio;
     int motion; /* --motion: 启用补间（默认关） */
+    int timeline; /* --timeline: 虚拟时钟由帧间推进（默认关） */
     int tone_hz;
     int audio_buffers;
     int audio_frames;
@@ -345,6 +346,7 @@ static const wchar_t *usage_text(void)
             L"  --save-preview-every N  运行中每 N 秒写一次预览（文件名加 .1/.2 序号）\n"
             L"  --save-encoding ENC  存档字符串编码 cp932|gbk（默认跟随脚本编码）\n"
             L"  --motion             启用动画补间（默认关闭：保持像素基准）\n"
+            L"  --timeline           虚拟时钟随帧推进（ThreadSleep/Wait 按毫秒唤醒）\n"
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
@@ -416,6 +418,7 @@ static void defaults(Options *o)
     o->run_seconds = 0.0;
     o->save_preview_every = 0.0;
     o->motion = 0;
+    o->timeline = 0;
     o->feed_text = 1;
 }
 
@@ -563,6 +566,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             }
         } else if (wcscmp(a, L"--motion") == 0) {
             o->motion = 1;
+        } else if (wcscmp(a, L"--timeline") == 0) {
+            o->timeline = 1;
         } else if (wcscmp(a, L"--save-encoding") == 0) {
             NEED_VALUE();
             wcsncpy(o->save_encoding, v, 15);
@@ -1642,6 +1647,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
     memset(&vm, 0, sizeof(vm));
     fvp_vm_init(&vm, &hcb, 1);
+    vm.timeline_on = opts.timeline;
+    if (opts.timeline) {
+        fvp_logf("time: virtual clock enabled (advanced by frame dt)");
+    }
 
     /* 全局存档 save/save.bin 里存的是设置 / flag / 已读文本位图，属于运行时状态，
      * 必须在脚本跑起来之前灌进 VM。只灌已确证的 type==2 整型（docs/save-format.md §7.1）。 */
@@ -1872,6 +1881,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             continue;
         }
         frame_dt = now - last_frame_time;
+        if (opts.timeline && frame_dt > 0.0) {
+            vm.virtual_ms += (uint64_t)(frame_dt * 1000.0);
+        }
         if (frame_dt < 0.0) {
             frame_dt = 0.0;
         }
@@ -2081,6 +2093,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                      (unsigned long long)steps, (double)steps / secs,
                      (unsigned long long)vm.ntext,
                      (unsigned long long)vm.nthreads);
+            fvp_logf("time: virtual %llu ms (timeline %s)",
+                     (unsigned long long)vm.virtual_ms,
+                     opts.timeline ? "on" : "off");
             fvp_logf("motion: %d active tween(s), %s", gfx_motion_active(gfx),
                      gfx_motion_enabled(gfx) ? "enabled" : "disabled");
             fvp_logf("audio: %s submitted=%d completed=%d underruns=%d "
