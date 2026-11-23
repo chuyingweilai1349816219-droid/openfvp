@@ -163,6 +163,27 @@ static void selftest(void)
               "write_file(NULL path) must fail");
     }
 
+    /* 3c. 回归钉：同一份合成槽序列化后的字节必须永远一样。
+     * 这不是「外部真值」，而是把当前已验收的字节布局钉住 —— 以后改序列化顺序、
+     * 漏字段、改字节序，这里会立刻炸。用 FNV-1a 64 避免把大段字节写进源码。 */
+    {
+        unsigned long long h = 1469598103934665603ULL;
+        size_t k;
+
+        for (k = 0; k < need; ++k) {
+            h ^= (unsigned long long)buf[k];
+            h *= 1099511628211ULL;
+        }
+        CHECK(need == 7u + 2u + 10u + 2u + 2u + 8u + 16u + 5u,
+              "golden slot size=%zu", need);
+        /* 这个值是从当前已验收的实现里取的（2026-11 存档层验收时记录）。
+         * 它守的是「字节布局不要变」，不是「格式定义」；真要改布局必须连这里一起改。 */
+        CHECK(h == 0x55bc2d006a29f2bfULL,
+              "golden FNV-1a 64 = 0x%016llx (expected 0x55bc2d006a29f2bf)",
+              h);
+        printf("golden slot: %zu bytes, FNV-1a 64 = 0x%016llx\n", need, h);
+    }
+
     /* 4. 修改时间戳与 str2，尾段必须原样保留。 */
     t.year = 2026;
     t.minute = 7;
