@@ -4,7 +4,7 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
-## [0.4.0] — 未发布：动画与时间模型（起步）
+## [0.8.0] — 未发布：完整测试版（动画/时间模型起步，目标版本）
 
 ### 新增
 
@@ -14,6 +14,12 @@
   - 未接 gfx / syscall，因此现有所有验收数字不变
   - 验收：`tests/test_motion.c` **31 项**（起点/中点/终点、超时钳制、零时长、
     负时长拒绝、多补间并存、reap、clear 保留时钟、NULL 安全）
+- **`Motion*` 命令接入补间表**（`src/syscall.c`）：`MotionMove`(48) / `MotionAlpha`(42) / `MotionMoveS2`(54)
+  在**动画开启**时改为「当前值 → 目标值 + 时长 + mode」的补间，关闭时仍是原来的静态赋值
+  外壳新增 `--motion`（默认关）+ 每帧 `gfx_motion_advance()` + 日志 `motion: N active tween(s)`
+  实测：开场 6 s / 15 s 运行里观察到 **1–2 条活跃补间**
+  ⚠️ 像素 A/B 对比**不能作数**：默认模式两次 15 s 运行本身就不同（墙钟驱动的文本节奏），
+  下一步需要用**步数确定**的 `render_vm` harness 做对照（已记入待办）
 - **`docs/animation-baseline.md`**：动画/时间模型的验收基线设计 ——
   哪些旧数字会失效（528k 参考帧、端到端帧）、改用哪三组自洽断言
   （t=0 不动 / t=END 到位 / 单调有界），以及「拿到原版实机对照前不默认开时间模型」的理由

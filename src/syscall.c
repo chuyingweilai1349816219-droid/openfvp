@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include "gfx.h"
+#include "motion.h"
 #include "gen_cmd_table.h"
 #include "snd.h"
 
@@ -43,6 +44,10 @@
 #pragma weak gfx_text_set_out_size
 #pragma weak gfx_text_set_pos
 #pragma weak gfx_text_set_size
+/* 动画补间（src/motion.c + gfx 侧）：只有链接了 gfx.c 的程序才有这些符号。 */
+#pragma weak gfx_get_prim
+#pragma weak gfx_motion_add
+#pragma weak gfx_motion_enabled
 
 /* Same story for the audio layer (src/snd.c): bin/fvm.exe links neither it
  * nor the BIN package reader, so every symbol is weak here and no audio code
@@ -261,7 +266,15 @@ static void fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         }
         break;
     case 42: /* MotionAlpha(id, from, to, ms, mode, flag): take `to` */
-        if (argc > 2 && fvp_gfx_is_int(&a[2])) {
+        if (gfx_motion_enabled != NULL && gfx_motion_enabled(g) && argc > 3 &&
+            fvp_gfx_is_int(&a[2]) && fvp_gfx_is_int(&a[3])) {
+            int from = 255;
+
+            (void)gfx_get_prim(g, id, GFX_F_ALPHA, &from);
+            (void)gfx_motion_add(g, id, FVP_TWEEN_ALPHA, from, 0,
+                                 fvp_gfx_int(&a[2]), 0, fvp_gfx_int(&a[3]),
+                                 argc > 4 ? fvp_gfx_int(&a[4]) : 1);
+        } else if (argc > 2 && fvp_gfx_is_int(&a[2])) {
             (void)gfx_set_prim(g, id, GFX_F_ALPHA, fvp_gfx_int(&a[2]));
         } else if (argc > 1 && fvp_gfx_is_int(&a[1])) {
             (void)gfx_set_prim(g, id, GFX_F_ALPHA, fvp_gfx_int(&a[1]));
@@ -276,15 +289,39 @@ static void fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             }
         }
         break;
-    case 48: /* MotionMove(id, x, y, z, ...) */
-        if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_X, fvp_gfx_int(&a[1]));
-        }
-        if (argc > 2 && fvp_gfx_is_int(&a[2])) {
-            (void)gfx_set_prim(g, id, GFX_F_Y, fvp_gfx_int(&a[2]));
-        }
-        if (argc > 3 && fvp_gfx_is_int(&a[3])) {
-            (void)gfx_set_prim(g, id, GFX_F_Z, fvp_gfx_int(&a[3]));
+    case 48: /* MotionMove(id, x, y, z, ?, ms, mode, flag)：开启动画时插补间 */
+        if (gfx_motion_enabled != NULL && gfx_motion_enabled(g) && argc > 5 &&
+            fvp_gfx_is_int(&a[5]) && (fvp_gfx_is_int(&a[1]) ||
+                                      fvp_gfx_is_int(&a[2]))) {
+            int cx = 0;
+            int cy = 0;
+            int tx = fvp_gfx_is_int(&a[1]) ? fvp_gfx_int(&a[1]) : 0;
+            int ty = fvp_gfx_is_int(&a[2]) ? fvp_gfx_int(&a[2]) : 0;
+
+            (void)gfx_get_prim(g, id, GFX_F_X, &cx);
+            (void)gfx_get_prim(g, id, GFX_F_Y, &cy);
+            if (!fvp_gfx_is_int(&a[1])) {
+                tx = cx;
+            }
+            if (!fvp_gfx_is_int(&a[2])) {
+                ty = cy;
+            }
+            (void)gfx_motion_add(g, id, FVP_TWEEN_MOVE_XY, cx, cy, tx, ty,
+                                 fvp_gfx_int(&a[5]),
+                                 argc > 6 ? fvp_gfx_int(&a[6]) : 1);
+            if (fvp_gfx_is_int(&a[3])) {
+                (void)gfx_set_prim(g, id, GFX_F_Z, fvp_gfx_int(&a[3]));
+            }
+        } else {
+            if (argc > 1 && fvp_gfx_is_int(&a[1])) {
+                (void)gfx_set_prim(g, id, GFX_F_X, fvp_gfx_int(&a[1]));
+            }
+            if (argc > 2 && fvp_gfx_is_int(&a[2])) {
+                (void)gfx_set_prim(g, id, GFX_F_Y, fvp_gfx_int(&a[2]));
+            }
+            if (argc > 3 && fvp_gfx_is_int(&a[3])) {
+                (void)gfx_set_prim(g, id, GFX_F_Z, fvp_gfx_int(&a[3]));
+            }
         }
         break;
     case 49: /* MotionMoveStop: no renderer state in the prototype */
@@ -298,12 +335,33 @@ static void fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             (void)gfx_set_prim(g, id, GFX_F_Y, fvp_gfx_int(&a[2]));
         }
         break;
-    case 54: /* MotionMoveS2(id, sx, sy, ...) */
-        if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_SCALE_X, fvp_gfx_int(&a[1]));
-        }
-        if (argc > 2 && fvp_gfx_is_int(&a[2])) {
-            (void)gfx_set_prim(g, id, GFX_F_SCALE_Y, fvp_gfx_int(&a[2]));
+    case 54: /* MotionMoveS2(id, sx, sy, ?, ?, ms, mode, flag) */
+        if (gfx_motion_enabled != NULL && gfx_motion_enabled(g) && argc > 5 &&
+            fvp_gfx_is_int(&a[5]) && (fvp_gfx_is_int(&a[1]) ||
+                                      fvp_gfx_is_int(&a[2]))) {
+            int csx = 1000;
+            int csy = 1000;
+            int tsx = fvp_gfx_is_int(&a[1]) ? fvp_gfx_int(&a[1]) : 1000;
+            int tsy = fvp_gfx_is_int(&a[2]) ? fvp_gfx_int(&a[2]) : 1000;
+
+            (void)gfx_get_prim(g, id, GFX_F_SCALE_X, &csx);
+            (void)gfx_get_prim(g, id, GFX_F_SCALE_Y, &csy);
+            if (!fvp_gfx_is_int(&a[1])) {
+                tsx = csx;
+            }
+            if (!fvp_gfx_is_int(&a[2])) {
+                tsy = csy;
+            }
+            (void)gfx_motion_add(g, id, FVP_TWEEN_SCALE, csx, csy, tsx, tsy,
+                                 fvp_gfx_int(&a[5]),
+                                 argc > 6 ? fvp_gfx_int(&a[6]) : 1);
+        } else {
+            if (argc > 1 && fvp_gfx_is_int(&a[1])) {
+                (void)gfx_set_prim(g, id, GFX_F_SCALE_X, fvp_gfx_int(&a[1]));
+            }
+            if (argc > 2 && fvp_gfx_is_int(&a[2])) {
+                (void)gfx_set_prim(g, id, GFX_F_SCALE_Y, fvp_gfx_int(&a[2]));
+            }
         }
         break;
     case 57: /* MotionMoveZ(id, z, ...) */

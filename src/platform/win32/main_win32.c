@@ -77,6 +77,7 @@ typedef struct Options {
     int fullscreen;
 
     int no_audio;
+    int motion; /* --motion: 启用补间（默认关） */
     int tone_hz;
     int audio_buffers;
     int audio_frames;
@@ -343,6 +344,7 @@ static const wchar_t *usage_text(void)
             L"  --save-preview FILE   退出时写出「模板 + 当前时间 + 当前画面缩略图」的槽\n"
             L"  --save-preview-every N  运行中每 N 秒写一次预览（文件名加 .1/.2 序号）\n"
             L"  --save-encoding ENC  存档字符串编码 cp932|gbk（默认跟随脚本编码）\n"
+            L"  --motion             启用动画补间（默认关闭：保持像素基准）\n"
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
@@ -413,6 +415,7 @@ static void defaults(Options *o)
     o->text_pace_mode = TEXT_PACE_AUTO;
     o->run_seconds = 0.0;
     o->save_preview_every = 0.0;
+    o->motion = 0;
     o->feed_text = 1;
 }
 
@@ -558,6 +561,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             if (o->save_preview_every < 0.0) {
                 o->save_preview_every = 0.0;
             }
+        } else if (wcscmp(a, L"--motion") == 0) {
+            o->motion = 1;
         } else if (wcscmp(a, L"--save-encoding") == 0) {
             NEED_VALUE();
             wcsncpy(o->save_encoding, v, 15);
@@ -1741,6 +1746,11 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     fvp_vm_attach_gfx(&vm, gfx);
     opts.feed_text = 0; /* 旧的临时文本桥关闭，否则文本会被追加两次 */
     fvp_logf("gfx: attached to vm (syscall -> gfx bridge active)");
+    /* 动画补间：默认关闭，--motion 才让 Motion* 真正改图元字段。 */
+    gfx_motion_set_enabled(gfx, opts.motion);
+    fvp_logf("motion: %s",
+             opts.motion ? "enabled (tweens modify prims)"
+                         : "disabled (static prims, pixel baseline kept)");
 #endif
 
     /*
@@ -2020,6 +2030,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             fvp_win32_present(&win, canvas, cw, ch);
             present_ms = (now_sec() - p0) * 1000.0;
         }
+        /* 动画补间：默认关闭时只走时间轴，不改图元字段。 */
+        gfx_motion_advance(gfx, (int)(frame_dt * 1000.0));
         perf_add(&perf, present_ms, frame_dt * 1000.0);
         frame += 1;
         (void)frame; /* consumed by the stub renderer only */
@@ -2069,6 +2081,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                      (unsigned long long)steps, (double)steps / secs,
                      (unsigned long long)vm.ntext,
                      (unsigned long long)vm.nthreads);
+            fvp_logf("motion: %d active tween(s), %s", gfx_motion_active(gfx),
+                     gfx_motion_enabled(gfx) ? "enabled" : "disabled");
             fvp_logf("audio: %s submitted=%d completed=%d underruns=%d "
                      "err=%lu",
                      fvp_audio_status(audio), a_sub, a_done, a_under, a_err);
