@@ -269,4 +269,20 @@ clean-wheel:
 
 .PHONY: clean-wheel
 
+# ---------------------------------------------------------------------------
+# 动画补间核心数学（Motion* 的时间轴 + 线性插值，尚未接 gfx）
+#   make test_motion
+# ---------------------------------------------------------------------------
+MOTION_TEST = bin/test_motion$(EXE)
+
+test_motion: $(MOTION_TEST)
+
+$(MOTION_TEST): tests/test_motion.c src/motion.c src/motion.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_motion.c src/motion.c $(LDFLAGS)
+
+clean-motion:
+	-rm -f $(MOTION_TEST)
+
+.PHONY: clean-motion
+
 clean-thumb:

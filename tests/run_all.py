@@ -248,6 +248,17 @@ def build_steps(args):
                           note='wheel accumulate / take-clears / negative / '
                                'NULL safety'))
 
+    # 4i. animation tween core (Motion* timeline math, not wired to gfx yet)
+    test_motion = tools['test_motion']
+    if not os.path.isfile(test_motion):
+        steps.append(Step('test_motion', None, 0,
+                          skip_reason='bin/test_motion.exe missing '
+                                      '(run: make test_motion)'))
+    else:
+        steps.append(Step('test_motion', [test_motion], 120,
+                          note='lerp timeline, zero/negative duration, reap, '
+                               'multi-tween, NULL safety'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()
