@@ -88,6 +88,8 @@ typedef struct Options {
     double run_seconds;
     wchar_t screenshot[PATH_CAP];
     wchar_t thumb_shot[PATH_CAP];
+    wchar_t save_template[PATH_CAP];
+    wchar_t save_preview[PATH_CAP];
     wchar_t log_path[PATH_CAP];
     wchar_t fonts[FONT_MAX][PATH_CAP];
     int nfonts;
@@ -335,6 +337,8 @@ static const wchar_t *usage_text(void)
            L"  --run-seconds S     运行 S 秒后自动退出（回归测试用）\n"
            L"  --screenshot FILE   退出时把最后一帧写成 32 位 BMP\n"
             L"  --thumb-shot FILE   退出时写 200x113 的存档缩略图 BMP\n"
+            L"  --save-template FILE  用这个真实存档槽当模板（配 --save-preview）\n"
+            L"  --save-preview FILE   退出时写出「模板 + 当前时间 + 当前画面缩略图」的槽\n"
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
@@ -537,6 +541,12 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--thumb-shot") == 0) {
             NEED_VALUE();
             wcsncpy(o->thumb_shot, v, PATH_CAP - 1);
+        } else if (wcscmp(a, L"--save-template") == 0) {
+            NEED_VALUE();
+            wcsncpy(o->save_template, v, PATH_CAP - 1);
+        } else if (wcscmp(a, L"--save-preview") == 0) {
+            NEED_VALUE();
+            wcsncpy(o->save_preview, v, PATH_CAP - 1);
         } else if (wcscmp(a, L"--font") == 0) {
             NEED_VALUE();
             if (o->nfonts < FONT_MAX) {
@@ -1011,6 +1021,123 @@ static int write_bmp32(const wchar_t *path, const uint32_t *rgba, int w,
 /* ------------------------------------------------------------------ */
 /* Window sizing / title                                               */
 /* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* 存档预览：用真实槽当模板，只换「时间戳 + 缩略图」写出一份新槽        */
+/* ------------------------------------------------------------------ */
+
+static unsigned char *read_file_w(const wchar_t *path, size_t *len_out)
+{
+    FILE *f;
+    long n;
+    unsigned char *buf;
+
+    if (len_out != NULL) {
+        *len_out = 0;
+    }
+    f = _wfopen(path, L"rb");
+    if (f == NULL) {
+        return NULL;
+    }
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
+    n = ftell(f);
+    if (n <= 0) {
+        fclose(f);
+        return NULL;
+    }
+    rewind(f);
+    buf = (unsigned char *)malloc((size_t)n);
+    if (buf == NULL) {
+        fclose(f);
+        return NULL;
+    }
+    if (fread(buf, 1, (size_t)n, f) != (size_t)n) {
+        free(buf);
+        fclose(f);
+        return NULL;
+    }
+    fclose(f);
+    if (len_out != NULL) {
+        *len_out = (size_t)n;
+    }
+    return buf;
+}
+
+/* 返回 1 表示写出成功。字符串段不在这里改（存档里是 CP932/GBK，UTF-8 需要转码，
+ * 那一步还没做），所以槽里的章节名/对话行沿用模板的内容。 */
+static int write_save_preview(const wchar_t *tmpl, const wchar_t *out_path,
+                              const unsigned char *canvas, int cw, int ch)
+{
+    unsigned char *buf;
+    size_t len = 0;
+    FvpSaveSlot slot;
+    SYSTEMTIME st;
+    char u8[PATH_CAP * 3];
+
+    buf = read_file_w(tmpl, &len);
+    if (buf == NULL) {
+        fvp_logf("save-preview: cannot read template %s",
+                 w2u(tmpl, u8, sizeof(u8)));
+        return 0;
+    }
+    memset(&slot, 0, sizeof(slot));
+    if (!fvp_save_slot_load(&slot, buf, len, FVP_SAVE_THUMB_W_DEFAULT,
+                            FVP_SAVE_THUMB_H_DEFAULT)) {
+        fvp_logf("save-preview: %s is not a valid save slot",
+                 w2u(tmpl, u8, sizeof(u8)));
+        free(buf);
+        return 0;
+    }
+    free(buf);
+
+    GetLocalTime(&st);
+    slot.year = st.wYear;
+    slot.month = (unsigned char)st.wMonth;
+    slot.day = (unsigned char)st.wDay;
+    slot.wday = (unsigned char)st.wDayOfWeek;
+    slot.hour = (unsigned char)st.wHour;
+    slot.minute = (unsigned char)st.wMinute;
+
+    if (canvas != NULL && slot.thumb != NULL && slot.thumb_w > 0 &&
+        slot.thumb_h > 0) {
+        if (fvp_thumb_scale_bgra(canvas, cw, ch, slot.thumb, slot.thumb_w,
+                                 slot.thumb_h)) {
+            fvp_logf("save-preview: thumbnail replaced (%dx%d)",
+                     slot.thumb_w, slot.thumb_h);
+        }
+    }
+
+    {
+        size_t need = fvp_save_slot_size(&slot);
+        unsigned char *out = need > 0 ? (unsigned char *)malloc(need) : NULL;
+        int ok = 0;
+
+        if (out != NULL && fvp_save_slot_store(&slot, out, need) == need) {
+            FILE *f = _wfopen(out_path, L"wb");
+
+            if (f != NULL) {
+                ok = fwrite(out, 1, need, f) == need;
+                fclose(f);
+            }
+        }
+        free(out);
+        fvp_save_slot_free(&slot);
+        if (!ok) {
+            fvp_logf("save-preview: cannot write %s",
+                     w2u(out_path, u8, sizeof(u8)));
+            return 0;
+        }
+        fvp_logf("save-preview: wrote %s (%zu bytes, timestamp %04u-%02u-%02u "
+                 "%02u:%02u, thumbnail from the live canvas)",
+                 w2u(out_path, u8, sizeof(u8)), need, (unsigned)st.wYear,
+                 (unsigned)st.wMonth, (unsigned)st.wDay, (unsigned)st.wHour,
+                 (unsigned)st.wMinute);
+    }
+    return 1;
+}
 
 static void work_area_size(int *w, int *h)
 {
@@ -1877,7 +2004,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     }
 
     /* ---------------- screenshot ---------------- */
-    if ((opts.screenshot[0] != L'\0' || opts.thumb_shot[0] != L'\0') &&
+    if ((opts.screenshot[0] != L'\0' || opts.thumb_shot[0] != L'\0' ||
+         (opts.save_template[0] != L'\0' && opts.save_preview[0] != L'\0')) &&
         gfx != NULL) {
         int cw = FVP_CANVAS_W;
         int ch = FVP_CANVAS_H;
@@ -1912,6 +2040,12 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             }
             free(tmp);
             free(pix);
+        }
+        /* 存档预览：模板槽 + 当前时间 + 当前画面缩略图。 */
+        if (canvas != NULL && opts.save_template[0] != L'\0' &&
+            opts.save_preview[0] != L'\0') {
+            write_save_preview(opts.save_template, opts.save_preview,
+                               (const unsigned char *)canvas, cw, ch);
         }
     }
 
