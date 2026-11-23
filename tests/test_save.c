@@ -462,6 +462,97 @@ static int run_files(const char *savebin_path, char **slots, int nslots)
         free(buf);
     }
 
+    /* 「保守写档」实测：拿第一个真实槽当模板，只改已确证字段（时间戳 / 字符串 /
+     * 缩略图），写完读回验证 —— 其余字节（可变长中段 + 常量尾）必须与模板**逐字节相同**。 */
+    if (nslots > 0) {
+        const char *tmpl = slots[0];
+        const char *out_path = "out/test_save_template.bin";
+        unsigned char *buf;
+        size_t len = 0;
+        FvpSaveSlot s;
+        size_t delta;
+
+        buf = read_file(tmpl, &len);
+        CHECK(buf != NULL, "template: cannot read %s", tmpl);
+        if (buf != NULL) {
+            memset(&s, 0, sizeof(s));
+            CHECK(fvp_save_slot_load(&s, buf, len, thumb_w, thumb_h),
+                  "template: parse failed");
+            if (s.tail != NULL) {
+                unsigned char *old_tail = s.tail;
+                size_t old_tail_len = s.tail_len;
+                size_t new_len;
+                unsigned char *fresh;
+
+                /* 只动已确证字段。 */
+                s.year = 2026;
+                s.month = 1;
+                s.day = 2;
+                s.wday = 5;
+                s.hour = 3;
+                s.minute = 4;
+                free(s.str[0]);
+                s.str[0] = dup_bytes("\x83\x65\x83\x58\x83\x67", 6); /* テスト */
+                s.len[0] = 6;
+                if (s.thumb != NULL) {
+                    size_t n = (size_t)s.thumb_w * (size_t)s.thumb_h * 4u;
+                    size_t k;
+
+                    for (k = 0; k < n; k += 4u) {
+                        s.thumb[k] = (unsigned char)(k & 0xFFu);
+                        s.thumb[k + 1] = 0x10;
+                        s.thumb[k + 2] = 0x20;
+                        s.thumb[k + 3] = 0xFF;
+                    }
+                }
+
+                /* 写盘 → 读回。 */
+                new_len = fvp_save_slot_write_file(&s, out_path);
+                CHECK(new_len > 0, "template: write_file failed");
+                fresh = new_len > 0 ? read_file(out_path, &new_len) : NULL;
+                CHECK(fresh != NULL, "template: cannot read back %s", out_path);
+                if (fresh != NULL) {
+                    FvpSaveSlot r;
+
+                    memset(&r, 0, sizeof(r));
+                    CHECK(fvp_save_slot_load(&r, fresh, new_len, thumb_w,
+                                             thumb_h),
+                          "template: reload failed");
+                    CHECK(r.year == 2026 && r.month == 1 && r.day == 2 &&
+                              r.wday == 5 && r.hour == 3 && r.minute == 4,
+                          "template: timestamp not applied");
+                    CHECK(r.len[0] == 6 && r.str[0] != NULL &&
+                              memcmp(r.str[0], "\x83\x65\x83\x58\x83\x67",
+                                     6) == 0,
+                          "template: str0 not applied");
+                    CHECK(r.tail_len == old_tail_len &&
+                              memcmp(r.tail, old_tail, old_tail_len) == 0,
+                          "template: engine-state tail changed "
+                          "(%zu vs %zu bytes)",
+                          r.tail_len, old_tail_len);
+                    if (r.thumb != NULL) {
+                        CHECK(r.thumb[0] == 0x00 && r.thumb[1] == 0x10 &&
+                                  r.thumb[2] == 0x20 && r.thumb[3] == 0xFF,
+                              "template: thumbnail not applied");
+                    }
+                    CHECK(memcmp(r.thumb, s.thumb,
+                                 (size_t)r.thumb_w * (size_t)r.thumb_h * 4u) ==
+                              0,
+                          "template: thumbnail round-trip differs");
+                    fvp_save_slot_free(&r);
+                    free(fresh);
+                }
+                (void)delta;
+                fvp_save_slot_free(&s);
+            } else {
+                CHECK(0, "template: tail missing");
+                fvp_save_slot_free(&s);
+            }
+            free(buf);
+        }
+        remove(out_path);
+    }
+
     fvp_save_bin_free(&b);
     free(bbuf);
     return g_fail == 0;
