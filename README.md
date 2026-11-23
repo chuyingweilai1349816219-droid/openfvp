@@ -13,7 +13,7 @@
 目标：让 FAVORITE 社的 FVP 视觉小说（《いろとりどりのセカイ HD》系列、《星空のメモリア》、
 《アストラエアの白き永遠》等）能在现代平台运行，首要目标是 Android。
 
-> **状态：0.2.0 进行中。** 脚本虚拟机（VM）与冻结的 Python 基准逐字节对齐；
+> **状态：0.8.0 测试版。** 脚本虚拟机（VM）与冻结的 Python 基准逐字节对齐；
 > 资源层（BIN / inflate / HZC1）、渲染层（gfx）都已有全量验收数字；
 > 音频层已接进 VM（BGM 真实出声），存档文件层 + 全局变量桥 + flag 位图已落地，
 > Win32 桌面外壳能跑出 60 fps、显示真实画面并在启动时读 `save/save.bin`；
@@ -193,7 +193,7 @@ python scripts/ci-compare.py        # -> RESULT: SKIPPED（仍会校验冻结基
 .
 ├── README.md              本文件（中文）
 ├── README.en.md           英文说明
-├── VERSION                版本号（0.2.0）
+├── VERSION                版本号（0.8.0）
 ├── LICENSE                GPL-2.0-only 全文
 ├── THIRD-PARTY.md         第三方代码（stb_vorbis）与生成文件的来源
 ├── CONTRIBUTING.md        报兼容问题 / 等价性验证 / 代码风格 / 提交前检查
@@ -279,7 +279,7 @@ python scripts/ci-compare.py        # -> RESULT: SKIPPED（仍会校验冻结基
 FAVORITE's titles such as *Irotoridori no Sekai HD*. It is not an emulator, not a
 Wine wrapper, and it never modifies the original game files.
 
-What works today (v0.2.0 in progress):
+What works today (v0.8.0 test build):
 
 - the whole `.hcb` script format is parsed — **948,219 instructions** and
   **55,461 strings** in the reference title — and all **40 VM opcodes** are implemented;

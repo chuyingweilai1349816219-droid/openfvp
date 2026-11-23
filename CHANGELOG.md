@@ -37,6 +37,21 @@
   哪些旧数字会失效（528k 参考帧、端到端帧）、改用哪三组自洽断言
   （t=0 不动 / t=END 到位 / 单调有界），以及「拿到原版实机对照前不默认开时间模型」的理由
 
+
+### 验收（0.8.0 发布前实跑）
+
+| 项 | 结果 |
+|---|---|
+| `tests/run_all.py` | **20/20 PASS**（含 VM 逐字节 / 资源 / 音频 / 存档 / flag / textattr / thumb / encode / wheel / motion / fuzz） |
+| `verify_gfx.ps1 -SkipDump`（静态门） | PASS：24/24 图元 0 px、293 px 差 (0.0141%)、PSNR 49.94、SSIM 0.99971 |
+| `verify_motion.ps1`（动态门） | PASS：关两次一致；1,000 步 开=关；60,000 步 开≠关 |
+| `verify_timeline.ps1` | PASS：legacy `virtual ms 0` 且 == `ref-900k.txt`；`--timeline` 2000 ms 且文本相同 |
+| `verify_save_preview.ps1` | PASS：真跑外壳 → 4 个槽全部读回，尾段 598,950 B 不变 |
+| `verify_save_encoding.ps1` | PASS：CP932 `83 76 …` / GBK `a5 d7 …` 与 Python codecs 逐字节一致 |
+| `verify_render_vm.ps1` / `verify_audio.ps1` | PASS：端到端帧一致；BGM 出声、混音非静音 |
+| `compare.py --run` | **逐字节一致** 6,496 B / 195 行 / `7F9837FF…` |
+| 编译 | `make -B all lib test … win32` **0 警告 0 错误** |
+
 ## [0.3.0] — 已打 tag（v0.3.0 → 55b8e6f）：存档写入闭环（模板路径）+ 结构分析文档
 
 0.3 的主线只有一条：**把「存档写入」做成能重复验证的闭环**，并把槽内快照的结构知识固化成一篇文章。

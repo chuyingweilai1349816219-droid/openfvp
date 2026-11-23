@@ -16,7 +16,7 @@ FVP is the closed-source visual-novel engine behind FAVORITE's titles such as
 *Astraea no Shiroki Eien*. The goal is to make those games runnable on modern
 platforms, with **Android as the primary target**.
 
-> **Status: 0.2.0 in progress.** The script virtual machine is byte-identical to the
+> **Status: 0.8.0 test build.** The script virtual machine is byte-identical to the
 > frozen Python reference. The asset layer (BIN / inflate / HZC1) and the renderer (`gfx`)
 > have full acceptance numbers. Audio is now wired into the VM (BGM really plays), the save
 > file layer, the globals bridge and the flag bitmap have landed, and the Win32 desktop
@@ -187,7 +187,7 @@ python scripts/ci-compare.py     # -> RESULT: SKIPPED (still verifies frozen ref
 ```
 .
 ├── README.md / README.en.md   project overview (Chinese / English)
-├── VERSION                    0.2.0
+├── VERSION                    0.8.0
 ├── LICENSE                    GPL-2.0-only
 ├── THIRD-PARTY.md             third-party code and generated files
 ├── CONTRIBUTING.md            bug reports, equivalence testing, style, pre-commit checks
