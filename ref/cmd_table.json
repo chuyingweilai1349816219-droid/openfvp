@@ -1,0 +1,890 @@
+[
+ {
+  "id": 0,
+  "argc": 2,
+  "name": "AudioLoad",
+  "len": 10
+ },
+ {
+  "id": 1,
+  "argc": 2,
+  "name": "AudioPlay",
+  "len": 10
+ },
+ {
+  "id": 2,
+  "argc": 1,
+  "name": "AudioSilentOn",
+  "len": 14
+ },
+ {
+  "id": 3,
+  "argc": 1,
+  "name": "AudioState",
+  "len": 11
+ },
+ {
+  "id": 4,
+  "argc": 2,
+  "name": "AudioStop",
+  "len": 10
+ },
+ {
+  "id": 5,
+  "argc": 2,
+  "name": "AudioType",
+  "len": 10
+ },
+ {
+  "id": 6,
+  "argc": 3,
+  "name": "AudioVol",
+  "len": 9
+ },
+ {
+  "id": 7,
+  "argc": 5,
+  "name": "ColorSet",
+  "len": 9
+ },
+ {
+  "id": 8,
+  "argc": 1,
+  "name": "ControlMask",
+  "len": 12
+ },
+ {
+  "id": 9,
+  "argc": 0,
+  "name": "ControlPulse",
+  "len": 13
+ },
+ {
+  "id": 10,
+  "argc": 1,
+  "name": "CursorChange",
+  "len": 13
+ },
+ {
+  "id": 11,
+  "argc": 3,
+  "name": "CursorMove",
+  "len": 11
+ },
+ {
+  "id": 12,
+  "argc": 1,
+  "name": "CursorShow",
+  "len": 11
+ },
+ {
+  "id": 13,
+  "argc": 2,
+  "name": "Debmess",
+  "len": 8
+ },
+ {
+  "id": 14,
+  "argc": 7,
+  "name": "Dissolve",
+  "len": 9
+ },
+ {
+  "id": 15,
+  "argc": 1,
+  "name": "DissolveWait",
+  "len": 13
+ },
+ {
+  "id": 16,
+  "argc": 0,
+  "name": "ExitDialog",
+  "len": 11
+ },
+ {
+  "id": 17,
+  "argc": 1,
+  "name": "ExitMode",
+  "len": 9
+ },
+ {
+  "id": 18,
+  "argc": 1,
+  "name": "FlagGet",
+  "len": 8
+ },
+ {
+  "id": 19,
+  "argc": 2,
+  "name": "FlagSet",
+  "len": 8
+ },
+ {
+  "id": 20,
+  "argc": 1,
+  "name": "FloatToInt",
+  "len": 11
+ },
+ {
+  "id": 21,
+  "argc": 3,
+  "name": "GaijiLoad",
+  "len": 10
+ },
+ {
+  "id": 22,
+  "argc": 2,
+  "name": "GraphLoad",
+  "len": 10
+ },
+ {
+  "id": 23,
+  "argc": 4,
+  "name": "GraphRGB",
+  "len": 9
+ },
+ {
+  "id": 24,
+  "argc": 2,
+  "name": "IntToText",
+  "len": 10
+ },
+ {
+  "id": 25,
+  "argc": 2,
+  "name": "HistoryGet",
+  "len": 11
+ },
+ {
+  "id": 26,
+  "argc": 2,
+  "name": "HistorySet",
+  "len": 11
+ },
+ {
+  "id": 27,
+  "argc": 0,
+  "name": "InputFlash",
+  "len": 11
+ },
+ {
+  "id": 28,
+  "argc": 0,
+  "name": "InputGetCursIn",
+  "len": 15
+ },
+ {
+  "id": 29,
+  "argc": 0,
+  "name": "InputGetCursX",
+  "len": 14
+ },
+ {
+  "id": 30,
+  "argc": 0,
+  "name": "InputGetCursY",
+  "len": 14
+ },
+ {
+  "id": 31,
+  "argc": 0,
+  "name": "InputGetDown",
+  "len": 13
+ },
+ {
+  "id": 32,
+  "argc": 0,
+  "name": "InputGetEvent",
+  "len": 14
+ },
+ {
+  "id": 33,
+  "argc": 0,
+  "name": "InputGetRepeat",
+  "len": 15
+ },
+ {
+  "id": 34,
+  "argc": 0,
+  "name": "InputGetState",
+  "len": 14
+ },
+ {
+  "id": 35,
+  "argc": 0,
+  "name": "InputGetUp",
+  "len": 11
+ },
+ {
+  "id": 36,
+  "argc": 0,
+  "name": "InputGetWheel",
+  "len": 14
+ },
+ {
+  "id": 37,
+  "argc": 0,
+  "name": "InputSetClick",
+  "len": 14
+ },
+ {
+  "id": 38,
+  "argc": 8,
+  "name": "LipAnim",
+  "len": 8
+ },
+ {
+  "id": 39,
+  "argc": 2,
+  "name": "LipSync",
+  "len": 8
+ },
+ {
+  "id": 40,
+  "argc": 1,
+  "name": "Load",
+  "len": 5
+ },
+ {
+  "id": 41,
+  "argc": 1,
+  "name": "MenuMessSkip",
+  "len": 13
+ },
+ {
+  "id": 42,
+  "argc": 6,
+  "name": "MotionAlpha",
+  "len": 12
+ },
+ {
+  "id": 43,
+  "argc": 1,
+  "name": "MotionAlphaStop",
+  "len": 16
+ },
+ {
+  "id": 44,
+  "argc": 1,
+  "name": "MotionAlphaTest",
+  "len": 16
+ },
+ {
+  "id": 45,
+  "argc": 4,
+  "name": "MotionAnim",
+  "len": 11
+ },
+ {
+  "id": 46,
+  "argc": 1,
+  "name": "MotionAnimStop",
+  "len": 15
+ },
+ {
+  "id": 47,
+  "argc": 1,
+  "name": "MotionAnimTest",
+  "len": 15
+ },
+ {
+  "id": 48,
+  "argc": 8,
+  "name": "MotionMove",
+  "len": 11
+ },
+ {
+  "id": 49,
+  "argc": 1,
+  "name": "MotionMoveStop",
+  "len": 15
+ },
+ {
+  "id": 50,
+  "argc": 1,
+  "name": "MotionMoveTest",
+  "len": 15
+ },
+ {
+  "id": 51,
+  "argc": 6,
+  "name": "MotionMoveR",
+  "len": 12
+ },
+ {
+  "id": 52,
+  "argc": 1,
+  "name": "MotionMoveRStop",
+  "len": 16
+ },
+ {
+  "id": 53,
+  "argc": 1,
+  "name": "MotionMoveRTest",
+  "len": 16
+ },
+ {
+  "id": 54,
+  "argc": 8,
+  "name": "MotionMoveS2",
+  "len": 13
+ },
+ {
+  "id": 55,
+  "argc": 1,
+  "name": "MotionMoveS2Stop",
+  "len": 17
+ },
+ {
+  "id": 56,
+  "argc": 1,
+  "name": "MotionMoveS2Test",
+  "len": 17
+ },
+ {
+  "id": 57,
+  "argc": 6,
+  "name": "MotionMoveZ",
+  "len": 12
+ },
+ {
+  "id": 58,
+  "argc": 1,
+  "name": "MotionMoveZStop",
+  "len": 16
+ },
+ {
+  "id": 59,
+  "argc": 1,
+  "name": "MotionMoveZTest",
+  "len": 16
+ },
+ {
+  "id": 60,
+  "argc": 2,
+  "name": "MotionPause",
+  "len": 12
+ },
+ {
+  "id": 61,
+  "argc": 2,
+  "name": "Movie",
+  "len": 6
+ },
+ {
+  "id": 62,
+  "argc": 1,
+  "name": "MovieState",
+  "len": 11
+ },
+ {
+  "id": 63,
+  "argc": 0,
+  "name": "MovieStop",
+  "len": 10
+ },
+ {
+  "id": 64,
+  "argc": 2,
+  "name": "PartsAssign",
+  "len": 12
+ },
+ {
+  "id": 65,
+  "argc": 2,
+  "name": "PartsLoad",
+  "len": 10
+ },
+ {
+  "id": 66,
+  "argc": 3,
+  "name": "PartsMotion",
+  "len": 12
+ },
+ {
+  "id": 67,
+  "argc": 2,
+  "name": "PartsMotionPause",
+  "len": 17
+ },
+ {
+  "id": 68,
+  "argc": 1,
+  "name": "PartsMotionStop",
+  "len": 16
+ },
+ {
+  "id": 69,
+  "argc": 1,
+  "name": "PartsMotionTest",
+  "len": 16
+ },
+ {
+  "id": 70,
+  "argc": 4,
+  "name": "PartsRGB",
+  "len": 9
+ },
+ {
+  "id": 71,
+  "argc": 2,
+  "name": "PartsSelect",
+  "len": 12
+ },
+ {
+  "id": 72,
+  "argc": 1,
+  "name": "PrimExitGroup",
+  "len": 14
+ },
+ {
+  "id": 73,
+  "argc": 2,
+  "name": "PrimGroupIn",
+  "len": 12
+ },
+ {
+  "id": 74,
+  "argc": 2,
+  "name": "PrimGroupMove",
+  "len": 14
+ },
+ {
+  "id": 75,
+  "argc": 1,
+  "name": "PrimGroupOut",
+  "len": 13
+ },
+ {
+  "id": 76,
+  "argc": 2,
+  "name": "PrimHit",
+  "len": 8
+ },
+ {
+  "id": 77,
+  "argc": 2,
+  "name": "PrimSetAlpha",
+  "len": 13
+ },
+ {
+  "id": 78,
+  "argc": 2,
+  "name": "PrimSetBlend",
+  "len": 13
+ },
+ {
+  "id": 79,
+  "argc": 2,
+  "name": "PrimSetDraw",
+  "len": 12
+ },
+ {
+  "id": 80,
+  "argc": 1,
+  "name": "PrimSetNull",
+  "len": 12
+ },
+ {
+  "id": 81,
+  "argc": 3,
+  "name": "PrimSetOP",
+  "len": 10
+ },
+ {
+  "id": 82,
+  "argc": 3,
+  "name": "PrimSetRS",
+  "len": 10
+ },
+ {
+  "id": 83,
+  "argc": 4,
+  "name": "PrimSetRS2",
+  "len": 11
+ },
+ {
+  "id": 84,
+  "argc": 4,
+  "name": "PrimSetSnow",
+  "len": 12
+ },
+ {
+  "id": 85,
+  "argc": 4,
+  "name": "PrimSetSprt",
+  "len": 12
+ },
+ {
+  "id": 86,
+  "argc": 4,
+  "name": "PrimSetText",
+  "len": 12
+ },
+ {
+  "id": 87,
+  "argc": 6,
+  "name": "PrimSetTile",
+  "len": 12
+ },
+ {
+  "id": 88,
+  "argc": 3,
+  "name": "PrimSetUV",
+  "len": 10
+ },
+ {
+  "id": 89,
+  "argc": 3,
+  "name": "PrimSetWH",
+  "len": 10
+ },
+ {
+  "id": 90,
+  "argc": 3,
+  "name": "PrimSetXY",
+  "len": 10
+ },
+ {
+  "id": 91,
+  "argc": 2,
+  "name": "PrimSetZ",
+  "len": 9
+ },
+ {
+  "id": 92,
+  "argc": 0,
+  "name": "Rand",
+  "len": 5
+ },
+ {
+  "id": 93,
+  "argc": 2,
+  "name": "SaveCreate",
+  "len": 11
+ },
+ {
+  "id": 94,
+  "argc": 2,
+  "name": "SaveThumbSize",
+  "len": 14
+ },
+ {
+  "id": 95,
+  "argc": 3,
+  "name": "SaveData",
+  "len": 9
+ },
+ {
+  "id": 96,
+  "argc": 1,
+  "name": "SaveWrite",
+  "len": 10
+ },
+ {
+  "id": 97,
+  "argc": 18,
+  "name": "Snow",
+  "len": 5
+ },
+ {
+  "id": 98,
+  "argc": 2,
+  "name": "SnowStart",
+  "len": 10
+ },
+ {
+  "id": 99,
+  "argc": 2,
+  "name": "SnowStop",
+  "len": 9
+ },
+ {
+  "id": 100,
+  "argc": 2,
+  "name": "SoundLoad",
+  "len": 10
+ },
+ {
+  "id": 101,
+  "argc": 1,
+  "name": "SoundMasterVol",
+  "len": 15
+ },
+ {
+  "id": 102,
+  "argc": 3,
+  "name": "SoundPlay",
+  "len": 10
+ },
+ {
+  "id": 103,
+  "argc": 1,
+  "name": "SoundSilentOn",
+  "len": 14
+ },
+ {
+  "id": 104,
+  "argc": 2,
+  "name": "SoundStop",
+  "len": 10
+ },
+ {
+  "id": 105,
+  "argc": 2,
+  "name": "SoundType",
+  "len": 10
+ },
+ {
+  "id": 106,
+  "argc": 2,
+  "name": "SoundTypeVol",
+  "len": 13
+ },
+ {
+  "id": 107,
+  "argc": 3,
+  "name": "SoundVol",
+  "len": 9
+ },
+ {
+  "id": 108,
+  "argc": 2,
+  "name": "SysAtSkipName",
+  "len": 14
+ },
+ {
+  "id": 109,
+  "argc": 1,
+  "name": "SysProjFolder",
+  "len": 14
+ },
+ {
+  "id": 110,
+  "argc": 3,
+  "name": "TextBuff",
+  "len": 9
+ },
+ {
+  "id": 111,
+  "argc": 1,
+  "name": "TextClear",
+  "len": 10
+ },
+ {
+  "id": 112,
+  "argc": 4,
+  "name": "TextColor",
+  "len": 10
+ },
+ {
+  "id": 113,
+  "argc": 3,
+  "name": "TextFont",
+  "len": 9
+ },
+ {
+  "id": 114,
+  "argc": 0,
+  "name": "TextFontCount",
+  "len": 14
+ },
+ {
+  "id": 115,
+  "argc": 0,
+  "name": "TextFontGet",
+  "len": 12
+ },
+ {
+  "id": 116,
+  "argc": 1,
+  "name": "TextFontName",
+  "len": 13
+ },
+ {
+  "id": 117,
+  "argc": 1,
+  "name": "TextFontSet",
+  "len": 12
+ },
+ {
+  "id": 118,
+  "argc": 7,
+  "name": "TextFormat",
+  "len": 11
+ },
+ {
+  "id": 119,
+  "argc": 4,
+  "name": "TextFunction",
+  "len": 13
+ },
+ {
+  "id": 120,
+  "argc": 3,
+  "name": "TextOutSize",
+  "len": 12
+ },
+ {
+  "id": 121,
+  "argc": 2,
+  "name": "TextPause",
+  "len": 10
+ },
+ {
+  "id": 122,
+  "argc": 3,
+  "name": "TextPos",
+  "len": 8
+ },
+ {
+  "id": 123,
+  "argc": 2,
+  "name": "TextPrint",
+  "len": 10
+ },
+ {
+  "id": 124,
+  "argc": 0,
+  "name": "TextRepaint",
+  "len": 12
+ },
+ {
+  "id": 125,
+  "argc": 2,
+  "name": "TextShadowDist",
+  "len": 15
+ },
+ {
+  "id": 126,
+  "argc": 3,
+  "name": "TextSize",
+  "len": 9
+ },
+ {
+  "id": 127,
+  "argc": 2,
+  "name": "TextSkip",
+  "len": 9
+ },
+ {
+  "id": 128,
+  "argc": 3,
+  "name": "TextSpace",
+  "len": 10
+ },
+ {
+  "id": 129,
+  "argc": 2,
+  "name": "TextSpeed",
+  "len": 10
+ },
+ {
+  "id": 130,
+  "argc": 2,
+  "name": "TextSuspendChr",
+  "len": 15
+ },
+ {
+  "id": 131,
+  "argc": 1,
+  "name": "TextTest",
+  "len": 9
+ },
+ {
+  "id": 132,
+  "argc": 1,
+  "name": "ThreadExit",
+  "len": 11
+ },
+ {
+  "id": 133,
+  "argc": 0,
+  "name": "ThreadNext",
+  "len": 11
+ },
+ {
+  "id": 134,
+  "argc": 1,
+  "name": "ThreadRaise",
+  "len": 12
+ },
+ {
+  "id": 135,
+  "argc": 1,
+  "name": "ThreadSleep",
+  "len": 12
+ },
+ {
+  "id": 136,
+  "argc": 2,
+  "name": "ThreadStart",
+  "len": 12
+ },
+ {
+  "id": 137,
+  "argc": 1,
+  "name": "ThreadWait",
+  "len": 11
+ },
+ {
+  "id": 138,
+  "argc": 2,
+  "name": "TimerGet",
+  "len": 9
+ },
+ {
+  "id": 139,
+  "argc": 2,
+  "name": "TimerSet",
+  "len": 9
+ },
+ {
+  "id": 140,
+  "argc": 1,
+  "name": "TimerSuspend",
+  "len": 13
+ },
+ {
+  "id": 141,
+  "argc": 1,
+  "name": "TitleMenu",
+  "len": 10
+ },
+ {
+  "id": 142,
+  "argc": 6,
+  "name": "V3DMotion",
+  "len": 10
+ },
+ {
+  "id": 143,
+  "argc": 1,
+  "name": "V3DMotionPause",
+  "len": 15
+ },
+ {
+  "id": 144,
+  "argc": 0,
+  "name": "V3DMotionStop",
+  "len": 14
+ },
+ {
+  "id": 145,
+  "argc": 0,
+  "name": "V3DMotionTest",
+  "len": 14
+ },
+ {
+  "id": 146,
+  "argc": 3,
+  "name": "V3DSet",
+  "len": 7
+ },
+ {
+  "id": 147,
+  "argc": 1,
+  "name": "WindowMode",
+  "len": 11
+ }
+]

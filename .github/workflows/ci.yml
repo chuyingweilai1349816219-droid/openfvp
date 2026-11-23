@@ -1,0 +1,123 @@
+# CI for openfvp: build the C99 engine on Linux and Windows, check that the
+# committed generated tables are reproducible, that the docs do not reference
+# dead paths, and run the byte-exact acceptance test when game data exists.
+#
+# The acceptance test needs the game script (and the game is copyrighted), so CI
+# cannot run it.  Instead of pretending to pass, scripts/ci-compare.py prints
+# "RESULT: SKIPPED" and still verifies the frozen reference SHA256s.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUTF8: '1'
+  PYTHONIOENCODING: 'utf-8'
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ---------------------------------------------------------------- Linux
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -eux
+          make
+          make lib
+          make test
+
+      # -------------------------------------------------------------- Windows
+      - name: Set up MSYS2 toolchain (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          set -eux
+          make CC=gcc
+          make lib CC=gcc
+          make test CC=gcc
+          make win32 CC=gcc
+
+      # ------------------------------------------------------- shared checks
+      - name: Build info
+        shell: bash
+        run: |
+          ls -l bin
+          fvm=bin/fvm
+          [ -x "$fvm" ] || fvm=bin/fvm.exe
+          "$fvm" --version
+
+      - name: Committed generated tables are reproducible
+        shell: bash
+        run: |
+          # Regenerating must reproduce src/gen_*.h byte for byte.  Windows
+          # writes CRLF and POSIX writes LF, so ignore CR-at-EOL only.
+          python tests/gen_tables.py
+          git diff --ignore-cr-at-eol --exit-code -- \
+            src/gen_cp932.h src/gen_gbk.h src/gen_cmd_table.h
+
+      - name: Docs reference existing paths
+        shell: bash
+        run: python scripts/check-docs.py
+
+      - name: Python sources compile
+        shell: bash
+        run: python -m compileall -q tests scripts
+
+      - name: Frozen reference integrity + byte-exact equivalence
+        shell: bash
+        run: |
+          # Without the game script this verifies ref/ SHA256s and prints
+          # "RESULT: SKIPPED -- no game data" (exit code 0).  With game data
+          # (FVP_SCRIPT, see CONTRIBUTING.md) it runs tests/compare.py.
+          python scripts/ci-compare.py
+
+      - name: Package sources (Windows only, smoke test for scripts/release.ps1)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/release.ps1 -OutDir dist
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Upload release zip
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvp-source-zip
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 7

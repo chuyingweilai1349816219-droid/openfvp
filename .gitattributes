@@ -1,0 +1,9 @@
+# 换行属性：仓库内的文件按原样存盘，git 不做任何换行符转换。
+#
+# 为什么必须这样：ref/*.txt 是「逐字节等价」的期望输出（CRLF），
+# 任何 autocrlf / text=auto 的转换都会让 tests/compare.py 在每个行尾假失败。
+# 同理 src/gen_*.h 是生成后入库的码表，字节也要保持稳定。
+#
+#   -text  = 不要做换行转换（提交/检出都按原始字节）
+#   diff   = 仍然按文本生成 diff（否则 GitHub 会把所有文件当二进制）
+* -text diff
