@@ -239,6 +239,22 @@ hoshimemo 的 asset 指向各自贴图 → 走贴图模式。
 新增第三部作品时只需要：量出它的墨迹表 → 在 `titlemenu.c` 里加一个 profile →
 `fvp_title_profile_find()` 加一个关键字。缺 profile 时退回 iroseka 的通用布局并打日志。
 
+### 4.2 Continue 的存档列表（只读）
+
+点 Continue 会打开存档列表：`src/savelist.c` 把 `<game_dir>\save\sNNN.bin` 逐个
+解析成一条记录（时间戳 7 字节、章节名 cp932→UTF-8、当前行、缩略图标记），
+按 `x=120, y=150, row_h=64, width=1680` 的带画出来，行文本形如
+`No.481   2023/03/19 23:43   プロローグ`。命中判定按行带算（`fvp_savelist_hit`）。
+
+- Windows 下 CJK 路径只能走宽字符 API，所以**目录枚举与读文件在外壳里做**
+  （`FindFirstFileW` + `_wfopen`），`savelist.c` 只吃"槽文件字节"
+  （`fvp_savelist_add_slot_bytes`），保持可移植；
+- 选中一行只记日志（`save list: selected No.481 ...`）并**停在列表里**——
+  槽尾 500–597 KB 的引擎状态快照还没解，恢复不了，所以不启动脚本（如实标注）；
+- 调试/截图入口：`--title-save-list`（等价于启动即打开 Continue 列表）；
+- 实测：五彩斑斓的世界 6 个可读槽（第 7 个 `save.bin` 是全局状态不是槽），
+  星空的记忆 0 个（没有 `save/` 目录）；这两条都进了多游戏门禁。
+
 ### 4.1 还差什么
 
 1. **主标题背景还没指认**：`a_top_s1` 是 ALBUM MODE 那版（夜空），白天那版还没在

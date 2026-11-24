@@ -404,6 +404,17 @@ def build_steps(args):
                                'right edge ~1769, pitch 100, ink height 40..56, '
                                'hit test matches layout'))
 
+    # 4i11. Continue 的存档列表（时间戳/章节名/缩略图，只读）
+    test_savelist = tools.get('test_savelist')
+    if not test_savelist or not os.path.isfile(test_savelist):
+        steps.append(Step('test_savelist', None, 0,
+                          skip_reason='bin/test_savelist.exe missing '
+                                      '(run: make test_savelist)'))
+    else:
+        steps.append(Step('test_savelist', [test_savelist], 120,
+                          note='continue save list: slot file -> timestamp/'
+                               'chapter/line decoded, row text, hit bands, cap'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):

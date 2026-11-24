@@ -62,7 +62,7 @@ GAMES = [
          # 标题菜单 profile（原版实测：右对齐 1769、行距 100、没有菜单贴图）
          title=dict(profile='iroseka', align='right', pitch=100,
                     right_edge=1769, textures=0,
-                    continue_enabled=True,
+                    continue_enabled=True, save_list=6,
                     centres=[531, 631, 732, 831, 931])),
     dict(name='hoshimemo',  # 《星空的记忆 HD》
          dir=os.path.join(DOWNLOADS, 'hoshimemo_installed'),
@@ -72,7 +72,7 @@ GAMES = [
          # 原版实测：居中 960、行距 90、5 张菜单贴图
          title=dict(profile='hoshimemo', align='centre', pitch=90,
                     centre_x=960, textures=5,
-                    continue_enabled=False,
+                    continue_enabled=False, save_list=0,
                     centres=[597, 687, 777, 867, 957])),
     dict(name='sakura',  # 《樱花，萌放。（さくら、もゆ。）》
          dir=os.path.join(DOWNLOADS, '樱花，萌放（さくら、もゆ。）'),
@@ -356,6 +356,29 @@ def stage_title_menu(shell, games, check):
             check(abs((b - a) - t['pitch']) <= 6,
                   'row pitch %d -> %d = %d ~ %d'
                   % (i - 1, i, b - a, t['pitch']))
+        # 第二次跑：直接打开 Continue 的存档列表（--title-save-list），
+        # 只读：断言可读槽数 = 期望值。
+        shot2 = os.path.join(OUT_DIR, 'mg-%s-savelist.bmp' % name)
+        log2_path = os.path.join(OUT_DIR, 'mg-%s-savelist.log' % name)
+        for p2 in (shot2, log2_path):
+            if os.path.isfile(p2):
+                os.remove(p2)
+        rc2, log2 = run_shell_frame(shell, g['dir'],
+                                    os.path.basename(g['script']), 2, shot2,
+                                    log2_path,
+                                    extra=['--title-menu', '--title-save-list'])
+        check(rc2 == 0, 'save list shell exit 0 (got %s)' % rc2)
+        m = log_match(r'save list: (\d+) slot\(s\) readable', log2)
+        check(m is not None and int(m.group(1)) == t['save_list'],
+              '%d save slot(s) readable (%s)'
+              % (t['save_list'], m.group(0) if m else 'missing'))
+        m = log_match(r'continue=\w+ \(\d+ slot\(s\), (\d+) readable\)',
+                      log2)
+        check(m is not None and int(m.group(1)) == t['save_list'],
+              'summary reports %d readable slot(s) (%s)'
+              % (t['save_list'], m.group(0) if m else 'missing'))
+        print('')
+
         print('')
 
 
@@ -542,7 +565,7 @@ def main():
                 check(m is not None and int(m.group(1)) > 0,
                       'text prims drawn (%s)'
                       % ((m.group(0) if m else 'missing')))
-                print('')
+        print('')
 
     # 7. 标题菜单：两部作品的 profile与菜单几何都要对
     if not args.no_shell:

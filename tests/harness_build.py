@@ -147,6 +147,7 @@ def public_tools():
         'test_vmmisc': os.path.join(FVP, 'bin', 'test_vmmisc.exe'),
         'test_nullvalue': os.path.join(FVP, 'bin', 'test_nullvalue.exe'),
         'test_titlemenu': os.path.join(FVP, 'bin', 'test_titlemenu.exe'),
+        'test_savelist': os.path.join(FVP, 'bin', 'test_savelist.exe'),
         'test_titlemenu_draw': os.path.join(FVP, 'bin',
                                            'test_titlemenu_draw.exe'),
         'test_gfx_motion': os.path.join(FVP, 'bin', 'test_gfx_motion.exe'),

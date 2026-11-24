@@ -88,7 +88,7 @@ WIN32_DIR   = src/platform/win32
 WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
                $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
-              src/titlemenu.c \
+              src/titlemenu.c src/savelist.c \
                src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c \
                src/timer.c src/history.c
 WIN32_RES   = src/bin.c src/hzc1.c src/inflate.c
@@ -160,6 +160,22 @@ test_save: $(SAVE_TEST)
 
 $(SAVE_TEST): tests/test_save.c src/save.c src/save.h | bin
 	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_save.c src/save.c $(LDFLAGS)
+
+# ---------------------------------------------------------------------------
+# 读档列表（Continue 的槽列表：时间戳/章节名/缩略图）
+#   make test_savelist
+# ---------------------------------------------------------------------------
+SAVELIST_TEST = bin/test_savelist$(EXE)
+
+test_savelist: $(SAVELIST_TEST)
+
+$(SAVELIST_TEST): tests/test_savelist.c src/savelist.c src/savelist.h src/save.c src/encoding.c src/fvp.c $(SAVE_OBJ)
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_savelist.c src/savelist.c src/save.c src/encoding.c src/fvp.c $(LDFLAGS) -lm
+
+clean-savelist:
+	-rm -f $(SAVELIST_TEST)
+
+.PHONY: test_savelist clean-savelist
 
 $(SAVE_OBJ): src/save.c src/save.h | src
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -542,7 +558,8 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
-             $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST) $(TITLEMENU_DRAW_TEST)
+             $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST) $(TITLEMENU_DRAW_TEST) \
+             $(SAVELIST_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

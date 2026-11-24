@@ -53,6 +53,21 @@
 
 ### 新增
 
+- **Continue 的存档列表（只读）：新模块 `src/savelist.c` + `--title-save-list`**
+  - `fvp_savelist_*`：把 `<game_dir>\save\sNNN.bin` 解析成记录（7 字节时间戳、
+    章节名 cp932→UTF-8、当前行、缩略图标记、文件大小），提供行文本格式化与
+    行带命中判定；布局 `x=120 y=150 row_h=64 width=1680`
+  - Windows 下 CJK 路径只能走宽字符 API，所以目录枚举/读文件在外壳里做
+    （`FindFirstFileW` + `_wfopen`），模块本身只吃"槽字节"，保持可移植
+  - 点 Continue → 打开列表；选中一行只记日志（快照恢复还没做，如实标注），
+    点空白处回标题菜单；`--title-save-list` 可直接打开列表（截图/调试用）
+  - 实测：五彩斑斓的世界 **6 个可读槽**（第 7 个 save.bin 是全局状态不是槽）、
+    星空的记忆 **0 个**；汇总行补 `continue=enabled (6 slot(s), 6 readable)`
+  - `tests/test_savelist`（**66 项**）：合成真实格式槽文件 → 解析字段、
+    行文本、命中、上限、坏文件/NULL；`make check` 现 24 个单测、run_all 39 步
+  - 多游戏门禁第二次跑 `--title-menu --title-save-list`，断言两部作品的可读槽数
+    与汇总行一致
+
 - **标题菜单的 Continue 改成按存档可用性启用/禁用（进多游戏门禁）**
   - 新增 `title_count_save_slots()`：数 `<game_dir>\save\sNNN.bin`；
     0 个槽 → Continue 置灰、点它只记日志（读档界面还没做）、不启动脚本；

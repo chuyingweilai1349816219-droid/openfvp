@@ -41,6 +41,7 @@
 #include "win32_log.h"
 #include "win32_window.h"
 #include "../../titlemenu.h"
+#include "../../savelist.h"
 
 #define FVP_WIN32_VERSION "0.1"
 #define FVP_CANVAS_W 1920
@@ -108,6 +109,7 @@ typedef struct Options {
     int typewriter; /* --typewriter: 逐字显示（默认关，关时像素基准不变） */
     int text_prims; /* --text-prims: 按文本图元（PrimSetText 86）定位，默认关 */
     int title_menu; /* --title-menu: 先显示引擎侧标题菜单，选了 New Game 才跑脚本 */
+    int title_save_list; /* --title-save-list: 直接打开 Continue 的存档列表 */
 } Options;
 
 /* ------------------------------------------------------------------ */
@@ -665,6 +667,9 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->text_prims = 1;
         } else if (wcscmp(a, L"--title-menu") == 0) {
             o->title_menu = 1;
+        } else if (wcscmp(a, L"--title-save-list") == 0) {
+            o->title_menu = 1;
+            o->title_save_list = 1;
         } else if (wcscmp(a, L"--tex-cache-mb") == 0) {
             NEED_VALUE();
             if (!parse_int_w(v, &o->tex_cache_mb) || o->tex_cache_mb < 0 ||
@@ -1668,6 +1673,85 @@ static int title_textures_on;
 
 /* 数一下 <game_dir>\save 里有几个存档槽（sNNN.bin）。
  * 标题菜单的 Continue 就靠它决定能不能点。 */
+/* 扫描 <game_dir>\save\sNNN.bin，把每个槽读成一条列表记录（只读）。
+ * 返回读到的条数。目录枚举在平台层做，savelist.c 只吃"一个槽文件路径"。 */
+static int title_scan_saves(FvpSaveList *list, const wchar_t *game_dir,
+                            const char *game_dir_u8, FvpEncoding enc)
+{
+    wchar_t pattern[PATH_CAP];
+    WIN32_FIND_DATAW fd;
+    HANDLE h;
+    int n = 0;
+
+    fvp_savelist_init(list);
+    if (game_dir == NULL || game_dir[0] == L'\0' || game_dir_u8 == NULL) {
+        return 0;
+    }
+    if (!path_join_w(pattern, PATH_CAP, game_dir, L"save\\s*.bin")) {
+        return 0;
+    }
+    h = FindFirstFileW(pattern, &fd);
+    if (h == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+    do {
+        wchar_t wpath[PATH_CAP];
+        int slot = -1;
+        FILE *sf;
+        long fsz;
+        unsigned char *sbuf;
+
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            continue;
+        }
+        if (fd.cFileName[0] != L's' ||
+            swscanf(fd.cFileName, L"s%d.bin", &slot) != 1) {
+            continue;
+        }
+        if (slot < 0 || slot > 999) {
+            continue;
+        }
+        /* Windows 下 CJK 路径只能走宽字符 API，所以这里自己读字节，
+         * 再交给 savelist 的 add_slot_bytes()。 */
+        if (!path_join_w(wpath, PATH_CAP, game_dir,
+                         L"save") ||
+            wcslen(wpath) + wcslen(fd.cFileName) + 2 > PATH_CAP) {
+            continue;
+        }
+        wcscat(wpath, L"\\");
+        wcscat(wpath, fd.cFileName);
+        sf = _wfopen(wpath, L"rb");
+        if (sf == NULL) {
+            continue;
+        }
+        if (fseek(sf, 0, SEEK_END) != 0 || (fsz = ftell(sf)) <= 0 ||
+            fseek(sf, 0, SEEK_SET) != 0) {
+            fclose(sf);
+            continue;
+        }
+        sbuf = (unsigned char *)malloc((size_t)fsz);
+        if (sbuf == NULL) {
+            fclose(sf);
+            continue;
+        }
+        if (fread(sbuf, 1, (size_t)fsz, sf) != (size_t)fsz) {
+            free(sbuf);
+            fclose(sf);
+            continue;
+        }
+        fclose(sf);
+        if (fvp_savelist_add_slot_bytes(list, sbuf, (size_t)fsz, slot, enc)) {
+            n += 1;
+        }
+        free(sbuf);
+        if (list->count >= FVP_SAVELIST_MAX) {
+            break;
+        }
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+    return n;
+}
+
 static int title_count_save_slots(const wchar_t *game_dir)
 {
     wchar_t pattern[PATH_CAP];
@@ -1686,7 +1770,13 @@ static int title_count_save_slots(const wchar_t *game_dir)
         return 0;
     }
     do {
-        if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+        const wchar_t *nm = fd.cFileName;
+
+        /* sNNN.bin（s + 3 位数字 + .bin）；save.bin 不算槽 */
+        if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 &&
+            nm[0] == L's' && nm[1] >= L'0' && nm[1] <= L'9' &&
+            nm[2] >= L'0' && nm[2] <= L'9' && nm[3] >= L'0' && nm[3] <= L'9' &&
+            wcscmp(nm + 4, L".bin") == 0) {
             n += 1;
             if (n >= 999) {
                 break;
@@ -1809,6 +1899,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int title_hover = -1;
     const FvpTitleProfile *title_profile = NULL;
     int title_textures = 0;
+    FvpSaveList save_list;
+    int save_list_active = 0;
+    int save_hover = -1;
     double title_shown_at = 0.0;
     double last_report = 0.0;
     PerfStats perf;
@@ -1891,6 +1984,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             title.enabled[FVP_TITLE_CONTINUE] = slots > 0 ? 1 : 0;
             fvp_logf("title: continue %s (%d slot(s) under save/)",
                      slots > 0 ? "enabled" : "disabled", slots);
+            /* Continue 的列表：把每个槽读成一条记录（只读） */
+            fvp_savelist_init(&save_list);
         }
         if (title_profile != NULL) {
             fvp_title_apply_profile(&title, title_profile);
@@ -1976,6 +2071,22 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         timeEndPeriod(1);
         LocalFree(argv);
         return 2;
+    }
+
+    /* Continue 的存档列表：等 game_u8 就绪后再扫描（只读） */
+    if (title_active) {
+        FvpEncoding slenc = (opts.enc_mode == ENC_GBK)
+                                ? FVP_ENC_GBK : FVP_ENC_CP932;
+
+        if (wcscmp(opts.save_encoding, L"gbk") == 0) {
+            slenc = FVP_ENC_GBK;
+        }
+        (void)title_scan_saves(&save_list, opts.game_dir, game_u8,
+                               slenc);
+        fvp_logf("save list: %d slot(s) readable", save_list.count);
+        if (opts.title_save_list && save_list.count > 0) {
+            save_list_active = 1;
+        }
     }
     fvp_logf("game dir: %s", w2u(game_dir, u8, sizeof(u8)));
     fvp_logf("script:   %s", w2u(script_path, u8, sizeof(u8)));
@@ -2316,7 +2427,27 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         in->mouse_pressed = 0;
         in->key_pressed = 0;
         /* 引擎侧标题菜单：菜单在的时候点击/回车归菜单用，不喂给 VM。 */
-        if (title_active) {
+        if (title_active && save_list_active) {
+            /* 读档列表：左键选中一行就记日志；右键/退出键回标题菜单 */
+            save_hover = fvp_savelist_hit(&save_list, vm.cx, vm.cy);
+            if (click_edges > 0 && save_hover >= 0) {
+                char row[256];
+
+                fvp_savelist_row_text(&save_list, save_hover, row,
+                                      sizeof(row));
+                save_list.selected = save_hover;
+                fvp_logf("save list: selected %s (chapter='%s' ", row,
+                         save_list.items[save_hover].chapter);
+                fvp_logf("save list: snapshot restore is not implemented "
+                         "yet, staying in the menu");
+                click_edges = 0;
+            } else if (click_edges > 0) {
+                save_list_active = 0; /* 点空白处回标题菜单 */
+                fvp_logf("save list: back to title menu");
+                click_edges = 0;
+            }
+        }
+        if (title_active && !save_list_active) {
             int pick = -1;
 
             if (title_profile != NULL) {
@@ -2352,13 +2483,12 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 if (pick == FVP_TITLE_EXIT) {
                     win.quit = 1;
                 } else if (pick == FVP_TITLE_CONTINUE) {
-                    /* 读档界面还没做：记一条日志、保持菜单（不覆盖
-                     * “Continue 已启用”这个已验证的状态）。 */
-                    fvp_logf("title: continue requested (%d slot(s)) "
-                             "but the load UI is not implemented yet",
-                             title_count_save_slots(opts.game_dir));
+                    /* Continue → 打开读档列表（只读：快照恢复还没做） */
+                    save_list_active = 1;
                     title_active = 1;
                     title_picked = -1;
+                    fvp_logf("title: continue -> save list (%d slot(s))",
+                             save_list.count);
                 } else {
                     fvp_vm_start(&vm);
                     fvp_logf("vm: started at pc=0x%x (from title menu)",
@@ -2500,7 +2630,29 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                      * 这里只记录菜单开始显示的时刻。 */
                     title_shown_at = now;
                 }
-                title_draw_overlay(gfx, &title, title_profile, title_hover);
+                if (save_list_active) {
+                    int li;
+
+                    for (li = 0; li < save_list.count; ++li) {
+                        char row[256];
+                        int ry = save_list.y + li * save_list.row_h + 18;
+                        int rr = 225, rg = 225, rb = 230;
+
+                        fvp_savelist_row_text(&save_list, li, row,
+                                              sizeof(row));
+                        if (li == save_hover || li == save_list.selected) {
+                            rr = 255;
+                            rg = 250;
+                            rb = 200;
+                        }
+                        (void)gfx_draw_text_line(gfx, row,
+                                                 save_list.x + 16, ry, 28,
+                                                 rr, rg, rb, 255);
+                    }
+                } else {
+                    title_draw_overlay(gfx, &title, title_profile,
+                                       title_hover);
+                }
             }
             canvas = gfx_canvas(gfx, &cw, &ch);
             render_ms = (now_sec() - r0) * 1000.0;
@@ -2610,7 +2762,22 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         gfx_render(gfx);
         /* 截图也要带上引擎侧 UI 覆盖层（和屏幕上看到的一致）。 */
         if (title_active) {
-            title_draw_overlay(gfx, &title, title_profile, title_hover);
+            if (save_list_active) {
+                int li;
+
+                for (li = 0; li < save_list.count; ++li) {
+                    char row[256];
+
+                    fvp_savelist_row_text(&save_list, li, row,
+                                          sizeof(row));
+                    (void)gfx_draw_text_line(gfx, row,
+                                             save_list.x + 16,
+                                             save_list.y + li * save_list.row_h + 18,
+                                             28, 225, 225, 230, 255);
+                }
+            } else {
+                title_draw_overlay(gfx, &title, title_profile, title_hover);
+            }
         }
         canvas = gfx_canvas(gfx, &cw, &ch);
         if (canvas != NULL && opts.screenshot[0] != L'\0') {
@@ -2710,7 +2877,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                gfx_stats(gfx)->text_prims, gfx_text_prim_bindings(gfx),
                opts.text_prims ? "on" : "off");
         APPEND("title menu     %s (profile=%s, align=%s, %d item(s), "
-               "pitch %d, continue=%s (%d slot(s)), picked %s)\n",
+               "pitch %d, continue=%s (%d slot(s), %d readable), picked %s)\n",
                opts.title_menu ? "enabled" : "off",
                title_profile != NULL ? title_profile->game : "generic",
                (title_profile != NULL &&
@@ -2718,7 +2885,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                    ? "centre" : "right",
                FVP_TITLE_ITEMS, title.pitch,
                title.enabled[FVP_TITLE_CONTINUE] ? "enabled" : "disabled",
-               title_count_save_slots(opts.game_dir),
+               title_count_save_slots(opts.game_dir), save_list.count,
                title_picked >= 0
                    ? (title_profile != NULL
                           ? title_profile->items[title_picked].label
