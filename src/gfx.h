@@ -270,6 +270,17 @@ int gfx_prim_hit(Gfx *g, int prim_id, int ignore_draw, int cx, int cy);
  * slot (like the engine's type-0 GraphLoad).  On a load failure the slot is
  * left untouched and -1 is returned (matches the Python prototype). */
 int gfx_graph_load(Gfx *g, int slot, const char *name);
+
+/* ---- 外字（GaijiLoad 21）---------------------------------------------
+ * 原版 GaijiLoad(字符, 字号, 图名) 的语义是：把这个字符在绘制时换成图名对应的
+ * 那张图（实测参数形如 `('ハ', 64, "graph/gaiji_heart68")`）。
+ * 本站的做法：syscall 层把图装进一个图形槽，再调 gfx_gaiji_add() 记下
+ * 「码点 → 槽 + 原始字号」；文本绘制时命中码点就用槽里的图，按**当前字号**
+ * 等比缩放画上去（原始字号只用于记录/诊断）。
+ * 返回 1 = 记录成功；码点 0、槽号越界或表满返回 0。 */
+#define GFX_MAX_GAIJI 64
+int gfx_gaiji_add(Gfx *g, uint32_t codepoint, int size, int slot);
+int gfx_gaiji_count(const Gfx *g);
 void gfx_graph_release(Gfx *g, int slot);
 /* Multi-frame image: choose the base frame (MotionAnim). */
 int gfx_graph_set_frame(Gfx *g, int slot, int frame);

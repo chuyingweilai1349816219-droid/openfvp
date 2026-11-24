@@ -442,7 +442,7 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 
 | id | 命令 | argc | 语义 / 证据 |
 | ---: | --- | ---: | --- |
-| 21 | GaijiLoad | 3 | `(char, size, image)`。handler **0x43f4f0**：第 1/3 个参数必须是字符串（原版 type 4/5），第 2 个必须是 int 且在 **12..0x40**；然后 `call 0x43e9c0(engine+0x6a49cc, str1, size, str2)`。实测参数形态：`size=64, "ハ", "graph/gaiji_heart68"` → **这是"外字"：把某个字符替换成 graph 包里的一张图** |
+| 21 | GaijiLoad | 3 | `(char, size, image)`。handler **0x43f4f0**：第 1/3 个参数必须是字符串（原版 type 4/5），第 2 个必须是 int 且在 **12..0x40**；然后 `call 0x43e9c0(engine+0x6a49cc, str1, size, str2)`。实测参数形态：`size=64, "ハ", "graph/gaiji_heart68"` → **这是"外字"：把某个字符替换成 graph 包里的一张图**。**已实现（含渲染）**：图装进高号图形槽 `0x0F00+` 并 `gfx_gaiji_add(cp, size, slot)` 登记，`draw_text_run` 命中码点就按当前字号等比缩放画图、按缩放宽度推进；见 `docs/roadmap.md` 的"外字渲染" |
 | 142 | V3DMotion | 6 | `(x?, y?, z?, timeMs, mode, flag?)`。handler **0x43cfe0**：arg4 必须 int 在 **1..0x493e0**（和 MotionMove 同一区间）、arg5 必须 int 在 **1..5**、arg6 当 bool，arg1..arg3 缺省取 `engine+0x6a65f0/f4/f8`。本作没有 3D 场景 |
 
 两者本站都只记录（`gaiji_calls/size/name1/name2`、`v3d_calls/time_ms/mode`），

@@ -344,6 +344,18 @@ def build_steps(args):
                           note='GaijiLoad 21: strings + size 12..64; '
                                'V3DMotion 142: time 1..300000, mode 1..5'))
 
+    # 4i6. GaijiLoad(21) rendering: registry + "character replaced by an image"
+    test_gaiji_render = tools.get('test_gaiji_render')
+    if not test_gaiji_render or not os.path.isfile(test_gaiji_render):
+        steps.append(Step('test_gaiji_render', None, 0,
+                          skip_reason='bin/test_gaiji_render.exe missing '
+                                      '(run: make test_gaiji_render)'))
+    else:
+        steps.append(Step('test_gaiji_render', [test_gaiji_render], 120,
+                          note='gaiji registry: codepoint -> graph slot image, '
+                               'scaled draw at the text position, re-register '
+                               'replaces, empty slot draws nothing'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):

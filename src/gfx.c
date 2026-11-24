@@ -444,6 +444,13 @@ typedef struct GfxOverlay {
     int x, y;
 } GfxOverlay;
 
+/* 外字表项：码点 → 图形槽 + 原始字号（见 gfx_gaiji_add 的说明）。 */
+typedef struct GfxGaiji {
+    uint32_t cp;
+    int size;
+    int slot;
+} GfxGaiji;
+
 typedef struct GfxSlot {
     GfxTex *tex;
     char *name; /* base resource name for the draw list */
@@ -507,6 +514,8 @@ struct Gfx {
     GfxTex *tex_hash[GFX_TEX_BUCKETS];
     GfxFont *fonts[GFX_MAX_FONTS];
     int nfonts;
+    GfxGaiji gaiji[GFX_MAX_GAIJI];
+    int ngaiji;
     GfxStats stats;
     GfxDrawItem *draw;
     int ndraw;
@@ -1530,6 +1539,104 @@ static void over_px_opaque(uint8_t *d, int sr, int sg, int sb, int sa)
     d[3] = 255;
 }
 
+/* 把 sw*sh 的 RGBA 源最近邻缩放到 dw*dh 画到 (x,y)。
+ * 合成规则与 blit_sprite 的非 additive 分支一致（源 alpha 覆盖目标）。 */
+static void blit_rgba_scaled(Gfx *g, int x, int y, int dw, int dh,
+                             const uint8_t *src, int sw, int sh)
+{
+    int yy;
+
+    if (src == NULL || sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) {
+        return;
+    }
+    for (yy = 0; yy < dh; yy++) {
+        int sy = (int)((long)yy * (long)sh / (long)dh);
+        int dy = y + yy;
+        int xx;
+
+        if (dy < 0 || dy >= g->h) {
+            continue;
+        }
+        for (xx = 0; xx < dw; xx++) {
+            int sx = (int)((long)xx * (long)sw / (long)dw);
+            int dx = x + xx;
+            const uint8_t *s;
+            uint8_t *d;
+            int a;
+
+            if (dx < 0 || dx >= g->w) {
+                continue;
+            }
+            s = src + ((size_t)sy * (size_t)sw + (size_t)sx) * 4u;
+            a = s[3];
+            if (a == 0) {
+                continue;
+            }
+            d = g->canvas + ((size_t)dy * (size_t)g->w + (size_t)dx) * 4u;
+            if (a == 255) {
+                d[0] = s[0];
+                d[1] = s[1];
+                d[2] = s[2];
+                d[3] = 255;
+            } else {
+                int c;
+                double af = (double)a / 255.0;
+
+                for (c = 0; c < 3; c++) {
+                    d[c] = (uint8_t)((double)s[c] * af +
+                                     (double)d[c] * (1.0 - af));
+                }
+                d[3] = 255;
+            }
+        }
+    }
+}
+
+static const GfxGaiji *gfx_gaiji_find(const Gfx *g, uint32_t cp)
+{
+    int i;
+
+    for (i = 0; i < g->ngaiji; i++) {
+        if (g->gaiji[i].cp == cp) {
+            return &g->gaiji[i];
+        }
+    }
+    return NULL;
+}
+
+int gfx_gaiji_add(Gfx *g, uint32_t codepoint, int size, int slot)
+{
+    int i;
+
+    if (g == NULL || codepoint == 0u) {
+        return 0;
+    }
+    if (slot < 0 || slot >= GFX_GRAPH_MAX) {
+        return 0;
+    }
+    /* 同一个码点重复登记：覆盖原条目（脚本重进场景时会重新 GaijiLoad） */
+    for (i = 0; i < g->ngaiji; i++) {
+        if (g->gaiji[i].cp == codepoint) {
+            g->gaiji[i].size = size;
+            g->gaiji[i].slot = slot;
+            return 1;
+        }
+    }
+    if (g->ngaiji >= GFX_MAX_GAIJI) {
+        return 0;
+    }
+    g->gaiji[g->ngaiji].cp = codepoint;
+    g->gaiji[g->ngaiji].size = size;
+    g->gaiji[g->ngaiji].slot = slot;
+    g->ngaiji += 1;
+    return 1;
+}
+
+int gfx_gaiji_count(const Gfx *g)
+{
+    return g == NULL ? 0 : g->ngaiji;
+}
+
 static void blit_sprite(Gfx *g, int x, int y, int rw, int rh,
                         const uint8_t *src, int additive, const GfxPrim *p)
 {
@@ -2243,6 +2350,30 @@ static void draw_text_run(Gfx *g, GfxFont *f, int x, int y, const char *s,
     int cp;
 
     while ((cp = utf8_next(&p)) >= 0) {
+        /* 外字优先：这个码点登记过 GaijiLoad 就直接画图（按当前字号缩放），
+         * 并且按缩放后的宽度推进笔位，排版仍然对。 */
+        if (g->ngaiji > 0) {
+            const GfxGaiji *gj = gfx_gaiji_find(g, (uint32_t)cp);
+
+            if (gj != NULL) {
+                const GfxTex *t = g->slot[gj->slot].tex;
+
+                if (t != NULL && t->img.rgba != NULL && t->img.w > 0 &&
+                    t->img.h > 0) {
+                    int dh = f->size;
+                    int dw = (int)((long)t->img.w * (long)dh /
+                                   (long)t->img.h);
+
+                    if (dw < 1) {
+                        dw = 1;
+                    }
+                    blit_rgba_scaled(g, pen, y, dw, dh, t->img.rgba,
+                                     t->img.w, t->img.h);
+                    pen += dw;
+                    continue;
+                }
+            }
+        }
         if (!f->builtin) {
             int gi = font_find(f, (uint32_t)cp);
 

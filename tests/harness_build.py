@@ -142,6 +142,8 @@ def public_tools():
         'test_graphcolor': os.path.join(FVP, 'bin', 'test_graphcolor.exe'),
         'test_textbuff': os.path.join(FVP, 'bin', 'test_textbuff.exe'),
         'test_gaiji': os.path.join(FVP, 'bin', 'test_gaiji.exe'),
+        'test_gaiji_render': os.path.join(FVP, 'bin',
+                                          'test_gaiji_render.exe'),
         'test_gfx_motion': os.path.join(FVP, 'bin', 'test_gfx_motion.exe'),
         'test_tex_cache': os.path.join(FVP, 'bin', 'test_tex_cache.exe'),
         'test_timer': os.path.join(FVP, 'bin', 'test_timer.exe'),

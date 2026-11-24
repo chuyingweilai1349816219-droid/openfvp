@@ -432,6 +432,22 @@ clean-gaiji:
 .PHONY: test_gaiji clean-gaiji
 
 # ---------------------------------------------------------------------------
+# 外字渲染（GaijiLoad 21 → gfx_gaiji_add → draw_text_run 接管）
+#   make test_gaiji_render
+# ---------------------------------------------------------------------------
+GAIJI_RENDER_TEST = bin/test_gaiji_render$(EXE)
+
+test_gaiji_render: $(GAIJI_RENDER_TEST)
+
+$(GAIJI_RENDER_TEST): tests/test_gaiji_render.c src/gfx.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_gaiji_render.c $(GFX_OBJ) $(LDFLAGS) -lm
+
+clean-gaiji-render:
+	-rm -f $(GAIJI_RENDER_TEST)
+
+.PHONY: test_gaiji_render clean-gaiji-render
+
+# ---------------------------------------------------------------------------
 # make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
 # CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
 #   make check
@@ -444,7 +460,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
-             $(GAIJI_TEST)
+             $(GAIJI_TEST) $(GAIJI_RENDER_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

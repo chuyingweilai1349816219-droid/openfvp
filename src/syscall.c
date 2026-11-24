@@ -30,6 +30,7 @@
  * called when fvp_vm_attach_gfx() installed a context, and a context can
  * only be installed by a program that links the renderer. */
 #pragma weak gfx_graph_load
+#pragma weak gfx_gaiji_add
 #pragma weak gfx_graph_set_frame
 #pragma weak gfx_parts_assign
 #pragma weak gfx_parts_load
@@ -66,6 +67,34 @@
 #pragma weak snd_play_wav
 #pragma weak snd_set_vol
 #pragma weak snd_stop
+
+/* 取 UTF-8 串的第一个码点（外字登记用；非法/空串返回 0）。 */
+static uint32_t fvp_utf8_first(const char *s)
+{
+    const unsigned char *p = (const unsigned char *)s;
+
+    if (p == NULL || p[0] == 0) {
+        return 0u;
+    }
+    if (p[0] < 0x80u) {
+        return (uint32_t)p[0];
+    }
+    if ((p[0] & 0xE0u) == 0xC0u && (p[1] & 0xC0u) == 0x80u) {
+        return ((uint32_t)(p[0] & 0x1Fu) << 6) | (uint32_t)(p[1] & 0x3Fu);
+    }
+    if ((p[0] & 0xF0u) == 0xE0u && (p[1] & 0xC0u) == 0x80u &&
+        (p[2] & 0xC0u) == 0x80u) {
+        return ((uint32_t)(p[0] & 0x0Fu) << 12) |
+               ((uint32_t)(p[1] & 0x3Fu) << 6) | (uint32_t)(p[2] & 0x3Fu);
+    }
+    if ((p[0] & 0xF8u) == 0xF0u && (p[1] & 0xC0u) == 0x80u &&
+        (p[2] & 0xC0u) == 0x80u && (p[3] & 0xC0u) == 0x80u) {
+        return ((uint32_t)(p[0] & 0x07u) << 18) |
+               ((uint32_t)(p[1] & 0x3Fu) << 12) |
+               ((uint32_t)(p[2] & 0x3Fu) << 6) | (uint32_t)(p[3] & 0x3Fu);
+    }
+    return 0u;
+}
 
 static FvpStr *fvp_sys_str(FvpVM *vm, const char *s)
 {
@@ -1667,7 +1696,22 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * 本站没有 3D 场景，只记录。 */
     case 21:
         if (argc >= 3) {
-            (void)fvp_vm_gaiji_load(vm, &args[0], &args[1], &args[2]);
+            if (fvp_vm_gaiji_load(vm, &args[0], &args[1], &args[2]) &&
+                vm->gfx_bridge != NULL && gfx_graph_load != NULL &&
+                gfx_gaiji_add != NULL && vm->gaiji_name2 != NULL) {
+                /* 外字图装进一个高号图形槽（0x0F00 起，最多 GFX_MAX_GAIJI 个；
+                 * 这个区间不会与脚本自己的图元/图形槽冲突），然后登记
+                 * 「码点 → 槽」；绘制时由 gfx.c 的 draw_text_run 接管。 */
+                int slot = 0x0F00 + (int)((vm->gaiji_calls - 1u) % 64u);
+                uint32_t cp = fvp_utf8_first(vm->gaiji_name1);
+
+                if (cp != 0u &&
+                    gfx_graph_load(vm->gfx_bridge->gfx, slot,
+                                   vm->gaiji_name2) == 0) {
+                    (void)gfx_gaiji_add(vm->gfx_bridge->gfx, cp,
+                                        vm->gaiji_size, slot);
+                }
+            }
             return;
         }
         break;
