@@ -1640,6 +1640,22 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * a/b 缺省 8、上限 0x400，写 tw+0x5dc/0x5de。只记录。 */
     /* 147 WindowMode(mode -1..6) / 17 ExitMode(mode 0..4)：handler
      * 0x43d0d0 / 0x43a1a0，真正改的是窗口层字段，本站只记录（见 vm.h）。 */
+    /* 21 GaijiLoad(str1, size 12..0x40, str2)：handler 0x43f4f0，
+     * call 0x43e9c0(engine+0x6a49cc, str1, size, str2)。只记录。
+     * 142 V3DMotion(..., timeMs 1..300000, mode 1..5, flag)：handler 0x43cfe0。
+     * 本站没有 3D 场景，只记录。 */
+    case 21:
+        if (argc >= 3) {
+            (void)fvp_vm_gaiji_load(vm, &args[0], &args[1], &args[2]);
+            return;
+        }
+        break;
+    case 142:
+        if (argc >= 5) {
+            (void)fvp_vm_v3d_motion(vm, &args[3], &args[4]);
+            return;
+        }
+        break;
     case 147:
         if (argc >= 1) {
             (void)fvp_vm_window_mode(vm, &args[0]);

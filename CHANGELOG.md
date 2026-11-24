@@ -53,6 +53,21 @@
 
 ### 新增
 
+- **`GaijiLoad`(21) / `V3DMotion`(142) 落地（本轮，只记录参数）—— 到此脚本命中的命令全部有实现**
+  - `GaijiLoad(char, size 12..0x40, image)`：handler **0x43f4f0**，两个字符串 + 一个
+    int 尺寸，然后 `call 0x43e9c0(engine+0x6a49cc, str1, size, str2)`
+    - 实测参数形态很有信息量：**`size=64, "ハ", "graph/gaiji_heart68"`** —— 这条命令
+      是"外字"：把某个字符替换成 graph 包里的一张图。它同时解释了为什么 56px 位图字集
+      只有 5 个字形、以及 `tw9` 的 `TextFont(9,-2,1)` 到底在指什么
+  - `V3DMotion(x?, y?, z?, timeMs 1..300000, mode 1..5, flag?)`：handler **0x43cfe0**，
+    arg4/arg5 的取值区间与 `MotionMove` 完全一致；本作没有 3D 场景
+  - 实现：只记录（`gaiji_calls/size/name1/name2`、`v3d_calls/time_ms/mode`），
+    表壳与 `fvm` 汇总各打印一行
+  - 实测（`fvm --steps 900000`）：`gaiji 24 call(s), size=64 name=ハ / graph/gaiji_heart68`、
+    `v3d 20 call(s), time=1 ms mode=1`，文本仍是 **195 行**、`stall none`
+  - 单测 `tests/test_gaiji.c` **33 项**（`make check` 现在 **17 个单测**，
+    `run_all.py` **32 步**）
+
 - **`WindowMode`(147) / `ExitMode`(17) 落地（本轮，只记录模式值）**
   - `WindowMode(mode -1..6)`：handler **0x43d0d0**。模式 0/1 把窗口状态置 0/1 并作为
     返回值，模式 2 返回当前值（当前值 ==2 时返回 -1），-1 走"切回"分支

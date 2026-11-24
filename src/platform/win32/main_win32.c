@@ -2358,6 +2358,12 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.control_calls[1],
                (unsigned long long)vm.control_calls[2],
                (unsigned long long)vm.control_calls[3]);
+        APPEND("gaiji          %llu call(s), size=%d name=%s / %s\n",
+               (unsigned long long)vm.gaiji_calls, vm.gaiji_size,
+               vm.gaiji_name1 != NULL ? vm.gaiji_name1 : "-",
+               vm.gaiji_name2 != NULL ? vm.gaiji_name2 : "-");
+        APPEND("v3d            %llu call(s), time=%d ms mode=%d\n",
+               (unsigned long long)vm.v3d_calls, vm.v3d_time_ms, vm.v3d_mode);
         APPEND("window         mode=%d state=%d (%llu call(s)); exit mode=%d "
                "(%llu call(s))\n", vm.window_mode_last, vm.window_state,
                (unsigned long long)vm.window_mode_calls, vm.exit_mode_last,

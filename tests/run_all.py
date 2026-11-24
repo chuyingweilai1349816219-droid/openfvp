@@ -323,6 +323,17 @@ def build_steps(args):
                           note='TextBuff 110: window 0..31, 8/8 defaults, '
                                '0..0x400 range, whole command dropped >0x400'))
 
+    # 4i5. GaijiLoad(21) / V3DMotion(142): parameter checks + recording
+    test_gaiji = tools.get('test_gaiji')
+    if not test_gaiji or not os.path.isfile(test_gaiji):
+        steps.append(Step('test_gaiji', None, 0,
+                          skip_reason='bin/test_gaiji.exe missing '
+                                      '(run: make test_gaiji)'))
+    else:
+        steps.append(Step('test_gaiji', [test_gaiji], 120,
+                          note='GaijiLoad 21: strings + size 12..64; '
+                               'V3DMotion 142: time 1..300000, mode 1..5'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):

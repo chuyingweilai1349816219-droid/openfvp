@@ -268,6 +268,24 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* GaijiLoad(21)：外字（造字）加载。handler 0x43f4f0：
+     *   GaijiLoad(str1, size 12..0x40, str2) —— 两个参数都必须是字符串（原版
+     *   type 4/5），中间那个必须是 int 且 12..64，然后
+     *   call 0x43e9c0(engine+0x6a49cc, str1, size, str2) 把外字登进表里。
+     * 本站没有"外字表 + 字形插入"这条链路，只记录最近一次与调用次数。 */
+    uint64_t gaiji_calls;
+    int gaiji_size;      /* 最近一次的 size（12..64），0 = 还没调用过 */
+    char *gaiji_name1;   /* 最近一次的 str1（arena 拷贝） */
+    char *gaiji_name2;   /* 最近一次的 str2（arena 拷贝） */
+
+    /* V3DMotion(142)：3D 补间。handler 0x43cfe0：
+     *   arg4 必须是 int 在 1..0x493e0（= 时间 ms，和 MotionMove 同一区间），
+     *   arg5 必须是 int 在 1..5（缓动模式），arg6 当 bool；arg1..arg3 是可选的
+     *   坐标（缺省取 engine+0x6a65f0/f4/f8）。本站没有 3D 场景，只记录。 */
+    uint64_t v3d_calls;
+    int v3d_time_ms;     /* 最近一次的时长，0 = 还没调用过 */
+    int v3d_mode;        /* 最近一次的模式 1..5 */
+
     /* WindowMode(147) / ExitMode(17)：只记录最后一次设置的值。
      *   WindowMode handler 0x43d0d0：参数必须是 int 且 -1..6；模式 0/1 会把
      *     engine->[0x8c]->[0x1fc] 置成 0/1 并返回该值，模式 2 返回当前值，
@@ -362,6 +380,11 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* GaijiLoad(21)：记录外字加载参数，返回 1 = 生效（两个字符串 + size 12..64）。 */
+int fvp_vm_gaiji_load(FvpVM *vm, const FvpValue *s1, const FvpValue *size,
+                      const FvpValue *s2);
+/* V3DMotion(142)：记录 3D 补间参数，返回 1 = 生效（time 1..300000、mode 1..5）。 */
+int fvp_vm_v3d_motion(FvpVM *vm, const FvpValue *time_ms, const FvpValue *mode);
 /* WindowMode(147) / ExitMode(17)：记录最后一次模式值，返回 1 = 生效
  * （参数必须是 int，且分别落在 -1..6 / 0..4）。 */
 int fvp_vm_window_mode(FvpVM *vm, const FvpValue *mode);

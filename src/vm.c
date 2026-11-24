@@ -1080,6 +1080,59 @@ int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
     return 1;
 }
 
+static char *arena_cstr(FvpVM *vm, const FvpValue *v)
+{
+    FvpStr *s;
+
+    if (v == NULL || v->type != (uint8_t)FVP_STR || v->str == NULL) {
+        return NULL;
+    }
+    s = fvp_arena_str(&vm->arena, v->str->data, v->str->len);
+    return (char *)s->data;
+}
+
+int fvp_vm_gaiji_load(FvpVM *vm, const FvpValue *s1, const FvpValue *size,
+                      const FvpValue *s2)
+{
+    if (vm == NULL || s1 == NULL || size == NULL || s2 == NULL) {
+        return 0;
+    }
+    if (s1->type != (uint8_t)FVP_STR || s2->type != (uint8_t)FVP_STR) {
+        return 0;
+    }
+    if (size->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    if (size->i < 12 || size->i > 0x40) {
+        return 0;
+    }
+    vm->gaiji_calls += 1u;
+    vm->gaiji_size = (int)size->i;
+    vm->gaiji_name1 = arena_cstr(vm, s1);
+    vm->gaiji_name2 = arena_cstr(vm, s2);
+    return 1;
+}
+
+int fvp_vm_v3d_motion(FvpVM *vm, const FvpValue *time_ms, const FvpValue *mode)
+{
+    if (vm == NULL || time_ms == NULL || mode == NULL) {
+        return 0;
+    }
+    if (time_ms->type != (uint8_t)FVP_INT || mode->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    if (time_ms->i < 1 || time_ms->i > 0x493e0) {
+        return 0;
+    }
+    if (mode->i < 1 || mode->i > 5) {
+        return 0;
+    }
+    vm->v3d_calls += 1u;
+    vm->v3d_time_ms = (int)time_ms->i;
+    vm->v3d_mode = (int)mode->i;
+    return 1;
+}
+
 int fvp_vm_window_mode(FvpVM *vm, const FvpValue *mode)
 {
     long m;

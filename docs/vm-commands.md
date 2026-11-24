@@ -438,6 +438,17 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### GaijiLoad(21) / V3DMotion(142)（**已实现：只记录参数**）
+
+| id | 命令 | argc | 语义 / 证据 |
+| ---: | --- | ---: | --- |
+| 21 | GaijiLoad | 3 | `(char, size, image)`。handler **0x43f4f0**：第 1/3 个参数必须是字符串（原版 type 4/5），第 2 个必须是 int 且在 **12..0x40**；然后 `call 0x43e9c0(engine+0x6a49cc, str1, size, str2)`。实测参数形态：`size=64, "ハ", "graph/gaiji_heart68"` → **这是"外字"：把某个字符替换成 graph 包里的一张图** |
+| 142 | V3DMotion | 6 | `(x?, y?, z?, timeMs, mode, flag?)`。handler **0x43cfe0**：arg4 必须 int 在 **1..0x493e0**（和 MotionMove 同一区间）、arg5 必须 int 在 **1..5**、arg6 当 bool，arg1..arg3 缺省取 `engine+0x6a65f0/f4/f8`。本作没有 3D 场景 |
+
+两者本站都只记录（`gaiji_calls/size/name1/name2`、`v3d_calls/time_ms/mode`），
+外壳与 `fvm` 汇总各打印一行。`GaijiLoad` 的渲染侧（字符 → 贴图）还没做，
+是文本呈现里最后一块，见 `docs/roadmap.md` 的"下一步"。
+
 ### WindowMode(147) / ExitMode(17)（**已实现：只记录模式值**）
 
 | id | 命令 | argc | 语义 / 证据 |
