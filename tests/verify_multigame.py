@@ -55,13 +55,16 @@ BASELINE_STEPS = 900000
 # 名称, 脚本路径, 期望行数（None = 只要求 > min_lines）
 GAMES = [
     dict(name='iroseka',  # 《五彩斑斓的世界 HD》
+         dir=os.path.join(DOWNLOADS, '五彩斑斓的世界HD'),
          script=os.path.join(DOWNLOADS, '五彩斑斓的世界HD', 'iroseka.hcb'),
          expect_lines=195),
     dict(name='hoshimemo',  # 《星空的记忆 HD》
+         dir=os.path.join(DOWNLOADS, 'hoshimemo_installed'),
          script=os.path.join(DOWNLOADS, 'hoshimemo_installed',
                              'Hoshimemo_HD.hcb'),
          expect_lines=None, min_lines=50),
     dict(name='sakura',  # 《樱花，萌放。（さくら、もゆ。）》
+         dir=os.path.join(DOWNLOADS, '樱花，萌放（さくら、もゆ。）'),
          script=os.path.join(DOWNLOADS, '樱花，萌放（さくら、もゆ。）',
                              'Sakura.hcb'),
          expect_lines=None, min_lines=0,
@@ -160,6 +163,54 @@ def stall_hint(output):
     return '' if pc is None else ' -- stalled at pc 0x%x' % pc
 
 
+# ---------------------------------------------------------------- 桌面外壳抓帧
+# 控制台侧（fvm）证明"脚本能跑、文本对"；外壳侧证明"**画面**能出来"：
+# 这两件事差着一整层渲染，第二部作品以前只被控制台验证过。外壳不参与逐字节
+# 比对（墙钟驱动，帧数不确定），这里只断言"能出帧 + 没有豆腐块 + 没有未实现命令"。
+
+SHELL_SECONDS = 8
+
+
+def shell_path():
+    base = os.path.join(FVP, 'bin', 'fvp')
+    for cand in (base + '.exe', base):
+        if os.path.isfile(cand):
+            return cand
+    return None
+
+
+def have_font_atlas():
+    b = os.path.join(FVP, 'bin')
+    if not os.path.isdir(b):
+        return False
+    return any(fn.startswith('gfx-font-') and fn.endswith('.bin')
+               for fn in os.listdir(b))
+
+
+def run_shell_frame(exe, game_dir, script_name, seconds, shot, log_path):
+    """跑外壳 N 秒并抓一帧。返回 (rc 或 None=超时, 日志文本)。"""
+    cmd = [exe, '--game', game_dir, '--run-seconds', str(seconds),
+           '--no-audio', '--screenshot', shot, '--log', log_path]
+    if script_name:
+        cmd += ['--script', script_name]
+    try:
+        p = subprocess.run(cmd, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, timeout=seconds + 240)
+    except subprocess.TimeoutExpired:
+        return None, ''
+    log = ''
+    if os.path.isfile(log_path):
+        log = open(log_path, encoding='utf-8', errors='replace').read()
+    return p.returncode, log
+
+
+def log_match(pattern, log):
+    import re
+
+    m = re.search(pattern, log, re.M)
+    return m
+
+
 def text_stats(text):
     """行数、U+FFFD 数、日文字符占比（假名 + 汉字）。"""
     lines = [ln for ln in text.splitlines() if ln.strip()]
@@ -180,6 +231,8 @@ def text_stats(text):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--steps', type=int, default=900000)
+    ap.add_argument('--no-shell', action='store_true',
+                    help='跳过桌面外壳抓帧阶段（无 GUI 的环境用）')
     args = ap.parse_args()
 
     exe = exe_path()
@@ -295,6 +348,56 @@ def main():
         if g.get('known_blocker'):
             print('     KNOWN BLOCKER: %s' % g['known_blocker'])
         print('')
+
+    # 6. 桌面外壳抓帧：两部目标作品都要能出"可读"的一帧。
+    if args.no_shell:
+        print('  skip  desktop shell stage (--no-shell)')
+    else:
+        shell = shell_path()
+        if shell is None:
+            print('  skip  desktop shell not built (bin/fvp.exe)')
+        else:
+            atlas = have_font_atlas()
+            if not atlas:
+                print('  note  bin/gfx-font-*.bin 不存在：跳过 tofu 断言'
+                      '（先跑 scripts/make-font-atlas.py）')
+            for g in have:
+                if g.get('known_blocker') or not g.get('dir'):
+                    continue
+                name = g['name']
+                print('== %s desktop shell @ %d s ==' % (name, SHELL_SECONDS))
+                shot = os.path.join(OUT_DIR, 'mg-%s-frame.bmp' % name)
+                log_path = os.path.join(OUT_DIR, 'mg-%s-shell.log' % name)
+                for p in (shot, log_path):
+                    if os.path.isfile(p):
+                        os.remove(p)
+                rc, log = run_shell_frame(
+                    shell, g['dir'], os.path.basename(g['script']),
+                    SHELL_SECONDS, shot, log_path)
+                check(rc == 0, 'shell exit 0 (got %s)' % rc)
+                size = os.path.getsize(shot) if os.path.isfile(shot) else 0
+                check(size > 1_000_000,
+                      'frame BMP written (%d bytes)' % size)
+                m = log_match(r'^vm\s+(\d+) steps total, (\d+) text lines',
+                              log)
+                check(m is not None and int(m.group(1)) > 0,
+                      'vm kept stepping (%s)'
+                      % ((m.group(0) if m else 'missing')))
+                m = log_match(r'^unimpl cmds\s+(\S+)', log)
+                check(m is not None and m.group(1) == 'none',
+                      'unimpl cmds none (got %s)'
+                      % (m.group(1) if m else 'missing'))
+                if atlas:
+                    m = log_match(r'^glyphs\s+(\d+) tofu, (\d+) from fallback',
+                                  log)
+                    check(m is not None and int(m.group(1)) == 0,
+                          'no tofu glyphs (%s)'
+                          % ((m.group(0) if m else 'missing')))
+                m = log_match(r'^\[\s*[0-9.]+\] screenshot: .* (\d+)x(\d+) '
+                              r'\((\d+) bytes\) ok', log)
+                check(m is not None, 'screenshot log line present (%s)'
+                      % ((m.group(0) if m else 'missing')))
+                print('')
 
     if fails:
         print('verify_multigame: %d check(s) FAILED' % len(fails))

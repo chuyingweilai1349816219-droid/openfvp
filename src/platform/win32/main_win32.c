@@ -2363,7 +2363,17 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.prim_hit_hits);
         /* 字形兜底：某套图集缺字时从别的图集缩放取（tofu=0 表示没有黑方块）。 */
         APPEND("glyphs         %d tofu, %d from fallback atlas\n",
-               gfx_stats(gfx)->tofu_glyphs, gfx_stats(gfx)->fallback_glyphs);
+               gfx_stats(gfx)->tofu_glyphs,
+               gfx_stats(gfx)->fallback_glyphs);
+        if (gfx_stats(gfx)->ntofu_cp > 0) {
+            int ti;
+
+            APPEND("glyphs missing");
+            for (ti = 0; ti < gfx_stats(gfx)->ntofu_cp; ++ti) {
+                APPEND(" U+%04X", (unsigned)gfx_stats(gfx)->tofu_cp[ti]);
+            }
+            APPEND("\n");
+        }
         APPEND("control        mask=%d pulse=%d cursor=%d pos=%d,%d "
                "(mask %llu / pulse %llu / change %llu / move %llu)\n",
                (int)vm.control_mask, (int)vm.pulse, vm.cursor_shape,

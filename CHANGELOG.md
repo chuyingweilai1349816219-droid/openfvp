@@ -53,6 +53,29 @@
 
 ### 新增
 
+- **第二部作品的桌面外壳验证 + 字体图集覆盖修复（tofu 19 → 0）**
+  - 新工具 `scripts/make-font-atlas.py`：用 `ref/fvm_ref.py` 精确解出 HCB 里所有
+    `pushstring` 字符串（不是"把二进制当 cp932 硬解"），取目标作品并集，再调
+    `tests/gfx_dump.py::write_font()`（同一 TTF / margin / glyph+stroke1+stroke2 三层）
+    生成 `bin\gfx-font-<size>.bin`
+  - 关键发现：图集必须覆盖渲染端**真正会请求的每一档字号** —— `gfx_layout_default()`
+    的默认层字号是 **30**，而早期只生成了 32/34/56，于是《星空的记忆 HD》的层 6
+    （地名标签）整层退回内置 8×16 字体，开场 8 个豆腐块
+  - 修 `str.isprintable()` 的坑：它对**全角空格 U+3000** 返回 False，早期过滤器把
+    台词里的全角空格全丢掉 → 每次出现都画豆腐块
+  - 实测（8 s 抓帧，`--no-audio`）：**iroseka 1 tofu → 0**、**hoshimemo 19 tofu → 0**；
+    两作都 `unimpl cmds none`、1920×1080 帧正常写出
+  - **诊断能力**：`GfxStats` 新增 `tofu_cp[8]/ntofu_cp`，汇总多一行
+    `glyphs missing U+XXXX …`；设 `FVP_DEBUG_TOFU=1` 还能在 stderr 看到每处豆腐块用的
+    是哪套字体（`builtin=1` = 整层退回内置字体）——这次正是靠它一次定位到"层 6 + 30 px"
+  - `tests/verify_multigame.py` 新增**桌面外壳阶段**：两部目标作品各跑 8 s 抓帧，
+    断言退出码 0、写出 1920×1080 帧、`vm … steps` > 0、`unimpl cmds none`、
+    `glyphs 0 tofu`、日志里有 `screenshot: … ok`；`--no-shell` 可跳过
+  - 图集 2764 glyph / 12–34 MB 一个，落在 `bin\`（gitignore，不进仓库），
+    生成命令写进 `docs/win32-shell.md` §5
+  - 已知遗留：层 6（地名标签）的**版面位置**仍按通用默认（x=120,y=880,size=30），
+    在《星空的记忆 HD》里会和正文层重叠 —— 层位置需要按层逆出来，另开一轮
+
 - **动画缓动 `mode 1..5` 从静态分析确认并落地（第 ④ 项优先级）**
   - 补间条目（每槽 28 字节，6 个管理器共用一套代码）里 `+4` = mode 字节、
     `+0x14` = 已过时间、`+0x18` = 时长；推进函数 **0x422C10** 的

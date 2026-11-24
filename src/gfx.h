@@ -132,6 +132,10 @@ typedef struct GfxStats {
     int resize_cache_hits; /* per-prim transformed images reused         */
     int fallback_glyphs; /* 当前图集缺字、从别的图集缩放取过来的字形数 */
     int tofu_glyphs;     /* 所有图集都没有这个字、只能画豆腐块的次数   */
+    /* 前 8 个导致豆腐块的码点（去重），用于诊断"图集缺哪个字"：
+     * 兼容性排查时要能指名道姓，而不是只知道"有 N 个豆腐块"。 */
+    uint32_t tofu_cp[8];
+    int ntofu_cp;
     long long pixels; /* destination pixels touched by the last render   */
 } GfxStats;
 

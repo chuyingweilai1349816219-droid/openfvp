@@ -176,10 +176,29 @@ defaults)`，不阻塞启动；文件损坏时打 `save: ... is not a valid save
 1. **游戏画面还没接上**：`syscall.c` 里 `GraphLoad / PrimSet* / Parts* / Text*` 仍是桩，
    没人调用 gfx 的 setter，所以真渲染层下画布只有背景 + 文本窗口（喂 `--font` 后可见台词），
    没有背景图/立绘。这是渲染→syscall 接线的问题，不是壳的问题；壳每帧该做的都做了。
-2. **文本需要字体图集**：gfx 内置只有 8×16 ASCII 字体，CJK 会画成缺字方框。用
-   `--font out\c\gfx-font-32.bin`（正文层默认字号 32）、`-34`（人名层）、`-30`（标题层）
-   可以显示中文/日文；这些图集可以用 `tests/gfx_dump.py` 的 `write_font()` 生成。
-   图集只包含生成时给的字符集，换脚本/换语言要重新生成。
+2. **文本需要字体图集**：gfx 内置只有 8×16 ASCII 字体，CJK 会画成缺字方框（豆腐块）。
+   图集必须按**目标作品用到的字**生成：`scripts/make-font-atlas.py` 用
+   `ref/fvm_ref.py` 精确解出 HCB 里所有 `pushstring` 操作数、取两作并集，再调用
+   `tests/gfx_dump.py::write_font()`（同一 TTF、同一 margin、glyph/stroke1/stroke2
+   三层覆盖图）写出 `bin\gfx-font-<size>.bin`：
+
+   ```
+   python fvp/scripts/make-font-atlas.py \
+       --hcb "<五彩斑斓的世界HD>\iroseka.hcb" \
+       --hcb "<hoshimemo_installed>\Hoshimemo_HD.hcb" \
+       --size 30 --size 32 --size 34 --size 56 --out fvp/bin
+   ```
+
+   尺寸不是随便挑的：`gfx_layout_default()` 里正文层 34、人名层 34、标题层 56，
+   其它层默认 **30**，正文层还会用 `TextSize` 给的高度（本作实测 32）。
+   **缺任何一档，那一层就会退回内置 8×16 字体 → 该层的日文全是豆腐块**
+   （2026-11-24 实测：《星空的记忆 HD》的层 6 用 30 px，当时只生成了 32/34/56，
+   开场就有 8 个豆腐块；补上 30 之后两作都是 `glyphs 0 tofu`）。
+   图集只包含生成时给的字符集，换作品/换语言要重新生成；`bin\` 与 `out\` 都在
+   `.gitignore` 里，所以**图集不进仓库**，只进生成脚本。
+   排查缺字时设环境变量 `FVP_DEBUG_TOFU=1`：日志会多出
+   `glyphs missing U+XXXX …`，还能在 stderr 看到每处豆腐块用的是哪套字体
+   （`builtin=1` 表示整层退回了内置字体）。
 3. **滚轮已接**：壳把累加量交给 VM，`InputGetWheel`（36）取走并清零（`tests/test_wheel.c` 有 8 项用例）；缺的是「原版引擎取走时机的对照验证」，需要脚本真的调用它。
    同理键盘只有 Enter/空格（= 左键）有语义，其它键不转发。
 4. **音频目前是静音的**：waveOut 通路、缓冲循环、`snd_mix` 都验证过在跑

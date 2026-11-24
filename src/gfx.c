@@ -2469,7 +2469,27 @@ static void draw_text_run(Gfx *g, GfxFont *f, int x, int y, const char *s,
             }
             pen += 8;
         } else {
+            int k;
+            int seen = 0;
+
+            if (getenv("FVP_DEBUG_TOFU") != NULL) {
+                fprintf(stderr,
+                        "tofu: cp=U+%04X font=%p builtin=%d size=%d count=%d "
+                        "nfonts=%d\n",
+                        (unsigned)cp, (void *)f, f->builtin, f->size, f->count,
+                        g->nfonts);
+            }
             g->stats.tofu_glyphs += 1;
+            /* 记下前 8 个不同的缺字码点（诊断用：兼容性排查要能指名道姓）。 */
+            for (k = 0; k < g->stats.ntofu_cp; ++k) {
+                if (g->stats.tofu_cp[k] == (uint32_t)cp) {
+                    seen = 1;
+                    break;
+                }
+            }
+            if (!seen && g->stats.ntofu_cp < 8) {
+                g->stats.tofu_cp[g->stats.ntofu_cp++] = (uint32_t)cp;
+            }
             draw_tofu(g, pen, y, f->size ? f->size : 16, r, gr, b, ca,
                       stroke_w, sr, sg, sb, sca);
             pen += f->size ? f->size : 16;
@@ -2624,6 +2644,11 @@ static void draw_text_window(Gfx *g, int idx)
         size = clampi(sh > 8 ? sh : 34, 18, 40);
     }
     f = pick_font(g, size);
+    if (getenv("FVP_DEBUG_TOFU") != NULL && f != NULL && f->builtin) {
+        fprintf(stderr,
+                "builtin-font: layer=%d size=%d nlines=%d text=\"%s\"\n", idx,
+                size, tw->nlines, tw->nlines > 0 ? tw->lines[0] : "");
+    }
 
     raw = tw->lines;
     nraw = tw->nlines;
