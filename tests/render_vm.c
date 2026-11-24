@@ -579,7 +579,8 @@ static void usage(const char *prog)
             "usage: %s <script.hcb> [--game DIR] [--steps N] [--click N]\n"
             "       [--enc cp932|gbk] [--frame-steps N] [--out DIR]\n"
             "       [--hold-text N] [--motion] [--motion-dt MS] [--typewriter]\n"
-            "       [--typewriter-dt MS] [--no-png] [--quiet]\n",
+            "       [--typewriter-dt MS] [--cursor X,Y] "
+            "[--dump-prims FILE] [--no-png] [--quiet]\n",
             prog);
 }
 
@@ -592,6 +593,8 @@ int main(int argc, char **argv)
     uint64_t steps = 528000;
     uint64_t frame_steps = 1000;
     int64_t click = 4000;
+    int cursor_x = -1; /* --cursor X,Y：固定光标位置（PrimHit 用） */
+    int cursor_y = -1;
     int hold_window = 30000;
     int motion = 0;
     int motion_dt = 16;
@@ -631,6 +634,7 @@ int main(int argc, char **argv)
     char png_nohold_path[1024];
     char geom_path[1024];
     char text_path[1024];
+    const char *prims_path = NULL; /* --dump-prims 的输出路径 */
     char perf_path[1024];
 
     for (i = 1; i < argc; i++) {
@@ -641,6 +645,11 @@ int main(int argc, char **argv)
             steps = (uint64_t)strtoull(argv[++i], NULL, 10);
         } else if (strcmp(a, "--click") == 0 && i + 1 < argc) {
             click = (int64_t)strtoll(argv[++i], NULL, 10);
+        } else if (strcmp(a, "--cursor") == 0 && i + 1 < argc) {
+            if (sscanf(argv[++i], "%d,%d", &cursor_x, &cursor_y) != 2) {
+                fprintf(stderr, "render_vm: bad --cursor (want X,Y)\n");
+                return 2;
+            }
         } else if (strcmp(a, "--enc") == 0 && i + 1 < argc) {
             encname = argv[++i];
         } else if (strcmp(a, "--frame-steps") == 0 && i + 1 < argc) {
@@ -651,6 +660,8 @@ int main(int argc, char **argv)
             hold_window = (int)strtol(argv[++i], NULL, 10);
         } else if (strcmp(a, "--no-png") == 0) {
             no_png = 1;
+        } else if (strcmp(a, "--dump-prims") == 0 && i + 1 < argc) {
+            prims_path = argv[++i];
         } else if (strcmp(a, "--motion") == 0) {
             motion = 1;
         } else if (strcmp(a, "--typewriter") == 0) {
@@ -767,6 +778,12 @@ int main(int argc, char **argv)
     memset(&vm, 0, sizeof vm);
     fvp_vm_init(&vm, &hcb, 1);
     vm.click_period = click;
+    if (cursor_x >= 0) {
+        vm.cx = cursor_x;
+    }
+    if (cursor_y >= 0) {
+        vm.cy = cursor_y;
+    }
     fvp_vm_attach_gfx(&vm, g);
     gfx_motion_set_enabled(g, motion);
     gfx_typewriter_set_enabled(g, typewriter);
@@ -912,6 +929,45 @@ int main(int argc, char **argv)
     if (!quiet) {
         double total = t_all1 - t_all0;
         double hot_avg = hot_frames > 0 ? hot_sum / (double)hot_frames : 0.0;
+
+        if (prims_path != NULL) {
+            FILE *pf = fopen(prims_path, "w");
+            int pid;
+
+            if (pf == NULL) {
+                fprintf(stderr, "render_vm: cannot write %s\n", prims_path);
+            } else {
+                fprintf(pf, "# id type draw parent x y w h graph "
+                            "hit_at_cursor\n");
+                for (pid = 1; pid < GFX_PRIM_MAX; pid++) {
+                    int type = 0;
+                    int draw = 0;
+                    int parent = -1;
+                    int x = 0;
+                    int y = 0;
+                    int w = 0;
+                    int h = 0;
+                    int graph = -1;
+
+                    if (gfx_get_prim(g, pid, GFX_F_TYPE, &type) != 0 ||
+                        type == 0) {
+                        continue;
+                    }
+                    (void)gfx_get_prim(g, pid, GFX_F_DRAW, &draw);
+                    (void)gfx_get_prim(g, pid, GFX_F_PARENT, &parent);
+                    (void)gfx_get_prim(g, pid, GFX_F_X, &x);
+                    (void)gfx_get_prim(g, pid, GFX_F_Y, &y);
+                    (void)gfx_get_prim(g, pid, GFX_F_W, &w);
+                    (void)gfx_get_prim(g, pid, GFX_F_H, &h);
+                    (void)gfx_get_prim(g, pid, GFX_F_GRAPH, &graph);
+                    fprintf(pf, "%d %d %d %d %d %d %d %d %d %d\n", pid, type,
+                            draw, parent, x, y, w, h, graph,
+                            gfx_prim_hit(g, pid, 1, (int)vm.cx, (int)vm.cy));
+                }
+                fclose(pf);
+                printf("prims dump      %s\n", prims_path);
+            }
+        }
         printf("\n=== render_vm summary ===\n");
         printf("steps           %llu (target %llu)\n",
                (unsigned long long)vm.steps, (unsigned long long)target);
@@ -926,6 +982,12 @@ int main(int argc, char **argv)
                cold_ms, hot_avg, max_render_ms);
         printf("draw list       %d sprites, %d text windows\n",
                gfx_draw_count(g), st.texts);
+        /* PrimHit(76)：脚本用 vm.cx/cy 做命中测试的次数与命中率。
+         * --cursor 固定光标，用来验证这条路径在真实脚本上确实会命中。 */
+        printf("prim hit        %llu call(s), %llu hit(s) (cursor %lld,%lld)\n",
+               (unsigned long long)vm.prim_hit_calls,
+               (unsigned long long)vm.prim_hit_hits, (long long)vm.cx,
+               (long long)vm.cy);
         printf("artifacts       %s, %s, %s, %s\n",
                no_png ? "(no png)" : png_path, geom_path, text_path,
                perf_path);

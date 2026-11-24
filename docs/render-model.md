@@ -320,12 +320,49 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
 8. `graph-not-found`：`taiken_start`、`title_trial`、部分 `SHINKU_e01*`、`graph/BG062_500(-b)`
    确实不在 6 个图像包里（多半在 `graph_vis*` 之外的包或运行时合成），属资源缺失而非解析错误。
 
+### 7.1 `TextShadowDist`(125)：只记录，不画（2026-11-24 修复）
+
+**现象**：外壳实跑时，对话框里的文字看起来有「残影」——每个字右边都拖着一份深色重影
+（用户实测报告）。抓帧放大 4 倍后确认是**一份向右偏移的实心深色文字副本**。
+
+**根因**：`TextShadowDist` 的两个参数被当成"阴影偏移"直接拿去渲染了
+（`draw_text_window()` 里在 `(x+dx, y+dy)` 先用 `(16,20,30)` alpha=255 画一遍再画正文）。
+而脚本实际传的值是：
+
+```
+$ bin/fvm.exe iroseka.hcb --steps 900000 --quiet --dump-textattr
+  tw  0: mask=0x1f color=10,51,100 size=64x32 speed=-1 ms shadow=12,0 skip=3
+  tw  8: mask=0xf  ... shadow=12,0 skip=0
+  tw  9: mask=0xf  ... shadow=12,0 skip=0
+```
+
+即 **`shadow=(12,0)`** —— 向右 12 px 的实心重影，显然不是原版的阴影。
+
+**为什么撤回（而不是改成"浅一点"）**：
+- 原版阴影的**颜色 / 透明度 / 合成方式**没有任何静态分析证据：`0x43CE10` 只把两个数值写进
+  `tw+0x5a8` / `tw+0x5aa`，读取方（渲染端）还没逆出来；
+- 我们自己的 Python 参考实现 `work/render.py` 里，`TextWindow.shadow` **只存不用**
+  （`@h('TextShadowDist')` 只做 `self.tw(a[0]).shadow = _int(a[1])`），绘制时根本没用它；
+- 因此"画出来"只会让帧偏离参考实现、也与实测观感不符。**只记录数值**是唯一同时满足
+  「忠实记录命令语义」和「不伪造像素」的做法。
+
+**改动**：`draw_text_window()` 删掉阴影层绘制；`gfx_text_set_shadow()` 保留为纯记录接口
+（`-32..32` 钳制、逐分量判定都不变，`test_textattr` 47 项照旧通过）。
+
+**验证**：`verify_gfx.ps1 -SkipDump` 仍是 **293 px / PSNR 49.94 dB / SSIM 0.99971 / 24/24 图元
+0 px**（528k 帧上 `shadow` 还是 0，所以改与不改的像素一致 —— 也就是说这个 bug 只在跑得更久、
+`TextShadowDist` 被调用之后才显形，静态门禁抓不到它，是用户实跑抓到的）。
+修复后重新抓帧（`out/zoom-fixed.png`）文字干净，用户确认「现在没有了」。
+
 ---
 
-## 8. 命中测试（`PrimHit` 76）：算法已解出，**尚未落地**
+## 8. 命中测试（`PrimHit` 76）：已落地（矩形层）
 
 `PrimHit(primId 1..0xFFF, flag)` 是脚本判断"鼠标点没点在这个图元上"的唯一入口
-（90 s / 480,942 步实测调用 **110 次**）。静态分析已经把算法完整解出来了：
+（90 s / 480,942 步外壳实测调用 **110 次**；528k 步 render_vm 实测 **132 次**）。
+静态分析已经把算法完整解出来了，**2026-11-24 已按下面三层落地**：实现在
+`src/gfx.c` 的 `gfx_prim_hit()`，入口在 `src/syscall.c` 的 `case 76`，
+单测 `tests/test_prim_hit.c`（47 项）。
 
 **第一层 `0x43B9C0`（handler）**
 - `arg0` 必须是整型、值 **1..0xFFF**（注意 0 非法）；`arg1` 只用来算一个布尔
@@ -348,17 +385,47 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
   `y0 = graph[slot].hdr_y(+0x516) + prim.y + 累加y`
   - `prim+0x06` 的 **bit0（WH 已被 `PrimSetWH` 写过）** 为 1 时
     `w = min(prim.w, graph.w)`、`h = min(prim.h, graph.h)`，否则用 `graph` 的整幅尺寸
+- tile 分支（`0x43B842`）：`prim+0x07`（alpha）为 0 直接返回 0；否则矩形 =
+  `(prim.x + 累加x, prim.y + 累加y, prim.w, prim.h)`
+- 组分支（`0x43B891`）：从 `prim+0x2A`（首子）沿 `prim+0x10`（兄弟）遍历，递归调用
+  本函数，任一子命中即命中。**注意它不额外加组自己的 x/y** —— 这是原版行为，
+  已在单测里固定住
 - 命中条件 `x0 <= cx < x0+w` 且 `y0 <= cy < y0+h`（**左闭右开**，`cx/cy` = 全局光标）
-- 命中后还有一段 UV/裁剪修正 + 一个按行的像素循环（`0x4259B0`）—— 看上去是**逐像素
-  掩码/透明测试**（只点不透明像素才算中），这一段没解完，是落地的最后一个未知
+- sprite 命中后还要过 UV 检查：`u = prim.u + (cx - x0)`、`v = prim.v + (cy - y0)`，
+  必须仍在图内（`0x43B720`）
 
-**落地时要小心的地方**
+**唯一没落地的部分**
+- 矩形+UV 之后的按行像素循环（`0x43B750` 与 `0x4259B0`）看上去是**逐像素掩码/透明
+  测试**（只点不透明像素才算中）。那一段没解完，所以现在**矩形内即算命中** ——
+  这是 `gfx_prim_hit()` 唯一的近似，`gfx.h` 的注释里也写着。要落地需要先解
+  `graph+0x488` / `graph+0x4C8` 那两个数组的语义。
+
+**实测：这两部作品里 `PrimHit` 一直是 0，而且原版也应该是 0**
+
+`--dump-prims` 把每个图元的字段 dump 出来后一目了然。两部作品都把命中测试
+**只**用在 11 个固定 id 上（`52, 55, 58, … 82`，步长 3），而这些图元在本作前
+200 万步里始终是：
+
+```
+52 4 1 -1 1 1 0 0 52 0      # type=4 draw=1 parent=-1 x=1 y=1 w=0 h=0 graph=52
+```
+
+即 **`parent == -1`（从没被 `PrimGroupIn` 放进组）、`graph == 自己的 id`（该 graph
+槽从没 `GraphLoad` 过）、w/h 都是 0**。按第一层的规则 `parent == 0xFFFF → 返回 0`，
+所以 528k 步 132 次调用、2M 步 407 次调用**全部 0 命中** —— 与原版一致，不是移植
+缺陷。这也是"接上 `PrimHit` 之后 `verify_gfx` 的 293 px / PSNR 49.94 / SSIM 0.99971
+一分不变"的原因：画面路径根本没被这条命令影响。
+
+（这 11 个图元应该是脚本给"选择支/菜单"预留的槽位，本作跑到 2M 步还没走到需要
+显示它们的分支。）
+
+**落地时踩到的坑**
 - 命中用的原点是 **图头 `+0x514/+0x516` + prim 偏移**，不是 §2.2 那三种锚点算出来的
   绘制落点。对 UI 图元两者一致；对**立绘**（底边中点锚 + 缩放）两者不同 —— 也就是说
   原版对站立的立绘做命中测试时用的是"未缩放的左上角矩形"。照抄即可，别"修正"成绘制矩形。
-- `gfx.h` 里已有的 `GFX_F_PARENT` / `GFX_F_DRAW` / `GFX_F_X` / `GFX_F_Y` / `GFX_F_W` /
-  `GFX_F_H` / `GFX_F_GRAPH` 加上 graph 槽的图头尺寸，就够实现前三层；缺的只有最后一层
-  的掩码像素测试。
+- `wh_set` 得单独记：引擎是 `prim+0x06` 的 bit0，我们原来只在 `flags` 里没写过，
+  所以 `GfxPrim` 新增了一个 `wh_set` 字段，由 `GFX_F_W` / `GFX_F_H` 置位。
+- 环状父子关系（`A→B` 且 `B→A`）原版会无限循环，这里加了 4096 次上限，返回 0。
 
 ---
 
@@ -373,6 +440,9 @@ $PY fvp/work/render_stackcheck.py --steps 600000
 
 # HCB 静态分析（按字节偏移）
 $PY fvp/work/render_scriptdump.py 0x58430 0x58480
+
+# 命中测试审计：把每个非空图元的字段 + 光标处是否命中都 dump 出来
+render_vm story.hcb --steps 528000 --no-png --cursor 960,540 --dump-prims out/c/vm-prims.txt
 
 # exe 静态分析（按 VA）/ 按 VA 读 .rdata（vtable、RTTI）
 $PY fvp/work/render_dis.py 0x43bfa0 0x43c060

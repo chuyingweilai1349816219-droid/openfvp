@@ -49,6 +49,7 @@
 #pragma weak gfx_text_busy
 /* 动画补间（src/motion.c + gfx 侧）：只有链接了 gfx.c 的程序才有这些符号。 */
 #pragma weak gfx_get_prim
+#pragma weak gfx_prim_hit
 #pragma weak gfx_motion_add
 #pragma weak gfx_motion_enabled
 
@@ -1352,7 +1353,9 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         }
         return;
     /* 125 TextShadowDist(twIdx, dx, dy)：静态分析 0x43CE10，两个分量各钳 -32..32
-     * （写 tw+0x5a8 / +0x5aa）。渲染层用它在文字偏移处补一层暗色。 */
+     * （写 tw+0x5a8 / +0x5aa）。**只记录数值，不渲染** —— 脚本给的是 (12,0)，
+     * 照字面在偏移处压一层实心暗色会得到向右 12 px 的重影（用户实测报「残影」）；
+     * 原版阴影颜色/透明度无证据，参考实现也只存不画。见 docs/render-model.md §7.1。 */
     case 125:
         if (argc >= 2) {
             int id = (int)args[0].i;
@@ -1478,6 +1481,36 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         return;
     case 13: /* Debmess */
         fvp_sys_debmess(vm, args, argc);
+        return;
+    /* 76 PrimHit(primId 1..0xFFF, flag)：**返回 bool** —— 光标是否命中该图元。
+     * 静态分析 0x43B9C0：arg0 必须是整型且在 1..0xFFF；flag = arg1 非空；
+     * 命中后返回值类型置 1（bool）。三层算法（父链累加 / 矩形判定 / 掩码）
+     * 见 docs/render-model.md §8，实现在 gfx.c 的 gfx_prim_hit()。
+     * 没有 gfx 上下文时（fvm.exe）保持旧行为：落到下面的"未实现"分支，返回值 0
+     * —— 冻结基线因此一个字节都不动。 */
+    case 76:
+        if (vm->gfx_bridge == NULL || gfx_prim_hit == NULL || argc < 1 ||
+            args[0].type != (uint8_t)FVP_INT) {
+            break;
+        }
+        {
+            int id = (int)args[0].i;
+
+            if (id < 1 || id > 0xFFF) {
+                break; /* 原版对非法 id 不设返回值 */
+            }
+            {
+                int hit = gfx_prim_hit(vm->gfx_bridge->gfx, id,
+                                       argc >= 2 ? 1 : 0, (int)vm->cx,
+                                       (int)vm->cy);
+
+                vm->prim_hit_calls += 1u;
+                if (hit) {
+                    vm->prim_hit_hits += 1u;
+                }
+                t->temp = fvp_make_int(hit ? 1 : 0);
+            }
+        }
         return;
     /* 26 HistorySet(kind, value)：台词历史（回想）的写入。静态分析 0x43A5E0：
      *   arg0 == null  → "开新的一条"：count = min(count+1,100)、pos = (pos+1)%100、

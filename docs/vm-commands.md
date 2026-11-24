@@ -314,7 +314,7 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | 3 | 42 | MotionAlpha | 6 | (primId, fromAlpha?, toAlpha?, timeMs 1..300000, mode? 0..1, flag≠0) | 透明度补间；from/to 省略则取 prim 当前 alpha(+7) | 0x43a8d6 校验 arg4=time；0x43a919/0x43a93f 读 `0x61dd6b`；0x43a97a `add $0x651e04,%ecx` + call 0x42d460 |
 | 4 | 50 | MotionMoveTest | 1 | (primId) | **返回 bool**：该 prim 的位置移动是否仍在进行 | 0x43ad13 call 0x4231a0(engine+0x65ba54,id) → `setne %al; mov %al,0x814(%esi)` |
 | 5 | 22 | GraphLoad | 2 | (graphSlot 0..0xFFF, filename 或 null) | 把图片文件读入图形槽 `engine+0x101064+slot*0x51c`；arg2 为 null 时清空/释放槽 | 0x43a358 `cmpb $0x0,0x8` → 0x424150(slot)（无文件名）；否则 type4/5 → 0x428bd0(slot, name, 0)，再 0x437330(engine+0x45c, slot) |
-| 6 | 76 | PrimHit | 2 | (primId 1..0xFFF, flag) | **返回 bool**：鼠标/光标是否命中该 primitive 的矩形；命中则返回值=true | 0x43b9f0 `cmp %dl,0x8` → flag；0x43b9fc call 0x43b8d0(id,flag)；0x43ba05 `movb $0x1,0x814` |
+| 6 | 76 | PrimHit | 2 | (primId 1..0xFFF, flag) | **返回 bool**：鼠标/光标是否命中该 primitive 的矩形。**已实现**：`gfx_prim_hit()`（`src/gfx.c`）+ `case 76`（`src/syscall.c`），三层算法（父链累加 / 类型分派矩形 / UV 检查）见 `docs/render-model.md` §8，单测 `tests/test_prim_hit.c` 47 项。⚠️ 矩形之后的逐像素掩码测试未实现（矩形内即算命中）；两部作品实测 0 命中，因为被测试的 11 个图元 `parent == -1`、graph 未加载 —— 原版同样返回 0 | 0x43b9f0 `cmp %dl,0x8` → flag；0x43b9fc call 0x43b8d0(id,flag)；0x43ba05 `movb $0x1,0x814`；父链累加在 0x43b8d0，矩形在 0x43b5f0 |
 | 7 | 73 | PrimGroupIn | 2 | (groupId 1..0xFFF, groupId 1..0xFFF) | 把组嵌套/归入另一组（组播放入口） | 0x43d6fd push arg2, push arg1; call 0x43d640 |
 | 8 | 79 | PrimSetDraw | 2 | (primId, 0/1) | 开关 primitive 是否绘制，写 `prim.draw(+5)` | 0x4379f4 `imul $0x34` + `mov %dl,0x61dd69(...)`（=prim+5） |
 | 9 | 31 | InputGetDown | 0 | — | **返回 int**：当前按下的按键位掩码（engine->[0x43c]） | 0x437763 `movb $0x2,0x814`（ret type=int）；0x437770 `mov 0x43c(%ecx),%edx; mov %edx,0x818` |
@@ -354,7 +354,7 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | 124 | TextRepaint | 0 | 强制重绘文本：`0x441790(engine)` |
 | 126 | TextSize | 3 | (twIdx, w 12..64, h 8..32)：字节写 `tw+0x592`(w)/`tw+0x594`(h)。**已实现**：存进 `FvpTextAttr`，按范围钳制 |
 | 127 | TextSkip | 2 | (twIdx 0..31, mode 0..3)：字节写 `tw+0x5d7`。**已实现**：`fvp_textattr_set_skip()` 存进 `FvpTextAttr.skip_mode`（超范围整条命令忽略）。静态分析出处 **0x43CDD0**：`cmp $2,(%eax)` 校验 arg0 是 int、`test %ecx; jl` / `cmp $0x1f; jg` 校验 twIdx、`test %edx; jl` / `cmp $3,%edx; jg` 校验 mode、`mov %al,0x5d7(%ecx)` 落盘 |
-| 125 | TextShadowDist | 2 | (twIdx, dx, dy)：两个分量各 **-32..32**，分别写 `tw+0x5a8`（x）/ `tw+0x5aa`（y），都是 16 位。**已实现**：`fvp_textattr_set_shadow()` + `gfx_text_set_shadow()`（偏移为 0 时不画阴影层，默认像素不变）。静态分析出处 **0x43CE10**：`cmp $0xffffffe0,%edx; jl` / `cmp $0x20,%edx; jg` 两个分量各判一次，超范围只跳过分量。⚠️ 命令表声明 argc=2，但 handler 会读第 3 个操作数 —— 实测脚本只给 2 个参数，dy 缺省按 0 处理 |
+| 125 | TextShadowDist | 2 | (twIdx, dx, dy)：两个分量各 **-32..32**，分别写 `tw+0x5a8`（x）/ `tw+0x5aa`（y），都是 16 位。**已实现：只记录数值，不渲染** —— `fvp_textattr_set_shadow()` + `gfx_text_set_shadow()`；脚本给的是 **(12,0)**，照字面在偏移处压一层实心暗色会得到向右 12 px 的重影（用户实测报「对话框内文字有残影」，已撤回绘制，见 `docs/render-model.md` §7.1）。静态分析出处 **0x43CE10**：`cmp $0xffffffe0,%edx; jl` / `cmp $0x20,%edx; jg` 两个分量各判一次，超范围只跳过分量。⚠️ 命令表声明 argc=2，但 handler 会读第 3 个操作数 —— 实测脚本只给 2 个参数，dy 缺省按 0 处理 |
 | 129 | TextSpeed | 2 | (twIdx, speed 0..300000)：dword 写 `tw+0x5e0`（每字毫秒） |
 | 135 | ThreadSleep | 1 | (ms)：线程 flags |=4，`ctx+0x80c = ms`，`ctx+0x810 = 1`（挂起） |
 | 136 | ThreadStart | 2 | (threadNo 0..31, entryOffset)：threadNo==0 先重置全部 32 个线程(0x444860)，再 0x4453f0(ctx, offset) 以 offset 为 PC 建线程 |

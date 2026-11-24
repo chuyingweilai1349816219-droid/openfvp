@@ -172,7 +172,9 @@ int gfx_text_total_chars(const Gfx *g, int layer);
 int gfx_text_busy(const Gfx *g, int layer); /* 1 = 还在逐字显示 */
 
 /* TextShadowDist(125)：文字阴影偏移（两个分量 -32..32，静态分析 0x43CE10 写
- * tw+0x5a8 / tw+0x5aa）。两个分量都是 0 时不画阴影层，默认像素不变。 */
+ * tw+0x5a8 / tw+0x5aa）。**只记录数值，不参与渲染**：脚本给的是 (12,0)，
+ * 照字面画会得到一份向右 12 px 的实心重影（用户实测报「残影」），而原版阴影的
+ * 颜色/透明度/合成方式没有任何静态分析证据。理由与实测见 docs/render-model.md §7.1。 */
 void gfx_text_set_shadow(Gfx *g, int layer, int dx, int dy);
 void gfx_text_get_shadow(const Gfx *g, int layer, int *dx, int *dy);
 
@@ -226,6 +228,20 @@ int gfx_prim_group_out(Gfx *g, int child);
 /* Per-prim clip rectangle in canvas space (x,y,w,h); w<=0 disables it.
  * This is an extension: the Python reference only clips to the canvas. */
 int gfx_prim_set_clip(Gfx *g, int id, int x, int y, int w, int h);
+
+/* PrimHit(76)：鼠标命中测试。语义逐条来自静态分析（docs/render-model.md §8）：
+ *   handler 0x43B9C0 → 0x43B8D0（沿 parent 链累加 x/y、任一层 draw==0 即未命中、
+ *   链必须走到 prim 0）→ 0x43B5F0（按类型判定矩形）。
+ * type 4 sprite：矩形 = 图头 x/y + prim x/y + 累加偏移，写过多 WH 时取 min(prim, 图)；
+ * type 2 tile：矩形 = prim x/y + 累加偏移，且 alpha 必须非 0；
+ * type 1 group：递归任一子图元命中即命中；type 0/3/5：恒不命中。
+ * ignore_draw = 原版第二参数非空（跳过起始图元的 draw==0 早退）。
+ * 返回 1 = 命中。
+ *
+ * ⚠️ 已知未实现：矩形+UV 判定之后原版还要查"可点像素掩码"（0x43B750 起的循环
+ * 与 0x4259B0），那一段没解出来，所以现在**矩形内即算命中**（被掩码挖空的像素
+ * 也会被算作命中）。这是本函数唯一的近似，别处都照抄原版。 */
+int gfx_prim_hit(Gfx *g, int prim_id, int ignore_draw, int cx, int cy);
 
 /* ---- graph slots / parts --------------------------------------------- */
 

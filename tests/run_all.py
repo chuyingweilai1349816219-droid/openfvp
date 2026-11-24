@@ -342,6 +342,17 @@ def build_steps(args):
                           note='100-slot ring: count cap, pos wrap, slot = pos-idx, '
                                'kind/type filters, NULL safety'))
 
+    # 4o. 命中测试（PrimHit 76 → gfx_prim_hit）
+    test_prim_hit = tools.get('test_prim_hit')
+    if not test_prim_hit or not os.path.isfile(test_prim_hit):
+        steps.append(Step('test_prim_hit', None, 0,
+                          skip_reason='bin/test_prim_hit.exe missing '
+                                      '(run: make test_prim_hit)'))
+    else:
+        steps.append(Step('test_prim_hit', [test_prim_hit], 120,
+                          note='parent-chain offsets, draw gating, min(prim,image) WH, '
+                               'UV clip, open right/bottom edges, group recursion'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

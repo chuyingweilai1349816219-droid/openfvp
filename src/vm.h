@@ -277,6 +277,10 @@ typedef struct FvpVM {
      * 静态分析出处见 src/history.h；记录本身是存档槽尾快照的一部分（原版在
      * 0x43F264 处序列化 count/pos/base）。 */
     FvpHistory history;
+    /* PrimHit(76) 诊断计数：只有挂了 gfx 的程序（外壳/render_vm）才会累加，
+     * fvm.exe 里这两个值恒 0（它保持"未实现"路径）。 */
+    uint64_t prim_hit_calls;
+    uint64_t prim_hit_hits;
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);

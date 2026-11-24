@@ -2260,6 +2260,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                "left\n",
                (unsigned long long)vm.steps, (unsigned long long)vm.ntext,
                (unsigned long long)vm.nthreads);
+        /* PrimHit(76)：脚本拿鼠标位置做命中测试的频率与命中率（真机才有意义）。 */
+        APPEND("prim hit       %llu call(s), %llu hit(s)\n",
+               (unsigned long long)vm.prim_hit_calls,
+               (unsigned long long)vm.prim_hit_hits);
+        APPEND("history        count=%u pos=%u filled=%d set=%llu\n",
+               (unsigned)vm.history.count, (unsigned)vm.history.pos,
+               fvp_history_filled(&vm.history),
+               (unsigned long long)vm.history.sets);
         APPEND("audio          ok=%d submitted=%d completed=%d underruns=%d\n",
                a_ok, a_sub, a_done, a_under);
         /* 真机上仍然没有语义的命令（fvm 里的直方图会把 gfx 命令也算进去，

@@ -407,6 +407,7 @@ typedef struct GfxPrim {
     unsigned char draw;
     unsigned char blend;
     unsigned char alpha;
+    unsigned char wh_set; /* 引擎 prim+0x06 的 bit0：PrimSetWH 写过 w/h */
     unsigned short flags;
     unsigned short z;
     int x, y;
@@ -2400,16 +2401,11 @@ static void draw_text_window(Gfx *g, int idx)
                 cg = 40;
                 cb = 60;
             }
-            /* TextShadowDist：先在偏移位置压一层暗色，再画正文。偏移为 0 时
-             * 这一层完全不画（默认路径不变）。 */
-            if (tw->shadow[0] != 0 || tw->shadow[1] != 0) {
-                int sx = x + tw->shadow[0];
-                int sy = y + tw->shadow[1];
-                int s_r = 16, s_g = 20, s_b = 30;
-
-                draw_text_run(g, f, sx, sy, lines[i].s, s_r, s_g, s_b, 255, 0,
-                              0, 0, 0, 0);
-            }
+            /* TextShadowDist(125) 只记录偏移（gfx_text_set_shadow），**这里不画阴影层**。
+             * 理由见 docs/render-model.md §7.1：脚本给的是 (12,0)，画出来是一份向右 12 px
+             * 的实心深色重影（用户实测报「残影」）；而原版阴影的颜色/透明度/合成方式
+             * 都没有静态分析证据，参考实现（work/render.py）也是只记录不渲染。因此宁可
+             * 不画 —— 这是唯一能与像素基线保持一致的选择。 */
             draw_text_run(g, f, x, y, lines[i].s, cr, cg, cb, 255, 1, 255, 255,
                           255, 120);
             y += size + 6;
@@ -2643,9 +2639,11 @@ int gfx_set_prim(Gfx *g, int id, int field, int v)
         break;
     case GFX_F_W:
         p->w = (unsigned short)(v & 0xFFFF);
+        p->wh_set = 1; /* 原版 PrimSetWH 会 orb 上 prim+0x06 的 bit0 */
         break;
     case GFX_F_H:
         p->h = (unsigned short)(v & 0xFFFF);
+        p->wh_set = 1;
         break;
     case GFX_F_U:
         p->u = (unsigned short)(v & 0xFFFF);
@@ -2888,6 +2886,145 @@ int gfx_prim_group_out(Gfx *g, int child)
     }
     prim_detach(g, &g->prim[child]);
     return 0;
+}
+
+/* ----------------------------------------------------------------------- */
+/* 命中测试 PrimHit(76) —— 语义见 docs/render-model.md §8                 */
+/*                                                                         */
+/* 三层结构照抄原版：                                                       */
+/*   0x43B9C0 handler → 0x43B8D0（沿父链累加 x/y + 可见性）→ 0x43B5F0（矩形）*/
+/* 唯一没落地的是最后一层：矩形内还要查"可点像素掩码"，那一段（0x43B750 起的  */
+/* 循环 + 0x4259B0）还没解出来，所以现在**矩形内即算命中**。对外文档必须写明。 */
+/* ----------------------------------------------------------------------- */
+
+static int prim_hit_rect(Gfx *g, int pid, int accx, int accy, int cx, int cy,
+                         int depth)
+{
+    const GfxPrim *p;
+
+    if (g == NULL || pid < 0 || pid >= GFX_PRIM_MAX || depth > 32) {
+        return 0;
+    }
+    p = &g->prim[pid];
+    if (p->type == 1) {
+        /* 0x43B891：组的分支 = 递归任一子图元命中（偏移不额外加自己的 x/y，
+         * 照抄原版；祖先偏移由外层父链累加提供）。 */
+        int i;
+
+        for (i = 0; i < p->nchildren; ++i) {
+            if (prim_hit_rect(g, p->children[i], accx, accy, cx, cy,
+                              depth + 1)) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    if (p->type == 2) {
+        /* 0x43B842：tile 分支 = alpha 非 0 + (prim.x/y + 累加) 的矩形 */
+        int x0;
+        int y0;
+
+        if (p->alpha == 0) {
+            return 0;
+        }
+        x0 = p->x + accx;
+        y0 = p->y + accy;
+        return (cx >= x0 && cx < x0 + (int)p->w && cy >= y0 &&
+                cy < y0 + (int)p->h)
+                   ? 1
+                   : 0;
+    }
+    if (p->type == 4) {
+        /* 0x43B654：sprite 分支 = 图头 x/y + prim 偏移；WH 写过则取 min(prim, 图) */
+        const GfxSlot *s;
+        int x0;
+        int y0;
+        int w;
+        int h;
+        int u;
+        int v;
+
+        if (p->graph < 0 || p->graph >= GFX_GRAPH_MAX) {
+            return 0;
+        }
+        s = &g->slot[p->graph];
+        if (s->tex == NULL) {
+            return 0;
+        }
+        x0 = s->tex->img.x + p->x + accx;
+        y0 = s->tex->img.y + p->y + accy;
+        if (p->wh_set) {
+            w = (int)p->w;
+            h = (int)p->h;
+            if (w > s->tex->img.w) {
+                w = s->tex->img.w;
+            }
+            if (h > s->tex->img.h) {
+                h = s->tex->img.h;
+            }
+        } else {
+            w = s->tex->img.w;
+            h = s->tex->img.h;
+        }
+        if (cx < x0 || cx >= x0 + w || cy < y0 || cy >= y0 + h) {
+            return 0;
+        }
+        /* 0x43B720：UV 偏移后的源坐标必须仍在图内（原版这里的检查是
+         * `u >= graph.w || v >= graph.h → 未命中`）。 */
+        u = (int)p->u + (cx - x0);
+        v = (int)p->v + (cy - y0);
+        if (u >= s->tex->img.w || v >= s->tex->img.h) {
+            return 0;
+        }
+        return 1;
+    }
+    return 0; /* 0/3/5：原版同样返回 0（文本图元不可点） */
+}
+
+int gfx_prim_hit(Gfx *g, int prim_id, int ignore_draw, int cx, int cy)
+{
+    int parent;
+    int accx = 0;
+    int accy = 0;
+    int reached_root = 0;
+    int guard = 0;
+
+    /* 0x43B9C0：primId 必须是 1..0xFFF（0 非法） */
+    if (g == NULL || prim_id < 1 || prim_id >= GFX_PRIM_MAX) {
+        return 0;
+    }
+    /* 0x43B904：prim+0x0A == 0xFFFF（不在任何组里）直接未命中 */
+    if (g->prim[prim_id].parent < 0) {
+        return 0;
+    }
+    /* 0x43B8ED：flag == 0 且 prim+0x05(draw) == 0 → 未命中 */
+    if (!ignore_draw && !g->prim[prim_id].draw) {
+        return 0;
+    }
+    /* 0x43B8FB 起的父链：累加每层 x/y，任一层 draw == 0 就未命中，
+     * 并且必须走到 prim 0（根）才算有效链。 */
+    parent = g->prim[prim_id].parent;
+    for (;;) {
+        if (guard++ > GFX_PRIM_MAX) {
+            return 0; /* 环状父子关系（原版会挂死，这里保守返回 0） */
+        }
+        if (parent == 0) {
+            reached_root = 1;
+        }
+        if (!g->prim[parent].draw) {
+            return 0;
+        }
+        accx += g->prim[parent].x;
+        accy += g->prim[parent].y;
+        parent = g->prim[parent].parent;
+        if (parent < 0) {
+            break;
+        }
+    }
+    if (!reached_root) {
+        return 0; /* 0x43B943：链没经过根 → 未命中 */
+    }
+    return prim_hit_rect(g, prim_id, accx, accy, cx, cy, 0);
 }
 
 /* ---- text API -------------------------------------------------------- */
@@ -3519,7 +3656,10 @@ void gfx_text_advance(Gfx *g, int dt_ms)
 }
 
 /* TextShadowDist(125)：文字阴影偏移（两个分量 -32..32，静态分析 0x43CE10）。
- * 都是 0 时不画阴影层 —— 默认配置下渲染结果与改动前完全一致。 */
+ * 只**记录**数值，渲染层不画阴影：脚本给的是 (12,0)，照字面画出来是一份向右
+ * 12 px 的实心深色重影（用户实测报「对话框内文字有残影」）；原版阴影的颜色 /
+ * 透明度 / 合成方式没有任何静态分析证据，参考实现 work/render.py 也只存不画。
+ * 详见 docs/render-model.md §7.1。 */
 void gfx_text_set_shadow(Gfx *g, int layer, int dx, int dy)
 {
     if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {

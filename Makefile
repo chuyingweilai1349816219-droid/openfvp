@@ -319,6 +319,22 @@ clean-history:
 .PHONY: test_history clean-history
 
 # ---------------------------------------------------------------------------
+# 命中测试 PrimHit(76)（gfx 层的父链累加 + 矩形判定）
+#   make test_prim_hit
+# ---------------------------------------------------------------------------
+PRIM_HIT_TEST = bin/test_prim_hit$(EXE)
+
+test_prim_hit: $(PRIM_HIT_TEST)
+
+$(PRIM_HIT_TEST): tests/test_prim_hit.c src/gfx.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_prim_hit.c $(GFX_OBJ) $(LDFLAGS) -lm
+
+clean-prim-hit:
+	-rm -f $(PRIM_HIT_TEST)
+
+.PHONY: test_prim_hit clean-prim-hit
+
+# ---------------------------------------------------------------------------
 # make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
 # CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
 #   make check
@@ -328,7 +344,8 @@ clean-history:
 # test_snd 要一个 ogg/wav（游戏数据或 work/ 里的样本，都不入库）。
 UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
-             $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST)
+             $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
+             $(PRIM_HIT_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \
