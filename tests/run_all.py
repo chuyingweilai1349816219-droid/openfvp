@@ -323,6 +323,16 @@ def build_steps(args):
                           note='TextBuff 110: window 0..31, 8/8 defaults, '
                                '0..0x400 range, whole command dropped >0x400'))
 
+    # 4i0. syscall 覆盖率审计（静态扫四个 switch，缺口数不许变大）
+    cov = os.path.join(FVP, 'scripts', 'check-commands.py')
+    if not os.path.isfile(cov):
+        steps.append(Step('check-commands.py', None, 0,
+                          skip_reason='scripts/check-commands.py missing'))
+    else:
+        steps.append(Step('check-commands.py', [PY, cov], 60,
+                          note='148 command ids: handler / generic *Test / '
+                               'documented no-op; missing count ratcheted'))
+
     # 4i5. GaijiLoad(21) / V3DMotion(142): parameter checks + recording
     test_gaiji = tools.get('test_gaiji')
     if not test_gaiji or not os.path.isfile(test_gaiji):

@@ -171,6 +171,22 @@ def build_cases():
                                        emit(0x04))), 100,
              text_out='op1f-string.txt', text_contains='[0] 0'))
 
+    # ---- IntToText(24)：返回十进制字符串句柄（handler 0x437646，wsprintf "%d"）
+    # 栈：[layer 0] → push 42, push opt 1 → syscall 24 吃掉两个参数、temp = "42"
+    #     → pushtemp → TextPrint(0, "42")，输出 "[0] 42"
+    add(case('inttotext-42', hcb(program(emit(0x0c, 0), emit(0x0c, 42),
+                                         emit(0x0c, 1), emit(0x03, 24),
+                                         emit(0x14), emit(0x03, 123),
+                                         emit(0x04))), 100, expect_steps=7,
+             text_out='inttotext.txt', text_contains='[0] 42'))
+    # 负数：wsprintf 的 "%d" 会带减号
+    add(case('inttotext-negative', hcb(program(emit(0x0c, 0), emit(0x0a, 0),
+                                               emit(0x0c, 7), emit(0x19),
+                                               emit(0x0c, 1), emit(0x03, 24),
+                                               emit(0x14), emit(0x03, 123),
+                                               emit(0x04))), 100,
+             text_out='inttotext-neg.txt', text_contains='[0] -7'))
+
     # ---- loops: the step budget is the hang guard -----------------------
     add(case('jmp-self', hcb(emit(0x06, 4)), 1000, expect_steps=1000))
     add(case('jmpcond-self', hcb(emit(0x09) + emit(0x07, 4)), 1000,

@@ -1239,6 +1239,27 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     }
 
     switch (cid) {
+    /* 24 IntToText(value, opt?): 把整数格式化成十进制字符串并**返回字符串句柄**。
+     * 静态分析 handler 0x437646：`push engine+0x481374; call wsprintfA`（格式串
+     * 0x472c4c = "%d"），然后 `call 0x4445e0` 分配字符串句柄、`movb $0x5,0x814`
+     * 把返回类型标成字符串。本站用 arena 造同内容的 FvpStr 当句柄。
+     * 第 2 个参数（文档里记作 opt 1..10）没有证据说明它影响格式，先忽略。 */
+    case 24: {
+        char buf[32];
+        int len;
+
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
+            len = snprintf(buf, sizeof buf, "%lld", (long long)args[0].i);
+            if (len < 0) {
+                len = 0;
+            }
+            t->temp = fvp_make_str(
+                fvp_arena_str(&vm->arena, buf, (uint32_t)len));
+        } else {
+            t->temp = fvp_make_str(fvp_arena_str(&vm->arena, "", 0));
+        }
+        return;
+    }
     case 123: /* TextPrint(layer, text) */
         fvp_sys_text_print(vm, args, argc);
         return;

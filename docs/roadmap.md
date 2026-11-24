@@ -53,6 +53,8 @@
 ### 真机上还缺哪些命令（2026-11-24 实测，45 s / 240,201 步 / 2,695 帧）
 
 **这个脚本实际命中的命令，现在全部有实现**（历史：25 → 20 → 18 → 15 → 11 → 7 → 5 → 4 → 2 → **0**）。
+注意这只说明"实测路径全覆盖"，**不等于 148 条全都实现了** —— 静态审计的真实数字是
+**119/148 有处理分支、28 条从来没被调用过**，见文末"命令覆盖率的真实数字"。
 最后两条是 `GaijiLoad`(21) 与 `V3DMotion`(142)，本轮落地为"记录参数"：
 
 | id | 命令 | 90 万步实测 | 目前做到哪一步 |
@@ -103,7 +105,7 @@ graph 包里 `gaiji_heart68` 那张图。这解释了之前几个对不上的现
 - **1.0**（2026-11-24）：**引擎与工程完整**——协程槽、定时器、逐字显示、纹理缓存上限、
   23 步测试、文档 29 篇、发布流程；**已知限制在 README 与 CHANGELOG 里逐条列明**。
   ✅ 已发布（v1.0.0）。注意：**1.0.0 不是"能完整通关"**，见下。
-- **1.0 之后（未发版）**：`tests/run_all.py` 现有 **32 个步骤**——在 1.0.0 的 23 步之上加了
+- **1.0 之后（未发版）**：`tests/run_all.py` 现有 **33 个步骤**——在 1.0.0 的 23 步之上加了
   **多作品兼容门禁** `tests/verify_multigame.py`（现在是**三部**作品各跑两遍 90 万步，
    `Sakura.hcb` 目前是 KNOWN BLOCKER，见文末"第三部作品的交叉验证"；要求同一次运行
   逐字节相同、行数基线不漂移、0 个替换字符）与 **台词历史** `test_history`（164 项）。
@@ -162,3 +164,43 @@ graph 包里 `gaiji_heart68` 那张图。这解释了之前几个对不上的现
 按 7×7 表重写比较语义，然后看 ① `iroseka` 的 195 行冻结基准是否仍然逐字节一致
 （**如果变了，说明基准本身依赖了错误语义，必须停下来重新审视**）② `Sakura` 的
 `0x8f415` 是否开始被调用、卡死是否消失。
+
+---
+
+### 命令覆盖率的真实数字（2026-11-24 静态审计）
+
+运行时直方图（外壳汇总里的 `unimpl cmds`）只统计**脚本实际调到**的命令，所以
+"脚本命中的命令全部有实现"这句话成立，但**不等于 148 条全都实现了**。为此加了
+`scripts/check-commands.py`：它直接扫 `src/syscall.c` 里四个 `switch (cid)`：
+
+| 块 | 作用 | 算不算实现 |
+|---|---|---|
+| `fvp_gfx_argc` | argc 修正表 | **不算**（它只改参数个数） |
+| `fvp_sys_gfx` | 渲染转发（Prim*/Text*/Graph*…） | 算 |
+| `fvp_sys_snd` | 音频命令 | 算 |
+| `fvp_syscall` | 主分发 | 算 |
+
+当前结果（`python fvp/scripts/check-commands.py`）：
+
+```
+commands             148
+handler in a switch  119
+generic *Test rule   1
+documented no-op     0
+MISSING              28
+```
+
+28 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
+
+`CursorShow(12) ExitDialog(16) InputFlash(27) InputGetRepeat(33) InputSetClick(37)
+LipAnim(38) LipSync(39) Load(40) MotionPause(60) MovieStop(63) PartsMotion(66)
+PartsMotionPause(67) PartsMotionStop(68) PartsRGB(70) PrimGroupMove(74)
+PrimSetSnow(84) Rand(92) SaveWrite(96) Snow(97) SnowStart(98) SnowStop(99)
+TextFontCount(114) TextFontGet(115) TextFontName(116) TextFontSet(117)
+TextPause(121) TextRepaint(124) ThreadRaise(134)`
+
+脚本里有 `MISSING_BASELINE = 28` 当**棘轮**：缺口数一旦变大（有人删了 case 或换了
+生成表）脚本会报 REGRESSION；实现掉一条就把这个数改小。`run_all.py` 已经有这一步。
+
+> 之前的说法"148 条里 146 条已实现"是把"实测调用过的命令"当成了全集，属于**口径错误**，
+> 本轮已在文档里更正为：**实测命中的命令 100% 有实现；按 id 静态审计是 119/148**。

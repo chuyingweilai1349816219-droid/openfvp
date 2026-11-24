@@ -383,7 +383,7 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | 26 | 44 | MotionAlphaTest | 1 | (primId) | **返回 bool**：透明度动画是否进行中 | 0x43a9ed `add $0x651e04,%ecx`; call 0x422990；`setne %al; mov %al,0x814` |
 | 27 | 78 | PrimSetBlend | 2 | (primId, blend 0/1) | 设混合模式，写 `prim.blend(+8)`（arg2 必须 int 0/1） | 0x43ba4a `mov %dl,0x61dd6c(%eax,%ecx,1)`（=prim+8） |
 | 28 | 123 | TextPrint | 2 | (twIdx 0..31, text) | 向文本窗口追加字符串。text 可为 type4（脚本内联字面量）或 type5（字符串句柄）；追加前用 lstrlenA 检查 <0x200 | 0x43cad4 `mov 0x98(%edx,%eax,4),%ebp`；0x43cadf type==4 → `engine->[0x68dfac]+value`；type==5 → `engine->[0x6a49ec+value*4]`；0x43cb01 lstrlenA；0x43cb51 call 0x433610(tw, str) |
-| 29 | 24 | IntToText | 2 | (value, opt 1..10) | **返回字符串句柄**：把整数格式化为十进制文本（wsprintfA），分配字符串句柄并压返回值（type5） | 0x437646 `push engine+0x481374; call wsprintfA`（格式串 0x472c4c="%d"）；0x437669 call 0x4445e0 分配句柄；0x43767a `movb $0x5,0x814` |
+| 29 | 24 | IntToText | 2 | (value, opt 1..10) | **返回字符串句柄**：把整数格式化为十进制文本（wsprintfA），分配字符串句柄并压返回值（type5）。**已实现**：`case 24`（`src/syscall.c`）用 arena 造同内容的 `FvpStr`；`opt` 没有证据说明影响格式，先忽略 | 0x437646 `push engine+0x481374; call wsprintfA`（格式串 0x472c4c="%d"）；0x437669 call 0x4445e0 分配句柄；0x43767a `movb $0x5,0x814` |
 | 30 | 139 | TimerSet | 2 | (timerId 0..15, timeMs 1..100000) | 启动 16 个定时器之一：`engine+0x1a997f+id*12` 处 {active=1, elapsed=0, duration=ms} | 0x43cfbc `lea 0x1a997f(%eax,%eax,2),%eax; lea (%ecx,%eax,4)` → `movb $0x1,(%eax); movl $0,0x4; mov %edx,0x8`；**已实现**：`src/timer.c`，ms 钳到 1..100000 |
 
 ### 补充（同批分析，非前 30 命中）

@@ -53,6 +53,23 @@
 
 ### 新增
 
+- **`IntToText`(24) 落地 + 命令覆盖率静态审计（本轮）**
+  - `IntToText(value, opt?)`：handler **0x437646**（`wsprintfA` 格式串 `"%d"` →
+    分配字符串句柄 → 返回类型标 5）。本站用 arena 造 `FvpStr` 当句柄；
+    第 2 个参数（文档记作 opt 1..10）没有证据说明影响格式，先忽略
+  - 新增 `scripts/check-commands.py`：静态扫 `src/syscall.c` 的四个 `switch (cid)`，
+    把 148 条 id 分成"有处理分支 / 通用 `*Test` / 已确证空操作 / **缺口**"，
+    并带 `MISSING_BASELINE` 棘轮（缺口变大就报 REGRESSION），已接进 `run_all.py`
+  - **更正经的口径**（本轮自查发现）：之前说"148 条里 146 条已实现"是把"实测调用过的
+    命令"当成了全集。真实数字是 **119 条有处理分支 + 1 条走通用 `*Test` 规则 +
+    28 条缺口**，那 28 条在本作 90 万步里一次都没被调用（所以运行时直方图看不见）。
+    完整名单与棘轮说明写进 `docs/roadmap.md` 的"命令覆盖率的真实数字"
+  - 回归测试：`tests/test_vm_edge.py` 新增 2 个 `IntToText` 用例（`42` / `-7`），
+    现在 **49 个用例** 全 PASS
+
+- **（口径修正）上一轮"脚本命中的命令全部有实现"仍然成立**，但请连着上面的静态审计一起看：
+  它只覆盖实测路径，不代表 148 条全实现
+
 - **`GaijiLoad`(21) / `V3DMotion`(142) 落地（本轮，只记录参数）—— 到此脚本命中的命令全部有实现**
   - `GaijiLoad(char, size 12..0x40, image)`：handler **0x43f4f0**，两个字符串 + 一个
     int 尺寸，然后 `call 0x43e9c0(engine+0x6a49cc, str1, size, str2)`

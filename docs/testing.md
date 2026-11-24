@@ -34,6 +34,7 @@
 | **协程（开关中立）** | `verify_threads.py` | `bin/fvm.exe` 跑 900k / 2M 两档，各跑「默认（协程开）」与 `--no-threads` | 真实脚本 | ① 默认模式 `start == exit`（每个协程都退出，没有空转）② 开/关文本**逐字节相同** ③ 两档都与 `ref/ref-900k.txt` / `ref/ref-2m.txt` 逐字节相同 |
 | **命中测试** | `test_prim_hit` | 假 host 造固定尺寸图 + 合成图元树，直接调 `gfx_prim_hit()` | 47 项 | ① `primId` 必须 1..0xFFF ② `parent == -1` 不可命中 ③ 起始图元 `draw==0`：flag=0 不命中、flag=1 命中 ④ 祖先 `draw==0` 一律不命中 ⑤ 父链 x/y 累加 ⑥ 矩形**左闭右开**（右/下边界外不命中） ⑦ 写过多 WH 取 `min(prim, 图)`、显式 WH=0 时矩形为空 ⑧ UV 后源坐标越界不命中 ⑨ type 2 看 alpha、type 5/0 恒不命中 ⑩ 组递归命中且**不加组自己的 x/y** ⑪ 悬空子树（链没到根）不命中 ⑫ 环状父子关系安全返回 0 ⑬ NULL 安全 |
 | **外字/3D 补间参数** | `test_gaiji` | 直接构造 `FvpVM`（不跑脚本） | 33 项 | ① `GaijiLoad` 两个字符串 + size 12..64：11 / 65 拒绝且不改旧值，int / float / NULL 参数拒绝 ② 记录 name1/name2（arena 拷贝）与调用计数 ③ `V3DMotion` 收 time 1..300000、mode 1..5：0 / 300001 / 0 / 6 / float 全拒绝 ④ 边界值 1 与 300000 合法 ⑤ NULL vm 安全 |
+| **命令覆盖审计** | `scripts/check-commands.py` | 静态扫 `src/syscall.c` 的四个 `switch (cid)` + `gen_cmd_table.h` 的 148 个名字 | 148 条 id | ① 分母固定 148 ② `fvp_gfx_argc` 里的 case **不算**实现（只改 argc）③ `*Test` 归到通用规则 ④ `MISSING_BASELINE = 28` 当棘轮：缺口变大就 REGRESSION ⑤ 输出 json 便于以后画曲线 |
 | **文本缓冲/窗口模式** | `test_textbuff` | 直接构造 `FvpVM`（不跑脚本） | 44 项 | ① `TextBuff` 窗口号 0..31：32 / -1 / 非 int / NULL 拒绝且不计数 ② 正常设置写进对应窗口，别的窗口不动 ③ a/b 缺省或非 int / 负数都回落 8/8 ④ 0 与 0x400 合法 ⑤ **0x401 让整条命令放弃**（连计数都不加、旧值保留） ⑥ `WindowMode` 收 -1..6，0/1 才改 state、其它只记录；7 / -2 / float / NULL 拒绝 ⑦ `ExitMode` 收 0..4，5 / -1 / float / NULL 拒绝 ⑧ NULL vm 安全 |
 | **图形槽颜色/工程目录** | `test_graphcolor` | 直接构造 `FvpVM`（不跑脚本） | 24 项 | ① `GraphRGB` 槽号 0..0xFFF：4096 / -1 / 非 int / NULL 全部拒绝且不计数 ② 分量"是 int 且在 0..200"才采用，201 / -5 / float 各自回落到 100 ③ 边界 0 与 200 合法 ④ 不同槽互不干扰、`graph_rgb_set` 标记 ⑤ `SysProjFolder` 只接受字符串（空串也算），int / float / NULL 拒绝 ⑥ 两次设置互相覆盖 ⑦ NULL vm 安全 |
 | **控制/光标状态** | `test_control` | 直接构造 `FvpVM`（不跑脚本），调用 4 个状态函数 | 42 项 | ① 初始值（`cursor_shape == -1`）② `ControlMask` **看类型不看值**：int 0/1、字符串、NULL 全是 mask=0，同时记下参数类型 ③ `ControlPulse` 只置 1、重复调用仍为 1 ④ `CursorChange` 只收 int 0..3，4 / -1 / float / string / NULL 全被拒且不改 shape ⑤ `CursorMove` 要求 x/y 是 int，第三参数只记录类型；NULL x/y 在计数前返回 ⑥ 每条命令的调用计数 ⑦ NULL vm 安全 |
@@ -205,7 +206,7 @@ hzc1（243 字节，102×102 fmt4）、`fvp/work/bgm001.ogg`、`fvp/work/se001.w
 
 ## 5. VM 边界用例（`test_vm_edge.py`）
 
-47 个用例，全部 PASS，且都在 `fvm_guard.exe`（页保护）下复跑通过。
+49 个用例，全部 PASS，且都在 `fvm_guard.exe`（页保护）下复跑通过。
 关键结果：
 
 | 用例 | 断言 | 实测 |
