@@ -361,6 +361,64 @@ int fvp_title_move(FvpTitleMenu *m, int mx, int my, FvpTitleMeasure measure,
     return m->hover;
 }
 
+int fvp_title_nav(FvpTitleMenu *m, int delta)
+{
+    int i;
+    int start;
+    int all_off = 1;
+
+    if (m == NULL || delta == 0) {
+        return m != NULL ? m->hover : -1;
+    }
+    for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+        if (m->enabled[i]) {
+            all_off = 0;
+            break;
+        }
+    }
+    if (all_off) {
+        m->hover = -1;
+        return -1;
+    }
+    if (m->hover < 0) {
+        start = delta > 0 ? -1 : 0;
+        m->hover = delta > 0 ? 0 : FVP_TITLE_ITEMS - 1;
+        if (!m->enabled[m->hover]) {
+            (void)start;
+            return fvp_title_nav(m, delta);
+        }
+        return m->hover;
+    }
+    i = m->hover;
+    do {
+        i = (i + (delta > 0 ? 1 : FVP_TITLE_ITEMS - 1)) % FVP_TITLE_ITEMS;
+    } while (!m->enabled[i] && i != m->hover);
+    m->hover = i;
+    return m->hover;
+}
+
+int fvp_title_activate(FvpTitleMenu *m)
+{
+    int i;
+
+    if (m == NULL) {
+        return -1;
+    }
+    if (m->hover < 0 || m->hover >= FVP_TITLE_ITEMS || !m->enabled[m->hover]) {
+        for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+            if (m->enabled[i]) {
+                m->hover = i;
+                break;
+            }
+        }
+    }
+    if (m->hover < 0 || !m->enabled[m->hover]) {
+        return -1;
+    }
+    m->selected = m->hover;
+    return m->selected;
+}
+
 int fvp_title_click(FvpTitleMenu *m, int mx, int my, FvpTitleMeasure measure,
                     void *ctx)
 {

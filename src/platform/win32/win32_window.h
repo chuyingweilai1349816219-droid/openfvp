@@ -5,6 +5,14 @@
 #include <windows.h>
 #include <stdint.h>
 
+/* FvpWin32Input.nav 的位 */
+#define FVP_NAV_UP 1
+#define FVP_NAV_DOWN 2
+#define FVP_NAV_LEFT 4
+#define FVP_NAV_RIGHT 8
+#define FVP_NAV_ENTER 16
+#define FVP_NAV_ESC 32
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,6 +30,11 @@ typedef struct FvpWin32Input {
     int canvas_y;
     int key_down;        /* Enter / Space held                               */
     int key_pressed;     /* number of Enter / Space press edges              */
+
+    /* 菜单导航按键（标题菜单用）：按下沿的位掩码，消费后由调用方清零。
+     * capture_nav = 1 时 ESC 只置位、不让窗口直接退出。 */
+    int nav;             /* bitmask of FVP_NAV_* press edges                 */
+    int capture_nav;     /* 1 = 菜单模式（ESC/方向键交给菜单）                 */
 } FvpWin32Input;
 
 typedef struct FvpWin32Window {

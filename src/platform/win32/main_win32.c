@@ -2421,6 +2421,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
 
         /* ---------------- input -> VM ---------------- */
+        in->capture_nav = title_active ? 1 : 0;
         vm.cx = in->canvas_x;
         vm.cy = in->canvas_y;
         click_edges = in->mouse_pressed + in->key_pressed;
@@ -2430,6 +2431,34 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         if (title_active && save_list_active) {
             /* 读档列表：左键选中一行就记日志；右键/退出键回标题菜单 */
             save_hover = fvp_savelist_hit(&save_list, vm.cx, vm.cy);
+            if (in->nav & FVP_NAV_DOWN) {
+                save_hover = (save_hover < 0) ? 0
+                             : (save_hover + 1) % save_list.count;
+                save_list.selected = save_hover;
+            }
+            if (in->nav & FVP_NAV_UP) {
+                save_hover = (save_hover < 0)
+                                 ? save_list.count - 1
+                                 : (save_hover + save_list.count - 1) %
+                                       save_list.count;
+                save_list.selected = save_hover;
+            }
+            if (in->nav & FVP_NAV_ESC) {
+                save_list_active = 0;
+                fvp_logf("save list: ESC -> back to title menu");
+                in->nav = 0;
+            }
+            if ((in->nav & FVP_NAV_ENTER) && save_hover >= 0 &&
+                save_list.count > 0) {
+                char row[256];
+
+                fvp_savelist_row_text(&save_list, save_hover, row,
+                                      sizeof(row));
+                save_list.selected = save_hover;
+                fvp_logf("save list: selected %s (chapter='%s')", row,
+                         save_list.items[save_hover].chapter);
+                in->nav = 0;
+            }
             if (click_edges > 0 && save_hover >= 0) {
                 char row[256];
 
@@ -2450,6 +2479,20 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         if (title_active && !save_list_active) {
             int pick = -1;
 
+            if (in->nav & FVP_NAV_DOWN) {
+                title_hover = fvp_title_nav(&title, +1);
+            }
+            if (in->nav & FVP_NAV_UP) {
+                title_hover = fvp_title_nav(&title, -1);
+            }
+            if (in->nav & FVP_NAV_ENTER) {
+                pick = fvp_title_activate(&title);
+                title_hover = title.hover;
+                in->nav = 0;
+            }
+            if ((in->nav & FVP_NAV_ESC) && !title_active) {
+                in->nav = 0;
+            }
             if (title_profile != NULL) {
                 /* 有该作品的 profile：直接用它实测的墨迹矩形命中 */
                 title_hover = fvp_title_profile_hit(title_profile, vm.cx,
@@ -2496,6 +2539,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 }
             }
             click_edges = 0;
+        }
+        if (!title_active) {
+            in->nav = 0; /* 菜单不在时导航键没有消费者 */
         }
         if (click_edges > 0) {
             want_skip_text = 1;

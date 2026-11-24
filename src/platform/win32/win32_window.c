@@ -600,8 +600,22 @@ static LRESULT CALLBACK fvp_win32_proc(HWND hwnd, UINT msg, WPARAM wp,
         int repeat = (int)((lp >> 30) & 1);
         if (wp == VK_ESCAPE) {
             if (!repeat) {
-                fvp_logf("window: ESC pressed -> quit");
-                w->quit = 1;
+                if (w->input.capture_nav) {
+                    /* 菜单模式：ESC 交给菜单（例如从存档列表回标题） */
+                    w->input.nav |= FVP_NAV_ESC;
+                } else {
+                    fvp_logf("window: ESC pressed -> quit");
+                    w->quit = 1;
+                }
+            }
+            return 0;
+        }
+        if (wp == VK_UP || wp == VK_DOWN || wp == VK_LEFT || wp == VK_RIGHT) {
+            if (!repeat) {
+                w->input.nav |= (wp == VK_UP)     ? FVP_NAV_UP
+                                : (wp == VK_DOWN) ? FVP_NAV_DOWN
+                                : (wp == VK_LEFT) ? FVP_NAV_LEFT
+                                                  : FVP_NAV_RIGHT;
             }
             return 0;
         }
@@ -615,6 +629,7 @@ static LRESULT CALLBACK fvp_win32_proc(HWND hwnd, UINT msg, WPARAM wp,
             if (!repeat) {
                 w->input.key_down = 1;
                 w->input.key_pressed += 1;
+                w->input.nav |= FVP_NAV_ENTER;
             }
             return 0;
         }

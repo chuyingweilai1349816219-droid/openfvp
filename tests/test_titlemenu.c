@@ -326,6 +326,62 @@ int main(void)
               "first labels differ (New Game vs GAME START)");
     }
 
+    /* --- 10. 键盘导航：上下移动、跳过禁用项、环绕、激活 --- */
+    {
+        FvpTitleMenu k;
+
+        fvp_title_init(&k);
+        CHECK(k.hover == -1, "nav: hover starts -1");
+        CHECK(fvp_title_nav(&k, +1) == 0, "nav down from none -> 0 (got %d)",
+              k.hover);
+        CHECK(fvp_title_nav(&k, +1) == 1, "nav down -> 1");
+        CHECK(fvp_title_nav(&k, +1) == 2, "nav down -> 2");
+        CHECK(fvp_title_nav(&k, -1) == 1, "nav up -> 1");
+        CHECK(fvp_title_nav(&k, -1) == 0, "nav up -> 0");
+        CHECK(fvp_title_nav(&k, -1) == FVP_TITLE_ITEMS - 1,
+              "nav up wraps to last (got %d)", k.hover);
+        CHECK(fvp_title_nav(&k, +1) == 0, "nav down wraps to 0");
+
+        /* 跳过禁用项：禁用 Continue(1) 后，0 往下应到 2 */
+        k.hover = 0;
+        k.enabled[1] = 0;
+        CHECK(fvp_title_nav(&k, +1) == 2, "nav skips disabled item (got %d)",
+              k.hover);
+        CHECK(fvp_title_nav(&k, -1) == 0, "nav back over disabled item");
+        k.enabled[1] = 1;
+
+        /* 全部禁用：hover 归 -1，不崩 */
+        {
+            int j;
+
+            for (j = 0; j < FVP_TITLE_ITEMS; ++j) {
+                k.enabled[j] = 0;
+            }
+            CHECK(fvp_title_nav(&k, +1) == -1, "nav with all disabled -> -1");
+            CHECK(k.hover == -1, "nav all disabled clears hover");
+            for (j = 0; j < FVP_TITLE_ITEMS; ++j) {
+                k.enabled[j] = 1;
+            }
+        }
+
+        /* 激活：没 hover 时选第一个可用项；有 hover 时选它 */
+        fvp_title_init(&k);
+        CHECK(fvp_title_activate(&k) == 0, "activate without hover -> 0");
+        CHECK(k.selected == 0, "activate sets selected");
+        k.hover = 3;
+        CHECK(fvp_title_activate(&k) == 3, "activate hovered item 3");
+        k.hover = 9;
+        CHECK(fvp_title_activate(&k) == 0, "activate with bad hover falls back");
+        k.hover = 1;
+        k.enabled[1] = 0;
+        CHECK(fvp_title_activate(&k) == 0,
+              "activate disabled hover falls back to first enabled");
+        k.enabled[1] = 1;
+        CHECK(fvp_title_nav(NULL, 1) == -1, "nav NULL safe");
+        CHECK(fvp_title_activate(NULL) == -1, "activate NULL safe");
+        CHECK(fvp_title_nav(&k, 0) == k.hover, "nav delta 0 keeps hover");
+    }
+
     printf("test_titlemenu: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

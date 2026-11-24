@@ -255,6 +255,17 @@ hoshimemo 的 asset 指向各自贴图 → 走贴图模式。
 - 实测：五彩斑斓的世界 6 个可读槽（第 7 个 `save.bin` 是全局状态不是槽），
   星空的记忆 0 个（没有 `save/` 目录）；这两条都进了多游戏门禁。
 
+### 4.3 键盘导航
+
+`fvp_title_nav(m, +1/-1)` 上下移动 hover（**跳过 `enabled[] == 0` 的项**、到边界环绕、
+全禁用时返回 -1），`fvp_title_activate(m)` 确认当前项（没有 hover 时退到第一个可用项）。
+外壳把 ↑/↓/Enter/Esc 做成窗口输入里的 `nav` 位掩码（`FVP_NAV_UP/DOWN/LEFT/RIGHT/
+ENTER/ESC`），**只有菜单打开时**才让窗口捕获取消 ESC 的"直接退出"语义
+（`input.capture_nav`），菜单关掉后 ESC 仍是退出。
+
+单测（`test_titlemenu`，共 227 项）覆盖：从无 hover 开始、连续上下、反向环绕、
+禁用项跳过、全禁用、激活回退、NULL。
+
 ### 4.1 还差什么
 
 1. **主标题背景还没指认**：`a_top_s1` 是 ALBUM MODE 那版（夜空），白天那版还没在

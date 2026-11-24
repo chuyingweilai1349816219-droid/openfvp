@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **标题菜单的键盘导航（↑/↓/Enter/Esc）+ 窗口输入加 nav 位掩码**
+  - `fvp_title_nav(m, ±1)`：上下移动 hover，**跳过置灰项**、边界环绕、
+    全禁用时返回 -1；`fvp_title_activate(m)`：确认当前项（无 hover 时退到
+    第一个可用项）
+  - `FvpWin32Input` 新增 `nav`（`FVP_NAV_UP/DOWN/LEFT/RIGHT/ENTER/ESC` 按下沿
+    位掩码）与 `capture_nav`：只有菜单打开时才把 ESC 交给菜单，菜单关掉后
+    ESC 仍是退出
+  - 外壳：标题菜单 ↑/↓ 选择、Enter 确认；存档列表 ↑/↓ 选槽、Enter 确认、
+    Esc 回标题菜单
+  - `test_titlemenu` 新增 20 项导航断言（共 **227 项**）
+  - `docs/win32-shell.md` 按键表、`docs/title-menu.md` §4.3 同步
+
 - **Continue 的存档列表（只读）：新模块 `src/savelist.c` + `--title-save-list`**
   - `fvp_savelist_*`：把 `<game_dir>\save\sNNN.bin` 解析成记录（7 字节时间戳、
     章节名 cp932→UTF-8、当前行、缩略图标记、文件大小），提供行文本格式化与

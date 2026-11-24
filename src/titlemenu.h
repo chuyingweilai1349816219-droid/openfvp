@@ -155,6 +155,13 @@ int fvp_title_hit(const FvpTitleMenu *m, int mx, int my,
 int fvp_title_move(FvpTitleMenu *m, int mx, int my, FvpTitleMeasure measure,
                    void *ctx);
 
+/* 键盘导航：把 hover 移动 delta 项（+1 下 / -1 上），跳过不可用项并环绕；
+ * hover 为 -1 时从 0（delta>0）或最后一项（delta<0）开始。返回新的 hover。 */
+int fvp_title_nav(FvpTitleMenu *m, int delta);
+
+/* 激活当前 hover（没有 hover 则选第 0 项可用项）。返回 0..4，失败 -1。 */
+int fvp_title_activate(FvpTitleMenu *m);
+
 /* 点击：命中且可用时返回该项 id 并把 hover 记进 selected；否则返回 -1。 */
 int fvp_title_click(FvpTitleMenu *m, int mx, int my, FvpTitleMeasure measure,
                     void *ctx);
