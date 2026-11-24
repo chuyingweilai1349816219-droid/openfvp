@@ -419,6 +419,29 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### Control\* / Cursor\*（8 / 9 / 10 / 11，**已实现：只记录状态**）
+
+| id | 命令 | argc | 语义 / 证据 |
+| ---: | --- | ---: | --- |
+| 8 | ControlMask | 1 | `engine+0x458 = (参数是 null)`。handler **0x437440**：`cmpb $0x0,(%eax)`（只看**类型字节**）+ `sete %cl` + `mov %cl,0x458(%edx)`，参数字面值不参与 |
+| 9 | ControlPulse | 0 | `engine+0xfd8 = 1`。handler **0x437460**：`movb $0x1,0xfd8(%ecx)`；消费方在帧更新 0x43f6df 一带 |
+| 10 | CursorChange | 1 | 参数必须是 int 且 0..3，否则整条命令无效；合法时 tail-call **0x441810** → `engine+0x88 = id`，并按 `engine+0x85/0x84` 换 Win32 光标（`*0x45d2c4` / `*0x45d250`） |
+| 11 | CursorMove | 3 | `(x, y, force)`：x/y 必须是 int；鼠标设备可用时直接做，不可用时要求第三参数的**类型字节非 0**；满足则调 **0x4417c0(engine, x, y)** |
+
+**本站的实现边界（照实写，不猜）**：这四个字段在 `FvpVM` 里都有对应状态
+（`control_mask` / `pulse` / `cursor_shape` / `cursor_x, y`）+ 调用计数，外壳汇总
+打印 `control mask=.. pulse=.. cursor=.. pos=..`。但：
+
+* 原版用 **type==0 表示 null**，本站的值模型没有 null（`FVP_INT == 0`，未赋值的
+  global 读出来是 int 0），所以 ControlMask 的"1 分支"**当前不可达**，CursorMove
+  的第三参数判定也退化成"只记录类型"（`control_mask_type` / `cursor_force_type`）。
+  这是**已知不可达**，不是猜出来的语义。
+* 光标/屏蔽位的下游消费（换系统光标、影响动画时间轴、参与输入屏蔽）没有实现：
+  没有证据说明"3 张光标位图对应什么形状"，也没有证据说明 0x458 具体屏蔽什么。
+
+实测调用量（iroseka 45 s 外壳）：ControlMask ×38、ControlPulse ×35、
+CursorChange ×1、CursorMove ×1；`unimpl cmds` 从 11 种降到 **7 种**。
+
 ### Motion\*Stop（43 / 46 / 55 / 58，**已实现**）
 
 | id | 命令 | argc | 语义 / 证据 |

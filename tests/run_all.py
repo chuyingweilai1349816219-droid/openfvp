@@ -288,6 +288,18 @@ def build_steps(args):
                           note='lerp timeline, zero/negative duration, reap, '
                                'multi-tween, NULL safety'))
 
+    # 4i2. Control* / Cursor* state (ControlMask 8 / ControlPulse 9 /
+    #      CursorChange 10 / CursorMove 11): type-driven validation only.
+    test_control = tools.get('test_control')
+    if not test_control or not os.path.isfile(test_control):
+        steps.append(Step('test_control', None, 0,
+                          skip_reason='bin/test_control.exe missing '
+                                      '(run: make test_control)'))
+    else:
+        steps.append(Step('test_control', [test_control], 120,
+                          note='mask/pulse/cursor state: type-vs-value rules, '
+                               '0..3 clamp, NULL args, per-command counters'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):

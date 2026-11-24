@@ -53,6 +53,24 @@
 
 ### 新增
 
+- **`ControlMask`(8) / `ControlPulse`(9) / `CursorChange`(10) / `CursorMove`(11) 落地（本轮，只记录状态）**
+  - handler 依次 **0x437440 / 0x437460 / 0x437470 / 0x4374a0**（同 `work/vm_id_handler.json`）：
+    `ControlMask` 只看参数的**类型字节**（null → engine+0x458=1）、`ControlPulse` 置
+    engine+0xfd8=1、`CursorChange` 收 int 0..3 后写 engine+0x88（并换 Win32 光标）、
+    `CursorMove(x,y,force)` 校验 x/y 是 int 后调 0x4417c0 设鼠标位置
+  - 实现：`FvpVM` 新增 `control_mask / pulse / cursor_shape / cursor_x,y` 与 4 个调用计数，
+    `src/vm.c` 里 4 个状态函数，`syscall.c` 的 `case 8/9/10/11` 分派；两个外壳的汇总都
+    打印 `control mask=.. pulse=.. cursor=.. pos=.. (mask N / pulse N / change N / move N)`
+  - **已知边界（照实写）**：原版用 `type==0` 表示 null，本站的值模型没有 null
+    （`FVP_INT == 0`，未赋值 global 读出来是 int 0），所以 `ControlMask` 的 1 分支
+    **当前不可达**，`CursorMove` 第三参数退化成只记录类型 —— 文档里标为"已知不可达"，
+    不是猜出来的语义；光标形状/屏蔽位的下游消费（没有证据）也没有实现
+  - 单测 `tests/test_control.c` **42 项**（`make check` 现在 **14 个单测**）
+  - 实测：iroseka 45 s 外壳 `ControlMask ×38 / ControlPulse ×35 / CursorChange ×1 /
+    CursorMove ×1`，`unimpl cmds` 从 **11 种降到 7 种**
+    （`109×1 147×1 110×6 21×24 17×1 142×7 23×4`）；`compare.py` 仍逐字节一致、
+    `verify_gfx` 仍是 293 px / PSNR 49.94 / SSIM 0.99971
+
 - **第三部作品交叉验证 + 引擎级"卡死侦测"（本轮）**
   - 用户提供《樱花，萌放。（さくら、もゆ。）》：`Sakura.hcb` 5,002,852 B 能被完整解码
     （966,284 条指令，`main_start` 0x36a79），且它的**内嵌 148 条命令表与另外两部

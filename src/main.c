@@ -227,6 +227,14 @@ static void fvp_print_summary(const FvpVM *vm)
     }
     /* 台词历史（HistorySet 26 / HistoryGet 25）：100 条环形记录，环形槽位见
      * src/history.h。默认只报计数，--dump-history 才逐条打印。 */
+    /* ControlMask 8 / ControlPulse 9 / CursorChange 10 / CursorMove 11 */
+    printf("control    mask=%d pulse=%d cursor=%d pos=%d,%d "
+           "(mask %llu / pulse %llu / change %llu / move %llu)\n",
+           (int)vm->control_mask, (int)vm->pulse, vm->cursor_shape, vm->cursor_x,
+           vm->cursor_y, (unsigned long long)vm->control_calls[0],
+           (unsigned long long)vm->control_calls[1],
+           (unsigned long long)vm->control_calls[2],
+           (unsigned long long)vm->control_calls[3]);
     printf("history    count=%u pos=%u filled=%d set=%llu get=%llu\n",
            (unsigned)vm->history.count, (unsigned)vm->history.pos,
            fvp_history_filled(&vm->history),

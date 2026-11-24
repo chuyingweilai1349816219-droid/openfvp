@@ -2281,6 +2281,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         /* 字形兜底：某套图集缺字时从别的图集缩放取（tofu=0 表示没有黑方块）。 */
         APPEND("glyphs         %d tofu, %d from fallback atlas\n",
                gfx_stats(gfx)->tofu_glyphs, gfx_stats(gfx)->fallback_glyphs);
+        APPEND("control        mask=%d pulse=%d cursor=%d pos=%d,%d "
+               "(mask %llu / pulse %llu / change %llu / move %llu)\n",
+               (int)vm.control_mask, (int)vm.pulse, vm.cursor_shape,
+               vm.cursor_x, vm.cursor_y,
+               (unsigned long long)vm.control_calls[0],
+               (unsigned long long)vm.control_calls[1],
+               (unsigned long long)vm.control_calls[2],
+               (unsigned long long)vm.control_calls[3]);
         APPEND("history        count=%u pos=%u filled=%d set=%llu\n",
                (unsigned)vm.history.count, (unsigned)vm.history.pos,
                fvp_history_filled(&vm.history),

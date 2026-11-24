@@ -727,6 +727,7 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     fvp_textattr_reset(vm->textattr, FVP_TEXT_WINDOWS);
     fvp_history_init(&vm->history);
     vm->save_slot = -1;
+    vm->cursor_shape = -1; /* -1 = 还没被 CursorChange 设过 */
     vm->save_thumb_w = 96; /* 引擎初值 96x72（docs/save-format.md §2.3） */
     vm->save_thumb_h = 72;
     /* 协程槽默认开启：实测（docs/05-threads.md §10）对本作脚本行为中立 ——
@@ -1034,6 +1035,68 @@ int fvp_snd_bank_read(FvpSndBridge *b, const char *name, uint8_t **data,
         return 0;
     }
     return opened > 0 ? -1 : -2;
+}
+
+void fvp_vm_control_mask(FvpVM *vm, const FvpValue *arg)
+{
+    if (vm == NULL) {
+        return;
+    }
+    vm->control_calls[0] += 1u;
+    /* 静态分析 0x437440：只比较参数的**类型字节**（cmpb $0x0,(%eax)）然后 sete——
+     * 参数是 null 时 engine+0x458 置 1，否则置 0，参数字面值不参与。
+     * 本站的值模型没有 null：未赋值的 global 读出来是 int 0（FVP_INT == 0），
+     * 脚本也压不出"空值"，所以 1 这一支**当前不可达**。照实写 0 并把最近一次
+     * 参数的类型记下来（control_mask_type），等以后引入 null 类型再补。 */
+    vm->control_mask = 0u;
+    vm->control_mask_type = (arg != NULL) ? arg->type : 0xFFu;
+}
+
+void fvp_vm_control_pulse(FvpVM *vm)
+{
+    if (vm == NULL) {
+        return;
+    }
+    vm->control_calls[1] += 1u;
+    vm->pulse = 1u; /* 静态分析 0x437460：movb $0x1,0xfd8(engine) */
+}
+
+int fvp_vm_cursor_change(FvpVM *vm, const FvpValue *arg)
+{
+    if (vm == NULL || arg == NULL) {
+        return 0;
+    }
+    vm->control_calls[2] += 1u;
+    /* 静态分析 0x437470：参数必须是 int 且 0..3，否则整条命令什么都不做；
+     * 合法时 tail-call 0x441810(engine, id) → engine+0x88 = id（+ 换 Win32 光标）。 */
+    if (arg->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    if (arg->i < 0 || arg->i > 3) {
+        return 0;
+    }
+    vm->cursor_shape = (int)arg->i;
+    return 1;
+}
+
+int fvp_vm_cursor_move(FvpVM *vm, const FvpValue *x, const FvpValue *y,
+                       const FvpValue *force)
+{
+    if (vm == NULL || x == NULL || y == NULL) {
+        return 0;
+    }
+    vm->control_calls[3] += 1u;
+    /* 静态分析 0x4374a0：鼠标设备可用时直接做；不可用时要求第三个参数的
+     * 类型字节非 0（cmpb $0x0,0x10(%ecx); je 返回）才做。本站没有"鼠标设备
+     * 表"（一律按可用处理），也没有 null 类型，所以第三参数只记录不判定。 */
+    vm->cursor_force_type = (force != NULL) ? force->type : 0xFFu;
+    if (x->type != (uint8_t)FVP_INT || y->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    vm->cursor_x = (int)x->i;
+    vm->cursor_y = (int)y->i;
+    vm->cursor_moved = 1;
+    return 1;
 }
 
 void fvp_vm_wheel_add(FvpVM *vm, int delta)

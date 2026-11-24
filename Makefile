@@ -367,6 +367,23 @@ clean-motion:
 .PHONY: test_motion clean-motion
 
 # ---------------------------------------------------------------------------
+# 控制 / 光标这一组（ControlMask 8 / ControlPulse 9 / CursorChange 10 /
+# CursorMove 11）的状态语义
+#   make test_control
+# ---------------------------------------------------------------------------
+CONTROL_TEST = bin/test_control$(EXE)
+
+test_control: $(CONTROL_TEST)
+
+$(CONTROL_TEST): tests/test_control.c src/vm.c src/vm.h $(OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_control.c $(filter-out src/main.o,$(OBJ)) $(LDFLAGS) -lm
+
+clean-control:
+	-rm -f $(CONTROL_TEST)
+
+.PHONY: test_control clean-control
+
+# ---------------------------------------------------------------------------
 # make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
 # CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
 #   make check
@@ -377,7 +394,8 @@ clean-motion:
 UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
-             $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST)
+             $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
+             $(CONTROL_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

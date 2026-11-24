@@ -1629,6 +1629,31 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             return;
         }
         break;
+    /* 8 ControlMask(argc 1) / 9 ControlPulse(argc 0) / 10 CursorChange(argc 1) /
+     * 11 CursorMove(argc 3)：写 engine 的 +0x458 / +0xfd8 / +0x88 和鼠标坐标。
+     * handler 依次 0x437440 / 0x437460 / 0x437470 / 0x4374a0；只记录状态，
+     * 不猜下游（见 src/vm.h 的 fvp_vm_control_mask 注释）。 */
+    case 8:
+        if (argc >= 1) {
+            fvp_vm_control_mask(vm, &args[0]);
+            return;
+        }
+        break;
+    case 9:
+        fvp_vm_control_pulse(vm);
+        return;
+    case 10:
+        if (argc >= 1) {
+            (void)fvp_vm_cursor_change(vm, &args[0]);
+            return;
+        }
+        break;
+    case 11:
+        if (argc >= 3) {
+            (void)fvp_vm_cursor_move(vm, &args[0], &args[1], &args[2]);
+            return;
+        }
+        break;
     case 76:
         if (vm->gfx_bridge == NULL || gfx_prim_hit == NULL || argc < 1 ||
             args[0].type != (uint8_t)FVP_INT) {

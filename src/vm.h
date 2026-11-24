@@ -224,6 +224,18 @@ typedef struct FvpVM {
      * 步数、stall_pc = 最后执行的那条指令的地址。stall_after == 0 表示关闭。
      * 为什么用"没 syscall"当判据：正常脚本每几十~几千步就有一条命令（画图、
      * 文本、定时器…），连续几百万步一条命令都没有只可能是脚本在自旋。 */
+    /* 控制 / 光标组的状态（ControlMask 8 / ControlPulse 9 / CursorChange 10 /
+     * CursorMove 11），见 fvp_vm_control_mask 的注释。 */
+    unsigned char control_mask; /* engine+0x458：0/1（null 分支不可达，见 vm.c） */
+    unsigned char control_mask_type; /* 最近一次 ControlMask 参数的 type（诊断） */
+    unsigned char pulse;        /* engine+0xfd8：置 1 后不会再被这几条命令清零 */
+    int cursor_shape;           /* engine+0x88：0..3，-1 = 还没设过 */
+    int cursor_x;
+    int cursor_y;
+    int cursor_moved;           /* CursorMove 是否生效过 */
+    unsigned char cursor_force_type; /* CursorMove 第三参数的类型（诊断） */
+    uint64_t control_calls[4];  /* 4 条命令各自的调用次数（诊断用） */
+
     uint64_t last_syscall_step;
     uint64_t stall_after;
     uint64_t stall_at;
@@ -303,6 +315,20 @@ uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps);
  * 命中后 fvp_vm_stalled() 返回 1，细节看 FvpVM 的 stall_* 字段。 */
 void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 int fvp_vm_stalled(const FvpVM *vm);
+
+/* 控制 / 光标这一组（静态分析证据见 docs/vm-commands.md §5 补充表）：
+ *   ControlMask(8)   → control_mask = (arg.type == 0)
+ *   ControlPulse(9)  → pulse = 1
+ *   CursorChange(10) → cursor_shape = 0..3（别的值直接忽略）
+ *   CursorMove(11)   → cursor_x / cursor_y，第三参数是"强制"标志（type==0 就忽略）
+ * 这几条在原版里写的是 engine 的字节字段（+0x458 / +0xfd8 / +0x88）和鼠标坐标，
+ * 消费方分别是动画时间轴、帧更新和 Win32 SetCursor/鼠标位置 —— 本站只把这几个
+ * 状态记录下来对外可见（与 TextFont 等一样：有证据的部分落库，不猜下游行为）。 */
+void fvp_vm_control_mask(FvpVM *vm, const FvpValue *arg);
+void fvp_vm_control_pulse(FvpVM *vm);
+int fvp_vm_cursor_change(FvpVM *vm, const FvpValue *arg);
+int fvp_vm_cursor_move(FvpVM *vm, const FvpValue *x, const FvpValue *y,
+                       const FvpValue *force);
 
 /* 鼠标滚轮：外壳/测试累加增量（120 = 一格），脚本通过 InputGetWheel(36) 取走。
  * fvp_vm_wheel_take() 返回累计值并把累加器清零（取走语义）。 */
