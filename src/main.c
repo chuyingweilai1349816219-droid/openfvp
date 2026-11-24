@@ -282,6 +282,11 @@ static void fvp_print_summary(const FvpVM *vm)
     printf("threads    raise %llu call(s), last ms=%d, woken %llu\n",
            (unsigned long long)vm->thread_raise_calls, vm->thread_raise_ms,
            (unsigned long long)vm->thread_raise_woken);
+    printf("lip        anim %llu call(s) id=%d mode=%d ; sync %llu call(s) "
+           "id=%d on=%d\n",
+           (unsigned long long)vm->lip_anim_calls, vm->lip_anim_id,
+           vm->lip_anim_mode, (unsigned long long)vm->lip_sync_calls,
+           vm->lip_sync_id, vm->lip_sync_on);
     /* GaijiLoad 21 / V3DMotion 142 */
     printf("gaiji      %llu call(s), size=%d name=%s / %s\n",
            (unsigned long long)vm->gaiji_calls, vm->gaiji_size,

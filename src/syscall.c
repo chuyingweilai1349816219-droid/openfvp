@@ -1653,6 +1653,18 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         t->blocked = 1;
         return;
     }
+    case 38: /* LipAnim(id 1..0xFFF, mode 0..3, …)：6 必填 + 2 可选 */
+        if (argc >= 6) {
+            (void)fvp_vm_lip_anim(vm, args, (int)argc);
+            return;
+        }
+        break;
+    case 39: /* LipSync(id 1..0xFFF, on)：原版只看第二参数是不是 null */
+        if (argc >= 1) {
+            (void)fvp_vm_lip_sync(vm, &args[0], argc >= 2 ? &args[1] : NULL);
+            return;
+        }
+        break;
     case 134: /* ThreadRaise(ms)：叫醒睡眠时长 == ms 的线程（原版 0x43 7B80） */
         if (argc >= 1) {
             (void)fvp_vm_thread_raise(vm, &args[0]);

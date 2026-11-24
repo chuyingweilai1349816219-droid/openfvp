@@ -250,6 +250,21 @@ def build_cases():
              expect_steps=3,
              expect_stdout_contains='threads    raise 1 call(s), '
                                     'last ms=100, woken 0'))
+    # LipSync(39)：2 个 push + syscall + ret = 4 步。第二参数非 null → on=1。
+    add(case('syscall-39-lipsync',
+             hcb(program(emit(0x0a, 1), emit(0x0a, 1), emit(0x03, 39),
+                         emit(0x04))), 100, expect_steps=4,
+             expect_stdout_contains='lip        anim 0 call(s) id=0 mode=0 ; '
+                                    'sync 1 call(s) id=1 on=1'))
+    # LipAnim(38)：argc 表是 8，脚本必须压满 8 个值（否则参数会错位）；
+    # 这里 arg7/arg8 压 0（落在 1..0xFFF 之外）→ 走"可选参数缺省 0"分支。
+    # 8 push + syscall + ret = 10 步。
+    add(case('syscall-38-lipanim',
+             hcb(program(*[emit(0x0a, v)
+                           for v in (7, 2, 10, 1000, 20, 2000, 0, 0)],
+                         emit(0x03, 38), emit(0x04))), 100, expect_steps=10,
+             expect_stdout_contains='lip        anim 1 call(s) id=7 mode=2 ; '
+                                    'sync 0 call(s) id=0 on=0'))
     # Snow(97) 是 18 参数大命令：18 个 push + syscall + ret = 20 步。参数取
     # handler 0x43C230 各条 cmp 的区间内部值，再从 fvm 汇总的自检行确认
     # 它真的被当成一条合法命令吃掉（而不是走 unknown cmds）。

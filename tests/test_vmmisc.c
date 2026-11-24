@@ -304,6 +304,80 @@ int main(void)
         a.thread_slots[5] = NULL;
     }
 
+    /* --- 4i. LipAnim(38) / LipSync(39) --- */
+    {
+        FvpValue a1[8];
+        FvpValue bad[8];
+        FvpValue id1 = fvp_make_int(1);
+        FvpValue id7 = fvp_make_int(7);
+        FvpValue id0 = fvp_make_int(0);
+        FvpValue id4096 = fvp_make_int(4096);
+        FvpValue on1 = fvp_make_int(1);
+        int i;
+
+        /* 8 个参数都落在 handler 0x43A6E0 的区间内 */
+        a1[0] = fvp_make_int(7);
+        a1[1] = fvp_make_int(2);
+        a1[2] = fvp_make_int(10);
+        a1[3] = fvp_make_int(1000);
+        a1[4] = fvp_make_int(20);
+        a1[5] = fvp_make_int(2000);
+        a1[6] = fvp_make_int(30);
+        a1[7] = fvp_make_int(3000);
+        for (i = 0; i < 8; ++i) {
+            bad[i] = a1[i];
+        }
+
+        CHECK(a.lip_anim_calls == 0 && a.lip_sync_calls == 0,
+              "fresh lip counters");
+        CHECK(fvp_vm_lip_anim(&a, a1, 6) == 1, "6 个必填参数 ok");
+        CHECK(a.lip_anim_calls == 1 && a.lip_anim_id == 7 &&
+              a.lip_anim_mode == 2, "记录 id/mode (%d/%d)", a.lip_anim_id,
+              a.lip_anim_mode);
+        CHECK(a.lip_anim_arg[3] == 1000 && a.lip_anim_arg[4] == 20 &&
+              a.lip_anim_arg[5] == 2000, "记录 arg4..arg6");
+        CHECK(a.lip_anim_arg[6] == 0 && a.lip_anim_arg[7] == 0,
+              "缺省的可选参数记 0");
+        CHECK(fvp_vm_lip_anim(&a, a1, 8) == 1, "8 个参数 ok");
+        CHECK(a.lip_anim_arg[6] == 30 && a.lip_anim_arg[7] == 3000,
+              "记录 arg7/arg8 (%d/%d)", a.lip_anim_arg[6],
+              a.lip_anim_arg[7]);
+
+        bad[0] = id0;
+        CHECK(fvp_vm_lip_anim(&a, bad, 8) == 0, "id 0 拒绝");
+        bad[0] = id4096;
+        CHECK(fvp_vm_lip_anim(&a, bad, 8) == 0, "id 4096 拒绝");
+        bad[0] = a1[0];
+        bad[1] = fvp_make_int(4);
+        CHECK(fvp_vm_lip_anim(&a, bad, 8) == 0, "mode 4 拒绝");
+        bad[1] = a1[1];
+        bad[3] = fvp_make_int(300001);
+        CHECK(fvp_vm_lip_anim(&a, bad, 8) == 0, "arg4 300001 拒绝");
+        bad[3] = a1[3];
+        bad[2] = fl;
+        CHECK(fvp_vm_lip_anim(&a, bad, 8) == 0, "float 参数拒绝");
+        CHECK(fvp_vm_lip_anim(&a, a1, 5) == 0, "只有 5 个参数拒绝");
+        CHECK(fvp_vm_lip_anim(&a, NULL, 8) == 0, "NULL args 拒绝");
+        CHECK(fvp_vm_lip_anim(NULL, a1, 8) == 0, "NULL vm 拒绝");
+        CHECK(a.lip_anim_calls == 2, "失败不进计数 (%llu)",
+              (unsigned long long)a.lip_anim_calls);
+
+        CHECK(fvp_vm_lip_sync(&a, &id1, &on1) == 1, "lip sync ok");
+        CHECK(a.lip_sync_calls == 1 && a.lip_sync_id == 1 &&
+              a.lip_sync_on == 1, "记录 id/on (%d/%d)", a.lip_sync_id,
+              a.lip_sync_on);
+        CHECK(fvp_vm_lip_sync(&a, &id7, NULL) == 1, "缺第二参数也生效");
+        CHECK(a.lip_sync_id == 7 && a.lip_sync_on == 0,
+              "缺参数按 on=0 记 (%d/%d)", a.lip_sync_id, a.lip_sync_on);
+        CHECK(fvp_vm_lip_sync(&a, &id0, &on1) == 0, "sync id 0 拒绝");
+        CHECK(fvp_vm_lip_sync(&a, &id4096, &on1) == 0, "sync id 4096 拒绝");
+        CHECK(fvp_vm_lip_sync(&a, &fl, &on1) == 0, "sync float id 拒绝");
+        CHECK(fvp_vm_lip_sync(&a, NULL, &on1) == 0, "sync NULL id 拒绝");
+        CHECK(fvp_vm_lip_sync(NULL, &id1, &on1) == 0, "sync NULL vm 拒绝");
+        CHECK(a.lip_sync_calls == 2, "sync 失败不进计数 (%llu)",
+              (unsigned long long)a.lip_sync_calls);
+    }
+
     /* --- 4e. SnowStart(98) / SnowStop(99) / PrimSetSnow(84) --- */
     {
         FvpValue l0 = fvp_make_int(0);

@@ -234,15 +234,15 @@ iroseka 的文本只推进到 **1,170 行**就停住了（`--click` 从 4000 调
 
 ```
 commands             148
-handler in a switch  145
+handler in a switch  147
 generic *Test rule   1
 documented no-op     0
-MISSING              2
+MISSING              0
 ```
 
-2 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
-
-`LipAnim(38) LipSync(39)`
+**0 条没有处理分支的命令**（2026-11-24：`LipAnim`(38) / `LipSync`(39) 落地后归零）。
+`1 条 generic *Test rule` 指的是 `*Test` 那类"查询是否进行中"的命令统一按
+`fvp_vm_*` 的查询接口处理，不单独占一条 switch 分支。
 
 已补齐的：`Rand(92)` / `TextRepaint(124)` / `Load(40)` / `SaveWrite(96)` /
 `TextFontCount`(114) / `TextFontGet`(115) / `TextFontName`(116) / `TextFontSet`(117) /
@@ -250,11 +250,11 @@ MISSING              2
 `CursorShow`(12) / `ExitDialog`(16) / `MovieStop`(63) /
 **`SnowStart`(98) / `SnowStop`(99) / `PrimSetSnow`(84)** /
 **`PartsMotion`(66) / `PartsMotionPause`(67) / `PartsMotionStop`(68) / `PartsRGB`(70) / `PrimGroupMove`(74)** /
-**`Snow`(97)** / **`ThreadRaise`(134)**（见 CHANGELOG）。
-剩下的只有 `LipAnim`(38) / `LipSync`(39)。
+**`Snow`(97)** / **`ThreadRaise`(134)** / **`LipAnim`(38) / `LipSync`(39)**（见 CHANGELOG）。
 
-脚本里有 `MISSING_BASELINE = 2` 当**棘轮**：缺口数一旦变大（有人删了 case 或换了
-生成表）脚本会报 REGRESSION；实现掉一条就把这个数改小。`run_all.py` 已经有这一步。
+脚本里有 `MISSING_BASELINE = 0` 当**棘轮**：缺口数一旦变大（有人删了 case 或换了
+生成表）脚本会报 REGRESSION。归零以后，`--strict` 也是绿的 —— 任何新缺口都会被立刻抓住。
 
 > 之前的说法"148 条里 146 条已实现"是把"实测调用过的命令"当成了全集，属于**口径错误**，
-> 本轮已在文档里更正为：**实测命中的命令 100% 有实现；按 id 静态审计是 145/148**。
+> 本轮已在文档里更正为：**实测命中的命令 100% 有实现；按 id 静态审计是 147/148**
+> （剩下 1 条是 `*Test` 通用规则覆盖的查询类命令）。

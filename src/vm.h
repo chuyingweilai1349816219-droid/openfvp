@@ -339,6 +339,32 @@ typedef struct FvpVM {
     uint64_t exit_dialog_calls;
     uint64_t movie_stop_calls;
 
+    /* LipAnim(38) / LipSync(39)：口型（lip sync）系统。静态分析：
+     *   `engine+0x683E74` 是 **4 个槽**的口型表（每槽 0x20 字节）：
+     *     +4 = 状态字节（0=空、1=停、2=播放中）
+     *     +8 = 槽号（0x42D700 释放时写回 engine+0x84 的空闲栈）
+     *     +0xa = i16 的 id
+     *   38 LipAnim(id 1..0xFFF, mode 0..3 **或 null**, arg3 1..0xFFF,
+     *              arg4 1..300000, arg5 1..0xFFF, arg6 1..300000,
+     *              [arg7 1..0xFFF, arg8 1..300000])
+     *      handler **0x43A6E0**：arg2 为 null → 只调 0x42D700(id) 停掉；
+     *      否则 arg1..arg6 必填、arg7/arg8 可选（缺省补 0），全过才
+     *      0x42EFA0(表, id, mode, …)：先停旧的，再从空闲栈挑一个槽写入 8 个参数
+     *      并置状态 1。
+     *   39 LipSync(id 1..0xFFF, on) → handler **0x43A830**：
+     *      `arg2.type == 0`（null）→ 0，否则 → 1，再 0x428870(表, id, on)：
+     *      在 4 个槽里按 id 找到条目，on → 状态字节 = 2，off → 0x4283A0 停 +
+     *      状态字节 = 1。
+     * 本站没有口型渲染，两条都只记录参数 + 计数。值模型没有 null，所以
+     * LipAnim 的"只停"分支与 LipSync 的 on=0 分支不可达（文档已注明）。 */
+    uint64_t lip_anim_calls;
+    uint64_t lip_sync_calls;
+    int lip_anim_id;      /* arg1 */
+    int lip_anim_mode;    /* arg2 */
+    int lip_anim_arg[8];  /* arg1..arg8 原值；可选参数缺省记 0 */
+    int lip_sync_id;      /* arg1 */
+    int lip_sync_on;      /* 1 = 非 null 参数（本站恒 1） */
+
     /* InputFlash(27) / InputGetRepeat(33) / InputSetClick(37)：输入微调。静态分析：
      *   27 InputFlash()        → handler 0x4376A0，`call 0x442400(engine+0x120)`，无返回值
      *   33 InputGetRepeat()    → handler 0x437860，**返回 int**（engine+0x448）
@@ -543,6 +569,13 @@ int fvp_vm_cursor_show(FvpVM *vm, const FvpValue *v);
 void fvp_vm_exit_dialog(FvpVM *vm);
 /* MovieStop(63)：没有视频在放 → 空操作，只计数。 */
 void fvp_vm_movie_stop(FvpVM *vm);
+
+/* LipAnim(38)：id 1..0xFFF + mode 0..3 + 四段区间校验（arg7/arg8 可选）。
+ * argc >= 6 才可能成立；返回 1 = 整条命令生效。 */
+int fvp_vm_lip_anim(FvpVM *vm, const FvpValue *args, int argc);
+/* LipSync(39)：id 1..0xFFF；on 为 NULL（第二参数缺失）时按 0 记。
+ * 返回 1 = 生效。 */
+int fvp_vm_lip_sync(FvpVM *vm, const FvpValue *id, const FvpValue *on);
 
 /* InputFlash(27)：只计数（原版 call 0x442400(engine+0x120)）。 */
 void fvp_vm_input_flash(FvpVM *vm);

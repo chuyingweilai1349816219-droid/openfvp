@@ -458,6 +458,24 @@ parts 表与 prim 表在引擎结构里是连着的：`0x61D064 + id*0x34`（64 
 而 0x651D70 也正是存档快照里 6 个 tween manager 的第一个（`docs/save-format.md`
 §2.4.4）——以后真做 parts 动画，可以直接复用 `src/motion.c` 的 `FvpTween`。
 
+### LipAnim(38) / LipSync(39)（**已实现：只记录参数**）
+
+`engine+0x683E74` 是**口型（lip sync）表**：**4 个槽**，每槽 `0x20` 字节，字段
+`+4` = 状态字节（**0 = 空、1 = 停、2 = 播放中**）、`+8` = 槽号（释放时写回
+`engine+0x84` 的空闲栈）、`+0xa` = i16 的 id。
+
+| id | 命令 | argc | 语义 / 证据 | 本站实现 |
+| ---: | --- | ---: | --- | --- |
+| 38 | LipAnim | 8 | handler **0x43A6E0**：arg1 int **1..0xFFF**；arg2 为 **null → 只停**（`0x42D700(id)`：按 id 找到槽、状态清 0、槽号进空闲栈、活跃计数 `engine+0x8C` 减一）；否则 arg2 int **0..3**（模式）、arg3 int **1..0xFFF**、arg4 int **1..300000**、arg5 int **1..0xFFF**（必填）、arg6 int **1..300000**（必填）、arg7 int **1..0xFFF** / arg8 int **1..300000**（**可选**，`0x43A7FE` 分支直接 push 0,0），全过才 `0x42EFA0(表, id, mode, …)`：先 `0x42D700` 停旧的，再从空闲栈取一个槽、状态置 1、把 8 个参数按 u16 写进槽 | `lip_anim_arg[8]` 记 arg1..arg8（可选缺省记 0）+ 计数；值模型没有 null，所以"只停"分支不可达（已在 CHANGELOG 注明） |
+| 39 | LipSync | 2 | handler **0x43A830**：arg1 int **1..0xFFF**；`cmpb $0x0,0x8` 只看第二参数**是不是 null**（null → 0、其它 → 1），再 `0x428870(表, id, on)`：在 4 个槽里按 id 匹配，**on → 状态字节 = 2**，**off → `0x4283A0` 停 + 状态字节 = 1** | 记 `lip_sync_id` / `lip_sync_on` + 计数；本站没有 null → on 恒 1 |
+
+两条的 **null 分支**都依赖"值类型 0 = null"，而本站值模型是
+`FVP_INT = 0 / FVP_FLOAT = 1 / FVP_STR = 2`（没有 null，`pushfalse` 也压 int 0），
+所以 `LipAnim` 只能走"启动"、`LipSync` 只能走 `on = 1` —— 与 `ControlMask` /
+`CursorShow` / `GraphLoad` 的 null 限制是同一类，不是新问题。
+
+实测 90 万步：两条都 **0 次调用**（`use = 0`），所以验证只能靠单测 + 合成脚本。
+
 ### Snow(97) / SnowStart(98) / SnowStop(99) / PrimSetSnow(84)（**已实现：只记录状态**）
 
 | id | 命令 | argc | 语义 / 证据 | 本站实现 |

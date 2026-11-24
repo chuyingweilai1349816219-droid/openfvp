@@ -1318,6 +1318,56 @@ void fvp_vm_movie_stop(FvpVM *vm)
     }
 }
 
+/* LipAnim(38) 的必填/可选区间，逐条来自 handler 0x43A6E0 的 cmp 序列。 */
+static const int lip_arg_min[8] = { 1, 0, 1, 1, 1, 1, 1, 1 };
+static const int lip_arg_max[8] = { 0xFFF, 3, 0xFFF, 300000, 0xFFF, 300000,
+                                    0xFFF, 300000 };
+
+int fvp_vm_lip_anim(FvpVM *vm, const FvpValue *args, int argc)
+{
+    int i;
+
+    if (vm == NULL || args == NULL || argc < 6) {
+        return 0;
+    }
+    for (i = 0; i < 6; ++i) {
+        if (!snow_int_in(&args[i], lip_arg_min[i], lip_arg_max[i])) {
+            return 0;
+        }
+    }
+    vm->lip_anim_calls += 1u;
+    vm->lip_anim_id = (int)args[0].i;
+    vm->lip_anim_mode = (int)args[1].i;
+    for (i = 0; i < 6; ++i) {
+        vm->lip_anim_arg[i] = (int)args[i].i;
+    }
+    /* arg7 / arg8：缺省或越界都补 0（原版 0x43A7FE 分支就是 push 0,0）。 */
+    for (i = 6; i < 8; ++i) {
+        vm->lip_anim_arg[i] = 0;
+        if (argc > i && snow_int_in(&args[i], lip_arg_min[i],
+                                    lip_arg_max[i])) {
+            vm->lip_anim_arg[i] = (int)args[i].i;
+        }
+    }
+    return 1;
+}
+
+int fvp_vm_lip_sync(FvpVM *vm, const FvpValue *id, const FvpValue *on)
+{
+    if (vm == NULL || id == NULL || id->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    if (id->i < 1 || id->i > 0xFFF) {
+        return 0;
+    }
+    vm->lip_sync_calls += 1u;
+    vm->lip_sync_id = (int)id->i;
+    /* 原版只看第二参数是不是 null（null → 0、其它 → 1）。本站值模型没有
+     * null，所以能走到这里的都算"非 null"；第二参数缺失时按 0 记。 */
+    vm->lip_sync_on = (on != NULL) ? 1 : 0;
+    return 1;
+}
+
 void fvp_vm_input_flash(FvpVM *vm)
 {
     if (vm != NULL) {

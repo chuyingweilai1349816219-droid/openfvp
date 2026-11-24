@@ -53,6 +53,34 @@
 
 ### 新增
 
+- **`LipAnim`(38) / `LipSync`(39) 落地 —— 静态命令缺口归零（2 → 0，148/148）**
+  - `engine+0x683E74` 是**口型表**：4 个槽，每槽 0x20 字节，`+4` = 状态字节
+    （**0 = 空 / 1 = 停 / 2 = 播放中**）、`+8` = 槽号（释放时写回 `engine+0x84` 的空闲栈）、
+    `+0xa` = i16 的 id
+  - `LipAnim(38)` handler **0x43A6E0**：arg1 int **1..0xFFF**；arg2 为 **null → 只停**
+    （`0x42D700(id)`：清状态、槽号进空闲栈、活跃计数 `engine+0x8C` 减一）；否则
+    arg2 int **0..3**（模式）、arg3 int **1..0xFFF**、arg4 int **1..300000**、
+    arg5 int **1..0xFFF**（必填）、arg6 int **1..300000**（必填）、
+    arg7 int **1..0xFFF** / arg8 int **1..300000**（**可选**，`0x43A7FE` 分支 push 0,0）；
+    全过才 `0x42EFA0(表, id, mode, …)`：先停旧的，再从空闲栈取槽、状态置 1、
+    8 个参数按 u16 写进槽
+  - `LipSync(39)` handler **0x43A830**：arg1 int **1..0xFFF**；`cmpb $0x0,0x8` 只看
+    第二参数**是不是 null**（null → 0、其它 → 1），再 `0x428870(表, id, on)`：
+    on → 状态字节 = 2，off → `0x4283A0` 停 + 状态字节 = 1
+  - 本站两条都只记录参数：`lip_anim_id/mode/arg[8]`、`lip_sync_id/on` + 两个计数；
+    外壳与 `fvm` 汇总多一行 `lip anim N call(s) id=… mode=… ; sync N call(s) id=… on=…`
+  - **已知限制（照实写）**：两条的 null 分支都依赖"值类型 0 = null"，本站值模型是
+    `FVP_INT=0 / FVP_FLOAT=1 / FVP_STR=2`（没有 null，`pushfalse` 也压 int 0），
+    所以 `LipAnim` 只能走"启动"、`LipSync` 只能走 `on = 1` —— 与 `ControlMask` /
+    `CursorShow` / `GraphLoad` 的 null 限制同类
+  - **`check-commands.py` 的 `MISSING_BASELINE` 从 2 改到 0，`--strict` 首次全绿**：
+    148 条命令里 147 条有显式处理分支、1 条落在通用 `*Test` 规则里、0 条缺口
+  - 单测 `tests/test_vmmisc.c` 2264 → **2290 项**（LipAnim 6/8 参数、每个必填参数越界、
+    可选参数缺省；LipSync 两个参数、缺第二参数按 0 记、越界与 NULL）；
+    `test_vm_edge.py` 51 → **53 例**（`syscall-38-lipanim`、`syscall-39-lipsync`，
+    断言汇总行）
+  - 实测 90 万步两条都 **0 次调用**（`use = 0`），验证来自单测 + 合成脚本
+
 - **`ThreadRaise`(134) 落地（缺口 3 → 2）**
   - handler **0x437B80**：arg1 **必须 int**，否则整条丢弃；然后对
     `engine+0x68DFC0 + i*0xB28`（i = 0..31，32 个协程槽）逐个调 **0x4447E0(ctx, ms)**
