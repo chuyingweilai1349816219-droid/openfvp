@@ -111,24 +111,48 @@ hoshimemo 51 处、sakura 65 处（`work/jmpcond_pred.py` 静态统计，官方�
 195 行输出变成 0 行**，所以必须连同比对表/未赋值 global 一起改，详见 `docs/roadmap.md`
 「值模型的第二步」。
 
-**比较 opcode 用哪张表、`sete` 还是 `setne`（2026-11 复核）**：四个 handler 除了这两点
-完全一样，表 A = `0x481450`、表 C = `0x481388`，两者的 int 比较器分别是
-`0x4450a0: cmp; setg`（"a > b"）和 `0x445200: cmp; setl`（"a < b"）：
+### 1.2.1 opcode 分发表（`0x4815E0`，40 项，`0x4463E0` 初始化）
 
-| opcode | handler | 表 | set 指令 |
-| --- | --- | --- | --- |
-| 0x24 | 0x445060 | A | `setne` |
-| 0x25 | 0x445180 | C | `sete` |
-| 0x26 | 0x4451c0 | C | `setne` |
-| 0x27 | 0x4452e0 | A | `sete` |
+解释器主循环 `0x4454D0` 附近就是 `call *(0x4815E0 + op*4)`。2026-11-24 把整张表读了出来：
 
-⚠️ **这里还差一步没能钉死**：表中"a/b"到底是"先压入的在前"还是"后压入的在前"，取决于
-handler 把哪个指针作为第一个参数传给比较器。按 cdecl（最后压入的是第一个参数）读出来
-是"先压入的在前"，据此 0x25 应为 `>=`、0x27 应为 `<=`；但**按这个把 0x25/0x27 对调之后，
-iroseka 90 万步的文本输出直接变成 0 行**（这两条在 90 万步里被执行 88,325 次：0x27 58,880 +
-0x25 29,445），而现在的实现跑出来是 195 行连贯台词。所以**现有实现的对应关系被实测反证为
-可用，静态分析这边还缺一个证据**（可能是参数顺序或比较器内部取值顺序），在这点上本站
-不改语义，只把矛盾如实记下来。
+```
+ 0 nop          0x41A550     10 pushint32   0x445A70     20 pushtemp    0x4449F0     30 mod        0x444DF0
+ 1 initstack    0x445890     11 pushint16   0x445AA0     21 popglobal   0x445DB0     31 test       0x444E40
+ 2 call         0x4458C0     12 pushint8    0x445AE0     22 copystack   0x445E00     32 logand     0x444E90
+ 3 syscall      0x445940     13 pushfloat   0x445B10     23 garr_write  0x446280     33 logor      0x444ED0
+ 4 ret          0x4448E0     14 pushstring  0x445B50     24 larr_write  0x446330     34 eq         0x444F10
+ 5 ret2         0x444900     15 pushglobal  0x445B90     25 neg         0x444A20     35 neq        0x445020
+ 6 jmp          0x445A10     16 pushstack   0x445C20     26 add         0x444A60     36 gt         0x445060
+ 7 jmpcond      0x445A30     17 garr_read   0x445CB0     27 sub         0x444C50     37 le         0x445180
+ 8 pushtrue     0x444940     18 larr_read   0x445D30     28 mul         0x444CE0     38 lt         0x4451C0
+ 9 pushfalse    0x444960     19 pushtop     0x444980     29 div         0x444D70     39 ge         0x4452E0
+```
+
+（顺序即本站 `ref/fvm_ref.py` 的 `OPDEF`；名字是我们起的，语义以 handler 为准。）
+
+**比较 opcode 用哪张表、`sete` 还是 `setne`（2026-11-24 钉死）**：六个 handler 除了
+"表 + setcc"两点外完全一样：
+
+| opcode | 名字（本站） | handler | 表 | setcc | 等价语义 |
+| --- | --- | --- | --- | --- | --- |
+| 0x22 | eq | `0x444f10` | C `0x481518` | `setne` | `a == b` |
+| 0x23 | neq | `0x445020` | C `0x481518` | `sete` | `a != b` |
+| 0x24 | gt | `0x445060` | B `0x481450` | `setne` | `a > b` |
+| 0x25 | le | `0x445180` | A `0x481388` | `sete` | **`!(a < b)` = `a >= b`** |
+| 0x26 | lt | `0x4451c0` | A `0x481388` | `setne` | `a < b` |
+| 0x27 | ge | `0x4452e0` | B `0x481450` | `sete` | **`!(a > b)` = `a <= b`** |
+
+表 A 的 int 比较器是 `0x445200: cmp; setl`（"a < b"），表 B 是
+`0x4450a0: cmp; setg`（"a > b"），表 C 是 `0x444fa0: cmp; sete`（"a == b"）。
+参数顺序也在 handler 里读死了：`push &b` 然后 `push &a`（cdecl → arg1 = **先压入的 a**、
+arg2 = 后压入的 b），所以比较器算的就是 `a OP b`。
+
+⚠️ **结论：按静态分析，opcode 0x25 其实是 `>=`、0x27 其实是 `<=`**，也就是本站在
+0x25/0x27 上的**名字/语义与静态分析相反**。旧版本文在这里写"按这个对调后 iroseka 输出
+变 0 行，所以不改"，现在把它写清楚：矛盾是真的存在的，不是读错——实测复现
+（`--bool-type` 里按上表实现 0x25/0x27）输出仍然是 **0 行**，所以这个矛盾只能靠
+**原版实机判据**来裁决，见 `docs/roadmap.md` 与 `docs/original-verification.md`。
+默认路径维持现状（195 行基准），不改。
 
 比较运算本身走 **7×7 类型对表**（三张并排：`0x481388` / `0x481450` / `0x481518`，
 每张 49 项、`索引 = a.type*7 + b.type`）。2026-11-24 把初始化器 `0x446580` 完整读了一遍：

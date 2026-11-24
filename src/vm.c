@@ -515,7 +515,24 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
         int c = vm->bool_type ? fvp_pair_cmp_faithful(&a, &b, &ok)
                               : fvp_value_cmp(&a, &b, &ok);
         int v = 0;
-        if (ok) {
+        if (vm->bool_type) {
+            /* 忠实模式下按静态分析的**真实**映射来（见 docs/vm-commands.md §1.2）：
+             *   0x24 gt = 表 B + setne → a > b
+             *   0x25    = 表 A + sete  → !(a < b) = a >= b   （不是"le"！）
+             *   0x26 lt = 表 A + setne → a < b
+             *   0x27    = 表 B + sete  → !(a > b) = a <= b   （不是"ge"！）
+             * 表外组合（null/true/异类型）的比较器返回 0，所以 sete 之后
+             * 0x25/0x27 在异类型上为**真**。 */
+            if (op == 0x24) {
+                v = ok ? (c > 0) : 0;
+            } else if (op == 0x25) {
+                v = ok ? (c >= 0) : 1;
+            } else if (op == 0x26) {
+                v = ok ? (c < 0) : 0;
+            } else {
+                v = ok ? (c <= 0) : 1;
+            }
+        } else if (ok) {
             if (op == 0x24) {
                 v = c > 0;
             } else if (op == 0x25) {

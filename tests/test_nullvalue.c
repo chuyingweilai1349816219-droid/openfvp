@@ -105,6 +105,26 @@ static const unsigned char kJmpNullHcb[17] = {
     0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
 };
 
+/* 最小 .hcb #5：pushint8 1 ; pushfalse ; le(0x25) ; ret
+ *   offset 4 : 0c 01   pushint8 1   → 6
+ *   offset 6 : 09      pushfalse    → 7
+ *   offset 7 : 25      le           → 8
+ *   offset 8 : 04      ret
+ * script_len = 9，main_start = 4。
+ *
+ * 0x25 在原版里是 **表 A + sete**，即 `!(a < b)`；而表外组合（int vs null）
+ * 比较器返回 0 → sete 得 1 → **真**。我们的默认模型按数值比较（null 当 0）
+ * 得 `1 <= 0` = 假。这就是"忠实模式下 0x25 其实是 a >= b"的直接体现。
+ */
+static const unsigned char kLeIntNullHcb[13] = {
+    0x09, 0x00, 0x00, 0x00,             /* script_len = 9 */
+    0x0c, 0x01,                         /* pushint8 1 */
+    0x09,                               /* pushfalse */
+    0x25,                               /* le (表 A + sete) */
+    0x04,                               /* ret */
+    0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
+};
+
 static int write_file(const char *path, const unsigned char *data, size_t len)
 {
     FILE *f = fopen(path, "wb");
@@ -413,6 +433,41 @@ static void test_bool_type_jmpcond(void)
         fvp_vm_free(&vm);
         fvp_hcb_free(&hcb);
         remove(p2);
+    }
+
+    /* le(1, null)：默认模型（按数值）假；忠实模型（表 A + sete）真 */
+    {
+        const char *p3 = "bin/_nullvalue_leintnull.hcb";
+        int v_off = -1;
+        int v_on = -1;
+
+        CHECK(write_file(p3, kLeIntNullHcb, sizeof(kLeIntNullHcb)) == 1,
+              "write le hcb");
+        if (!fvp_hcb_load(&hcb, p3, FVP_ENC_CP932, err, sizeof(err))) {
+            CHECK(0, "load le hcb: %s", err);
+            remove(p3);
+            return;
+        }
+        fvp_vm_init(&vm, &hcb, 1);
+        fvp_vm_start(&vm);
+        (void)fvp_vm_run(&vm, 3);
+        if (vm.cur != NULL && vm.cur->sp == 1) {
+            v_off = (int)vm.cur->stack[0].i;
+        }
+        CHECK(v_off == 0, "numeric le(1, null) is false (got %d)", v_off);
+        fvp_vm_free(&vm);
+
+        fvp_vm_init(&vm, &hcb, 1);
+        vm.bool_type = 1;
+        fvp_vm_start(&vm);
+        (void)fvp_vm_run(&vm, 3);
+        if (vm.cur != NULL && vm.cur->sp == 1) {
+            v_on = (int)vm.cur->stack[0].i;
+        }
+        CHECK(v_on == 1, "faithful le(1, null) is true (got %d)", v_on);
+        fvp_vm_free(&vm);
+        fvp_hcb_free(&hcb);
+        remove(p3);
     }
 }
 
