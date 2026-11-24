@@ -63,6 +63,7 @@ GAMES = [
          title=dict(profile='iroseka', align='right', pitch=100,
                     right_edge=1769, textures=0,
                     continue_enabled=True, save_list=6, bg='',
+                    logo='title_logo1', copyright='',
                     centres=[531, 631, 732, 831, 931])),
     dict(name='hoshimemo',  # 《星空的记忆 HD》
          dir=os.path.join(DOWNLOADS, 'hoshimemo_installed'),
@@ -73,7 +74,8 @@ GAMES = [
          title=dict(profile='hoshimemo', align='centre', pitch=90,
                     centre_x=960, textures=5,
                     continue_enabled=False, save_list=0,
-                    bg='title_bg1',
+                    bg='title_bg1', logo='title_logo1',
+                    copyright='title_copyright',
                     centres=[597, 687, 777, 867, 957])),
     dict(name='sakura',  # 《樱花，萌放。（さくら、もゆ。）》
          dir=os.path.join(DOWNLOADS, '樱花，萌放（さくら、もゆ。）'),
@@ -339,6 +341,19 @@ def stage_title_menu(shell, games, check):
                                         extra=['--title-menu'])
         check(rc_bg == 0, 'background run exit 0 (got %s)' % rc_bg)
 
+        # logo / 版权行：名字来自 profile，位置来自素材头里的 x/y
+        if t.get('logo'):
+            m = log_match(r"title: logo '([^']+)' loaded", log_bg)
+            check(m is not None and m.group(1) == t['logo'],
+                  'title logo %s loaded (%s)'
+                  % (t['logo'], m.group(0) if m else 'missing'))
+        if t.get('copyright'):
+            m = log_match(r"title: copyright '([^']+)' loaded", log_bg)
+            check(m is not None and m.group(1) == t['copyright'],
+                  'title copyright %s loaded (%s)'
+                  % (t['copyright'], m.group(0) if m else 'missing'))
+
+
         # 标题背景：有 bg 素材的作品要真的铺上（帧不再是黑的）
         if t.get('bg'):
             m = log_match(r"title: background '([^']+)' loaded",
@@ -372,9 +387,10 @@ def stage_title_menu(shell, games, check):
                   'title frame is mostly lit by the background (%d of %d)'
                   % (bright, total))
         else:
-            check(bright < total // 20,
-                  'title frame stays black without a background asset '
-                  '(%d of %d)' % (bright, total))
+            # 没有背景素材的作品：只有 logo（和文字菜单）是亮的，整帧仍是深色
+            check(bright < total // 3,
+                  'title frame stays mostly dark without a background asset '
+                  '(only the logo lights up: %d of %d)' % (bright, total))
         got_centres = []
         for i, cy in enumerate(t['centres']):
             minx, maxx, miny, maxy, cnt = ink_span(rows, cy - 34, cy + 40)

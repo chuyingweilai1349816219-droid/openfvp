@@ -1578,11 +1578,15 @@ static double perf_percentile(const PerfStats *p, double pct)
 static int title_textures_on;
 /* 标题画面背景是否装上（整屏图，画在菜单之前） */
 static int title_bg_on;
+static int title_logo_on;
+static int title_copy_on;
 /* --title-no-bg：只画菜单、不铺背景（几何测量/门禁用：背景的亮部会污染
  * 墨迹检测）。 */
 static int title_bg_disabled;
 /* 背景占用的图形槽 */
 #define TITLE_BG_SLOT 0x0FF0
+#define TITLE_LOGO_SLOT 0x0FF1
+#define TITLE_COPY_SLOT 0x0FF2
 
 /* 贴图占用的图形槽（脚本还没开始跑，用 0xF00 之后的高位，避免和脚本槽冲突） */
 #define TITLE_SLOT_BASE 0x0F00
@@ -1630,12 +1634,19 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
     if (gfx == NULL || m == NULL) {
         return;
     }
+    /* 背景 / logo / 版权行与"菜单用贴图还是文字"无关：先铺背景和 logo，
+     * 菜单项画完后再压版权行。位置都取自素材头里的 x/y。 */
+    if (title_bg_on) {
+        (void)gfx_draw_image_at(gfx, TITLE_BG_SLOT, 0, 0);
+    }
+    if (title_logo_on) {
+        int lx = 0;
+        int ly = 0;
+
+        (void)gfx_image_offset(gfx, TITLE_LOGO_SLOT, &lx, &ly);
+        (void)gfx_draw_image_at(gfx, TITLE_LOGO_SLOT, lx, ly);
+    }
     if (title_textures_on) {
-        /* 贴图模式：把装进图形槽的贴图直接贴到画布（render 之后画，
-         * 和文字覆盖层同一时机）。先用整屏背景铺底。 */
-        if (title_bg_on) {
-            (void)gfx_draw_image_at(gfx, TITLE_BG_SLOT, 0, 0);
-        }
         for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
             int ix = 0;
             int iy = 0;
@@ -1643,8 +1654,13 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
             if (prof == NULL || !prof->items[i].asset[0]) {
                 continue;
             }
-            if (!fvp_title_profile_image_pos(prof, i, &ix, &iy)) {
-                continue;
+            /* 素材头里自带摆放坐标（原版就是这么放的）→ 优先用它；
+             * 没有的话退回 profile 里按墨迹框反推的位置。 */
+            if (!gfx_image_offset(gfx, TITLE_SLOT_BASE + i, &ix, &iy) ||
+                (ix == 0 && iy == 0)) {
+                if (!fvp_title_profile_image_pos(prof, i, &ix, &iy)) {
+                    continue;
+                }
             }
             if (i == hover) {
                 int gw = 0;
@@ -1714,6 +1730,14 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
             }
             (void)gfx_draw_text_line(gfx, label, dx, y0, px, r, gr, b, 255);
         }
+    }
+    /* 版权行压在最上面（原版在屏幕底部） */
+    if (title_copy_on) {
+        int cx = 0;
+        int cy = 0;
+
+        (void)gfx_image_offset(gfx, TITLE_COPY_SLOT, &cx, &cy);
+        (void)gfx_draw_image_at(gfx, TITLE_COPY_SLOT, cx, cy);
     }
 #endif
 }
@@ -1909,6 +1933,22 @@ static int title_load_textures(Gfx *gfx, const FvpTitleProfile *prof)
         } else {
             fvp_logf("title: background '%s' failed to load",
                      prof->bg_asset);
+        }
+    }
+    if (prof->logo_asset[0] != '\0') {
+        if (gfx_graph_load(gfx, TITLE_LOGO_SLOT, prof->logo_asset) ==
+            0) {
+            title_logo_on = 1;
+            fvp_logf("title: logo '%s' loaded (slot 0x%X)",
+                     prof->logo_asset, TITLE_LOGO_SLOT);
+        }
+    }
+    if (prof->copyright_asset[0] != '\0') {
+        if (gfx_graph_load(gfx, TITLE_COPY_SLOT,
+                           prof->copyright_asset) == 0) {
+            title_copy_on = 1;
+            fvp_logf("title: copyright '%s' loaded (slot 0x%X)",
+                     prof->copyright_asset, TITLE_COPY_SLOT);
         }
     }
     return loaded;

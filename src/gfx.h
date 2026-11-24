@@ -338,6 +338,12 @@ int gfx_draw_image_at(Gfx *g, int slot, int x, int y);
 
 /* 取图形槽里那张图的像素尺寸（0 = 槽里没图）。UI 排发光层/按钮时要用。 */
 int gfx_image_size(const Gfx *g, int slot, int *w, int *h);
+
+/* 取图片头里自带的贴图坐标（HZC1 的 x/y）。引擎侧 UI 素材（标题 logo、
+ * 版权行、标题按钮）就把**摆放位置**存在这里 —— 原版渲染时 img.x/img.y
+ * 直接进坐标计算，所以这个值比"从截图反推的墨迹框"更准确。
+ * 返回 1 = 取到了，0 = 槽里没图。 */
+int gfx_image_offset(const Gfx *g, int slot, int *x, int *y);
 int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
                        int gr, int b, int alpha);
 void gfx_text_clear(Gfx *g, int layer);

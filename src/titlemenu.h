@@ -108,6 +108,9 @@ typedef struct FvpTitleProfile {
     /* 标题画面背景素材名（整屏 1920x1080）。空串 = 还没指认出来（iroseka 的
      * 白天背景仍未找到，见 docs/title-menu.md §4.1）。 */
     char bg_asset[FVP_TITLE_ASSET_MAX];
+    /* 标题 logo / 版权行的素材名（位置在各自图片头里，用 gfx_image_offset 取） */
+    char logo_asset[FVP_TITLE_ASSET_MAX];
+    char copyright_asset[FVP_TITLE_ASSET_MAX];
 } FvpTitleProfile;
 
 extern const FvpTitleProfile fvp_title_profile_iroseka;
