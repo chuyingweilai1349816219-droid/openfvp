@@ -356,7 +356,7 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | # | id | 命令 | argc | 参数（栈序） | 语义 | 关键证据 |
 |---|---|---|---|---|---|---|
 | 1 | 77 | PrimSetAlpha | 2 | (primId 1..0xFFF, alpha 0..255) | 设 primitive 透明度，写 `prim.alpha(+7)` | 0x437999-0x4379bd：`cmp $0x1000` / `cmpl $0xff` / `mov %dl,0x61dd6b(%eax,%ecx,1)`（=prim+7） |
-| 2 | 48 | MotionMove | 8 | (primId, x, y, z, ?, timeMs 1..300000, mode 1..5, flag≠0) | 位置移动动画；未给的坐标沿用 prim 当前 X/Y(+0x14/+0x16)，提交给 motion 管理器 engine+0x65ba54 | 0x43abfe/0x43ac0a/0x43ac1f 校验 arg6=时间、arg7=模式；0x43ac3b 读 `0x61dd78/0x61dd7a`；0x43ac94 `lea 0x65ba54(%ebp)` + call 0x42d560 |
+| 2 | 48 | MotionMove | 8 | (primId, x, y, z, ?, timeMs 1..300000, **mode 1..5**, flag≠0) | 位置移动动画；未给的坐标沿用 prim 当前 X/Y(+0x14/+0x16)，提交给 motion 管理器 engine+0x65ba54。**mode 1..5 的缓动曲线已解出**：跳表 `0x423154` → 5 个例程（0x422CB6/0x422D25/0x422DAF/0x422E37/0x422F8F），见 `docs/animation-baseline.md` §2.3 | 0x43abfe/0x43ac0a/0x43ac1f 校验 arg6=时间、arg7=模式；0x43ac3b 读 `0x61dd78/0x61dd7a`；0x43ac94 `lea 0x65ba54(%ebp)` + call 0x42d560（条目 28 字节，+4 存 mode） |
 | 3 | 42 | MotionAlpha | 6 | (primId, fromAlpha?, toAlpha?, timeMs 1..300000, mode? 0..1, flag≠0) | 透明度补间；from/to 省略则取 prim 当前 alpha(+7) | 0x43a8d6 校验 arg4=time；0x43a919/0x43a93f 读 `0x61dd6b`；0x43a97a `add $0x651e04,%ecx` + call 0x42d460 |
 | 4 | 50 | MotionMoveTest | 1 | (primId) | **返回 bool**：该 prim 的位置移动是否仍在进行 | 0x43ad13 call 0x4231a0(engine+0x65ba54,id) → `setne %al; mov %al,0x814(%esi)` |
 | 5 | 22 | GraphLoad | 2 | (graphSlot 0..0xFFF, filename 或 null) | 把图片文件读入图形槽 `engine+0x101064+slot*0x51c`；arg2 为 null 时清空/释放槽 | 0x43a358 `cmpb $0x0,0x8` → 0x424150(slot)（无文件名）；否则 type4/5 → 0x428bd0(slot, name, 0)，再 0x437330(engine+0x45c, slot) |

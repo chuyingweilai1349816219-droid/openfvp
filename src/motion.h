@@ -6,9 +6,9 @@
  *   MotionAlpha(primId, from?, to?, timeMs, mode?, flag)
  *   MotionMoveS2(primId, scaleX, scaleY, ?, ?, timeMs, mode, flag)
  *
- * 目前**只实现已确证的部分**：时间轴（开始 / 持续 / 结束）与线性插值。
- * `mode`（1..5）的缓动曲线语义**尚无证据**，所以原样存下来、按线性处理，并在文档
- * 里标为未解 —— 不猜曲线，免得写出一套看起来对、实际和原版不一样的动画。
+ * 目前实现：时间轴（开始 / 持续 / 结束）+ **mode 1..5 的缓动曲线**
+ * （`fvp_motion_ease()`；语义来自静态分析，证据级别见
+ * docs/animation-baseline.md §2.3）。
  *
  * 本模块不依赖 gfx / VM：入口是「毫秒时间戳 + 补间表」，出口是「当前值 / 是否还在跑」，
  * 所以可以直接单测，也方便以后接到别的时间源上。
@@ -39,7 +39,7 @@ typedef struct FvpTween {
     double to_y;
     double start_ms;
     double dur_ms;
-    int mode;        /* 引擎的 1..5，语义未解，原样保留 */
+    int mode;        /* 引擎的 1..5 缓动曲线，见 fvp_motion_ease() */
     int flag;
 } FvpTween;
 
@@ -65,6 +65,15 @@ void fvp_motion_advance(FvpMotion *m, double dt_ms);
 int fvp_motion_add(FvpMotion *m, int prim_id, int kind, double from_x,
                    double from_y, double to_x, double to_y, double dur_ms,
                    int mode, int flag);
+
+/* 缓动曲线：把线性进度 p(0..1) 映射成插值系数（0..1）。
+ *
+ * `mode` 的语义来自静态分析（handler 0x43ABD0 把 mode 存进补间条目 +4，
+ * 推进函数 0x422C10 用 `jmp *0x423154(,%eax,4)` 按 mode-1 分派到 5 个例程）：
+ *   1 = 线性、2 = 缓入（二次）、3 = 缓出（二次）、
+ *   4 = 缓入-缓出（以 d/2 分段）、5 = 先缓出后缓入（同样分段）
+ * mode 0 / 表外值按线性。细节与证据级别见 docs/animation-baseline.md §2.3。 */
+double fvp_motion_ease(int mode, double p);
 
 /* 取某条补间的当前值：还在跑或刚好跑完都算有效（跑完时给终值）。
  * 返回 1 = 有这条补间，0 = 没有。 */

@@ -155,6 +155,88 @@ int main(void)
         fvp_motion_clear(&m);
     }
 
+    /* 8. 缓动曲线 mode 1..5（fvp_motion_ease）：
+     *    端点、中点、单调性、以及各 mode 的形态特征。 */
+    {
+        int mode;
+        int bad_endpoint = 0;
+        int bad_mono = 0;
+        int bad_mid = 0;
+        const double mid_ok[6] = { 0.5, 0.5, 0.25, 0.75, 0.5, 0.5 };
+
+        for (mode = 1; mode <= 5; ++mode) {
+            int i;
+
+            CHECK(fvp_motion_ease(mode, 0.0) == 0.0, "mode %d 起点 0", mode);
+            CHECK(fvp_motion_ease(mode, 1.0) == 1.0, "mode %d 终点 1", mode);
+            CHECK(fvp_motion_ease(mode, -0.5) == 0.0, "mode %d p<0 钳到 0",
+                  mode);
+            CHECK(fvp_motion_ease(mode, 2.0) == 1.0, "mode %d p>1 钳到 1",
+                  mode);
+            if (fvp_motion_ease(mode, 0.5) != mid_ok[mode]) {
+                bad_mid += 1;
+                printf("FAIL mode %d mid=%g want %g\n", mode,
+                       fvp_motion_ease(mode, 0.5), mid_ok[mode]);
+            }
+            for (i = 0; i <= 100; ++i) {
+                double p0 = (double)i / 100.0;
+                double p1 = (double)(i + 1) / 100.0;
+
+                if (i < 100 &&
+                    fvp_motion_ease(mode, p1) < fvp_motion_ease(mode, p0)) {
+                    bad_mono += 1;
+                }
+            }
+            if (fvp_motion_ease(mode, 1.0001) != 1.0 ||
+                fvp_motion_ease(mode, 0.9999) > 1.0) {
+                bad_endpoint += 1;
+            }
+        }
+        CHECK(bad_mid == 0, "中点值全部正确（坏 %d 个）", bad_mid);
+        CHECK(bad_mono == 0, "5 条曲线都单调不减（坏 %d 个）", bad_mono);
+        CHECK(bad_endpoint == 0, "终点附近不越界（坏 %d 个）", bad_endpoint);
+
+        /* 形态特征：mode 2 起步慢（1/4 处 < 1/4）、mode 3 起步快（> 1/4）、
+         * mode 4 两端慢中间快（1/4 处 < 1/4 且 3/4 处 > 3/4）、
+         * mode 5 起步快（1/4 处 > 1/4）。 */
+        CHECK(fvp_motion_ease(2, 0.25) == 0.0625, "mode2 p=.25 -> .0625 (%g)",
+              fvp_motion_ease(2, 0.25));
+        CHECK(fvp_motion_ease(3, 0.25) == 0.4375, "mode3 p=.25 -> .4375 (%g)",
+              fvp_motion_ease(3, 0.25));
+        CHECK(fvp_motion_ease(4, 0.25) == 0.125, "mode4 p=.25 -> .125 (%g)",
+              fvp_motion_ease(4, 0.25));
+        CHECK(fvp_motion_ease(4, 0.75) == 0.875, "mode4 p=.75 -> .875 (%g)",
+              fvp_motion_ease(4, 0.75));
+        CHECK(fvp_motion_ease(5, 0.25) == 0.375, "mode5 p=.25 -> .375 (%g)",
+              fvp_motion_ease(5, 0.25));
+        CHECK(fvp_motion_ease(1, 0.25) == 0.25, "mode1 线性");
+        CHECK(fvp_motion_ease(0, 0.25) == 0.25, "mode 0 按线性");
+        CHECK(fvp_motion_ease(9, 0.25) == 0.25, "表外 mode 也按线性");
+
+        /* 端到端：mode 2（缓入）在 25% 时间点只走了 6.25% 的距离。 */
+        fvp_motion_clear(&m);
+        {
+            int e2 = fvp_motion_add(&m, 21, FVP_TWEEN_MOVE_XY, 0.0, 0.0, 400.0,
+                                    1000.0, 1000.0, 2, 1);
+            int e4 = fvp_motion_add(&m, 22, FVP_TWEEN_MOVE_XY, 0.0, 0.0, 400.0,
+                                    1000.0, 1000.0, 4, 1);
+
+            CHECK(e2 > 0 && e4 > 0, "add easing tweens");
+            fvp_motion_advance(&m, 250.0);
+            CHECK(fvp_motion_value(&m, e2, &x, &y) == 1, "mode2 value");
+            CHECK(x == 25.0 && y == 62.5, "mode2 25%% -> (25,62.5) 实得 (%g,%g)",
+                  x, y);
+            CHECK(fvp_motion_value(&m, e4, &x, &y) == 1, "mode4 value");
+            CHECK(x == 50.0 && y == 125.0, "mode4 25%% -> (50,125) 实得 (%g,%g)",
+                  x, y);
+            fvp_motion_advance(&m, 750.0);
+            CHECK(fvp_motion_value(&m, e2, &x, &y) == 1, "mode2 end");
+            CHECK(x == 400.0 && y == 1000.0, "mode2 终点 (400,1000) 实得 (%g,%g)",
+                  x, y);
+        }
+        fvp_motion_clear(&m);
+    }
+
     fvp_motion_free(&m);
     printf("\ntest_motion: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
