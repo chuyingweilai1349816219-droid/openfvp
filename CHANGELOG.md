@@ -53,6 +53,20 @@
 
 ### 新增
 
+- **标题菜单接进桌面外壳（`--title-menu`）**
+  - 启动后先画引擎侧标题菜单并等输入：点 `New Game`（或回车）才 `fvp_vm_start()`，
+    `Exit` 关窗口，`Continue`/`Album`/`Option` 先只记录（还没有存档界面/相册/设置页）
+  - 鼠标用外壳已有的 `canvas_x/canvas_y`（1920×1080 客户坐标），命中复用
+    `fvp_title_move/hit/click`；悬停项高亮、不可用项压暗
+  - **顺序坑**：`gfx_render()` 会按图元/文本窗口重建画布，菜单覆盖层必须在 render
+    **之后**画；截图路径也要补画一次（否则 `--screenshot` 截出来是全黑）
+  - 实测对照（同一套度量方法，原版 vs 本引擎）：墨迹右边界 **1766..1768 vs 1768/1769**
+    （差 ≤3 px）、行距 **100 vs 100**、首项墨迹带上沿 516 vs 511（内建字形 bearing）、
+    墨迹高 45（`Option` 含降部 52）vs 40..42（字体不同：内建位图 vs 原版衬线体）；
+    左边界因字宽不同必然不同，**右对齐才是硬指标**
+  - 汇总多一行 `title menu enabled (5 item(s) right-aligned to x=1769, pitch 100, picked ...)`
+  - `docs/title-menu.md` §2.2 + `docs/win32-shell.md` 选项表已更新
+
 - **标题菜单的像素级渲染验证**（`gfx_text_width`/`gfx_draw_text_line` +
   `tests/test_titlemenu_draw.c`）
   - gfx 新增两个引擎侧 UI 用的 API：任意位置/任意字号画一行、量一行宽；

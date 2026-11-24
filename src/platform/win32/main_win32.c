@@ -40,6 +40,7 @@
 #include "win32_audio.h"
 #include "win32_log.h"
 #include "win32_window.h"
+#include "../../titlemenu.h"
 
 #define FVP_WIN32_VERSION "0.1"
 #define FVP_CANVAS_W 1920
@@ -106,6 +107,7 @@ typedef struct Options {
     int unknown_all; /* --unknown-all: 退出总结打印全部未实现命令 */
     int typewriter; /* --typewriter: 逐字显示（默认关，关时像素基准不变） */
     int text_prims; /* --text-prims: 按文本图元（PrimSetText 86）定位，默认关 */
+    int title_menu; /* --title-menu: 先显示引擎侧标题菜单，选了 New Game 才跑脚本 */
 } Options;
 
 /* ------------------------------------------------------------------ */
@@ -418,6 +420,8 @@ static const wchar_t *usage_text(void)
             L"  --unknown-all       退出总结打印全部未实现命令（默认只打 top 12）\n"
             L"  --typewriter        逐字显示文本（按 TextSpeed，默认关；关时像素基准不变）\n"
            L"  --text-prims        文本窗口画在 PrimSetText(86) 绑定的图元位置上（默认关）\n"
+           L"  --title-menu        先显示引擎侧标题菜单（New Game/Continue/Album/Option/Exit），\n"
+           L"                      选 New Game 才开始跑脚本（默认关；几何按原版实测）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --startup-trace FILE 把启动各阶段写进 FILE（日志打开之前也能落盘，\n"
@@ -659,6 +663,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->typewriter = 1;
         } else if (wcscmp(a, L"--text-prims") == 0) {
             o->text_prims = 1;
+        } else if (wcscmp(a, L"--title-menu") == 0) {
+            o->title_menu = 1;
         } else if (wcscmp(a, L"--tex-cache-mb") == 0) {
             NEED_VALUE();
             if (!parse_int_w(v, &o->tex_cache_mb) || o->tex_cache_mb < 0 ||
@@ -1538,6 +1544,68 @@ static double perf_percentile(const PerfStats *p, double pct)
 }
 
 /* ------------------------------------------------------------------ */
+/* 引擎侧标题菜单（--title-menu）                                       */
+/* ------------------------------------------------------------------ */
+
+/* 量宽回调：走 gfx 的字体，保证"量"和"画"用同一套字形。 */
+static int title_measure(void *ctx, const char *utf8, int px, int *width)
+{
+#ifdef FVP_STUB_GFX
+    (void)ctx;
+    (void)utf8;
+    (void)px;
+    (void)width;
+    return 0;
+#else
+    Gfx *g = (Gfx *)ctx;
+    int w;
+
+    if (g == NULL) {
+        return 0;
+    }
+    w = gfx_text_width(g, utf8, px);
+    if (w <= 0) {
+        return 0;
+    }
+    *width = w;
+    return 1;
+#endif
+}
+
+/* 把菜单画到当前画布上。必须**在 gfx_render() 之后**调用——render 会按图元/
+ * 文本窗口重建画布，先画会被抹掉（见 docs/title-menu.md §2.1）。 */
+static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m)
+{
+#ifdef FVP_STUB_GFX
+    (void)gfx;
+    (void)m;
+#else
+    int i;
+
+    if (gfx == NULL || m == NULL) {
+        return;
+    }
+    for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+        int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+        int hovered = (i == m->hover);
+        int r = hovered ? 255 : 235;
+        int gr = hovered ? 250 : 235;
+        int b = hovered ? 255 : 240;
+
+        if (!m->enabled[i]) {
+            r = gr = b = 120; /* 不可用项压暗（例如没存档时的 Continue） */
+        }
+        if (!fvp_title_item_rect(m, i, title_measure, gfx, &x0, &y0, &x1,
+                                 &y1)) {
+            continue;
+        }
+        (void)gfx_draw_text_line(gfx, fvp_title_label(i), x0, y0, m->font_px, r,
+                                 gr, b, 255);
+    }
+#endif
+}
+
+/* ------------------------------------------------------------------ */
 /* WinMain                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -1593,6 +1661,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     double last_preview_at = 0.0;
     int preview_seq = 0;
     int exit_script = 0;
+    FvpTitleMenu title;
+    int title_active = 0;
+    int title_picked = -1;
+    double title_shown_at = 0.0;
     double last_report = 0.0;
     PerfStats perf;
     PerfStats wperf; /* 本周期 5 s 窗口内的统计（周期报告用，见 perf_clear） */
@@ -1653,6 +1725,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         return parsed == 1 ? 0 : 2;
     }
     verbose = opts.verbose;
+    /* 标题菜单状态：几何先按原版实测初始化好，--title-menu 打开时才启用。 */
+    fvp_title_init(&title);
+    title_active = opts.title_menu;
 
     /* 存档字符串编码：显式 --save-encoding 优先，否则跟随脚本编码。 */
     save_enc = (opts.enc_mode == ENC_GBK) ? FVP_ENC_GBK : FVP_ENC_CP932;
@@ -1805,8 +1880,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             free(save_path);
         }
     }
-    fvp_vm_start(&vm);
-    fvp_logf("vm: started at pc=0x%x (quiet text capture)", hcb.main_start);
+    if (opts.title_menu) {
+        /* 引擎侧标题菜单：先不启动脚本，等用户在菜单里选 New Game。 */
+        fvp_logf("title: engine-side menu enabled (script starts on New Game)");
+    } else {
+        fvp_vm_start(&vm);
+        fvp_logf("vm: started at pc=0x%x (quiet text capture)",
+                 hcb.main_start);
+    }
 
     snd = snd_create(48000, 2);
     if (snd == NULL) {
@@ -2046,6 +2127,37 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         click_edges = in->mouse_pressed + in->key_pressed;
         in->mouse_pressed = 0;
         in->key_pressed = 0;
+        /* 引擎侧标题菜单：菜单在的时候点击/回车归菜单用，不喂给 VM。 */
+        if (title_active) {
+            int pick = -1;
+
+            (void)fvp_title_move(&title, vm.cx, vm.cy, title_measure, gfx);
+            if (click_edges > 0) {
+                pick = fvp_title_click(&title, vm.cx, vm.cy, title_measure,
+                                       gfx);
+                if (pick < 0 && title.hover >= 0) {
+                    pick = title.hover;
+                }
+            }
+            if (pick < 0 && in->key_down && title.hover < 0) {
+                pick = FVP_TITLE_NEW_GAME; /* 回车且没悬停：直接开新游戏 */
+            }
+            if (pick >= 0) {
+                title_picked = pick;
+                title_active = 0;
+                fvp_logf("title: picked %s (item %d at %d ms)",
+                         fvp_title_label(pick), pick,
+                         (int)((now - title_shown_at) * 1000.0));
+                if (pick == FVP_TITLE_EXIT) {
+                    win.quit = 1;
+                } else {
+                    fvp_vm_start(&vm);
+                    fvp_logf("vm: started at pc=0x%x (from title menu)",
+                             hcb.main_start);
+                }
+            }
+            click_edges = 0;
+        }
         if (click_edges > 0) {
             want_skip_text = 1;
             click_flash = 10;
@@ -2172,6 +2284,15 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         {
             double r0 = now_sec();
             gfx_render(gfx);
+            /* 标题菜单是引擎侧 UI 覆盖层，必须在 render 之后画。 */
+            if (title_active) {
+                if (title_shown_at == 0.0) {
+                    title_shown_at = now;
+                    fvp_title_init(&title);
+                    title.font_px = 56; /* 实测：墨迹高 40..42 → 字号 56 */
+                }
+                title_draw_overlay(gfx, &title);
+            }
             canvas = gfx_canvas(gfx, &cw, &ch);
             render_ms = (now_sec() - r0) * 1000.0;
         }
@@ -2278,6 +2399,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         int ch = FVP_CANVAS_H;
         const uint32_t *canvas;
         gfx_render(gfx);
+        /* 截图也要带上引擎侧 UI 覆盖层（和屏幕上看到的一致）。 */
+        if (title_active) {
+            title_draw_overlay(gfx, &title);
+        }
         canvas = gfx_canvas(gfx, &cw, &ch);
         if (canvas != NULL && opts.screenshot[0] != L'\0') {
             write_bmp32(opts.screenshot, canvas, cw, ch);
@@ -2375,6 +2500,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         APPEND("text prims     %d drawn, %d bound (PrimSetText 86, --text-prims %s)\n",
                gfx_stats(gfx)->text_prims, gfx_text_prim_bindings(gfx),
                opts.text_prims ? "on" : "off");
+        APPEND("title menu     %s (%d item(s) right-aligned to x=%d, pitch %d, "
+               "picked %s)\n", opts.title_menu ? "enabled" : "off",
+               FVP_TITLE_ITEMS, title.x_right, title.pitch,
+               title_picked >= 0 ? fvp_title_label(title_picked) : "-");
         if (gfx_stats(gfx)->ntofu_cp > 0) {
             int ti;
 

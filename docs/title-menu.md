@@ -91,6 +91,33 @@ int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px,
 
 `make check` 现在跑 23 个单测。
 
+### 2.2 外壳接线（`--title-menu`）与实测对照
+
+桌面外壳新增 `--title-menu`：启动后**不**立刻跑脚本，而是画标题菜单并等输入；
+点 `New Game`（或回车）才 `fvp_vm_start()`，点 `Exit` 关窗口，
+`Continue`/`Album`/`Option` 目前只记录（还没有存档界面/相册/设置页）。
+鼠标位置用外壳已有的 `canvas_x/canvas_y`（1920×1080 客户坐标），
+命中判定直接复用 `fvp_title_move/hit/click`。
+
+```powershell
+fvp.exe --game <游戏目录> --script iroseka.hcb --title-menu --run-seconds 3 `
+        --no-audio --scale 1 --screenshot out\title-ours.bmp
+python work\measure_ours.py out\title-ours.png
+```
+
+同一套度量方法量我们自己画的标题菜单（1920×1080 画布，白字黑底）：
+
+| 项目 | 原版实测 | 本引擎实测 | 差 |
+|---|---|---|---|
+| 墨迹右边界 | 1768 / 1769 | **1766..1768** | ≤ 3 px（右对齐列一致） |
+| 行距（相邻项中心差） | 100 ± 1 | **100**（538→638→738→938） | 0 |
+| 墨迹带 y（首项） | 511..552 | 516..560 | 上沿 +5（内建字形 bearing） |
+| 墨迹高 | 40..42 | 45（`Option` 含降部 52） | 字体不同：内建位图 vs 原版衬线体 |
+| 左边界 | 与字宽相关（1461..1662） | 1546..1659 | 字体不同必然不同，**右对齐才是硬指标** |
+
+注意：`gfx_render()` 会按图元/文本窗口重建画布，所以菜单覆盖层必须在
+**render 之后**画；截图路径同理（`--screenshot` 里也要补画一次，否则截出来是黑的）。
+
 ---
 
 ## 3. 还差什么（按顺序）
