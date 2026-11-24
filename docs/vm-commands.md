@@ -438,6 +438,14 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### InputFlash(27) / InputGetRepeat(33) / InputSetClick(37)（**已实现**）
+
+| id | 命令 | argc | 语义 / 证据 | 本站实现 |
+| ---: | --- | ---: | --- | --- |
+| 27 | InputFlash | 0 | handler **0x4376A0**：`call 0x442400(engine+0x120)`，无返回值 | 只计数（原版"闪屏"的视觉没有证据） |
+| 33 | InputGetRepeat | 0 | handler **0x437860**：**返回 int** = `engine+0x448` | 返回记录的 `input_repeat`（默认 0，与原版初始化值一致） |
+| 37 | InputSetClick | 1 | handler **0x437920**：参数必须是 int 且只能是 **0 或 1**，写 `engine+0x438`；其它值整条忽略 | 按 0/1 校验后存 `input_click` |
+
 ### MotionPause(60) / TextPause(121)（**已实现：暂停字节，TextPause 会真的停住打字机**）
 
 | id | 命令 | argc | 语义 / 证据 |

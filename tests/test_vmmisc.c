@@ -85,6 +85,35 @@ int main(void)
     CHECK(a.text_repaint_calls == 2, "repaint counter (%llu)",
           (unsigned long long)a.text_repaint_calls);
 
+    /* --- 4c. InputFlash(27) / InputGetRepeat(33) / InputSetClick(37) --- */
+    {
+        FvpValue on1 = fvp_make_int(1);
+        FvpValue on2 = fvp_make_int(2);
+        FvpValue off0 = fvp_make_int(0);
+
+        CHECK(a.input_click == 0u && a.input_repeat == 0,
+              "fresh input state (click=%u repeat=%d)",
+              (unsigned)a.input_click, a.input_repeat);
+        CHECK(fvp_vm_input_repeat(&a) == 0, "repeat default 0");
+        CHECK(fvp_vm_input_set_click(&a, &on1) == 1, "set click 1");
+        CHECK(a.input_click == 1u, "click = 1 (%u)", (unsigned)a.input_click);
+        CHECK(fvp_vm_input_set_click(&a, &off0) == 1, "set click 0");
+        CHECK(a.input_click == 0u, "click = 0");
+        CHECK(fvp_vm_input_set_click(&a, &on2) == 0, "click 2 rejected");
+        CHECK(a.input_click == 0u, "click unchanged after reject");
+        CHECK(fvp_vm_input_set_click(&a, &fl) == 0, "float click rejected");
+        CHECK(fvp_vm_input_set_click(&a, NULL) == 0, "NULL click rejected");
+        CHECK(a.input_setclick_calls == 2, "setclick counter (%llu)",
+              (unsigned long long)a.input_setclick_calls);
+        CHECK(fvp_vm_input_set_click(NULL, &on1) == 0, "NULL vm setclick");
+        fvp_vm_input_flash(&a);
+        fvp_vm_input_flash(&a);
+        CHECK(a.input_flash_calls == 2, "flash counter (%llu)",
+              (unsigned long long)a.input_flash_calls);
+        fvp_vm_input_flash(NULL);
+        CHECK(fvp_vm_input_repeat(NULL) == 0, "NULL vm repeat");
+    }
+
     /* --- 4a. MotionPause(60) / TextPause(121) --- */
     {
         FvpValue p2 = fvp_make_int(2);

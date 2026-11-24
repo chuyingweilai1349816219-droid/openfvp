@@ -1705,6 +1705,19 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     /* 60 MotionPause(primId 0..0xFFF, on 0..1)：handler 0x43AB60 → prim+9。
      * 121 TextPause(twIdx 0..31, on 0..1)：handler 0x43C9C0 → tw+0x5DA，
      *     同时转给 gfx（打字机推进时跳过暂停的窗口）。 */
+    /* 27 InputFlash() / 33 InputGetRepeat() / 37 InputSetClick(v 0/1)。 */
+    case 27:
+        fvp_vm_input_flash(vm);
+        return;
+    case 33:
+        t->temp = fvp_make_int(fvp_vm_input_repeat(vm));
+        return;
+    case 37:
+        if (argc >= 1) {
+            (void)fvp_vm_input_set_click(vm, &args[0]);
+            return;
+        }
+        break;
     case 60:
         if (argc >= 2) {
             (void)fvp_vm_motion_pause(vm, &args[0], &args[1]);

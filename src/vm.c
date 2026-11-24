@@ -1094,6 +1094,31 @@ static char *arena_cstr(FvpVM *vm, const FvpValue *v)
     return (char *)s->data;
 }
 
+void fvp_vm_input_flash(FvpVM *vm)
+{
+    if (vm != NULL) {
+        vm->input_flash_calls += 1u;
+    }
+}
+
+int fvp_vm_input_repeat(const FvpVM *vm)
+{
+    return vm == NULL ? 0 : vm->input_repeat;
+}
+
+int fvp_vm_input_set_click(FvpVM *vm, const FvpValue *v)
+{
+    if (vm == NULL || v == NULL || v->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    if (v->i != 0 && v->i != 1) {
+        return 0;
+    }
+    vm->input_setclick_calls += 1u;
+    vm->input_click = (unsigned char)v->i;
+    return 1;
+}
+
 static int on_off_of(const FvpValue *v, int *out)
 {
     if (v == NULL || v->type != (uint8_t)FVP_INT) {

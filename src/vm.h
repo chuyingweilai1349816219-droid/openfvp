@@ -274,6 +274,17 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* InputFlash(27) / InputGetRepeat(33) / InputSetClick(37)：输入微调。静态分析：
+     *   27 InputFlash()        → handler 0x4376A0，`call 0x442400(engine+0x120)`，无返回值
+     *   33 InputGetRepeat()    → handler 0x437860，**返回 int**（engine+0x448）
+     *   37 InputSetClick(v)    → handler 0x437920，v 必须是 int 0 或 1，写 engine+0x438
+     * 本站：Flash 只计数（原版那一下"闪屏"的视觉没有证据）；GetRepeat 返回记录值
+     * （默认 0，和原版初始化一致）；SetClick 按 0/1 校验后存值。 */
+    unsigned char input_click; /* engine+0x438：0/1 */
+    int input_repeat;          /* engine+0x448：默认 0 */
+    uint64_t input_flash_calls;
+    uint64_t input_setclick_calls;
+
     /* MotionPause(60) / TextPause(121)：两条都是"暂停字节"。静态分析：
      *   MotionPause(primId 0..0xFFF, on 0..1) → handler 0x43AB60 写 `prim+9`
      *   TextPause(twIdx 0..31, on 0..1)       → handler 0x43C9C0 写 `tw+0x5DA`
@@ -433,6 +444,13 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* InputFlash(27)：只计数（原版 call 0x442400(engine+0x120)）。 */
+void fvp_vm_input_flash(FvpVM *vm);
+/* InputGetRepeat(33)：返回 engine+0x448 的记录值（默认 0）。 */
+int fvp_vm_input_repeat(const FvpVM *vm);
+/* InputSetClick(37)：arg 必须是 int 0/1；返回 1 = 生效。 */
+int fvp_vm_input_set_click(FvpVM *vm, const FvpValue *v);
+
 /* MotionPause(60)：primId 0..0xFFF + on 0..1；返回 1 = 生效。 */
 int fvp_vm_motion_pause(FvpVM *vm, const FvpValue *prim, const FvpValue *on);
 /* TextPause(121)：twIdx 0..31 + on 0..1；返回 1 = 生效。 */

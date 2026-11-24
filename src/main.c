@@ -235,6 +235,10 @@ static void fvp_print_summary(const FvpVM *vm)
            (unsigned long long)vm->control_calls[1],
            (unsigned long long)vm->control_calls[2],
            (unsigned long long)vm->control_calls[3]);
+    printf("input      click=%d repeat=%d flash=%llu setclick=%llu\n",
+           (int)vm->input_click, vm->input_repeat,
+           (unsigned long long)vm->input_flash_calls,
+           (unsigned long long)vm->input_setclick_calls);
     printf("pause      text %llu call(s), motion %llu call(s)\n",
            (unsigned long long)vm->text_pause_calls,
            (unsigned long long)vm->motion_pause_calls);

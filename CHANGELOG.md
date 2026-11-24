@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **`InputFlash`(27) / `InputGetRepeat`(33) / `InputSetClick`(37) 落地（缺口 18 → 15）**
+  - `InputFlash()`：handler **0x4376A0**，`call 0x442400(engine+0x120)`，无返回值 → 只计数
+  - `InputGetRepeat()`：handler **0x437860**，**返回 int**（`engine+0x448`）→ 返回记录值（默认 0）
+  - `InputSetClick(v)`：handler **0x437920**，v 必须 int 且只能是 0/1，写 `engine+0x438`
+  - 单测 `tests/test_vmmisc.c` 2135 → **2149 项**；两个外壳汇总多一行 `input click=… repeat=…`
+  - `scripts/check-commands.py` 棘轮 18 → **15**；门禁全绿（`compare` 字节一致、
+    `verify_gfx` 293 px / PSNR 49.94 / SSIM 0.99971 不变）
+  - **附：存档快照的第二个锚点也失败了** —— 用 prim 数组（4096×0x34）当锚点，
+    numpy 稀疏采样筛出 103,163 个候选、全量校验后**没有**一个能凑出 ≥3 条"活的" prim。
+    已把失败原因与下一个锚点（32 个协程上下文，`0x68DFC0..0x6A44C0` 正好 0x16500 字节，
+    与调色板首尾相接）写进 `docs/save-format.md`
+
 - **`MotionPause`(60) / `TextPause`(121) 落地（缺口 20 → 18）**
   - `MotionPause(primId 0..0xFFF, on 0..1)`：handler **0x43AB60**，写 `prim+9`（暂停字节）
   - `TextPause(twIdx 0..31, on 0..1)`：handler **0x43C9C0**，写 `tw+0x5DA`

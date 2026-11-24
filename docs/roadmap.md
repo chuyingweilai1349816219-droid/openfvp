@@ -234,22 +234,23 @@ iroseka 的文本只推进到 **1,170 行**就停住了（`--click` 从 4000 调
 
 ```
 commands             148
-handler in a switch  129
+handler in a switch  132
 generic *Test rule   1
 documented no-op     0
-MISSING              18
+MISSING              15
 ```
 
-18 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
+15 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
 
-`CursorShow(12) ExitDialog(16) InputFlash(27) InputGetRepeat(33) InputSetClick(37)
-LipAnim(38) LipSync(39) MovieStop(63) PartsMotion(66) PartsMotionPause(67)
-PartsMotionStop(68) PartsRGB(70) PrimGroupMove(74) PrimSetSnow(84) Snow(97)
-SnowStart(98) SnowStop(99) ThreadRaise(134)`
+`CursorShow(12) ExitDialog(16) LipAnim(38) LipSync(39) MovieStop(63)
+PartsMotion(66) PartsMotionPause(67) PartsMotionStop(68) PartsRGB(70)
+PrimGroupMove(74) PrimSetSnow(84) Snow(97) SnowStart(98) SnowStop(99)
+ThreadRaise(134)`
 
 已补齐的：`Rand(92)` / `TextRepaint(124)` / `Load(40)` / `SaveWrite(96)` /
 `TextFontCount`(114) / `TextFontGet`(115) / `TextFontName`(116) / `TextFontSet`(117) /
-**`MotionPause`(60) / `TextPause`(121)**（见 CHANGELOG）。
+**`MotionPause`(60) / `TextPause`(121)** / **`InputFlash`(27) / `InputGetRepeat`(33) /
+`InputSetClick`(37)**（见 CHANGELOG）。
 剩下的都是 Snow/Lip/Movie/Parts 这类特效与输入微调命令。
 
 脚本里有 `MISSING_BASELINE = 28` 当**棘轮**：缺口数一旦变大（有人删了 case 或换了
