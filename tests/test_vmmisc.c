@@ -85,6 +85,98 @@ int main(void)
     CHECK(a.text_repaint_calls == 2, "repaint counter (%llu)",
           (unsigned long long)a.text_repaint_calls);
 
+    /* --- 4f. PartsMotion(66/67/68) / PartsRGB(70) / PrimGroupMove(74) --- */
+    {
+        FvpValue p0 = fvp_make_int(0);
+        FvpValue p1 = fvp_make_int(1);
+        FvpValue p63 = fvp_make_int(63);
+        FvpValue p64 = fvp_make_int(64);
+        FvpValue on1 = fvp_make_int(1);
+        FvpValue on2 = fvp_make_int(2);
+        FvpValue n50 = fvp_make_int(50);
+        FvpValue n200 = fvp_make_int(200);
+        FvpValue n201 = fvp_make_int(201);
+        FvpValue n256 = fvp_make_int(256);
+        FvpValue t0 = fvp_make_int(0);
+        FvpValue t1000 = fvp_make_int(1000);
+        FvpValue t300000 = fvp_make_int(300000);
+        FvpValue t300001 = fvp_make_int(300001);
+        FvpValue g4095 = fvp_make_int(4095);
+        FvpValue g4096 = fvp_make_int(4096);
+
+        CHECK(a.parts_motion_calls == 0 && a.parts_rgb_calls == 0 &&
+              a.prim_group_move_calls == 0, "fresh parts counters");
+        CHECK(fvp_vm_parts_motion(&a, &p0, &n50, &t1000) == 1,
+              "parts motion ok");
+        CHECK(a.parts_motion_calls == 1, "motion counter (%llu)",
+              (unsigned long long)a.parts_motion_calls);
+        CHECK(a.parts_motion[0] == 50u && a.parts_motion_time[0] == 1000u,
+              "记录 kind/时长 (%u/%u)", (unsigned)a.parts_motion[0],
+              a.parts_motion_time[0]);
+        CHECK(fvp_vm_parts_motion(&a, &p63, &n200, &t300000) == 1,
+              "partsId 63 + 时长上限 300000 ok");
+        CHECK(fvp_vm_parts_motion(&a, &p64, &n50, &t1000) == 0,
+              "partsId 64 拒绝");
+        CHECK(fvp_vm_parts_motion(&a, &slot_neg, &n50, &t1000) == 0,
+              "partsId -1 拒绝");
+        CHECK(fvp_vm_parts_motion(&a, &p1, NULL, &t1000) == 0,
+              "NULL kind 拒绝");
+        CHECK(fvp_vm_parts_motion(&a, &p1, &fl, &t1000) == 0,
+              "float kind 拒绝");
+        CHECK(fvp_vm_parts_motion(&a, &p1, &n256, &t1000) == 0,
+              "kind 256 拒绝");
+        CHECK(fvp_vm_parts_motion(&a, &p1, &n50, &t0) == 0, "时长 0 拒绝");
+        CHECK(fvp_vm_parts_motion(&a, &p1, &n50, &t300001) == 0,
+              "时长 300001 拒绝");
+        CHECK(fvp_vm_parts_motion(&a, &p1, &n50, NULL) == 0, "NULL 时长 拒绝");
+        CHECK(a.parts_motion_calls == 2, "motion counter 只算成功 (%llu)",
+              (unsigned long long)a.parts_motion_calls);
+
+        CHECK(fvp_vm_parts_motion_pause(&a, &p1, &on1) == 1, "pause ok");
+        CHECK(a.parts_motion_pause_calls == 1, "pause counter (%llu)",
+              (unsigned long long)a.parts_motion_pause_calls);
+        CHECK(fvp_vm_parts_motion_pause(&a, &p1, &on2) == 0, "on=2 拒绝");
+        CHECK(fvp_vm_parts_motion_pause(&a, &p1, NULL) == 0, "NULL on 拒绝");
+        CHECK(fvp_vm_parts_motion_pause(&a, &p64, &on1) == 0,
+              "pause partsId 64 拒绝");
+        CHECK(a.parts_motion_pause_calls == 1, "pause counter 只算成功");
+        CHECK(fvp_vm_parts_motion_stop(&a, &p0) == 0, "stop partsId 0 拒绝");
+        CHECK(fvp_vm_parts_motion_stop(&a, &p1) == 1, "stop partsId 1 ok");
+        CHECK(fvp_vm_parts_motion_stop(&a, &p63) == 1, "stop partsId 63 ok");
+        CHECK(fvp_vm_parts_motion_stop(&a, &p64) == 0, "stop partsId 64 拒绝");
+        CHECK(a.parts_motion_stop_calls == 2, "stop counter (%llu)",
+              (unsigned long long)a.parts_motion_stop_calls);
+
+        CHECK(fvp_vm_parts_rgb(&a, &p1, &n50, &n200, &n201) == 1,
+              "parts rgb ok");
+        CHECK(a.parts_rgb[1][0] == 50 && a.parts_rgb[1][1] == 200 &&
+              a.parts_rgb[1][2] == 100, "分量：201 回落到 100 (%d,%d,%d)",
+              a.parts_rgb[1][0], a.parts_rgb[1][1], a.parts_rgb[1][2]);
+        CHECK(a.parts_rgb_set[1] == 1u, "parts rgb set");
+        CHECK(fvp_vm_parts_rgb(&a, &p64, &n50, &n50, &n50) == 0,
+              "partsId 64 拒绝 (rgb)");
+        CHECK(a.parts_rgb_calls == 1, "rgb counter (%llu)",
+              (unsigned long long)a.parts_rgb_calls);
+
+        CHECK(fvp_vm_prim_group_move(&a, &p0, &p1) == 0, "group id 0 拒绝");
+        CHECK(fvp_vm_prim_group_move(&a, &g4095, &p1) == 1, "group id 4095 ok");
+        CHECK(a.prim_group_move_last[0] == 4095 &&
+              a.prim_group_move_last[1] == 1, "recorded id/target (%d/%d)",
+              a.prim_group_move_last[0], a.prim_group_move_last[1]);
+        CHECK(fvp_vm_prim_group_move(&a, &g4096, &p1) == 0,
+              "group id 4096 拒绝");
+        CHECK(fvp_vm_prim_group_move(&a, &p1, &p0) == 0, "target 0 拒绝");
+        CHECK(fvp_vm_prim_group_move(&a, &p1, &g4096) == 0,
+              "target 4096 拒绝");
+        CHECK(fvp_vm_prim_group_move(&a, &p1, &fl) == 0, "float target 拒绝");
+        CHECK(fvp_vm_prim_group_move(&a, &p1, NULL) == 0, "NULL target 拒绝");
+        CHECK(a.prim_group_move_calls == 1, "group move counter (%llu)",
+              (unsigned long long)a.prim_group_move_calls);
+        CHECK(fvp_vm_parts_motion(NULL, &p1, &n50, &t1000) == 0, "NULL vm");
+        CHECK(fvp_vm_parts_rgb(NULL, &p1, &n50, &n50, &n50) == 0, "NULL vm rgb");
+        CHECK(fvp_vm_prim_group_move(NULL, &p1, &p1) == 0, "NULL vm group");
+    }
+
     /* --- 4e. SnowStart(98) / SnowStop(99) / PrimSetSnow(84) --- */
     {
         FvpValue l0 = fvp_make_int(0);

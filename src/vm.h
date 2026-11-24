@@ -274,6 +274,26 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* parts（部件/角色合成层）与组移动。静态分析：
+     *   66 PartsMotion(partsId 0..0x3F, …)      handler 0x43B3E0：arg1 0..0x3F、arg2 int
+     *   67 PartsMotionPause(partsId 0..0x3F, …) handler 0x43B440：同上校验
+     *   68 PartsMotionStop(partsId **1..0x3F**) handler 0x43B480：tail-call
+     *      `0x4264C0(engine+0x651D70, id)`（和位置补间同一个管理器）
+     *   70 PartsRGB(partsId 0..0x3F, r, g, b)   handler 0x43B500：分量规则与 GraphRGB
+     *      完全相同（int 且 0..200，否则默认 100）
+     *   74 PrimGroupMove(id **1..0xFFF**, …)    handler 0x43B980：arg2 也是 int
+     * 本站都没有"部件动画/组位移"的渲染语义，按记录处理（值 + 计数）。 */
+    unsigned char parts_rgb[64][3];
+    unsigned char parts_rgb_set[64];
+    unsigned char parts_motion[64]; /* 最近一次 PartsMotion 的 arg2（诊断） */
+    unsigned int parts_motion_time[64]; /* 最近一次 PartsMotion 的 arg3（时长 ms） */
+    int prim_group_move_last[2];
+    uint64_t parts_motion_calls;
+    uint64_t parts_motion_pause_calls;
+    uint64_t parts_motion_stop_calls;
+    uint64_t parts_rgb_calls;
+    uint64_t prim_group_move_calls;
+
     /* SnowStart(98) / SnowStop(99) / PrimSetSnow(84)。静态分析：
      *   98 SnowStart(layer 0..1, …) → handler 0x43C4F0：`snow[layer]+0x688F1C 处 = 1`，
      *      层号按 `layer*0x5048` 索引（两层雪花系统的参数表）
@@ -469,6 +489,20 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* PartsMotion(66) / PartsMotionPause(67) / PartsMotionStop(68)：
+ * partsId 0..0x3F（Stop 是 1..0x3F）；返回 1 = 生效。 */
+int fvp_vm_parts_motion(FvpVM *vm, const FvpValue *parts, const FvpValue *arg2,
+                        const FvpValue *arg3);
+int fvp_vm_parts_motion_pause(FvpVM *vm, const FvpValue *parts,
+                              const FvpValue *on);
+int fvp_vm_parts_motion_stop(FvpVM *vm, const FvpValue *parts);
+/* PartsRGB(70)：partsId 0..0x3F + 三个 0..200 分量（缺省 100）。 */
+int fvp_vm_parts_rgb(FvpVM *vm, const FvpValue *parts, const FvpValue *r,
+                     const FvpValue *g, const FvpValue *b);
+/* PrimGroupMove(74)：id 1..0xFFF + 一个 int 参数。 */
+int fvp_vm_prim_group_move(FvpVM *vm, const FvpValue *id,
+                           const FvpValue *arg2);
+
 /* SnowStart(98) / SnowStop(99)：layer 0..1；返回 1 = 生效。 */
 int fvp_vm_snow(FvpVM *vm, const FvpValue *layer, int on);
 /* PrimSetSnow(84)：primId 1..0xFFF + on 0..1；返回 1 = 生效。 */

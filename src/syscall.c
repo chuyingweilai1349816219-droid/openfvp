@@ -1708,6 +1708,39 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     /* 27 InputFlash() / 33 InputGetRepeat() / 37 InputSetClick(v 0/1)。 */
     /* 12 CursorShow(v) / 16 ExitDialog() / 63 MovieStop()。 */
     /* 98 SnowStart(layer, …) / 99 SnowStop(layer, …) / 84 PrimSetSnow(primId, on, …)。 */
+    /* 66 PartsMotion / 67 PartsMotionPause / 68 PartsMotionStop / 70 PartsRGB /
+     * 74 PrimGroupMove：都是部件/组级别的记录（本站没有对应渲染语义）。 */
+    case 66:
+        if (argc >= 2) {
+            (void)fvp_vm_parts_motion(vm, &args[0], &args[1],
+                                      argc >= 3 ? &args[2] : NULL);
+            return;
+        }
+        break;
+    case 67:
+        if (argc >= 2) {
+            (void)fvp_vm_parts_motion_pause(vm, &args[0], &args[1]);
+            return;
+        }
+        break;
+    case 68:
+        if (argc >= 1) {
+            (void)fvp_vm_parts_motion_stop(vm, &args[0]);
+            return;
+        }
+        break;
+    case 70:
+        if (argc >= 4) {
+            (void)fvp_vm_parts_rgb(vm, &args[0], &args[1], &args[2], &args[3]);
+            return;
+        }
+        break;
+    case 74:
+        if (argc >= 2) {
+            (void)fvp_vm_prim_group_move(vm, &args[0], &args[1]);
+            return;
+        }
+        break;
     case 98:
         if (argc >= 1) {
             (void)fvp_vm_snow(vm, &args[0], 1);

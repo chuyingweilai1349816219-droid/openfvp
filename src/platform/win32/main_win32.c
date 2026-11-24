@@ -2372,6 +2372,13 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.control_calls[1],
                (unsigned long long)vm.control_calls[2],
                (unsigned long long)vm.control_calls[3]);
+        APPEND("parts          motion %llu / pause %llu / stop %llu call(s) "
+               "; rgb %llu call(s) ; group move %llu call(s)\n",
+               (unsigned long long)vm.parts_motion_calls,
+               (unsigned long long)vm.parts_motion_pause_calls,
+               (unsigned long long)vm.parts_motion_stop_calls,
+               (unsigned long long)vm.parts_rgb_calls,
+               (unsigned long long)vm.prim_group_move_calls);
         APPEND("snow           layer=%d,%d (start %llu / stop %llu), prim "
                "%llu call(s)\n", (int)vm.snow_on[0], (int)vm.snow_on[1],
                (unsigned long long)vm.snow_start_calls,

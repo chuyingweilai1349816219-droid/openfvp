@@ -53,6 +53,26 @@
 
 ### 新增
 
+- **`PartsMotion`(66) / `PartsMotionPause`(67) / `PartsMotionStop`(68) / `PartsRGB`(70) /
+  `PrimGroupMove`(74) 落地（缺口 9 → 4）**
+  - `PartsMotion(partsId 0..0x3F, kind 0..0xFF, timeMs 1..300000)`：handler **0x43B3E0**，
+    三段校验任一失败就整条丢弃（`0x43B433 ret $0x4`）；全过才
+    `0x42D400(&tween_mgr[0x651D70], partsId, kind, timeMs)` 起补间。本站没有 parts 渲染层，
+    记录 `parts_motion[id]` / `parts_motion_time[id]` + 计数，不建 tween
+  - `PartsMotionPause(partsId, on 0..1)`：handler **0x43B440**，写 parts 表
+    `0x61D064 + id*0x34 + 0x33` 的暂停字节；`on` 非 int 或越界整条丢弃
+  - `PartsMotionStop(partsId 1..0x3F)`：handler **0x43B480** 尾调用
+    `0x4264C0(&tween_mgr[0x651D70], partsId)`
+  - `PartsRGB(partsId, r, g, b)`：handler **0x43B500**，每个分量「是 int 且 0..200 才采用，
+    否则回落 100」，`rgb_component()` 逐字重实现；再 `0x424500(&parts[id], r, g, b)`
+  - `PrimGroupMove(group 1..0xFFF, target 1..0xFFF)`：handler **0x43B980**，两个参数都校验后
+    `0x438E20(group, target)`
+  - 单测 `tests/test_vmmisc.c` 2183 → **2225 项**（逐条参数边界 + 「计数只算成功」）
+  - 棘轮 9 → **4**；门禁全绿（`compare` 字节一致、`verify_gfx` 293 px / PSNR 49.94 / SSIM 0.99971 不变）
+  - 附：parts 表 `0x61D064 + id*0x34`（64 项 = 0xD00 字节）正好接在 prim 数组基址
+    `0x61DD64` 前；`0x651D70` 也正是存档快照里 6 个 tween manager 的第一个
+    （`docs/save-format.md` §2.4.4）——以后真做 parts 动画可直接复用 `src/motion.c`
+
 - **`SnowStart`(98) / `SnowStop`(99) / `PrimSetSnow`(84) 落地（缺口 12 → 9）**
   - `SnowStart(layer 0..1, …)`：handler **0x43C4F0**，写 `engine+0x688F1C + layer*0x5048`
     处的开关字节 = 1（两层雪花系统）；`SnowStop` 写 0（handler **0x43C520**）

@@ -1097,6 +1097,115 @@ static char *arena_cstr(FvpVM *vm, const FvpValue *v)
 
 static int on_off_of(const FvpValue *v, int *out);
 
+static int parts_id_of(const FvpValue *v, int min, int *out)
+{
+    if (v == NULL || v->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    if (v->i < min || v->i > 0x3F) {
+        return 0;
+    }
+    *out = (int)v->i;
+    return 1;
+}
+
+int fvp_vm_parts_motion(FvpVM *vm, const FvpValue *parts, const FvpValue *arg2,
+                        const FvpValue *arg3)
+{
+    int id;
+
+    if (vm == NULL || !parts_id_of(parts, 0, &id)) {
+        return 0;
+    }
+    /* 原版 0x43B3E0：arg2 必须 int 且 0..0xFF，arg3 必须 int 且 1..0x493E0
+     * （<= 300000 ms），否则整条调用被丢弃（连计数都不进）。 */
+    if (arg2 == NULL || arg2->type != (uint8_t)FVP_INT || arg2->i < 0 ||
+        arg2->i > 0xFF) {
+        return 0;
+    }
+    if (arg3 == NULL || arg3->type != (uint8_t)FVP_INT || arg3->i < 1 ||
+        arg3->i > 300000) {
+        return 0;
+    }
+    vm->parts_motion_calls += 1u;
+    vm->parts_motion[id] = (unsigned char)(arg2->i & 0xFF);
+    vm->parts_motion_time[id] = (unsigned int)arg3->i;
+    return 1;
+}
+
+int fvp_vm_parts_motion_pause(FvpVM *vm, const FvpValue *parts,
+                              const FvpValue *on)
+{
+    int id;
+
+    if (vm == NULL || !parts_id_of(parts, 0, &id)) {
+        return 0;
+    }
+    /* 原版 0x43B440：arg2 必须 int 且 0..1，否则整条丢弃。 */
+    if (on == NULL || on->type != (uint8_t)FVP_INT || on->i < 0 ||
+        on->i > 1) {
+        return 0;
+    }
+    vm->parts_motion_pause_calls += 1u;
+    vm->parts_motion[id] = (unsigned char)on->i;
+    return 1;
+}
+
+int fvp_vm_parts_motion_stop(FvpVM *vm, const FvpValue *parts)
+{
+    int id;
+
+    if (vm == NULL || !parts_id_of(parts, 1, &id)) {
+        return 0;
+    }
+    vm->parts_motion_stop_calls += 1u;
+    vm->parts_motion[id] = 0u;
+    return 1;
+}
+
+int fvp_vm_parts_rgb(FvpVM *vm, const FvpValue *parts, const FvpValue *r,
+                     const FvpValue *g, const FvpValue *b)
+{
+    int id;
+
+    if (vm == NULL || !parts_id_of(parts, 0, &id)) {
+        return 0;
+    }
+    vm->parts_rgb_calls += 1u;
+    vm->parts_rgb[id][0] = rgb_component(r);
+    vm->parts_rgb[id][1] = rgb_component(g);
+    vm->parts_rgb[id][2] = rgb_component(b);
+    vm->parts_rgb_set[id] = 1u;
+    return 1;
+}
+
+int fvp_vm_prim_group_move(FvpVM *vm, const FvpValue *id,
+                           const FvpValue *arg2)
+{
+    long v;
+    long w;
+
+    if (vm == NULL || id == NULL || id->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    v = (long)id->i;
+    if (v < 1 || v >= 0x1000) {
+        return 0;
+    }
+    /* 原版 0x43B980：arg2 同样是 int 且 1..0xFFF，否则整条丢弃。 */
+    if (arg2 == NULL || arg2->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    w = (long)arg2->i;
+    if (w < 1 || w >= 0x1000) {
+        return 0;
+    }
+    vm->prim_group_move_calls += 1u;
+    vm->prim_group_move_last[0] = (int)v;
+    vm->prim_group_move_last[1] = (int)w;
+    return 1;
+}
+
 int fvp_vm_snow(FvpVM *vm, const FvpValue *layer, int on)
 {
     if (vm == NULL || layer == NULL || layer->type != (uint8_t)FVP_INT) {

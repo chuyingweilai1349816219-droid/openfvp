@@ -438,6 +438,25 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### PartsMotion(66) / PartsMotionPause(67) / PartsMotionStop(68) / PartsRGB(70) / PrimGroupMove(74)（**已实现：状态记录**）
+
+| id | 命令 | argc | 语义 / 证据 | 本站实现 |
+| ---: | --- | ---: | --- | --- |
+| 66 | PartsMotion | 3 | handler **0x43B3E0**：arg1 int **0..0x3F**（partsId）、arg2 int **0..0xFF**（动作号）、arg3 int **1..0x493E0**（时长，≤300000）；三者任一不合规就整条丢弃（`0x43B433 ret $0x4`）。通过后 `0x42D400(&tween_mgr[0x651D70], partsId, arg2, arg3)` 起补间 | 记录 `parts_motion[id] = arg2`、`parts_motion_time[id] = arg3` + 计数（本站没有 parts 渲染层，不建 tween） |
+| 67 | PartsMotionPause | 2 | handler **0x43B440**：arg1 int 0..0x3F、arg2 int **0..1**，写 parts 表 `0x61D064 + id*0x34 + 0x33` 的暂停字节；`on` 不合法整条丢弃 | 记录 `parts_motion[id]` + 计数 |
+| 68 | PartsMotionStop | 1 | handler **0x43B480**：arg1 int **1..0x3F**，`add $0x651D70,%ecx; jmp 0x4264C0`（尾调用，从 0x651D70 补间管理器里杀掉该 parts 的补间） | `parts_motion[id] = 0` + 计数（本站不建 tween，本来就没有东西要杀） |
+| 70 | PartsRGB | 4 | handler **0x43B500**：arg1 int 0..0x3F；r/g/b 各自「**是 int 且 0..0xC8(200) 才采用，否则回落到 0x64(100)**」（`mov $0x64,%ebp` 后逐个 `cmp`），最后 `0x424500(&parts[id], r, g, b)` | `rgb_component()` 逐字重实现回落规则；`parts_rgb[id][3]` + `parts_rgb_set[id]` + 计数 |
+| 74 | PrimGroupMove | 2 | handler **0x43B980**：arg1 int **1..0xFFF**（组号）、arg2 int **1..0xFFF**（目标号），两个都合规才 `0x438E20(组号, 目标号)` | 记录 `prim_group_move_last[0..1]` + 计数（组平移没有渲染层） |
+
+原文里的 `cmpb $0x2,(%eax)` 是「参数必须是 int」（原版 Variant 的 type 2 = int，
+见前文类型表）；本站值模型把 int 记作 `FVP_INT(0)`，所以代码里写成
+`type == FVP_INT` —— 语义等价，编码不同。
+
+parts 表与 prim 表在引擎结构里是连着的：`0x61D064 + id*0x34`（64 项 = 0xD00 字节）
+正好结束在 prim 数组基址 `0x61DD64`，暂停字节 `0x61D097 = 0x61D064 + 0x33`。
+而 0x651D70 也正是存档快照里 6 个 tween manager 的第一个（`docs/save-format.md`
+§2.4.4）——以后真做 parts 动画，可以直接复用 `src/motion.c` 的 `FvpTween`。
+
 ### SnowStart(98) / SnowStop(99) / PrimSetSnow(84)（**已实现：只记录开关**）
 
 | id | 命令 | argc | 语义 / 证据 | 本站实现 |
