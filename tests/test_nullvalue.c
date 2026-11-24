@@ -50,6 +50,42 @@ static const unsigned char kPushFalseHcb[9] = {
     0x04, 0x00, 0x00, 0x00  /* main_start = 4 */
 };
 
+/* 最小 .hcb #2：pushint8 0 ; jmpcond 13 ; pushint8 1 ; ret
+ *   offset 4 : 0c 00            pushint8 0        (size 2) → 6
+ *   offset 6 : 07 <u32=13>      jmpcond 13        (size 5) → 11
+ *   offset 11: 0c 01            pushint8 1        (size 2) → 13
+ *   offset 13: 04               ret
+ * script_len = 14，main_start = 4。
+ *
+ * 跳转目标 13 与顺序执行位置 11 **不同**，所以跑两步后的 pc 就能分辨语义：
+ *   bool_type = 0（默认，数值真假）：int 0 是假 → 跳到 13 → pc = 13
+ *   bool_type = 1（原版类型真假）：int 0 的 type 是 2 ≠ 0 → **不跳** → pc = 11
+ */
+static const unsigned char kJmpIntZeroHcb[18] = {
+    0x0e, 0x00, 0x00, 0x00,             /* script_len = 14 */
+    0x0c, 0x00,                         /* pushint8 0 */
+    0x07, 0x0d, 0x00, 0x00, 0x00,       /* jmpcond 13 */
+    0x0c, 0x01,                         /* pushint8 1 */
+    0x04,                               /* ret */
+    0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
+};
+
+/* 最小 .hcb #3：pushfalse ; jmpcond 12 ; pushint8 1 ; ret
+ *   offset 4 : 09               pushfalse        (size 1) → 5
+ *   offset 5 : 07 <u32=12>      jmpcond 12        (size 5) → 10
+ *   offset 10: 0c 01            pushint8 1        (size 2) → 12
+ *   offset 12: 04               ret
+ * script_len = 13，main_start = 4。两种语义下 pushfalse（type 0）都算假 → 都跳到 12。
+ */
+static const unsigned char kJmpNullHcb[17] = {
+    0x0d, 0x00, 0x00, 0x00,             /* script_len = 13 */
+    0x09,                               /* pushfalse */
+    0x07, 0x0c, 0x00, 0x00, 0x00,       /* jmpcond 12 */
+    0x0c, 0x01,                         /* pushint8 1 */
+    0x04,                               /* ret */
+    0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
+};
+
 static int write_file(const char *path, const unsigned char *data, size_t len)
 {
     FILE *f = fopen(path, "wb");
@@ -242,11 +278,92 @@ static void test_pushfalse_opcode(void)
     remove(path);
 }
 
+/* 10. 实验开关 bool_type：jmpcond 只认 type==0 为假（原版 handler 0x445a30）。
+ *
+ * 默认关（数值真假）时 int 0 是假 → 跳；打开后 int 0 的 type 是 2 → 不跳。
+ * 这组断言把两种语义的差别钉死，避免以后改回数值真假却没人发现。 */
+static void test_bool_type_jmpcond(void)
+{
+    const char *path = "bin/_nullvalue_jmpint0.hcb";
+    FvpHcb hcb;
+    FvpVM vm;
+    char err[256];
+    uint32_t pc_off = 0;
+    uint32_t pc_on = 0;
+
+    CHECK(write_file(path, kJmpIntZeroHcb, sizeof(kJmpIntZeroHcb)) == 1,
+          "write jmpcond hcb");
+    if (!fvp_hcb_load(&hcb, path, FVP_ENC_CP932, err, sizeof(err))) {
+        CHECK(0, "load jmpcond hcb: %s", err);
+        remove(path);
+        return;
+    }
+    CHECK(hcb.ninstr == 4, "four instructions decoded (got %u)",
+          (unsigned)hcb.ninstr);
+
+    /* --- 默认（数值真假）：pushint8 0 → 假 → 跳到 13 --- */
+    fvp_vm_init(&vm, &hcb, 1);
+    fvp_vm_start(&vm);
+    (void)fvp_vm_run(&vm, 2);
+    if (vm.cur != NULL) {
+        pc_off = vm.cur->pc;
+    }
+    CHECK(pc_off == 13u, "numeric truth: int 0 jumps, pc=%u (want 13)",
+          (unsigned)pc_off);
+    fvp_vm_free(&vm);
+
+    /* --- bool_type = 1（原版类型真假）：type 2 ≠ 0 → 不跳 → pc = 11 --- */
+    fvp_vm_init(&vm, &hcb, 1);
+    vm.bool_type = 1;
+    fvp_vm_start(&vm);
+    (void)fvp_vm_run(&vm, 2);
+    if (vm.cur != NULL) {
+        pc_on = vm.cur->pc;
+    }
+    CHECK(pc_on == 11u, "type truth: int 0 does NOT jump, pc=%u (want 11)",
+          (unsigned)pc_on);
+    fvp_vm_free(&vm);
+    fvp_hcb_free(&hcb);
+    remove(path);
+
+    /* pushfalse 压的是 FVP_NULL（type 0）：两种语义下都跳到 12 */
+    {
+        uint32_t pc[2] = { 0, 0 };
+        int mode;
+
+        CHECK(write_file(path, kJmpNullHcb, sizeof(kJmpNullHcb)) == 1,
+              "write null-jmp hcb");
+        if (!fvp_hcb_load(&hcb, path, FVP_ENC_CP932, err, sizeof(err))) {
+            CHECK(0, "load null-jmp hcb: %s", err);
+            remove(path);
+            return;
+        }
+        CHECK(hcb.ninstr == 4, "null-jmp: 4 instructions (got %u)",
+              (unsigned)hcb.ninstr);
+        for (mode = 0; mode <= 1; ++mode) {
+            fvp_vm_init(&vm, &hcb, 1);
+            vm.bool_type = mode;
+            fvp_vm_start(&vm);
+            (void)fvp_vm_run(&vm, 2);
+            if (vm.cur != NULL) {
+                pc[mode] = vm.cur->pc;
+            }
+            CHECK(pc[mode] == 12u,
+                  "pushfalse jumps in bool_type=%d (pc=%u, want 12)", mode,
+                  (unsigned)pc[mode]);
+            fvp_vm_free(&vm);
+        }
+        fvp_hcb_free(&hcb);
+        remove(path);
+    }
+}
+
 int main(void)
 {
     test_null_value();
     test_lip_and_control();
     test_pushfalse_opcode();
+    test_bool_type_jmpcond();
 
     printf("test_nullvalue: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

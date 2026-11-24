@@ -384,6 +384,17 @@ static FvpValue fvp_op_mod(FvpVM *vm, const FvpValue *a, const FvpValue *b)
     return fvp_make_int(0);
 }
 
+/* 布尔结果该怎么表示。默认（bool_type == 0）= int 1/0 + 数值真假，这是冻结基准
+ * 用的模型；bool_type == 1 = 原版的"类型即真假"：假 → FVP_NULL(type 0)，
+ * 真 → int 1（type != 0）。见 vm.h 里 bool_type 的说明与 docs/roadmap.md。 */
+static FvpValue fvp_make_bool(FvpVM *vm, int b)
+{
+    if (b) {
+        return fvp_make_int(1);
+    }
+    return (vm != NULL && vm->bool_type) ? fvp_make_null() : fvp_make_int(0);
+}
+
 static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
 {
     FvpValue b = fvp_thread_pop(t);
@@ -409,22 +420,22 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
         /* 位测试（handler 0x444e40）：两个操作数都是 int 时算
          * (a.i & (1 << (b.i & 31))) != 0，否则结果 0。不是"取真值"。 */
         if (a.type == (uint8_t)FVP_INT && b.type == (uint8_t)FVP_INT) {
-            r = fvp_make_int((a.i & ((int64_t)1 << (int)(b.i & 31))) != 0 ? 1 : 0);
+            r = fvp_make_bool(vm, (a.i & ((int64_t)1 << (int)(b.i & 31))) != 0);
         } else {
-            r = fvp_make_int(0);
+            r = fvp_make_bool(vm, 0);
         }
         break;
     case 0x20:
-        r = fvp_make_int((fvp_value_truth(&a) && fvp_value_truth(&b)) ? 1 : 0);
+        r = fvp_make_bool(vm, fvp_value_truth(&a) && fvp_value_truth(&b));
         break;
     case 0x21:
-        r = fvp_make_int((fvp_value_truth(&a) || fvp_value_truth(&b)) ? 1 : 0);
+        r = fvp_make_bool(vm, fvp_value_truth(&a) || fvp_value_truth(&b));
         break;
     case 0x22:
-        r = fvp_make_int(fvp_value_eq(&a, &b) ? 1 : 0);
+        r = fvp_make_bool(vm, fvp_value_eq(&a, &b));
         break;
     case 0x23:
-        r = fvp_make_int(fvp_value_eq(&a, &b) ? 0 : 1);
+        r = fvp_make_bool(vm, !fvp_value_eq(&a, &b));
         break;
     case 0x24:
     case 0x25:
@@ -444,7 +455,7 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
                 v = c >= 0;
             }
         }
-        r = fvp_make_int(v ? 1 : 0);
+        r = fvp_make_bool(vm, v);
         break;
     }
     default:
@@ -539,7 +550,11 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         break;
     case 0x07: { /* jmpcond: jump when false */
         FvpValue c = fvp_thread_pop(t);
-        if (!fvp_value_truth(&c)) {
+        /* 默认（bool_type == 0）：数值真假 —— int 0 算假。
+         * bool_type == 1：照原版 handler 0x445a30 的 `cmpb $0x0,(%edx)`，
+         * 只认"类型字节 == 0"（也就是 FVP_NULL）为假；int 0 是 type 2 → 不算假。 */
+        int cond = vm->bool_type ? (c.type == (uint8_t)FVP_NULL) : !fvp_value_truth(&c);
+        if (cond) {
             t->pc = ins->u;
         } else {
             t->pc += 5u;

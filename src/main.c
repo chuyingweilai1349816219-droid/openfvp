@@ -36,6 +36,8 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --pctrace FILE   log executed pc values (debug aid)\n"
             "  --savebin FILE   seed globals from a save/save.bin\n"
             "  --timeline       use the virtual clock (ThreadSleep/ThreadWait wake by ms)\n"
+            "  --bool-type      jmpcond 只认 type==0 为假、比较类把真假写进类型（原版语义，\n"
+            "                   会改变输出；默认关，见 docs/roadmap.md 第二步）\n"
             "  --no-threads     disable coroutine slots 0..31 (A/B against the old stub)\n"
             "  --unknown-all    print every unknown command id (not just the top 15)\n"
             "  --dump-textattr  print every configured text window (color/size/speed)\n"
@@ -504,6 +506,7 @@ int main(int argc, char **argv)
     int64_t cy = 540;
     int quiet = 0;
     int timeline = 0;
+    int bool_type = 0;
     int threads = 1; /* 1/0 = 开/关协程槽；-1 表示命令行显式 --no-threads */
     int crlf = 1;
     int i;
@@ -572,6 +575,8 @@ int main(int argc, char **argv)
             pctrace_path = argv[++i];
         } else if (strcmp(a, "--timeline") == 0) {
             timeline = 1;
+        } else if (strcmp(a, "--bool-type") == 0) {
+            bool_type = 1;
         } else if (strcmp(a, "--threads") == 0) {
             threads = 1;
         } else if (strcmp(a, "--no-threads") == 0) {
@@ -644,6 +649,7 @@ int main(int argc, char **argv)
 
     fvp_vm_init(&vm, &hcb, quiet);
     vm.timeline_on = timeline;
+    vm.bool_type = bool_type;
     vm.threads_on = (threads < 0) ? 0 : threads;
     if (savebin_path != NULL && !fvp_seed_globals(savebin_path, &vm)) {
         fvp_vm_free(&vm);

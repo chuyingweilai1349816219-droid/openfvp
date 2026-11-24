@@ -257,6 +257,15 @@ typedef struct FvpVM {
     int64_t cy;
     int64_t key_mask;
     int quiet;
+    /* 实验开关（默认 0 = 现值模型）：1 = "类型即真假"。
+     *
+     * 静态分析证据（handler 0x445a30）明确：jmpcond 只看弹出值的**类型字节**
+     * （`cmpb $0x0,(%edx)`，type == 0 才跳），比较类 opcode 把结果写进类型字节。
+     * 但本项目的冻结基准（ref/ref-900k.txt）是在"数值真假"模型下生成的，
+     * 所以默认行为保持不变，把这个语义放在开关后面做 A/B（见 docs/roadmap.md
+     * 「值模型的第二步」）。打开后：比较/逻辑/位测试类 opcode 为假时压
+     * FVP_NULL（type 0）、为真时压 int 1；jmpcond 只在 type == FVP_NULL 时跳。 */
+    int bool_type;
     FvpArena arena;         /* runtime strings (concat, int -> str) */
     FvpTextLine *text;
     size_t ntext;

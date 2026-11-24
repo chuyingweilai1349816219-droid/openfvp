@@ -53,6 +53,22 @@
 
 ### 新增
 
+- **`fvm --bool-type` 实验开关 + 第二步 A/B 实测（结论：不能只改布尔表示）**
+  - 开关打开后逐字照 handler 0x445a30：比较/逻辑/位测试类 opcode 为假压
+    `FVP_NULL`、为真压 int 1，`jmpcond` 只在 `type == FVP_NULL` 时跳；
+    **默认关闭**，冻结基准仍在"数值真假"模型下逐字节一致
+  - 实测：打开后 **iroseka 900k 步的 195 行文本输出变成 0 行**；第一个分歧点在
+    step 12,645 / pc `0x05aaf5`，正是 `initstack[0,4]; pushint8[0]; copystack[3];
+    pushint8[0]; jmpcond` 这类"常量 0 条件"（数值模型跳去 ret，类型模型继续执行
+    函数体）。执行函数体后流程立刻走偏（`unknown cmds` 分布完全不同），说明
+    7×7 比较表、未赋值 global = null 这两件必须一起改——已写进 `docs/roadmap.md`
+  - 静态统计（官方解码器，`work/jmpcond_pred.py`）：jmpcond 的条件 81–85% 来自
+    比较类、13–17% 来自 logand/logor、~1% 来自 `test`、0.7–1.2% 来自 `pushint8`
+    （其中 iroseka 17 / hoshimemo 51 / sakura 65 处是 `pushint8 0`，即两种语义
+    真正分叉的地方）
+  - `tests/test_nullvalue` 66 → **74 项**：新增两个最小 `.hcb` 把"int 0 在两种模型
+    下跳不跳"钉死（默认 pc=13 跳、类型模型 pc=11 不跳；`pushfalse` 两种都跳到 pc=12）
+
 - **值模型补上 null（原版 Variant type 0）：`pushfalse` 不再压成 int 0**
   - 新增 `FVP_NULL` + `fvp_make_null()` + `fvp_value_is_null()`；opcode 0x09
     `pushfalse` 压 `FVP_NULL`（依据：原版 0x444940 写的是 `Variant.type = 0`）。
