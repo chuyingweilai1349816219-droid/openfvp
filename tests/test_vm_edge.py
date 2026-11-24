@@ -149,6 +149,28 @@ def build_cases():
     add(case('control-textprint', control, 100, expect_steps=4,
              text_out='control.txt', text_contains='[0] 12345'))
 
+    # ---- opcode 0x1f 是「位测试」，不是「取真值」（handler 0x444e40）----
+    # test(a, b) = (a & (1 << (b & 31))) != 0；非 int 一律 0。
+    # 用 TextPrint(0, 结果) 观察：脚本先压层号 0，再算，再 syscall 123。
+    def bit_test(a, b):
+        return hcb(program(emit(0x0c, 0), emit(0x0c, a), emit(0x0c, b),
+                           emit(0x1f), emit(0x03, 123), emit(0x04)))
+
+    add(case('op1f-bit-set', bit_test(6, 1), 100, expect_steps=6,
+             text_out='op1f-set.txt', text_contains='[0] 1'))
+    add(case('op1f-bit-clear', bit_test(4, 1), 100, expect_steps=6,
+             text_out='op1f-clear.txt', text_contains='[0] 0'))
+    # x86 的 shl 只取移位数低 5 位：1 << (33 & 31) = 2，1 & 2 = 0
+    add(case('op1f-shift-masked', bit_test(1, 33), 100, expect_steps=6,
+             text_out='op1f-mask.txt', text_contains='[0] 0'))
+    # 非 int 操作数（字符串）：结果 0，且不能崩
+    add(case('op1f-string', hcb(program(emit(0x0c, 0),
+                                       emit(0x0c, 1),
+                                       pushstr('A'),
+                                       emit(0x1f), emit(0x03, 123),
+                                       emit(0x04))), 100,
+             text_out='op1f-string.txt', text_contains='[0] 0'))
+
     # ---- loops: the step budget is the hang guard -----------------------
     add(case('jmp-self', hcb(emit(0x06, 4)), 1000, expect_steps=1000))
     add(case('jmpcond-self', hcb(emit(0x09) + emit(0x07, 4)), 1000,

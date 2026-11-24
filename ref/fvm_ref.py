@@ -322,7 +322,13 @@ class VM(object):
             elif op == 0x1e:
                 r = a % b if b else 0
             elif op == 0x1f:
-                r = 1 if a else 0
+                # 位测试（0x444e40）：(a & (1 << (b & 31))) != 0，非 int 一律 0
+                if isinstance(a, bool) or isinstance(b, bool):
+                    r = 0
+                elif isinstance(a, int) and isinstance(b, int):
+                    r = 1 if (a & (1 << (b & 31))) else 0
+                else:
+                    r = 0
             elif op == 0x20:
                 r = 1 if (self.truth(a) and self.truth(b)) else 0
             elif op == 0x21:

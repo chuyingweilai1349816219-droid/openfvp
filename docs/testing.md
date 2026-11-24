@@ -202,7 +202,7 @@ hzc1（243 字节，102×102 fmt4）、`fvp/work/bgm001.ogg`、`fvp/work/se001.w
 
 ## 5. VM 边界用例（`test_vm_edge.py`）
 
-43 个用例，全部 PASS，且都在 `fvm_guard.exe`（页保护）下复跑通过。
+47 个用例，全部 PASS，且都在 `fvm_guard.exe`（页保护）下复跑通过。
 关键结果：
 
 | 用例 | 断言 | 实测 |

@@ -116,7 +116,21 @@
 
 ### 修复
 
-- **两处测试体系缺口（本轮顺手补上）**
+- **修正 opcode `0x1f` 的语义：它是「位测试」，不是「取真值」**
+  - handler **0x444e40**：两个操作数都是 int 时算 `(a & (1 << (b & 31))) != 0`
+    （x86 的 `shl` 只取移位数低 5 位），任一操作数不是 int 就写 0
+  - 以前按 `truth(a)` 实现：对 `(4, 1)` 给 1，原版是 0（4 的 bit1 为 0）——语义确实错了
+  - **冻结基准不受影响**：iroseka 的前 90 万步里 `0x1f` 一次都没执行（实测 pctrace 直方图
+    为 0），所以 `compare.py` 仍然逐字节一致；`src/vm.c` 与 `ref/fvm_ref.py` 同步修正
+  - 顺带把四条比较 opcode 的 handler / 用哪张 7×7 表 / `sete` 还是 `setne` 写进
+    `docs/vm-commands.md` §1.2。**但 a/b 的先后顺序这一步没能钉死**：按 cdecl 读出来
+    0x25 应为 `>=`、0x27 应为 `<=`，可真按这个对调之后 iroseka 90 万步输出直接变成
+    0 行（这两条在 90 万步里被执行 **88,325 次**）。所以现有实现不改，文档里如实
+    记下这个矛盾，等更多证据
+  - 回归测试：`tests/test_vm_edge.py` 新增 4 个用例（bit 置位 / bit 清零 / 33 的移位
+    掩码 / 非 int 操作数），现在 **47 个用例** 全 PASS
+
+- **两处测试体系缺口（第 11 轮顺手补上）**
   - `tests/test_motion.c` 一直**没有 Makefile 规则**：`run_all.py` 里有它的步骤，
     但 `make test_motion` 直接 "No rule to make target"，实际跑的是手编的旧二进制
     （31 项，落后于源码）。现在补上 `test_motion` 目标并进 `make check`

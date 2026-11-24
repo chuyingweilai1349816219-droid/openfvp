@@ -405,7 +405,13 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
         r = fvp_op_mod(vm, &a, &b);
         break;
     case 0x1f:
-        r = fvp_make_int(fvp_value_truth(&a) ? 1 : 0);
+        /* 位测试（handler 0x444e40）：两个操作数都是 int 时算
+         * (a.i & (1 << (b.i & 31))) != 0，否则结果 0。不是"取真值"。 */
+        if (a.type == (uint8_t)FVP_INT && b.type == (uint8_t)FVP_INT) {
+            r = fvp_make_int((a.i & ((int64_t)1 << (int)(b.i & 31))) != 0 ? 1 : 0);
+        } else {
+            r = fvp_make_int(0);
+        }
         break;
     case 0x20:
         r = fvp_make_int((fvp_value_truth(&a) && fvp_value_truth(&b)) ? 1 : 0);
