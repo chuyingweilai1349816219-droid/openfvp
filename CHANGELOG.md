@@ -53,6 +53,23 @@
 
 ### 新增
 
+- **查清标题菜单的真实实现：菜单项是预渲染贴图（不是文字）+ 模块补图像模式**
+  - 逐项 dump `graph.bin` 找到标题素材：`title_start`(340×80) 就是「New Game」整张图、
+    `title_start1..5` 是其余菜单项、`title_logo1`(1150×283) 是作品 logo、
+    `a_top_s1`(1920×1080) 是 ALBUM MODE 那版标题背景、`a_top_p1/p2` 是零件、
+    `logo_bg`/`logo_favo` 是 FAVORITE splash 素材
+  - 用"文字掩码模板匹配"在原始标题帧里验证 `title_start`：**92.2% 吻合，文字落在
+    (1460,511)，贴图左上角 = (1445,492)，墨迹右边界 1769**——和上一轮实测表逐项对上
+    （贴图 y+19=511、x+324=1769、行距 100 推出第 2 行墨迹上沿 611）
+  - 结论：**"菜单字体"不存在**，衬线字 + 白色外发光都烘焙在贴图里（这也解释了为什么
+    `font/` 里只有 Sarasa、为什么量出的字高和常见字体比例对不上）
+  - `titlemenu` 模块补**图像模式**：`fvp_title_set_images()` /
+    `fvp_title_image_pos()`，`fvp_title_item_rect()` 在图像模式返回贴图矩形
+    （340×80 @ `(1445, 492+i*100)`），命中带仍是整行 100 px；文字模式保留作退化方案
+  - `tests/test_titlemenu` 90 → **136 项**（新增图像模式的几何/命中断言）
+  - `docs/title-menu.md` §3 记录素材表、模板匹配结果与推导；`work/match_title_buttons.py`
+    是这次用的匹配脚本（本地，不入库）
+
 - **标题菜单接进桌面外壳（`--title-menu`）**
   - 启动后先画引擎侧标题菜单并等输入：点 `New Game`（或回车）才 `fvp_vm_start()`，
     `Exit` 关窗口，`Continue`/`Album`/`Option` 先只记录（还没有存档界面/相册/设置页）

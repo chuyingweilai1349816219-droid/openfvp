@@ -33,7 +33,39 @@ void fvp_title_init(FvpTitleMenu *m)
     m->selected = -1;
     for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
         m->enabled[i] = 1;
+        m->img_ready[i] = 0;
     }
+    /* 图像模式常数：graph.bin 的 title_start* 都是 340x80，贴图内文字右对齐，
+     * 墨迹在贴图内 x=15..324、y=19..60（对原版帧模板匹配得到，见头文件注释）。 */
+    m->use_images = 0;
+    m->img_w = 340;
+    m->img_h = 80;
+    m->img_x = 1445;
+    m->img_y0 = 492;
+    m->ink_x0_off = 15;
+    m->ink_x1_off = 324;
+    m->ink_y0_off = 19;
+}
+
+void fvp_title_set_images(FvpTitleMenu *m, int on)
+{
+    if (m != NULL) {
+        m->use_images = on ? 1 : 0;
+    }
+}
+
+int fvp_title_image_pos(const FvpTitleMenu *m, int item, int *x, int *y)
+{
+    if (m == NULL || item < 0 || item >= FVP_TITLE_ITEMS) {
+        return 0;
+    }
+    if (x != NULL) {
+        *x = m->img_x;
+    }
+    if (y != NULL) {
+        *y = m->img_y0 + item * m->pitch;
+    }
+    return 1;
 }
 
 /* 没有字体时的等宽估计：拉丁平均字宽约为字号的 0.5 倍。 */
@@ -65,6 +97,22 @@ int fvp_title_item_rect(const FvpTitleMenu *m, int item, FvpTitleMeasure measure
 
     if (m == NULL || item < 0 || item >= FVP_TITLE_ITEMS) {
         return 0;
+    }
+    if (m->use_images) {
+        /* 图像模式：返回贴图矩形（原版就是按这个位置贴图的）。 */
+        if (x0 != NULL) {
+            *x0 = m->img_x;
+        }
+        if (y0 != NULL) {
+            *y0 = m->img_y0 + item * m->pitch;
+        }
+        if (x1 != NULL) {
+            *x1 = m->img_x + m->img_w;
+        }
+        if (y1 != NULL) {
+            *y1 = m->img_y0 + item * m->pitch + m->img_h;
+        }
+        return 1;
     }
     w = item_width(m, item, measure, ctx);
     top = m->y_first + item * m->pitch;

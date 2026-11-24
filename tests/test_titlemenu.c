@@ -167,6 +167,67 @@ int main(void)
     CHECK(fvp_title_move(NULL, 0, 0, NULL, NULL) == -1, "move NULL menu");
     CHECK(fvp_title_click(NULL, 0, 0, NULL, NULL) == -1, "click NULL menu");
 
+    /* --- 8. 图像模式：原版菜单项是预渲染贴图（340x80 @ (1445,492+i*100)） ---
+     * 这些常数来自 graph.bin 的 title_start* + 对原始标题帧的模板匹配
+     * （work/match_title_buttons.py：92.2% 吻合，墨迹右边界正好 1769）。 */
+    {
+        FvpTitleMenu im;
+        int i2;
+
+        fvp_title_init(&im);
+        CHECK(im.use_images == 0, "images off by default");
+        CHECK(im.img_w == 340 && im.img_h == 80, "image cell %dx%d", im.img_w,
+              im.img_h);
+        CHECK(im.img_x == 1445 && im.img_y0 == 492, "image origin (%d,%d)",
+              im.img_x, im.img_y0);
+        CHECK(im.ink_x0_off == 15 && im.ink_x1_off == 324 &&
+                  im.ink_y0_off == 19,
+              "ink offsets %d/%d/%d", im.ink_x0_off, im.ink_x1_off,
+              im.ink_y0_off);
+
+        fvp_title_set_images(&im, 1);
+        CHECK(im.use_images == 1, "images on");
+        for (i2 = 0; i2 < FVP_TITLE_ITEMS; ++i2) {
+            int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+            int ix = 0, iy = 0;
+
+            CHECK(fvp_title_item_rect(&im, i2, NULL, NULL, &x0, &y0, &x1,
+                                      &y1) == 1,
+                  "image rect %d", i2);
+            CHECK(x0 == 1445 && x1 == 1785, "image rect %d x=%d..%d", i2, x0,
+                  x1);
+            CHECK(y0 == 492 + i2 * 100 && y1 == 572 + i2 * 100,
+                  "image rect %d y=%d..%d", i2, y0, y1);
+            CHECK(fvp_title_image_pos(&im, i2, &ix, &iy) == 1,
+                  "image pos %d", i2);
+            CHECK(ix == x0 && iy == y0, "image pos == rect %d", i2);
+            /* 由贴图位置推出的墨迹必须与实测**右边界**一致（每项贴图内文字右对齐，
+             * 所以右偏移对所有项都是 324；左偏移随字宽不同，只有第 1 项是 15）。 */
+            if (i2 == 0) {
+                CHECK(abs_diff(x0 + im.ink_x0_off, kOrigX0[i2]) <= 1,
+                      "derived ink left %d (want %d)", x0 + im.ink_x0_off,
+                      kOrigX0[i2]);
+            }
+            CHECK(x0 + im.ink_x1_off == 1769, "derived ink right %d",
+                  x0 + im.ink_x1_off);
+            CHECK(y0 + im.ink_y0_off == kOrigCy[i2] - 20 ||
+                      y0 + im.ink_y0_off == kOrigCy[i2] - 21,
+                  "derived ink top %d (want ~%d)", y0 + im.ink_y0_off,
+                  kOrigCy[i2] - 20);
+        }
+        /* 命中：图像模式的整行 100 px 带仍然可点 */
+        CHECK(fvp_title_hit(&im, 1600, 531, NULL, NULL) == 0,
+              "image hit row 0");
+        CHECK(fvp_title_hit(&im, 1600, 631, NULL, NULL) == 1,
+              "image hit row 1");
+        CHECK(fvp_title_hit(&im, 1600, 481, NULL, NULL) == -1,
+              "image hit above row 0");
+        CHECK(fvp_title_hit(&im, 1400, 531, NULL, NULL) == -1,
+              "image hit left of the picture");
+        fvp_title_set_images(&im, 0);
+        CHECK(im.use_images == 0, "images off again");
+    }
+
     printf("test_titlemenu: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
