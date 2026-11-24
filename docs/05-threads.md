@@ -24,7 +24,7 @@ FVP 脚本是**多线程/协程**驱动的。本文记录已经确认的事实�
 |---|---:|---|
 | `ThreadExit` | 132 | 参数 0 = 结束全部子线程；非 0 = 结束指定线程 |
 | `ThreadNext` | 133 | 把当前线程的 +0x810 置 1，即让出执行权（轮转） |
-| `ThreadRaise` | 134 | 对 32 个线程槽逐个调用唤醒函数 0x4447e0 |
+| `ThreadRaise` | 134 | 对 32 个线程槽逐个调用 **0x4447e0(ctx, ms)**，后者的全部逻辑是 `if ((flags & 4) && ctx->wait_ms == ms) flags &= ~4;` —— **叫醒睡眠时长正好等于 ms 的线程**（只认 ThreadSleep 的 sleep 位 0x4，不认 ThreadWait 的 wait 位 0x2）。arg1 必须是 int，否则整条命令丢弃。**本站已实现**（`fvp_vm_thread_raise()`，见 `docs/vm-commands.md`）；实测 90 万步 0 次调用 |
 | `ThreadSleep` | 135 | +0x808 |= 4，+0x80c = 毫秒数，+0x810 = 1 |
 | `ThreadStart` | 136 | (线程号 0..31, 入口地址)；号为 0 时先重置所有槽 |
 | `ThreadWait` | 137 | +0x808 |= 2，+0x80c = 毫秒数，+0x810 = 1 |

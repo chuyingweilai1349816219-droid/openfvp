@@ -243,6 +243,13 @@ def build_cases():
              expect_steps=2))
     add(case('syscall-147',
              hcb(program(emit(0x03, 147), emit(0x04))), 100, expect_steps=2))
+    # ThreadRaise(134)：push 一个毫秒数 + syscall + ret = 3 步；没有线程在睡，
+    # 所以叫醒 0 个，但汇总行必须出现（证明分发到 fvp_vm_thread_raise）。
+    add(case('syscall-134-threadraise',
+             hcb(program(emit(0x0a, 100), emit(0x03, 134), emit(0x04))), 100,
+             expect_steps=3,
+             expect_stdout_contains='threads    raise 1 call(s), '
+                                    'last ms=100, woken 0'))
     # Snow(97) 是 18 参数大命令：18 个 push + syscall + ret = 20 步。参数取
     # handler 0x43C230 各条 cmp 的区间内部值，再从 fvm 汇总的自检行确认
     # 它真的被当成一条合法命令吃掉（而不是走 unknown cmds）。

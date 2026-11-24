@@ -1631,23 +1631,34 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         }
         return;
     /* 135 ThreadSleep(ms) / 137 ThreadWait(ms)：
-     * 时间模型开启时按虚拟时钟定时唤醒，否则保持旧的 yield 语义。 */
+     * 时间模型开启时按虚拟时钟定时唤醒，否则保持旧的 yield 语义。
+     * `sleep_ms` 记原版 ctx+0x80C 的时长：ThreadSleep 的会被 ThreadRaise(134)
+     * 按值匹配叫醒，ThreadWait 的不认（原版唤醒函数只看 sleep 位）。 */
     case 135:
     case 137:
-        if (vm->timeline_on && argc >= 1) {
-            int64_t ms = args[0].i;
+    {
+        int64_t ms = (argc >= 1) ? args[0].i : 0;
 
-            if (ms < 0) {
-                ms = 0;
-            }
-            if (ms > 300000) {
-                ms = 300000;
-            }
+        if (ms < 0) {
+            ms = 0;
+        }
+        if (ms > 300000) {
+            ms = 300000;
+        }
+        t->sleep_ms = (cid == 135) ? (int)ms : -1;
+        if (vm->timeline_on && argc >= 1) {
             t->timed = 1;
             t->wake_ms = vm->virtual_ms + (uint64_t)ms;
         }
         t->blocked = 1;
         return;
+    }
+    case 134: /* ThreadRaise(ms)：叫醒睡眠时长 == ms 的线程（原版 0x43 7B80） */
+        if (argc >= 1) {
+            (void)fvp_vm_thread_raise(vm, &args[0]);
+            return;
+        }
+        break;
     case 13: /* Debmess */
         fvp_sys_debmess(vm, args, argc);
         return;

@@ -253,6 +253,57 @@ int main(void)
         CHECK(a.snow_calls == 3, "失败不进计数 (%d)", a.snow_calls);
     }
 
+    /* --- 4h. ThreadRaise(134)：只叫醒 sleep 时长匹配的线程 --- */
+    {
+        FvpThread t0;
+        FvpThread t1;
+        FvpThread t2;
+        FvpValue ms100 = fvp_make_int(100);
+        FvpValue ms250 = fvp_make_int(250);
+
+        memset(&t0, 0, sizeof t0);
+        memset(&t1, 0, sizeof t1);
+        memset(&t2, 0, sizeof t2);
+        t0.blocked = 1; /* 槽 3：sleep 100 -> 会被叫醒 */
+        t0.timed = 1;
+        t0.sleep_ms = 100;
+        t0.wait = 5;
+        t1.blocked = 1; /* 槽 4：sleep 250 -> 时长不匹配 */
+        t1.timed = 1;
+        t1.sleep_ms = 250;
+        t2.blocked = 1; /* 槽 5：ThreadWait（sleep_ms = -1）-> 不认 */
+        t2.timed = 1;
+        t2.sleep_ms = -1;
+
+        CHECK(fvp_vm_thread_raise(&a, &ms100) == 0, "空槽表叫醒 0 个");
+        CHECK(a.thread_raise_calls == 1 && a.thread_raise_woken == 0,
+              "空槽表也计数 (%llu/%llu)",
+              (unsigned long long)a.thread_raise_calls,
+              (unsigned long long)a.thread_raise_woken);
+        a.thread_slots[3] = &t0;
+        a.thread_slots[4] = &t1;
+        a.thread_slots[5] = &t2;
+        CHECK(fvp_vm_thread_raise(&a, &ms100) == 1, "时长 100 叫醒 1 个");
+        CHECK(t0.blocked == 0 && t0.timed == 0 && t0.wait == 0,
+              "匹配的线程被完全唤醒");
+        CHECK(t1.blocked == 1 && t1.timed == 1, "时长 250 的继续睡");
+        CHECK(t2.blocked == 1 && t2.timed == 1, "ThreadWait 的不被叫醒");
+        CHECK(fvp_vm_thread_raise(&a, &ms250) == 1, "时长 250 叫醒 1 个");
+        CHECK(t1.blocked == 0, "250 的被叫醒");
+        CHECK(fvp_vm_thread_raise(&a, &ms100) == 0, "已醒的不会重复计数");
+        CHECK(fvp_vm_thread_raise(&a, &fl) == -1, "float 参数拒绝");
+        CHECK(fvp_vm_thread_raise(&a, NULL) == -1, "NULL 参数拒绝");
+        CHECK(fvp_vm_thread_raise(NULL, &ms100) == -1, "NULL vm 拒绝");
+        CHECK(a.thread_raise_calls == 4u && a.thread_raise_ms == 100 &&
+              a.thread_raise_woken == 2u,
+              "只算合法调用 (%llu/%d/%llu)",
+              (unsigned long long)a.thread_raise_calls, a.thread_raise_ms,
+              (unsigned long long)a.thread_raise_woken);
+        a.thread_slots[3] = NULL;
+        a.thread_slots[4] = NULL;
+        a.thread_slots[5] = NULL;
+    }
+
     /* --- 4e. SnowStart(98) / SnowStop(99) / PrimSetSnow(84) --- */
     {
         FvpValue l0 = fvp_make_int(0);

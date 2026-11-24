@@ -227,6 +227,7 @@ static FvpThread *fvp_thread_new(uint32_t pc, const char *name)
     t->name = name;
     t->alive = 1;
     t->slot = -1;
+    t->sleep_ms = -1; /* 还没睡过：ThreadRaise 不会命中它 */
     t->temp = fvp_make_int(0);
     return t;
 }
@@ -2005,6 +2006,39 @@ int fvp_vm_thread_exit(FvpVM *vm, FvpThread *self, int which)
         fprintf(stdout, "[thread exit] killed %d thread(s)\n", n);
     }
     return 1;
+}
+
+/* ThreadRaise(134)：handler 0x437B80 把 arg1 传给 32 次 0x4447E0(ctx, ms)：
+ *   if ((ctx->flags & 4) != 0 && ctx->wait_ms == ms) ctx->flags &= ~4;
+ * 即"叫醒睡眠时长正好等于 ms 的那些线程"。注意它只认 sleep（flags bit2 = 4），
+ * 不认 ThreadWait 的 wait 位（bit1 = 2）。本站用 blocked + timed 表示在等虚拟时钟，
+ * sleep_ms 记 ThreadSleep 的时长（ThreadWait 记 -1，不会被叫醒）。 */
+int fvp_vm_thread_raise(FvpVM *vm, const FvpValue *ms)
+{
+    int slot;
+    uint64_t woken = 0;
+
+    if (vm == NULL || ms == NULL || ms->type != (uint8_t)FVP_INT) {
+        return -1;
+    }
+    for (slot = 0; slot < FVP_THREAD_SLOTS; ++slot) {
+        FvpThread *t = vm->thread_slots[slot];
+
+        if (t == NULL || !t->blocked || !t->timed) {
+            continue;
+        }
+        if (t->sleep_ms != (int)ms->i) {
+            continue;
+        }
+        t->blocked = 0;
+        t->timed = 0;
+        t->wait = 0;
+        woken += 1u;
+    }
+    vm->thread_raise_calls += 1u;
+    vm->thread_raise_ms = (int)ms->i;
+    vm->thread_raise_woken += woken;
+    return (int)woken;
 }
 
 /* ------------------------------------------------------------------ */

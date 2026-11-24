@@ -53,6 +53,23 @@
 
 ### 新增
 
+- **`ThreadRaise`(134) 落地（缺口 3 → 2）**
+  - handler **0x437B80**：arg1 **必须 int**，否则整条丢弃；然后对
+    `engine+0x68DFC0 + i*0xB28`（i = 0..31，32 个协程槽）逐个调 **0x4447E0(ctx, ms)**
+  - 0x4447E0 的有效代码只有三行：`if ((flags & 4) && ctx->wait_ms == ms) flags &= ~4;`
+    —— 语义是**叫醒"睡眠时长正好等于 ms"的线程**，而且只认 `ThreadSleep` 的 sleep 位
+    (`0x4`)，不认 `ThreadWait` 的 wait 位 (`0x2`)
+  - 本站实现 `fvp_vm_thread_raise()`（`src/vm.c`）：`FvpThread` 新增 `sleep_ms`
+    （ThreadSleep 记时长、ThreadWait 记 -1），命中就清 `blocked/timed/wait`；
+    返回叫醒个数，参数非法返回 -1
+  - 外壳与 `fvm` 汇总多一行 `threads raise N call(s), last ms=…, woken M`
+  - 这是**真的会改执行状态**的一条（不是纯记录）：被叫醒的线程在同一轮调度里就会继续跑，
+    所以它和 `--timeline` 的虚拟时钟是配套的
+  - 单测 `tests/test_vmmisc.c` 2251 → **2264 项**（手工往 32 个槽里放三个线程：
+    匹配的 sleep、不匹配的 sleep、ThreadWait，逐个验证唤醒/不唤醒/计数）；
+    `test_vm_edge.py` 50 → **51 例**（新增 `syscall-134-threadraise`，断言汇总行）
+  - 棘轮 3 → **2**；实测 90 万步 `ThreadRaise` **0 次调用**，所以只能靠单测与合成脚本验证
+
 - **`Snow`(97) 落地（缺口 4 → 3）**
   - 18 参数大命令，handler **0x43C230**：arg1..arg14 **必填**（逐段 `cmp` 区间见
     `docs/vm-commands.md`），另有 **arg8 ≤ arg9** 的交叉约束（`0x43C356 cmp %eax,%ebp; jg`）；

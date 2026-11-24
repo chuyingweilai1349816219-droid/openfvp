@@ -43,6 +43,7 @@ typedef struct FvpThread {
     int32_t wait;
     uint64_t wake_ms; /* 时间模型：该线程到这个虚拟时刻醒 */
     int timed;        /* 1 = 按 wake_ms 定时唤醒（非旧的 yield 行为） */
+    int sleep_ms;     /* ThreadSleep 请求的时长（原版 ctx+0x80C）；-1 = 不是 sleep */
     FvpValue temp;
 } FvpThread;
 
@@ -474,6 +475,12 @@ typedef struct FvpVM {
     uint64_t thread_starts; /* 诊断：ThreadStart 成功创建过多少次 */
     uint64_t thread_exits;  /* 诊断：ThreadExit 收掉过多少个线程 */
     uint64_t thread_resets; /* 诊断：ThreadStart(0)/(无槽可回收) 触发过多少次 */
+    /* ThreadRaise(134)：handler 0x437B80 对 32 个槽逐个调 0x4447E0(ctx, ms)，
+     * 后者是 `if ((flags & 4) && ctx->wait_ms == ms) flags &= ~4;`
+     * —— 也就是"把睡眠时长正好等于 ms 的线程叫醒"。 */
+    uint64_t thread_raise_calls; /* 调用次数 */
+    int thread_raise_ms;         /* 最近一次的参数 */
+    uint64_t thread_raise_woken; /* 累计叫醒的线程数 */
     /* 16 个定时器（TimerSet 139 / TimerGet 138 / TimerSuspend 140）。 */
     FvpTimer timer[FVP_TIMER_COUNT];
     int timer_suspended;  /* TimerSuspend(1) 置位、(0) 清除 */
@@ -638,6 +645,9 @@ void fvp_vm_count_unknown(FvpVM *vm, uint16_t cid);
  * 两者都返回 1 = 语义执行了，0 = threads_on 关着（调用方照旧当空桩）。 */
 int fvp_vm_thread_start(FvpVM *vm, int no, uint32_t pc);
 int fvp_vm_thread_exit(FvpVM *vm, FvpThread *self, int which);
+/* ThreadRaise(134)：ms 必须是 int；把 32 个槽里"正在 sleep 且时长 == ms"的
+ * 线程叫醒（清 blocked/timed）。返回叫醒的线程数，参数非法返回 -1。 */
+int fvp_vm_thread_raise(FvpVM *vm, const FvpValue *ms);
 
 /* ---- 定时器（TimerSet 139 / TimerGet 138 / TimerSuspend 140）----------
  * 实现在 src/timer.c，VM 只负责把 vm.virtual_ms 当 now_ms 传下去。 */
