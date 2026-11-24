@@ -62,7 +62,7 @@ GAMES = [
          # 标题菜单 profile（原版实测：右对齐 1769、行距 100、没有菜单贴图）
          title=dict(profile='iroseka', align='right', pitch=100,
                     right_edge=1769, textures=0,
-                    continue_enabled=True, save_list=6,
+                    continue_enabled=True, save_list=6, bg='',
                     centres=[531, 631, 732, 831, 931])),
     dict(name='hoshimemo',  # 《星空的记忆 HD》
          dir=os.path.join(DOWNLOADS, 'hoshimemo_installed'),
@@ -73,6 +73,7 @@ GAMES = [
          title=dict(profile='hoshimemo', align='centre', pitch=90,
                     centre_x=960, textures=5,
                     continue_enabled=False, save_list=0,
+                    bg='title_bg1',
                     centres=[597, 687, 777, 867, 957])),
     dict(name='sakura',  # 《樱花，萌放。（さくら、もゆ。）》
          dir=os.path.join(DOWNLOADS, '樱花，萌放（さくら、もゆ。）'),
@@ -301,7 +302,9 @@ def stage_title_menu(shell, games, check):
                 os.remove(p)
         rc, log = run_shell_frame(shell, g['dir'],
                                   os.path.basename(g['script']), 2, shot,
-                                  log_path, extra=['--title-menu'])
+                                  log_path,
+                                  extra=['--title-menu',
+                                         '--title-no-bg'])
         check(rc == 0, 'title menu shell exit 0 (got %s)' % rc)
         m = log_match(r'^title menu\s+enabled \(profile=([a-z]+), '
                       r'align=(\w+),', log)
@@ -324,14 +327,54 @@ def stage_title_menu(shell, games, check):
         else:
             check('falling back to text' in log,
                   'falls back to text when the title has no menu textures')
-        img = read_bmp32(shot) if os.path.isfile(shot) else None
-        check(img is not None, 'title frame BMP readable')
-        if img is None:
+        # 单独跑一次"带背景"的版本：背景断言和 hover 对照都以它为基准
+        shot_bg = os.path.join(OUT_DIR, 'mg-%s-bg.bmp' % name)
+        log_bg_path = os.path.join(OUT_DIR, 'mg-%s-bg.log' % name)
+        for pb in (shot_bg, log_bg_path):
+            if os.path.isfile(pb):
+                os.remove(pb)
+        rc_bg, log_bg = run_shell_frame(shell, g['dir'],
+                                        os.path.basename(g['script']), 2,
+                                        shot_bg, log_bg_path,
+                                        extra=['--title-menu'])
+        check(rc_bg == 0, 'background run exit 0 (got %s)' % rc_bg)
+
+        # 标题背景：有 bg 素材的作品要真的铺上（帧不再是黑的）
+        if t.get('bg'):
+            m = log_match(r"title: background '([^']+)' loaded",
+                          log_bg)
+            check(m is not None and m.group(1) == t['bg'],
+                  'title background %s loaded (%s)'
+                  % (t['bg'], m.group(0) if m else 'missing'))
+        img_geom = read_bmp32(shot) if os.path.isfile(shot) else None
+        img_bg = read_bmp32(shot_bg) if os.path.isfile(shot_bg) else None
+        check(img_geom is not None and img_bg is not None,
+              'title frame BMPs readable')
+        if img_geom is None or img_bg is None:
             print('')
             continue
-        w, h, rows = img
+        # 几何量在 --title-no-bg 那一帧上做（背景亮部会污染墨迹检测）；
+        # 亮度/背景断言用带背景那一帧。
+        w, h, rows = img_geom
         check(w == 1920 and h == 1080, 'frame is 1920x1080 (got %dx%d)'
               % (w, h))
+        # 背景铺上后整帧不再是黑的；没有背景素材的作品仍是文字菜单（黑底）
+        bright = 0
+        rows_bg = img_bg[2]
+        for yy in range(0, h, 16):
+            row = rows_bg[yy]
+            for xx in range(0, w, 16):
+                if (row[xx * 4] + row[xx * 4 + 1] + row[xx * 4 + 2]) > 90:
+                    bright += 1
+        total = (h // 16 + 1) * (w // 16 + 1)
+        if t.get('bg'):
+            check(bright > total // 2,
+                  'title frame is mostly lit by the background (%d of %d)'
+                  % (bright, total))
+        else:
+            check(bright < total // 20,
+                  'title frame stays black without a background asset '
+                  '(%d of %d)' % (bright, total))
         got_centres = []
         for i, cy in enumerate(t['centres']):
             minx, maxx, miny, maxy, cnt = ink_span(rows, cy - 34, cy + 40)
@@ -397,7 +440,7 @@ def stage_title_menu(shell, games, check):
                                     log3_path,
                                     extra=['--title-menu', '--title-hover', '1'])
         check(rc3 == 0, 'hover run exit 0 (got %s)' % rc3)
-        img_a = read_bmp32(shot) if os.path.isfile(shot) else None
+        img_a = read_bmp32(shot_bg) if os.path.isfile(shot_bg) else None
         img_b = read_bmp32(shot3) if os.path.isfile(shot3) else None
         if img_a is not None and img_b is not None:
             diff = 0

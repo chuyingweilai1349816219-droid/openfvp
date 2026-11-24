@@ -112,6 +112,7 @@ typedef struct Options {
     int title_save_list; /* --title-save-list: 直接打开 Continue 的存档列表 */
     /* 调试钩子：脚本自己调 SaveWrite/Load 之前先手动造一个请求，用来端到端
      * 验证"请求 -> 外壳执行"这条链路（-1 = 不发）。 */
+    int title_no_bg; /* --title-no-bg：标题菜单不铺背景（几何测量用） */
     int title_hover_seed; /* --title-hover N：启动就把第 N 项设为 hover（截图/门禁用，-1 = 不动） */
     int debug_save_request;
     int debug_load_request;
@@ -502,6 +503,7 @@ static void defaults(Options *o)
     o->run_seconds = 0.0;
     o->save_preview_every = 0.0;
     o->debug_save_request = -1;
+    o->title_no_bg = 0;
     o->title_hover_seed = -1;
     o->debug_load_request = -1;
     o->motion = 0;
@@ -658,6 +660,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--save-preview-every") == 0) {
             NEED_VALUE();
             o->save_preview_every = wcstod(v, NULL);
+        } else if (wcscmp(a, L"--title-no-bg") == 0) {
+            o->title_no_bg = 1;
         } else if (wcscmp(a, L"--title-hover") == 0 &&
                    i + 1 < argc) {
             o->title_hover_seed = _wtoi(argv[++i]);
@@ -1572,6 +1576,13 @@ static double perf_percentile(const PerfStats *p, double pct)
 /* 量宽回调：走 gfx 的字体，保证"量"和"画"用同一套字形。 */
 /* 贴图模式开关：贴图已经绑进图元后，覆盖层就不要再画一遍文字。 */
 static int title_textures_on;
+/* 标题画面背景是否装上（整屏图，画在菜单之前） */
+static int title_bg_on;
+/* --title-no-bg：只画菜单、不铺背景（几何测量/门禁用：背景的亮部会污染
+ * 墨迹检测）。 */
+static int title_bg_disabled;
+/* 背景占用的图形槽 */
+#define TITLE_BG_SLOT 0x0FF0
 
 /* 贴图占用的图形槽（脚本还没开始跑，用 0xF00 之后的高位，避免和脚本槽冲突） */
 #define TITLE_SLOT_BASE 0x0F00
@@ -1621,7 +1632,10 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
     }
     if (title_textures_on) {
         /* 贴图模式：把装进图形槽的贴图直接贴到画布（render 之后画，
-         * 和文字覆盖层同一时机）。 */
+         * 和文字覆盖层同一时机）。先用整屏背景铺底。 */
+        if (title_bg_on) {
+            (void)gfx_draw_image_at(gfx, TITLE_BG_SLOT, 0, 0);
+        }
         for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
             int ix = 0;
             int iy = 0;
@@ -1886,6 +1900,16 @@ static int title_load_textures(Gfx *gfx, const FvpTitleProfile *prof)
         fvp_logf("title: %d glow texture(s) loaded (slots 0x%X..0x%X)",
                  glow_loaded, TITLE_SLOT_BASE + 8,
                  TITLE_SLOT_BASE + 7 + FVP_TITLE_ITEMS);
+    }
+    if (prof->bg_asset[0] != '\0' && !title_bg_disabled) {
+        if (gfx_graph_load(gfx, TITLE_BG_SLOT, prof->bg_asset) == 0) {
+            title_bg_on = 1;
+            fvp_logf("title: background '%s' loaded (slot 0x%X)",
+                     prof->bg_asset, TITLE_BG_SLOT);
+        } else {
+            fvp_logf("title: background '%s' failed to load",
+                     prof->bg_asset);
+        }
     }
     return loaded;
 #endif
@@ -2292,6 +2316,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     fvp_logf("gfx: text prims %s", opts.text_prims ? "on" : "off");
         fvp_logf("gfx: typewriter %s", opts.typewriter ? "on" : "off");
         if (title_active) {
+            title_bg_disabled = opts.title_no_bg;
             title_textures = title_load_textures(gfx, title_profile);
             title_textures_on = title_textures > 0;
             if (title_textures > 0) {
