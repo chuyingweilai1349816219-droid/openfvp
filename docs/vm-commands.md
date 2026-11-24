@@ -438,6 +438,34 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### GraphRGB(23) / SysProjFolder(109)（**已实现：只记录状态**）
+
+| id | 命令 | argc | 语义 / 证据 |
+| ---: | --- | ---: | --- |
+| 23 | GraphRGB | 4 | `(graphId 0..0xFFF, r, g, b)`。handler **0x43a3d0**：槽号必须 int 且在 0..0xFFF；三个分量**各自**"是 int 且在 0..200"才采用，否则取默认 **100**（= 不调制）；然后 `call 0x428910(engine+0x101064+id*0x51c, r,g,b)` 并 tail-call `0x437330(engine+0x45c, id)` 通知刷新（和 GraphLoad 同一个"槽变了"回调） |
+| 109 | SysProjFolder | 1 | `(folder)`。handler **0x43c7f0**：只接受 type 4/5（字符串）参数，其余直接返回；取到字符串后 tail-call `0x433c60(engine+0x6a7e78, str)` |
+
+本站两个都**只记录**：`FvpVM` 里有 `graph_rgb[4096][3] + graph_rgb_set[]`（每个槽的
+三通道）与 `proj_folder`（arena 里的字符串拷贝），外壳汇总打印
+`graph rgb N call(s), folder=...`。不消费的理由：渲染端没有"100 是不是 1.0 倍、
+200 是过曝还是叠色"的证据；工程目录字符串具体影响哪条资源路径也没解出。
+
+实测（iroseka 45 s）：`GraphRGB` 调 4 次、`SysProjFolder` 调 1 次（参数是空串）。
+
+### GraphRGB(23) / SysProjFolder(109)（**已实现：只记录状态**）
+
+| id | 命令 | argc | 语义 / 证据 |
+| ---: | --- | ---: | --- |
+| 23 | GraphRGB | 4 | `(graphId 0..0xFFF, r, g, b)`。handler **0x43a3d0**：槽号必须 int 且在 0..0xFFF；三个分量**各自**"是 int 且在 0..200"才采用，否则取默认 **100**（= 不调制）；然后 `call 0x428910(engine+0x101064+id*0x51c, r,g,b)` 并 tail-call `0x437330(engine+0x45c, id)` 通知刷新（和 GraphLoad 同一个"槽变了"回调） |
+| 109 | SysProjFolder | 1 | `(folder)`。handler **0x43c7f0**：只接受 type 4/5（字符串）参数，其余直接返回；取到字符串后 tail-call `0x433c60(engine+0x6a7e78, str)` |
+
+本站两个都**只记录**：`FvpVM` 里有 `graph_rgb[4096][3] + graph_rgb_set[]`（每个槽的
+三通道）与 `proj_folder`（arena 里的字符串拷贝），外壳汇总打印
+`graph rgb N call(s), folder=...`。不消费的理由：渲染端没有"100 是不是 1.0 倍、
+200 是过曝还是叠色"的证据；工程目录字符串具体影响哪条资源路径也没解出。
+
+实测（iroseka 45 s）：`GraphRGB` 调 4 次、`SysProjFolder` 调 1 次（参数是空串）。
+
 ### Control\* / Cursor\*（8 / 9 / 10 / 11，**已实现：只记录状态**）
 
 | id | 命令 | argc | 语义 / 证据 |

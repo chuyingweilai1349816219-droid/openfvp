@@ -1633,6 +1633,21 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * 11 CursorMove(argc 3)：写 engine 的 +0x458 / +0xfd8 / +0x88 和鼠标坐标。
      * handler 依次 0x437440 / 0x437460 / 0x437470 / 0x4374a0；只记录状态，
      * 不猜下游（见 src/vm.h 的 fvp_vm_control_mask 注释）。 */
+    /* 23 GraphRGB(graphId 0..0xFFF, r, g, b)：handler 0x43a3d0，分量 0..200、
+     * 缺省 100；只记录（见 src/vm.h 的 graph_rgb 注释）。
+     * 109 SysProjFolder(str)：handler 0x43c7f0，只接受字符串参数。 */
+    case 23:
+        if (argc >= 4) {
+            (void)fvp_vm_graph_rgb(vm, &args[0], &args[1], &args[2], &args[3]);
+            return;
+        }
+        break;
+    case 109:
+        if (argc >= 1) {
+            (void)fvp_vm_set_proj_folder(vm, &args[0]);
+            return;
+        }
+        break;
     case 8:
         if (argc >= 1) {
             fvp_vm_control_mask(vm, &args[0]);

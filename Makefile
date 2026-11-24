@@ -384,6 +384,22 @@ clean-control:
 .PHONY: test_control clean-control
 
 # ---------------------------------------------------------------------------
+# GraphRGB(23) / SysProjFolder(109) 的状态语义
+#   make test_graphcolor
+# ---------------------------------------------------------------------------
+GRAPHCOLOR_TEST = bin/test_graphcolor$(EXE)
+
+test_graphcolor: $(GRAPHCOLOR_TEST)
+
+$(GRAPHCOLOR_TEST): tests/test_graphcolor.c src/vm.c src/vm.h $(OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_graphcolor.c $(filter-out src/main.o,$(OBJ)) $(LDFLAGS) -lm
+
+clean-graphcolor:
+	-rm -f $(GRAPHCOLOR_TEST)
+
+.PHONY: test_graphcolor clean-graphcolor
+
+# ---------------------------------------------------------------------------
 # make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
 # CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
 #   make check
@@ -395,7 +411,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
-             $(CONTROL_TEST)
+             $(CONTROL_TEST) $(GRAPHCOLOR_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

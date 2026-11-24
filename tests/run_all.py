@@ -300,6 +300,18 @@ def build_steps(args):
                           note='mask/pulse/cursor state: type-vs-value rules, '
                                '0..3 clamp, NULL args, per-command counters'))
 
+    # 4i3. GraphRGB(23) / SysProjFolder(109) state (recorded, not rendered)
+    test_graphcolor = tools.get('test_graphcolor')
+    if not test_graphcolor or not os.path.isfile(test_graphcolor):
+        steps.append(Step('test_graphcolor', None, 0,
+                          skip_reason='bin/test_graphcolor.exe missing '
+                                      '(run: make test_graphcolor)'))
+    else:
+        steps.append(Step('test_graphcolor', [test_graphcolor], 120,
+                          note='graph slot RGB: 0..0xFFF slot, 0..200 '
+                               'components with 100 fallback; project folder '
+                               'string'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):

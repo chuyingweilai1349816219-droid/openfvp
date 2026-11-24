@@ -1043,6 +1043,57 @@ int fvp_snd_bank_read(FvpSndBridge *b, const char *name, uint8_t **data,
     return opened > 0 ? -1 : -2;
 }
 
+/* 静态分析 0x43a3d0：分量"是 int 且在 0..200 内"才采用，否则默认 100。 */
+static unsigned char rgb_component(const FvpValue *v)
+{
+    if (v == NULL || v->type != (uint8_t)FVP_INT) {
+        return 100u;
+    }
+    if (v->i < 0 || v->i > 200) {
+        return 100u;
+    }
+    return (unsigned char)v->i;
+}
+
+int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
+                     const FvpValue *g, const FvpValue *b)
+{
+    int id;
+
+    if (vm == NULL || slot == NULL) {
+        return 0;
+    }
+    if (slot->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    id = (int)slot->i;
+    if (id < 0 || id >= FVP_GRAPH_SLOTS) {
+        return 0;
+    }
+    vm->graph_rgb_calls += 1u;
+    vm->graph_rgb[id][0] = rgb_component(r);
+    vm->graph_rgb[id][1] = rgb_component(g);
+    vm->graph_rgb[id][2] = rgb_component(b);
+    vm->graph_rgb_set[id] = 1u;
+    return 1;
+}
+
+int fvp_vm_set_proj_folder(FvpVM *vm, const FvpValue *arg)
+{
+    FvpStr *s;
+
+    if (vm == NULL || arg == NULL) {
+        return 0;
+    }
+    if (arg->type != (uint8_t)FVP_STR || arg->str == NULL) {
+        return 0;
+    }
+    vm->proj_folder_calls += 1u;
+    s = fvp_arena_str(&vm->arena, arg->str->data, arg->str->len);
+    vm->proj_folder = (char *)s->data;
+    return 1;
+}
+
 void fvp_vm_control_mask(FvpVM *vm, const FvpValue *arg)
 {
     if (vm == NULL) {

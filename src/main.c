@@ -235,6 +235,11 @@ static void fvp_print_summary(const FvpVM *vm)
            (unsigned long long)vm->control_calls[1],
            (unsigned long long)vm->control_calls[2],
            (unsigned long long)vm->control_calls[3]);
+    /* GraphRGB 23 / SysProjFolder 109 */
+    printf("graph rgb  %llu call(s), folder=%s (folder calls %llu)\n",
+           (unsigned long long)vm->graph_rgb_calls,
+           vm->proj_folder != NULL ? vm->proj_folder : "-",
+           (unsigned long long)vm->proj_folder_calls);
     printf("history    count=%u pos=%u filled=%d set=%llu get=%llu\n",
            (unsigned)vm->history.count, (unsigned)vm->history.pos,
            fvp_history_filled(&vm->history),

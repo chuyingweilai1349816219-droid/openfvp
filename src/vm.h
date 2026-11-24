@@ -208,6 +208,9 @@ typedef struct FvpSndBridge {
     void *event_ud;
 } FvpSndBridge;
 
+/* GraphRGB 的槽号上限（静态分析 0..0xFFF）。 */
+#define FVP_GRAPH_SLOTS 4096
+
 typedef struct FvpVM {
     FvpHcb *hcb;
     FvpValue globals[FVP_GLOBAL_COUNT];
@@ -265,6 +268,21 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* GraphRGB(23)：每个图形槽的颜色调制。静态分析（handler 0x43a3d0）结论：
+     * 槽号必须 int 0..0xFFF；三个分量各自"是 int 且在 0..200 内"才采用，否则取
+     * 默认 100（= 不调制）；然后 call 0x428910(engine+0x101064+slot*0x51c, r,g,b)
+     * 并 tail-call 0x437330(engine+0x45c, slot) 通知刷新。
+     * 本站只记录（渲染端没有"颜色调制怎么合成"的证据，见 docs/render-model.md）。 */
+    unsigned char graph_rgb[FVP_GRAPH_SLOTS][3];
+    unsigned char graph_rgb_set[FVP_GRAPH_SLOTS];
+    uint64_t graph_rgb_calls;
+
+    /* SysProjFolder(109)：handler 0x43c7f0 只接受 type 4/5（字符串）参数，然后
+     * tail-call 0x433c60(engine+0x6a7e78, str) 设置"工程目录"。本站把字符串存进
+     * arena 记下来（档案路径的语义还没解出，不消费）。 */
+    char *proj_folder;
+    uint64_t proj_folder_calls;
+
     /* 存档暂存区（SaveCreate / SaveThumbSize 写入，SaveWrite 将来消费）：
      * str[0]=章节名, str[1]=未用, str[2]=当前对话行（docs/save-format.md §2.2）。 */
     FvpStr *save_str[3];
@@ -314,6 +332,12 @@ uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps);
 /* 打开卡死侦测：连续 n 步没有 syscall 就停下（n == 0 关闭，默认关闭）。
  * 命中后 fvp_vm_stalled() 返回 1，细节看 FvpVM 的 stall_* 字段。 */
 void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
+
+/* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
+int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
+                     const FvpValue *g, const FvpValue *b);
+/* SysProjFolder(109)：记录工程目录字符串，返回 1 = 生效（参数是字符串）。 */
+int fvp_vm_set_proj_folder(FvpVM *vm, const FvpValue *arg);
 int fvp_vm_stalled(const FvpVM *vm);
 
 /* 控制 / 光标这一组（静态分析证据见 docs/vm-commands.md §5 补充表）：

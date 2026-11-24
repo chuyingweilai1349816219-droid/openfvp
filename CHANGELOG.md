@@ -53,6 +53,22 @@
 
 ### 新增
 
+- **`GraphRGB`(23) / `SysProjFolder`(109) 落地（本轮，只记录状态）**
+  - `GraphRGB(graphId, r, g, b)`：handler **0x43a3d0**。槽号必须 int 0..0xFFF；
+    三个分量**各自**"是 int 且在 0..200"才采用，否则默认 **100**；随后
+    `call 0x428910(engine+0x101064+id*0x51c, r,g,b)` + tail-call
+    `0x437330(engine+0x45c, id)`（与 GraphLoad 同一个"槽已更新"回调）
+  - `SysProjFolder(folder)`：handler **0x43c7f0**。只接受字符串参数（原版 type 4/5），
+    然后 tail-call `0x433c60(engine+0x6a7e78, str)`
+  - 实现：`FvpVM` 新增 `graph_rgb[4096][3] / graph_rgb_set[] / graph_rgb_calls` 与
+    `proj_folder / proj_folder_calls`；两个外壳汇总打印
+    `graph rgb N call(s), folder=...`。**不消费**：渲染端没有"100 是否等于 1.0 倍、
+    200 是过曝还是叠色"的证据，工程目录影响哪条资源路径也没解出（同 TextFont 的处理）
+  - 实测：iroseka 45 s 外壳 `GraphRGB` 4 次、`SysProjFolder` 1 次（空串），
+    `unimpl cmds` 从 **7 种降到 5 种**（`147×1 110×6 21×24 17×1 142×7`）
+  - 单测 `tests/test_graphcolor.c` **24 项**（`make check` 现在 **15 个单测**，
+    `run_all.py` **30 步**）
+
 - **`ControlMask`(8) / `ControlPulse`(9) / `CursorChange`(10) / `CursorMove`(11) 落地（本轮，只记录状态）**
   - handler 依次 **0x437440 / 0x437460 / 0x437470 / 0x4374a0**（同 `work/vm_id_handler.json`）：
     `ControlMask` 只看参数的**类型字节**（null → engine+0x458=1）、`ControlPulse` 置
