@@ -4,6 +4,51 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [1.0.0] — 2026-11-24：第一个正式版（引擎本体 + 工程完整）
+
+引擎本体的第一个正式版。**定位是"引擎与工程完整、已知限制写清楚"，不是"能完整通关"**，
+所以下面把「做了什么」和「明确不做什么」并列写。逐条可核对，不含宣传词。
+
+### 这一版里落地的（相对 0.8.0）
+
+- **32 个协程槽**（`ThreadStart`/`ThreadExit`/`ThreadNext`，默认开启）+ 修掉栈底帧自循环的
+  VM bug；900k / 2M 两档开关文本逐字节相同（`tests/verify_threads.py` 门禁）
+- **16 个定时器**（`TimerSet`/`TimerGet`/`TimerSuspend`，新模块 `src/timer.c`）
+- **逐字显示（打字机）**：`TextSpeed`(129) + `TextSuspendChr`(130) 的渲染侧，
+  默认关闭（`--typewriter`），UTF-8 按码点边界截断
+- **纹理缓存 LRU 上限**（默认 256 MiB）+ 诊断计数
+- **周期性能报告修 bug**：fps/slow 之前用全程累计值除以 5 s 窗口（135 s 会报 1606.9 fps）
+- **未实现命令统计口径修正**：外壳日志从 52 种降到 25 种，剩下的是文本显示细节
+- **`SaveData`(95) 记录**：查明它只打三个已读标记，不是状态摊平入口
+- **测试从 20 步扩到 23 步**（新增 `verify_threads`、`test_timer`、`test_typewriter`、`test_tex_cache`）
+
+### 1.0.0 明确不做（已知限制）
+
+| 限制 | 影响 | 依据 |
+|---|---|---|
+| **游戏内存档/读档** | 游戏里点保存/读取不会真的生效 | 槽尾 500–597 KB 的引擎状态快照由 `0x43DE90` 直接序列化内部结构，字段语义未解（`docs/save-format.md` §2.5） |
+| 动画缓动曲线（`mode 1..5`） | 演出是线性插值，和原版不同 | 没有静态分析证据，也未拿到原版实机对照 |
+| 游戏内菜单/设置/存档界面 | 没有这些界面 | `Menu*`/`TitleMenu` 是桩 |
+| WMV 视频 | 开场动画被跳过 | `Movie*` 返回"已播放完毕" |
+| 语音播放 | 只有 BGM/SE 出声 | voice id 依赖存档层，未接 |
+| 文本显示细节 | `TextFont`/`TextShadowDist`/`TextFormat`/`TextFunction`/`TextSkip` 是桩 | 外壳实测 25 种未实现命令里的高频项 |
+| 长跑内存 | 随游程阶梯上升 | 脚本把 79 个槽（含整套 `fc_*` UI 图）一次性装载且从不释放；LRU 只能回收被覆盖过的图 |
+| Android 后端 | 只有文档与设计 | 非本阶段目标 |
+| 与**原版**逐像素对照 | 未做 | 所有"一致"都是相对我们自己的 Python 参考实现；手上没有原版截图/录像 |
+| 老版本 FVP 作品 | 未测试 | 只验证过两部（`iroseka` / 星空のメモリア） |
+
+### 验收（1.0.0 发布前实跑）
+
+| 项 | 结果 |
+|---|---|
+| `tests/run_all.py` | **23 项全绿**（含 VM 逐字节 / 资源 / 音频 / 存档 / flag / textattr / thumb / encode / wheel / motion / tex_cache / timer / typewriter / 协程 / fuzz 27,300 次变异） |
+| `tests/compare.py --run` | PASS：6,496 B / 195 行 / `7f9837ff…b3ea2` |
+| `verify_gfx.ps1 -SkipDump` | PASS：24/24 图元 0 px、293 px 差（0.0141%）、PSNR 49.94、SSIM 0.99971 |
+| `verify_motion.ps1` | PASS：关两次一致；1,000 步开=关；60,000 步开≠关 |
+| `verify_threads.py` | PASS：`start == exit`、开/关同字节、900k 与 2M 都对冻结基准 |
+| `check-docs.py` | PASS：29 篇文档、0 缺失路径、DeepSeek 声明齐全 |
+| 外壳长跑 | 15 分钟级采样：59.7–59.9 fps、`slow=0`、`underruns=0`、`exit=run-seconds` |
+
 ## [未发布] — 协程槽落地（1.0.0 之前）
 
 ### 新增

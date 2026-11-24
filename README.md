@@ -13,13 +13,13 @@
 目标：让 FAVORITE 社的 FVP 视觉小说（《いろとりどりのセカイ HD》系列、《星空のメモリア》、
 《アストラエアの白き永遠》等）能在现代平台运行，首要目标是 Android。
 
-> **状态：0.8.0 测试版。** 脚本虚拟机（VM）与冻结的 Python 基准逐字节对齐；
-> 资源层（BIN / inflate / HZC1）、渲染层（gfx）都已有全量验收数字；
-> 音频层已接进 VM（BGM 真实出声），存档文件层 + 全局变量桥 + flag 位图已落地，
-> Win32 桌面外壳能跑出 60 fps、显示真实画面并在启动时读 `save/save.bin`；
-> 游戏内存/读档、命令语义（动画/设置）、时间模型、Android 后端**仍未完成**；
-> 协程槽已实现并证明对本作行为中立（见 [`docs/05-threads.md`](docs/05-threads.md) §10）。
-> 下面的「能做什么 / 不能做什么」是逐条可核对的清单，不含宣传词。
+> **状态：1.0.0 正式版。** 引擎本体（C99）在桌面端跑得起来：窗口 / 渲染 / 音频 / 输入 /
+> 存档文件层 / 协程槽 / 定时器 / 逐字显示都已落地，测试与文档齐备。
+> 脚本虚拟机（VM）与冻结的 Python 基准逐字节对齐；
+> 资源层（BIN / inflate / HZC1）、渲染层（gfx）都有全量验收数字；
+> **已知限制（1.0.0 明确不做，不是"以后再说"的漂亮话）：** 游戏内存/读档（槽尾 500–597 KB
+> 的引擎状态快照未解）、动画缓动曲线（`mode 1..5`）、WMV 视频、游戏内菜单/设置界面、
+> 语音播放、Android 后端。逐条见下面的「能做什么 / 不能做什么」。
 
 本仓库**不含任何游戏数据**：没有 `.bin`、`.hcb`、音频、图像、台词。要跑起来必须自备正版游戏，
 见文末[免责声明](#免责声明)。
@@ -87,18 +87,23 @@
 
 按影响从大到小，这些都是**已知未完成**，不是待办里的漂亮话：
 
-1. **只有开场到第一章的画面能看。** 渲染层与桌面外壳都通过了像素级验收，
-   但**游戏内 UI 还是占位**：对话框是画的圆角框（真实的 `main_window` 贴图已解出但没接），
-   没有菜单、没有存档界面、没有设置页。动画（`Motion*`）仍是空实现，所以立绘不会动。
-2. **命令语义基本是桩。** [`src/syscall.c`](src/syscall.c) 里渲染相关的 30 条已接 gfx，
-   但动画/视频/存档/设置类命令仍是兜底策略（`*Test` 返回 1、声明返回值的返回 0）。
-   **没有移动、没有淡入淡出、没有转场、没有存档。**
+1. **游戏内 UI 还是占位。** 渲染层与桌面外壳都通过了像素级验收，但对话框仍是画的圆角框
+   （游戏自己的 `main_window_mask` 贴图已解出、脚本也把它挂在 36 号图元上，但没有证据表明
+   它就是对话框外框，所以没强行接）；没有菜单、没有存档界面、没有设置页。
+   动画（`Motion*`）有补间骨架（`--motion` 可开），但 `mode 1..5` 的缓动曲线**没有证据**，
+   现在一律线性插值。
+2. **命令语义仍有缺口，但清单是准确的。** [`src/syscall.c`](src/syscall.c) 里渲染相关的命令已接 gfx，
+   动画接补间表，音频接 snd，定时器接 `src/timer.c`。外壳 90 秒 / 480,942 步实测**只剩 25 种**
+   未实现命令，且高频的全是文本显示细节（`TextFont`/`TextShadowDist`/`TextFormat`/
+   `TextFunction`/`TextSkip`）—— 具体表在 [`docs/roadmap.md`](docs/roadmap.md)。
+   `Movie*`（视频）与 `V3D*` 仍是桩。
 3. **协程已实现，但本作的协程体被脚本自己关掉了。** 32 个协程槽
    （`ThreadStart`/`ThreadExit`/`ThreadNext`）已按静态分析语义接上（默认开启，`--no-threads` 可关），
    900k / 2M 两档的开/关文本**逐字节相同**，也与冻结基准相同 —— 因为这份脚本里每个协程入口
    都是 `initstack; pushint8 0; jmpcond <ret>`，条件是**编译期常量 0**，协程建起来就退出。
    所以「约 50 句台词缺失」这个旧结论**不成立**（已据此改正文档）。
-   `Timer*` 与虚拟时钟仍是可选的最小实现（`--timeline`，默认关闭，对文本行为中立）。
+   16 个定时器（`TimerSet`/`TimerGet`/`TimerSuspend`）已实现，elapsed 由虚拟时钟推导
+   （`--timeline` 默认关闭，所以计时恒 0 —— 与旧行为一致）。
    细节与实测表在 [`docs/05-threads.md`](docs/05-threads.md) §10。
 4. **音频播放已经通了，但音画同步与音量体系还没做。** 脚本里的 `AudioPlay` 现在会真的解码并混音
    （900k 步触发 4 次 BGM），但语音路径依赖存档层给的 voice id（原型里没有），
@@ -112,8 +117,10 @@
 8. **4 个 opcode 语义未确认**（`0x11` / `0x12` / `0x17` / `0x18`，占本作指令 0.18%），
    按数组读写实现，未做定向验证 —— 见 [`docs/roadmap.md`](docs/roadmap.md)。
 9. **存档只做到文件层。** `save/sNNN.bin` 与 `save/save.bin` 能完整解析并原样重写
-   （6 个真实存档逐字节回环一致），但槽文件里那段引擎状态快照的字段语义还没解完，
-   所以**游戏内还不能真的存档/读档**；也没有选项菜单与 Android 后端。
+   （6 个真实存档逐字节回环一致），但槽文件里那段引擎状态快照（500–597 KB）的字段语义
+   还没解完，所以**游戏内还不能真的存档/读档**。2026-11 查明：脚本的 `SaveData`(95)
+   只打三个已读标记（`kind=2 idx=900/903/904`），快照是 `0x43DE90` 直接序列化引擎内部结构
+   —— 见 [`docs/save-format.md`](docs/save-format.md) §2.5。
 10. **`work/` 里的 Python 原型没有入库**（体积大、含大量一次性侦查脚本）。
     因此「重新生成渲染帧」「重跑 HZC1 参考解码」这类操作在克隆出来的仓库里做不了，
     只能用仓库内的 C 工具（[`tests/verify_assets.ps1`](tests/verify_assets.ps1)）做验收。
@@ -197,7 +204,7 @@ python scripts/ci-compare.py        # -> RESULT: SKIPPED（仍会校验冻结基
 .
 ├── README.md              本文件（中文）
 ├── README.en.md           英文说明
-├── VERSION                版本号（0.8.0）
+├── VERSION                版本号（1.0.0）
 ├── LICENSE                GPL-2.0-only 全文
 ├── THIRD-PARTY.md         第三方代码（stb_vorbis）与生成文件的来源
 ├── CONTRIBUTING.md        报兼容问题 / 等价性验证 / 代码风格 / 提交前检查
@@ -283,7 +290,7 @@ python scripts/ci-compare.py        # -> RESULT: SKIPPED（仍会校验冻结基
 FAVORITE's titles such as *Irotoridori no Sekai HD*. It is not an emulator, not a
 Wine wrapper, and it never modifies the original game files.
 
-What works today (v0.8.0 test build):
+What works today (v1.0.0):
 
 - the whole `.hcb` script format is parsed — **948,219 instructions** and
   **55,461 strings** in the reference title — and all **40 VM opcodes** are implemented;
