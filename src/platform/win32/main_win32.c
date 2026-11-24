@@ -2264,6 +2264,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         APPEND("prim hit       %llu call(s), %llu hit(s)\n",
                (unsigned long long)vm.prim_hit_calls,
                (unsigned long long)vm.prim_hit_hits);
+        /* 字形兜底：某套图集缺字时从别的图集缩放取（tofu=0 表示没有黑方块）。 */
+        APPEND("glyphs         %d tofu, %d from fallback atlas\n",
+               gfx_stats(gfx)->tofu_glyphs, gfx_stats(gfx)->fallback_glyphs);
         APPEND("history        count=%u pos=%u filled=%d set=%llu\n",
                (unsigned)vm.history.count, (unsigned)vm.history.pos,
                fvp_history_filled(&vm.history),

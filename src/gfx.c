@@ -1860,6 +1860,8 @@ static void mark_tree(Gfx *g, int pid, unsigned char *seen)
 /* text                                                                    */
 /* ----------------------------------------------------------------------- */
 
+static GfxFont *font_fallback(Gfx *g, const GfxFont *want, uint32_t cp);
+
 static GfxFont *pick_font(Gfx *g, int size)
 {
     int i;
@@ -1874,11 +1876,25 @@ static GfxFont *pick_font(Gfx *g, int size)
 static int char_advance(Gfx *g, GfxFont *f, uint32_t cp)
 {
     int gi;
-    (void)g;
+
     if (!f->builtin) {
         gi = font_find(f, cp);
         if (gi >= 0) {
             return f->adv[gi];
+        }
+        {
+            GfxFont *fb = font_fallback(g, f, cp);
+
+            if (fb != NULL) {
+                int gi2 = font_find(fb, cp);
+
+                if (gi2 >= 0 && fb->size > 0) {
+                    /* 跨字号取字：推进量按字号比例缩放，排版才对齐 */
+                    double sc = (double)f->size / (double)fb->size;
+
+                    return (int)((double)fb->adv[gi2] * sc + 0.5);
+                }
+            }
         }
     }
     if (f->builtin && cp >= 32 && cp <= 126) {
@@ -1888,6 +1904,39 @@ static int char_advance(Gfx *g, GfxFont *f, uint32_t cp)
         return 8; /* built-in ASCII fallback */
     }
     return f->size ? f->size : 16; /* tofu advance */
+}
+
+/* 目标图集 f 里没有 cp 时，去其它已注册图集里找（优先字号最接近的）。
+ * 这是为了让"某套图集只收了少数几个字"不至于直接退化成豆腐块 —— 例如游戏里
+ * 56px 的章节标题图集只有 5 个字形，而标题正文来自 34px 图集。
+ * 返回 NULL 表示所有图集都没有这个字。 */
+static GfxFont *font_fallback(Gfx *g, const GfxFont *want, uint32_t cp)
+{
+    GfxFont *best = NULL;
+    int best_d = 0;
+    int i;
+
+    if (g == NULL || want == NULL) {
+        return NULL;
+    }
+    for (i = 0; i < g->nfonts; ++i) {
+        GfxFont *f = g->fonts[i];
+        int d;
+
+        if (f == NULL || f == want || f->builtin || f->count <= 0) {
+            continue;
+        }
+        if (font_find(f, cp) < 0) {
+            continue;
+        }
+        d = (f->size > want->size) ? (f->size - want->size)
+                                   : (want->size - f->size);
+        if (best == NULL || d < best_d) {
+            best = f;
+            best_d = d;
+        }
+    }
+    return best;
 }
 
 static int text_width(Gfx *g, GfxFont *f, const char *s)
@@ -2120,6 +2169,65 @@ static void draw_tofu(Gfx *g, int x, int y, int size, int r, int gr, int b,
     }
 }
 
+/* 把 src 图集里的字形按目标字号缩放画上去（最近邻采样）。
+ * 用于 font_fallback()：目标图集缺这个字，但别的图集有。 */
+static void draw_glyph_scaled(Gfx *g, GfxFont *f, const GfxFont *src, int gi,
+                              int x, int y, int r, int gr, int b, int ca,
+                              int stroke_w, int sr, int sg, int sb, int sca)
+{
+    int sw = src->gw[gi];
+    int sh = src->cell_h;
+    int dw;
+    int dh;
+    int dx;
+    int dy;
+    const uint8_t *body;
+    const uint8_t *stroke = NULL;
+
+    if (src->size <= 0 || sw <= 0 || sh <= 0 || f->size <= 0) {
+        return;
+    }
+    dw = (int)((double)sw * (double)f->size / (double)src->size + 0.5);
+    dh = (int)((double)sh * (double)f->size / (double)src->size + 0.5);
+    if (dw <= 0 || dh <= 0) {
+        return;
+    }
+    body = font_glyph_px(src, gi, 0);
+    if (body == NULL) {
+        return;
+    }
+    if (stroke_w > 0 && src->layers >= 3) {
+        stroke = font_glyph_px(src, gi, stroke_w <= 2 ? stroke_w : 2);
+    }
+    for (dy = 0; dy < dh; ++dy) {
+        int sy = (int)((long)dy * sh / dh);
+
+        if (sy >= sh) {
+            sy = sh - 1;
+        }
+        for (dx = 0; dx < dw; ++dx) {
+            int sx = (int)((long)dx * sw / dw);
+            size_t off = (size_t)sy * (size_t)sw + (size_t)sx;
+            int cov;
+
+            if (sx >= sw) {
+                sx = sw - 1;
+            }
+            if (stroke != NULL) {
+                cov = stroke[(size_t)sy * (size_t)sw + (size_t)sx];
+                if (cov != 0) {
+                    ink_px(g, x + dx, y + dy, sr, sg, sb, sca, cov);
+                }
+            }
+            cov = body[off];
+            if (cov != 0) {
+                ink_px(g, x + dx, y + dy, r, gr, b, ca, cov);
+            }
+        }
+    }
+    g->stats.fallback_glyphs += 1;
+}
+
 /* one run of text at (x, y); y is the ascender top, like PIL's default
  * "la" anchor */
 static void draw_text_run(Gfx *g, GfxFont *f, int x, int y, const char *s,
@@ -2133,11 +2241,31 @@ static void draw_text_run(Gfx *g, GfxFont *f, int x, int y, const char *s,
     while ((cp = utf8_next(&p)) >= 0) {
         if (!f->builtin) {
             int gi = font_find(f, (uint32_t)cp);
+
             if (gi >= 0) {
                 draw_glyph_atlas(g, f, gi, pen - f->margin, y - f->margin, r,
                                  gr, b, ca, stroke_w, sr, sg, sb, sca);
                 pen += f->adv[gi];
                 continue;
+            }
+            /* 本图集没有这个字：用别的图集缩放补上（比豆腐块好） */
+            {
+                GfxFont *fb = font_fallback(g, f, (uint32_t)cp);
+
+                if (fb != NULL) {
+                    int gi2 = font_find(fb, (uint32_t)cp);
+
+                    if (gi2 >= 0) {
+                        int m = (int)((double)fb->margin * (double)f->size /
+                                          (double)fb->size +
+                                      0.5);
+
+                        draw_glyph_scaled(g, f, fb, gi2, pen - m, y - m, r, gr,
+                                          b, ca, stroke_w, sr, sg, sb, sca);
+                        pen += char_advance(g, f, (uint32_t)cp);
+                        continue;
+                    }
+                }
             }
         }
         if (cp >= 32 && cp <= 126) {
@@ -2163,6 +2291,7 @@ static void draw_text_run(Gfx *g, GfxFont *f, int x, int y, const char *s,
             }
             pen += 8;
         } else {
+            g->stats.tofu_glyphs += 1;
             draw_tofu(g, pen, y, f->size ? f->size : 16, r, gr, b, ca,
                       stroke_w, sr, sg, sb, sca);
             pen += f->size ? f->size : 16;
@@ -2465,6 +2594,8 @@ void gfx_render(Gfx *g)
     g->stats.compo_builds = 0;
     g->stats.pixels = 0;
     g->stats.resize_cache_hits = 0;
+    g->stats.fallback_glyphs = 0;
+    g->stats.tofu_glyphs = 0;
     xf_identity(&xf);
     walk_tree(g, 0, 0, &xf);
     seen = (unsigned char *)calloc(GFX_PRIM_MAX, 1);

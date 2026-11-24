@@ -335,6 +335,22 @@ clean-prim-hit:
 .PHONY: test_prim_hit clean-prim-hit
 
 # ---------------------------------------------------------------------------
+# 跨图集字形兜底（某套图集缺字时从别的图集缩放取，而不是画豆腐块）
+#   make test_glyph_fallback
+# ---------------------------------------------------------------------------
+GLYPH_FALLBACK_TEST = bin/test_glyph_fallback$(EXE)
+
+test_glyph_fallback: $(GLYPH_FALLBACK_TEST)
+
+$(GLYPH_FALLBACK_TEST): tests/test_glyph_fallback.c src/gfx.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_glyph_fallback.c $(GFX_OBJ) $(LDFLAGS) -lm
+
+clean-glyph-fallback:
+	-rm -f $(GLYPH_FALLBACK_TEST)
+
+.PHONY: test_glyph_fallback clean-glyph-fallback
+
+# ---------------------------------------------------------------------------
 # make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
 # CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
 #   make check
@@ -345,7 +361,7 @@ clean-prim-hit:
 UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
-             $(PRIM_HIT_TEST)
+             $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

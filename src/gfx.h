@@ -130,6 +130,8 @@ typedef struct GfxStats {
     int cache_hits;   /* graph slots that reused a decoded image         */
     int compo_builds; /* graph slot composites rebuilt (base+overlays)   */
     int resize_cache_hits; /* per-prim transformed images reused         */
+    int fallback_glyphs; /* 当前图集缺字、从别的图集缩放取过来的字形数 */
+    int tofu_glyphs;     /* 所有图集都没有这个字、只能画豆腐块的次数   */
     long long pixels; /* destination pixels touched by the last render   */
 } GfxStats;
 

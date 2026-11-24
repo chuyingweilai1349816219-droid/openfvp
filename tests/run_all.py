@@ -353,6 +353,17 @@ def build_steps(args):
                           note='parent-chain offsets, draw gating, min(prim,image) WH, '
                                'UV clip, open right/bottom edges, group recursion'))
 
+    # 4p. 跨图集字形兜底（缺字时缩放取别的图集，不再画豆腐块）
+    test_glyph_fallback = tools.get('test_glyph_fallback')
+    if not test_glyph_fallback or not os.path.isfile(test_glyph_fallback):
+        steps.append(Step('test_glyph_fallback', None, 0,
+                          skip_reason='bin/test_glyph_fallback.exe missing '
+                                      '(run: make test_glyph_fallback)'))
+    else:
+        steps.append(Step('test_glyph_fallback', [test_glyph_fallback], 120,
+                          note='hit / scaled fallback / tofu counters, '
+                               'per-render reset'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

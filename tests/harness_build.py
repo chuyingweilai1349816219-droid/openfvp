@@ -144,6 +144,7 @@ def public_tools():
         'test_typewriter': os.path.join(FVP, 'bin', 'test_typewriter.exe'),
         'test_history': os.path.join(FVP, 'bin', 'test_history.exe'),
         'test_prim_hit': os.path.join(FVP, 'bin', 'test_prim_hit.exe'),
+        'test_glyph_fallback': os.path.join(FVP, 'bin', 'test_glyph_fallback.exe'),
     }
 
 
