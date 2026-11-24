@@ -352,7 +352,7 @@ static const wchar_t *usage_text(void)
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
             L"  --no-threads        关闭协程槽 0..31（A/B 用；默认开启，本作脚本行为中立）\n"
-            L"  --tex-cache-mb N    texture cache cap in MiB（默认 512；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
+            L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --console           同时输出到启动它的控制台窗口\n"
            L"  --verbose           更详细的日志\n"
@@ -424,7 +424,7 @@ static void defaults(Options *o)
     o->motion = 0;
     o->timeline = 0;
     o->threads = 1;
-    o->tex_cache_mb = 512;
+    o->tex_cache_mb = 256;
     o->feed_text = 1;
 }
 

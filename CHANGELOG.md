@@ -8,6 +8,16 @@
 
 ### 新增
 
+- **纹理缓存 LRU 上限（默认 256 MiB）**：长跑 RSS 阶梯式增长的根因
+  - 采样证据：0–95 s 稳定 194 MiB，之后随换场景阶跃 222.9 / 209.5 / 221.7 MiB，
+    每一跳都精确对应缓存 75→78→80→81→83 张（108.7 MiB）的阶跃 —— **不是泄漏，是只进不出**
+  - 语义：`tex_unref()` 到 0 引用不再立即释放，图像留在缓存等复用；新加 `tex_free()`
+    只由淘汰和 `gfx_destroy` 调用。`refs` 只数外部持有者，**refs == 0 = 可淘汰**
+  - 淘汰只挑 refs == 0 的条目（被图元/组槽/部件引用的永不动），因此像素输出不变：
+    `verify_gfx.ps1 -SkipDump` 仍是 293 px / PSNR 49.94 / SSIM 0.99971
+  - 接口：`gfx_tex_cap_bytes` / `gfx_tex_set_cap_bytes` / `gfx_tex_evictions`；
+    外壳 `--tex-cache-mb N`（0 = 不限制），`tex:` 行打印上限与累计淘汰数
+  - 测试：`tests/test_tex_cache.c` **26 项**（已并入 `run_all`，共 21 步）
 - **32 个协程槽进 C，默认开启**（`ThreadStart`/`ThreadExit`/`ThreadNext`）
   - `src/vm.h`：`FVP_THREAD_SLOTS 32`、`thread_slots[32]`、`threads_on`、诊断计数
   - `src/vm.c`：`fvp_vm_thread_start()` / `fvp_vm_thread_exit()`，死线程回收时清槽
@@ -36,7 +46,7 @@
   20 分钟采样（每 10 s 记 RSS）结论：**不是内存泄漏，是纹理缓存只进不出**
   —— RSS 在 0–95 s 稳定 194 MiB，之后随换场景阶跃到 222.9 / 209.5 / 221.7 MiB，
   每一跳都精确对应缓存 75→78→80→81→83 张（108.7 MiB）的阶跃。
-  → 待办：纹理缓存加 LRU 上限（1.0.0 前）。
+  → 已由上面的 LRU 上限解决。
 
 ### 修正（推翻旧结论）
 
