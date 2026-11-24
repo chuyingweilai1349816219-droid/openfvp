@@ -110,6 +110,10 @@ typedef struct Options {
     int text_prims; /* --text-prims: 按文本图元（PrimSetText 86）定位，默认关 */
     int title_menu; /* --title-menu: 先显示引擎侧标题菜单，选了 New Game 才跑脚本 */
     int title_save_list; /* --title-save-list: 直接打开 Continue 的存档列表 */
+    /* 调试钩子：脚本自己调 SaveWrite/Load 之前先手动造一个请求，用来端到端
+     * 验证"请求 -> 外壳执行"这条链路（-1 = 不发）。 */
+    int debug_save_request;
+    int debug_load_request;
 } Options;
 
 /* ------------------------------------------------------------------ */
@@ -496,6 +500,8 @@ static void defaults(Options *o)
     o->text_pace_mode = TEXT_PACE_AUTO;
     o->run_seconds = 0.0;
     o->save_preview_every = 0.0;
+    o->debug_save_request = -1;
+    o->debug_load_request = -1;
     o->motion = 0;
     o->timeline = 0;
     o->threads = 1;
@@ -650,6 +656,12 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--save-preview-every") == 0) {
             NEED_VALUE();
             o->save_preview_every = wcstod(v, NULL);
+        } else if (wcscmp(a, L"--debug-save-request") == 0 &&
+                   i + 1 < argc) {
+            o->debug_save_request = _wtoi(argv[++i]);
+        } else if (wcscmp(a, L"--debug-load-request") == 0 &&
+                   i + 1 < argc) {
+            o->debug_load_request = _wtoi(argv[++i]);
             if (o->save_preview_every < 0.0) {
                 o->save_preview_every = 0.0;
             }
@@ -1902,6 +1914,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     FvpSaveList save_list;
     int save_list_active = 0;
     int save_hover = -1;
+    int debug_requests_sent = 0;
+    wchar_t save_dir[PATH_CAP];
+    int save_writes = 0;
+    int load_requests = 0;
     double title_shown_at = 0.0;
     double last_report = 0.0;
     PerfStats perf;
@@ -2713,6 +2729,84 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             canvas = gfx_canvas(gfx, &cw, &ch);
             render_ms = (now_sec() - r0) * 1000.0;
         }
+        /* ---- 存档/读档请求（Load 40 / SaveWrite 96）----
+         * VM 只记录"请求 + 槽号"，真正读写文件在这一侧做：
+         *   SaveWrite → 用 --save-template 当模板 + 当前画布缩略图 + 脚本暂存的
+         *               三条字符串，写成 <game_dir>\save\sNNN.bin；
+         *               没有模板就**拒绝写**（槽尾语义未解，硬造只会写坏档）。
+         *   Load      → 只记日志：槽尾快照的字段语义还没解完，恢复不了。 */
+        if (canvas != NULL) {
+            if (!debug_requests_sent) {
+                if (opts.debug_save_request >= 0) {
+                    FvpValue dv;
+
+                    memset(&dv, 0, sizeof dv);
+                    dv.type = FVP_INT;
+                    dv.i = opts.debug_save_request;
+                    (void)fvp_vm_request_save(&vm, &dv);
+                }
+                if (opts.debug_load_request >= 0) {
+                    FvpValue dv;
+
+                    memset(&dv, 0, sizeof dv);
+                    dv.type = FVP_INT;
+                    dv.i = opts.debug_load_request;
+                    (void)fvp_vm_request_load(&vm, &dv);
+                }
+                debug_requests_sent = 1;
+            }
+            {
+                int sreq = fvp_vm_take_save_request(&vm);
+
+                if (sreq >= 0) {
+                    if (opts.save_template[0] == L'\0') {
+                        fvp_logf("save: slot %d requested but --save-template "
+                                 "was not given (refusing to invent a snapshot)",
+                                 sreq);
+                    } else if (path_join_w(save_dir, PATH_CAP, opts.game_dir,
+                                           L"save")) {
+                        wchar_t slot_path[PATH_CAP];
+                        wchar_t fname[32];
+                        FvpEncoding senc2 =
+                            (opts.enc_mode == ENC_GBK) ? FVP_ENC_GBK
+                                                       : FVP_ENC_CP932;
+                        int wrote = 0;
+
+                        (void)CreateDirectoryW(save_dir, NULL);
+                        swprintf(fname, 32, L"\\s%03d.bin", sreq);
+                        wcscpy(slot_path, save_dir);
+                        if (wcslen(slot_path) + wcslen(fname) + 1 < PATH_CAP) {
+                            wcscat(slot_path, fname);
+                            wrote = write_save_preview(
+                                opts.save_template, slot_path,
+                                (const unsigned char *)canvas, cw, ch, &vm,
+                                senc2);
+                        }
+                        if (wrote) {
+                            char u8p[PATH_CAP * 3];
+
+                            fvp_logf("save: wrote slot %d -> %s", sreq,
+                                     w2u(slot_path, u8p, sizeof(u8p)));
+                            save_writes += 1;
+                        } else {
+                            fvp_logf("save: slot %d FAILED", sreq);
+                        }
+                    } else {
+                        fvp_logf("save: cannot build the save dir path");
+                    }
+                }
+            }
+            {
+                int lreq = fvp_vm_take_load_request(&vm);
+
+                if (lreq >= 0) {
+                    fvp_logf("load: slot %d requested; snapshot restore is not "
+                             "implemented yet (staying in the current scene)",
+                             lreq);
+                    load_requests += 1;
+                }
+            }
+        }
         if (canvas == NULL) {
             fvp_logf("gfx: gfx_canvas returned NULL, stopping");
             exit_code = 6;
@@ -3000,9 +3094,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         APPEND("fonts          %d name(s), current=%d\n",
                fvp_vm_font_count(&vm), fvp_vm_font_get(&vm));
         APPEND("save/load      request slot=%d (load %llu call(s), save "
-               "%llu call(s))\n", vm.request_slot,
-               (unsigned long long)vm.load_calls,
-               (unsigned long long)vm.save_calls);
+               "%llu call(s)); shell did %d write(s), refused %d load(s)\n",
+               vm.request_slot, (unsigned long long)vm.load_calls,
+               (unsigned long long)vm.save_calls, save_writes,
+               load_requests);
         APPEND("rand           state=%u ; text repaint %llu call(s)\n",
                (unsigned)vm.rand_state,
                (unsigned long long)vm.text_repaint_calls);

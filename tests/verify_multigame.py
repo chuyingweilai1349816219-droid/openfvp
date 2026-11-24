@@ -573,6 +573,31 @@ def main():
                       % ((m.group(0) if m else 'missing')))
         print('')
 
+    # 6.5 存档请求：没给 --save-template 时必须拒绝写，且**不能**写进游戏目录
+    if not args.no_shell:
+        shell_sr = shell_path()
+        if shell_sr is not None:
+            for g in have:
+                if g.get('known_blocker') or not g.get('dir'):
+                    continue
+                save_dir = os.path.join(g['dir'], 'save')
+                before = (sorted(os.listdir(save_dir))
+                          if os.path.isdir(save_dir) else [])
+                shot = os.path.join(OUT_DIR, 'mg-%s-savereq.bmp' % g['name'])
+                log_path = os.path.join(OUT_DIR, 'mg-%s-savereq.log' % g['name'])
+                rc, log = run_shell_frame(
+                    shell_sr, g['dir'], os.path.basename(g['script']), 1, shot,
+                    log_path, extra=['--debug-save-request', '12'])
+                check(rc == 0, 'save-request run exit 0 (got %s)' % rc)
+                check('refusing to invent a snapshot' in log,
+                      'save request without --save-template is refused')
+                after = (sorted(os.listdir(save_dir))
+                         if os.path.isdir(save_dir) else [])
+                check(before == after,
+                      'save request wrote nothing into the game save dir '
+                      '(%d -> %d entries)' % (len(before), len(after)))
+                print('')
+
     # 7. 标题菜单：两部作品的 profile与菜单几何都要对
     if not args.no_shell:
         shell2 = shell_path()

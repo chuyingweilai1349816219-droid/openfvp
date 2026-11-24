@@ -75,6 +75,9 @@ fvp.exe --game <游戏目录> [选项]
 | `--save-encoding ENC` | 存档字符串编码：`cp932` / `gbk`（默认跟随脚本编码）。同一句日文写成 `83 76 83 8d …` 或 `a5 d7 a5 ed …` |
 | `--font FILE` | 加载 GFXF 字体图集，可重复；默认自动找 exe 目录的 `gfx-font-*.bin` |
 | `--text-prims` | 文本窗口画在 `PrimSetText(86)` 绑定的**图元绝对位置**上（原版做法），不再按层号固定版式画。默认关 —— 关时与冻结像素基线一致。汇总多一行 `text prims N drawn, M bound` |
+| `--save-template <槽文件>` | 写档模板：SaveWrite 请求用它当底，替换时间戳/字符串/缩略图后写 `<game_dir>\save\sNNN.bin` |
+| `--debug-save-request N` | 调试钩子：发一个 `SaveWrite(N)` 请求，验证"请求 → 外壳写档"链路 |
+| `--debug-load-request N` | 调试钩子：发一个 `Load(N)` 请求（目前只记日志，快照恢复未实现） |
 | `--title-menu` | 启动后先显示**引擎侧标题菜单**（`New Game/Continue/Album/Option/Exit`），点 `New Game`（或回车）才开始跑脚本，`Exit` 关窗口。默认关 —— 关时行为与之前完全一致。菜单几何按原版实测（右对齐 x=1769、行距 100、字号 56），见 [`docs/title-menu.md`](title-menu.md)。汇总多一行 `title menu enabled (profile=..., align=..., continue=..., picked ...)`；`continue=` 由 `<game_dir>\save\sNNN.bin` 的个数决定 |
 | `--no-feed-text` | 关闭壳的临时文本桥（等 syscall 层接好 gfx 后应关闭） |
 | `--log FILE` | 日志路径，默认 `<exe目录>\fvp-win32.log`（不可写时退到 %TEMP%） |
@@ -285,3 +288,22 @@ exit           window/ESC
 | 想接控制台看输出 | 加 `--console`（从控制台启动时有效） |
 | `make win32` 没反应 | `bin\fvp.exe` 已是最新；改编译宏时用 `-B` |
 | 全屏掉帧 | 用默认 `--filter nearest`；或让窗口尺寸与画布 1:1 |
+
+## 存档/读档请求（Load 40 / SaveWrite 96）怎么走
+
+`Load`/`SaveWrite` **本身不碰文件**（原版也只是置 `engine+0xfcb/fca` 两个标志 +
+槽号）。本站照这个模型：VM 记录请求，**外壳**在执行帧里消费：
+
+| 请求 | 外壳行为 |
+|---|---|
+| `SaveWrite(slot)` + 给了 `--save-template` | 用模板当底，把**当前画布缩略图**、脚本暂存的 3 条字符串（`SaveCreate`）、**当前时间**写进 `<game_dir>\save\sNNN.bin`；日志 `save: wrote slot N -> <路径>` |
+| `SaveWrite(slot)` + 没给模板 | **拒绝写**：`save: slot N requested but --save-template was not given (refusing to invent a snapshot)`（槽尾语义未解，硬造只会写坏档） |
+| `Load(slot)` | 只记日志：`load: slot N requested; snapshot restore is not implemented yet`（`docs/save-snapshot.md` §4） |
+
+汇总行会多一句 `save/load … shell did N write(s), refused M load(s)`。
+
+**实测**（2026-11-25，`out/savetest` 临时目录）：
+`--debug-save-request 12 --save-template <真槽>` → 写出 616,572 B 的 `s012.bin`，
+时间戳更新为当前时间、缩略图换成当前画面、尾段与模板一致（`work/probe_slot.exe` 可读懂）。
+`--debug-save-request 7` 不带模板 → 只打拒绝日志、**不落任何文件**。
+这条"不写坏档"的红线也进了多游戏门禁。

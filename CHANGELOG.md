@@ -53,6 +53,21 @@
 
 ### 新增
 
+- **Load(40) / SaveWrite(96) 的请求链路在外壳里打通（含"不写坏档"红线）**
+  - 以前 VM 只记录请求、外壳从不消费，等于两个命令是空桩。现在外壳在执行帧里
+    取走请求：
+  - `SaveWrite(slot)` + `--save-template`：用模板当底，替换**当前画布缩略图**、
+    脚本 `SaveCreate` 暂存的三条字符串、**当前时间**，写
+    `<game_dir>\save\sNNN.bin`；没有模板则**拒绝写**（槽尾语义未解，硬造只会写坏档）
+  - `Load(slot)`：只记日志（快照恢复仍未实现，如实标注）
+  - 新增调试钩子 `--debug-save-request N` / `--debug-load-request N`，用来在
+    脚本自己调这些命令之前端到端验证链路
+  - 实测：模板 + 请求 12 → 写出 616,572 B 的 `s012.bin`（时间戳=当前、缩略图=当前
+    画面、尾段与模板一致，`probe_slot` 可读回）；不带模板 → 只打拒绝日志、不落文件
+  - `verify_multigame.py` 新增断言：不带模板的存档请求必须被拒绝，且**游戏
+    `save/` 目录条目数不变**（防写坏用户目录）
+  - `docs/win32-shell.md` 新增"存档/读档请求怎么走"一节与选项表
+
 - **把槽尾字符串池接进研究工具链并回填文档（`tailstat.py` + `save-snapshot.md`）**
   - `tools/tailstat.py` 新增 `parse_pool()` / `looks_like_graph()`（与
     `src/savetail.c` 同一规则），输出新增 `== 槽尾字符串池 @+0x19408 ==` 一节：
