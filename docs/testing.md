@@ -30,6 +30,7 @@
 | **动画（静态门）** | `verify_gfx.ps1 -SkipDump` | `bin/test_gfx.exe` 回放 528k 步场景 | 真实资产 | 动画默认关闭时参考帧指标必须**一分不变**：24/24 图元位置误差 **0 px**、像素差 **293 (0.0141%)**、PSNR **49.94 dB**、SSIM **0.99971**（2026-11 实测仍 PASS） |
 | **长跑（soak）** | `verify_soak.ps1` | 真跑 `bin\fvp.exe --run-seconds N`，期间 2 s 一次采样工作集 | 默认 180 s | 退出码 0、工作集增长 ≤ 96 MiB、
 每个 5 s 窗口 fps ≥ 55 且 slow ≤ 2、`underruns=0`、脚本有产出、日志无 error/fatal |
+| **外字帧定位** | `render_vm --watch-gaiji` | 控制台渲染器，每帧检查文本窗口 | 真实脚本 | 命中已注册外字码点就停在那一帧，输出 `gaiji-hit-on.png` / `gaiji-hit-off.png` 做逐像素 A/B；命中前不渲染，便于深跑 |
 | **动画（动态门）** | `verify_motion.ps1` | `render_vm --motion`（固定步数 + 固定 dt） | 真实脚本 | ① 关动画两次同参数帧一致（harness 确定）② 1,000 步 开=关（t≈0 不漂移）③ 60,000 步 开≠关（动画可见） |
 | **协程（开关中立）** | `verify_threads.py` | `bin/fvm.exe` 跑 900k / 2M 两档，各跑「默认（协程开）」与 `--no-threads` | 真实脚本 | ① 默认模式 `start == exit`（每个协程都退出，没有空转）② 开/关文本**逐字节相同** ③ 两档都与 `ref/ref-900k.txt` / `ref/ref-2m.txt` 逐字节相同 |
 | **命中测试** | `test_prim_hit` | 假 host 造固定尺寸图 + 合成图元树，直接调 `gfx_prim_hit()` | 47 项 | ① `primId` 必须 1..0xFFF ② `parent == -1` 不可命中 ③ 起始图元 `draw==0`：flag=0 不命中、flag=1 命中 ④ 祖先 `draw==0` 一律不命中 ⑤ 父链 x/y 累加 ⑥ 矩形**左闭右开**（右/下边界外不命中） ⑦ 写过多 WH 取 `min(prim, 图)`、显式 WH=0 时矩形为空 ⑧ UV 后源坐标越界不命中 ⑨ type 2 看 alpha、type 5/0 恒不命中 ⑩ 组递归命中且**不加组自己的 x/y** ⑪ 悬空子树（链没到根）不命中 ⑫ 环状父子关系安全返回 0 ⑬ NULL 安全 |

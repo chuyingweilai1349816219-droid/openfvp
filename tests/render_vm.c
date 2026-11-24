@@ -582,8 +582,78 @@ static void usage(const char *prog)
             "       [--enc cp932|gbk] [--frame-steps N] [--out DIR]\n"
             "       [--hold-text N] [--motion] [--motion-dt MS] [--typewriter]\n"
             "       [--typewriter-dt MS] [--cursor X,Y] "
-            "[--dump-prims FILE] [--no-png] [--no-gaiji] [--quiet]\n",
+            "[--dump-prims FILE] [--no-png] [--no-gaiji]\n"
+            "       [--watch-gaiji] [--quiet]\n",
             prog);
+}
+
+/* ---- --watch-gaiji：找"文本里真的出现外字字符"的那一帧 ------------------
+ * 外字（GaijiLoad 21）是表情/符号贴图，脚本里是单独一个字符的字符串，一次性
+ * 打印、随即被下一条台词覆盖，所以 --hold-text 抓不到。这里每帧检查文本窗口
+ * 的内容，一旦出现已注册的外字码点，就：
+ *   1. 先把带外字的帧存成 gaiji-hit-on.png
+ *   2. 关掉外字再渲染一次，存成 gaiji-hit-off.png（两张图逐像素对比即可证明
+ *      "外字确实被画上去了"）
+ *   3. 打印命中的层/文本/步数后退出渲染循环
+ */
+static int utf8_cp(const char **pp)
+{
+    const unsigned char *p = (const unsigned char *)*pp;
+    int cp;
+
+    if (p == NULL || *p == 0) {
+        return -1;
+    }
+    if (*p < 0x80u) {
+        cp = *p;
+        *pp += 1;
+        return cp;
+    }
+    if ((p[0] & 0xE0u) == 0xC0u && (p[1] & 0xC0u) == 0x80u) {
+        cp = ((int)(p[0] & 0x1Fu) << 6) | (int)(p[1] & 0x3Fu);
+        *pp += 2;
+        return cp;
+    }
+    if ((p[0] & 0xF0u) == 0xE0u && (p[1] & 0xC0u) == 0x80u &&
+        (p[2] & 0xC0u) == 0x80u) {
+        cp = ((int)(p[0] & 0x0Fu) << 12) | ((int)(p[1] & 0x3Fu) << 6) |
+             (int)(p[2] & 0x3Fu);
+        *pp += 3;
+        return cp;
+    }
+    if ((p[0] & 0xF8u) == 0xF0u && (p[1] & 0xC0u) == 0x80u &&
+        (p[2] & 0xC0u) == 0x80u && (p[3] & 0xC0u) == 0x80u) {
+        cp = ((int)(p[0] & 0x07u) << 18) | ((int)(p[1] & 0x3Fu) << 12) |
+             ((int)(p[2] & 0x3Fu) << 6) | (int)(p[3] & 0x3Fu);
+        *pp += 4;
+        return cp;
+    }
+    *pp += 1;
+    return -1;
+}
+
+static int text_has_gaiji(Gfx *g, const char *text)
+{
+    int n = gfx_gaiji_count(g);
+    const char *p = text;
+    int cp;
+
+    if (n <= 0 || text == NULL) {
+        return 0;
+    }
+    while ((cp = utf8_cp(&p)) >= 0) {
+        int k;
+
+        for (k = 0; k < n; k++) {
+            uint32_t gp = 0;
+
+            if (gfx_gaiji_entry(g, k, &gp, NULL, NULL, NULL) &&
+                gp == (uint32_t)cp) {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 int main(int argc, char **argv)
@@ -604,6 +674,11 @@ int main(int argc, char **argv)
     int tw_dt = 16;       /* --typewriter-dt: 每帧推进的毫秒数 */
     int no_png = 0;
     int no_gaiji = 0; /* --no-gaiji：关掉外字渲染（A/B 验证用） */
+    int watch_gaiji = 0; /* --watch-gaiji：停在外字出现的那一帧并存 A/B 两张图 */
+    int gaiji_hit = 0;
+    int gaiji_hit_layer = -1;
+    char gaiji_hit_text[512];
+    uint64_t gaiji_hit_step = 0;
     int quiet = 0;
     int i;
     FvpEncoding enc;
@@ -661,6 +736,8 @@ int main(int argc, char **argv)
             outdir = argv[++i];
         } else if (strcmp(a, "--hold-text") == 0 && i + 1 < argc) {
             hold_window = (int)strtol(argv[++i], NULL, 10);
+        } else if (strcmp(a, "--watch-gaiji") == 0) {
+            watch_gaiji = 1;
         } else if (strcmp(a, "--no-gaiji") == 0) {
             no_gaiji = 1;
         } else if (strcmp(a, "--no-png") == 0) {
@@ -816,6 +893,34 @@ int main(int argc, char **argv)
         gfx_motion_advance(g, motion_dt);
         gfx_text_advance(g, tw_dt);
         nheld = shadow_hold_apply(&shadow, held);
+        if (watch_gaiji && !gaiji_hit) {
+            int li;
+
+            for (li = 0; li < GFX_TEXT_MAX; li++) {
+                int lj;
+
+                for (lj = 0; lj < shadow.layer_lines[li]; lj++) {
+                    if (text_has_gaiji(g, shadow.lines[li][lj])) {
+                        gaiji_hit = 1;
+                        gaiji_hit_layer = li;
+                        gaiji_hit_step = vm.steps;
+                        snprintf(gaiji_hit_text, sizeof gaiji_hit_text, "%s",
+                                 shadow.lines[li][lj]);
+                        break;
+                    }
+                }
+                if (gaiji_hit) {
+                    break;
+                }
+            }
+        }
+        if (watch_gaiji && !gaiji_hit) {
+            /* 只看文本，先不渲染：这样可以跑到很深的步数找外字帧 */
+            shadow_hold_restore(&shadow, held, nheld);
+            nheld = 0;
+            frames += 1;
+            continue;
+        }
         r0 = now_ms();
         gfx_render(g);
         r1 = now_ms();
@@ -829,9 +934,36 @@ int main(int argc, char **argv)
             max_render_ms = r1 - r0;
         }
         render_sum += r1 - r0;
+        if (gaiji_hit) {
+            const uint8_t *rgba;
+            int ww = 0, hh = 0;
+            char on_path[1024];
+            char off_path[1024];
+
+            rgba = gfx_canvas_rgba(g, &ww, &hh);
+            if (!no_png && rgba != NULL &&
+                path_join(on_path, sizeof on_path, outdir,
+                          "gaiji-hit-on.png") == 0 &&
+                path_join(off_path, sizeof off_path, outdir,
+                          "gaiji-hit-off.png") == 0) {
+                (void)write_png(on_path, rgba, ww, hh);
+                gfx_gaiji_set_enabled(g, 0);
+                gfx_render(g);
+                rgba = gfx_canvas_rgba(g, &ww, &hh);
+                (void)write_png(off_path, rgba, ww, hh);
+                gfx_gaiji_set_enabled(g, 1);
+                printf("[gaiji] hit at step=%llu layer=%d text=\"%s\"\n"
+                       "        gaiji-hit-on.png / gaiji-hit-off.png -> %s\n",
+                       (unsigned long long)gaiji_hit_step, gaiji_hit_layer,
+                       gaiji_hit_text, outdir);
+            }
+        }
         shadow_hold_restore(&shadow, held, nheld);
         nheld = 0;
         frames += 1;
+        if (gaiji_hit) {
+            break;
+        }
     }
     t_all1 = now_ms();
 
