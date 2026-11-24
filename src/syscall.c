@@ -232,15 +232,15 @@ static int fvp_gfx_argc(uint16_t cid, uint32_t argc)
     }
 }
 
-static void fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
-                        uint32_t argc, uint16_t cid)
+static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
+                       uint32_t argc, uint16_t cid)
 {
     FvpGfxBridge *b = vm->gfx_bridge;
     Gfx *g = (b != NULL) ? b->gfx : NULL;
     int id;
 
     if (g == NULL) {
-        return;
+        return 0;
     }
     id = (argc > 0) ? fvp_gfx_int(&a[0]) : 0;
 
@@ -567,8 +567,9 @@ static void fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
                * lines, like render.py); intentionally a no-op */
         break;
     default:
-        break;
+        return 0; /* 主 switch 也没有 case 的命令：仍算未实现 */
     }
+    return 1;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1175,6 +1176,7 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     int32_t sp_before = t->sp;
     uint32_t k;
 
+    vm->gfx_handled = 0;
     if (argc > (uint32_t)FVP_MAX_ARGC) {
         argc = (uint32_t)FVP_MAX_ARGC;
     }
@@ -1207,9 +1209,13 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
                              ? t->stack[idx]
                              : fvp_make_int(0);
             }
-            fvp_sys_gfx(vm, t, raw, (uint32_t)rargc, cid);
+            if (fvp_sys_gfx(vm, t, raw, (uint32_t)rargc, cid)) {
+                vm->gfx_handled = 1;
+            }
         } else {
-            fvp_sys_gfx(vm, t, args, argc, cid);
+            if (fvp_sys_gfx(vm, t, args, argc, cid)) {
+                vm->gfx_handled = 1;
+            }
         }
     }
 
@@ -1414,8 +1420,11 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         break;
     }
 
-    /* Unimplemented commands. */
-    fvp_vm_count_unknown(vm, cid);
+    /* Unimplemented commands.  gfx 已处理（但主 switch 没有 case）的命令不再计入
+     * 未实现直方图 —— 否则外壳日志会把 PrimSetNull 这类实现过的命令报成缺口。 */
+    if (!vm->gfx_handled) {
+        fvp_vm_count_unknown(vm, cid);
+    }
     if (fvp_sys_is_test(cid)) {
         t->temp = fvp_make_int(1);
     } else if (cid < FVP_CMD_COUNT && fvp_cmd_returns[cid]) {

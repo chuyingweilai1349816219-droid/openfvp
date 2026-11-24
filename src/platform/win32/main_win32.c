@@ -102,6 +102,7 @@ typedef struct Options {
     int feed_text; /* temporary shell-side TextPrint -> gfx bridge */
     int console;
     int verbose;
+    int unknown_all; /* --unknown-all: 退出总结打印全部未实现命令 */
 } Options;
 
 /* ------------------------------------------------------------------ */
@@ -352,6 +353,7 @@ static const wchar_t *usage_text(void)
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
             L"  --no-threads        关闭协程槽 0..31（A/B 用；默认开启，本作脚本行为中立）\n"
+            L"  --unknown-all       退出总结打印全部未实现命令（默认只打 top 12）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --console           同时输出到启动它的控制台窗口\n"
@@ -576,6 +578,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->timeline = 1;
         } else if (wcscmp(a, L"--no-threads") == 0) {
             o->threads = 0;
+        } else if (wcscmp(a, L"--unknown-all") == 0) {
+            o->unknown_all = 1;
         } else if (wcscmp(a, L"--tex-cache-mb") == 0) {
             NEED_VALUE();
             if (!parse_int_w(v, &o->tex_cache_mb) || o->tex_cache_mb < 0 ||
@@ -2249,6 +2253,26 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.nthreads);
         APPEND("audio          ok=%d submitted=%d completed=%d underruns=%d\n",
                a_ok, a_sub, a_done, a_under);
+        /* 真机上仍然没有语义的命令（fvm 里的直方图会把 gfx 命令也算进去，
+         * 因为 fvm 不挂 gfx；这里才是「接了 gfx/音频之后还剩哪些桩」）。 */
+        if (vm.nunknown > 0) {
+            size_t ui;
+            size_t shown_u = opts.unknown_all ? vm.nunknown : 12u;
+
+            if (shown_u > vm.nunknown) {
+                shown_u = vm.nunknown;
+            }
+            APPEND("unimpl cmds    %llu distinct:", (unsigned long long)vm.nunknown);
+            for (ui = 0; ui < shown_u; ++ui) {
+                uint16_t cid = vm.unknown_order[ui];
+
+                APPEND(" %u×%lu", (unsigned)cid,
+                       (unsigned long)vm.unknown_count[cid]);
+            }
+            APPEND("%s\n", opts.unknown_all ? "" : " (top 12)");
+        } else {
+            APPEND("unimpl cmds    none\n");
+        }
         APPEND("exit           %s\n",
                exit_auto ? "run-seconds" :
                exit_script ? "script-finished" :

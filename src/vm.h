@@ -254,6 +254,10 @@ typedef struct FvpVM {
     FvpTimer timer[FVP_TIMER_COUNT];
     int timer_suspended;  /* TimerSuspend(1) 置位、(0) 清除 */
     uint64_t timer_sets;  /* 诊断：TimerSet 调用次数 */
+    /* 诊断：本次 syscall 是否被 gfx 桥处理过。主 switch 没有 case 的渲染命令
+     * 走的是 fvp_sys_gfx()，若不再计一次「已处理」，未实现直方图会把
+     * PrimSetNull 这类已经实现的命令报成缺口。 */
+    int gfx_handled;
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);
