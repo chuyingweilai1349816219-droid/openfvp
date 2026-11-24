@@ -24,17 +24,20 @@ SAVEVM_OBJ = src/save_vm.o
 FLAGS_OBJ  = src/flags.o
 TEXTATTR_OBJ = src/textattr.o
 THUMB_OBJ = src/thumb.o
+TIMER_OBJ = src/timer.o
 
 OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ) \
-           $(TEXTATTR_OBJ) $(THUMB_OBJ)
+           $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ)
 LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ) \
-           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ)
+           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ)
 
 BIN = bin/fvm$(EXE)
 LIB = bin/libfvp.a
 
 HEADERS = src/fvp.h src/encoding.h src/hcb.h src/vm.h src/syscall.h \
           src/snd.h src/bin.h src/inflate.h src/hzc1.h \
+          src/textattr.h src/timer.h src/motion.h src/save.h src/save_vm.h \
+          src/flags.h src/thumb.h \
           src/gen_cp932.h src/gen_gbk.h src/gen_cmd_table.h
 
 all: $(BIN)
@@ -83,7 +86,8 @@ WIN32_DIR   = src/platform/win32
 WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
                $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
-               src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c
+               src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c \
+               src/timer.c
 WIN32_RES   = src/bin.c src/hzc1.c src/inflate.c
 WIN32_GFX_H = $(wildcard src/gfx.h)
 
@@ -247,6 +251,22 @@ clean-gfx-motion:
 	-rm -f $(GFX_MOTION_TEST)
 
 .PHONY: test_gfx_motion clean-gfx-motion
+
+# ---------------------------------------------------------------------------
+# 定时器语义（TimerSet/TimerGet/TimerSuspend）
+#   make test_timer
+# ---------------------------------------------------------------------------
+TIMER_TEST = bin/test_timer$(EXE)
+
+test_timer: $(TIMER_TEST)
+
+$(TIMER_TEST): tests/test_timer.c src/timer.c src/timer.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_timer.c src/timer.c $(LDFLAGS)
+
+clean-timer:
+	-rm -f $(TIMER_TEST)
+
+.PHONY: test_timer clean-timer
 
 # ---------------------------------------------------------------------------
 # 纹理缓存 LRU 上限（长跑内存不再无界增长）

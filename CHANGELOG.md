@@ -8,6 +8,15 @@
 
 ### 新增
 
+- **引擎定时器 `TimerSet`(139) / `TimerGet`(138) / `TimerSuspend`(140)**
+  - 语义来自静态分析（`docs/vm-commands.md` §5）：16 个定时器，set 记 `{active, start, duration}`，
+    get 返回已过毫秒、给了第二参数则返回 `elapsed*opt/duration`
+  - 新模块 `src/timer.c` + `src/timer.h`，VM 只把 `vm.virtual_ms` 当 `now_ms` 传下去；
+    **默认没开 `--timeline` 时时钟恒 0 → `TimerGet` 返回 0**，与旧的「未实现返回 0」行为一致
+  - 实测：900k 步 unknown 直方图里 `139`（259 次）消失，文本仍是 195 行、协程 5/5，
+    字节基线不动
+  - 测试 `tests/test_timer.c` **37 项**（已并入 `run_all`）：起点/elapsed/百分比换算与取整/
+    INT32 夹紧/ms 钳制/重设重置/16 个互不干扰/NULL 安全
 - **纹理缓存 LRU 上限（默认 256 MiB）**：长跑 RSS 阶梯式增长的根因
   - 采样证据：0–95 s 稳定 194 MiB，之后随换场景阶跃 222.9 / 209.5 / 221.7 MiB，
     每一跳都精确对应缓存 75→78→80→81→83 张（108.7 MiB）的阶跃 —— **不是泄漏，是只进不出**
@@ -17,7 +26,13 @@
     `verify_gfx.ps1 -SkipDump` 仍是 293 px / PSNR 49.94 / SSIM 0.99971
   - 接口：`gfx_tex_cap_bytes` / `gfx_tex_set_cap_bytes` / `gfx_tex_evictions`；
     外壳 `--tex-cache-mb N`（0 = 不限制），`tex:` 行打印上限与累计淘汰数
-  - 测试：`tests/test_tex_cache.c` **26 项**（已并入 `run_all`，共 21 步）
+  - 测试：`tests/test_tex_cache.c` **26 项**（已并入 `run_all`，共 22 步）
+  - ⚠️ **实测限制（2026-11-24，`--tex-cache-mb 64` 跑 150 s）**：上限设 64 MiB，缓存仍到
+    113.8 MiB、**只有 4 张被淘汰**。原因是本作脚本把整套 UI 贴图（`main_window_mask` + 24 个
+    `fc_*` 按钮图）和背景/立绘一次性 `GraphLoad` 到 79 个槽里、**从不释放**，这些图 refs>0
+    因而受保护。所以这个上限目前只能回收「被覆盖过的旧图」，**不能压住被引用图的内存**；
+    长跑 RSS 依旧随场景阶梯上升（194 → 223 MiB 与不设上限时相同）。彻底解决需要引擎的
+    资源卸载策略（未结构分析），已记入 `docs/roadmap.md` 的已知限制。
 - **32 个协程槽进 C，默认开启**（`ThreadStart`/`ThreadExit`/`ThreadNext`）
   - `src/vm.h`：`FVP_THREAD_SLOTS 32`、`thread_slots[32]`、`threads_on`、诊断计数
   - `src/vm.c`：`fvp_vm_thread_start()` / `fvp_vm_thread_exit()`，死线程回收时清槽

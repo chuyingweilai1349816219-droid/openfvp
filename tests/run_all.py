@@ -297,6 +297,16 @@ def build_steps(args):
                           note='cap evicts LRU refs==0 entries only; '
                                'referenced images survive'))
 
+    # 4l. engine timers (TimerSet/TimerGet/TimerSuspend)
+    test_timer = tools.get('test_timer')
+    if not test_timer or not os.path.isfile(test_timer):
+        steps.append(Step('test_timer', None, 0,
+                          skip_reason='bin/test_timer.exe missing '
+                                      '(run: make test_timer)'))
+    else:
+        steps.append(Step('test_timer', [test_timer], 120,
+                          note='16 timers: set/elapsed/percent/clamp/overflow'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

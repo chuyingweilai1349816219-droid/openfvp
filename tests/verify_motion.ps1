@@ -47,6 +47,7 @@ if (-not $SkipBuild) {
     try {
         $srcs = @('src\fvp.c', 'src\encoding.c', 'src\hcb.c', 'src\vm.c', 'src\syscall.c',
                   'src\flags.c', 'src\textattr.c', 'src\gfx.c', 'src\motion.c',
+                  'src\timer.c',
                   'src\bin.c', 'src\hzc1.c', 'src\inflate.c')
         & gcc -std=c99 -O2 -Wall -Wextra -Wpedantic -fwrapv -Isrc -Isrc/platform/win32 `
             -o 'bin\render_vm.exe' 'tests\render_vm.c' @srcs -lm

@@ -24,11 +24,13 @@ OUT = os.path.join(FVP, 'out', 'fuzz')
 
 CORE_SRC = [os.path.join(SRC, n) for n in
             ('fvp.c', 'encoding.c', 'hcb.c', 'vm.c', 'syscall.c', 'flags.c',
-             'textattr.c', 'save.c', 'save_vm.c', 'thumb.c', 'motion.c')]
+             'textattr.c', 'save.c', 'save_vm.c', 'thumb.c', 'motion.c',
+             'timer.c')]
 CORE_HDR = [os.path.join(SRC, n) for n in
             ('fvp.h', 'encoding.h', 'hcb.h', 'vm.h', 'syscall.h',
              'flags.h', 'textattr.h', 'save.h', 'save_vm.h', 'thumb.h',
-             'motion.h', 'gen_cmd_table.h', 'gen_cp932.h', 'gen_gbk.h')]
+             'motion.h', 'timer.h', 'gen_cmd_table.h', 'gen_cp932.h',
+             'gen_gbk.h')]
 ALLOC = os.path.join(TESTS, 'fuzz_alloc.h')
 
 BASE_FLAGS = ['-std=c99', '-O1', '-g', '-Wall', '-Wextra',
@@ -138,6 +140,7 @@ def public_tools():
         'test_motion': os.path.join(FVP, 'bin', 'test_motion.exe'),
         'test_gfx_motion': os.path.join(FVP, 'bin', 'test_gfx_motion.exe'),
         'test_tex_cache': os.path.join(FVP, 'bin', 'test_tex_cache.exe'),
+        'test_timer': os.path.join(FVP, 'bin', 'test_timer.exe'),
     }
 
 

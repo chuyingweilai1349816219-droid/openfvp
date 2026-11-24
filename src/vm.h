@@ -11,6 +11,7 @@
 #include "hcb.h"
 #include "snd.h"
 #include "textattr.h"
+#include "timer.h"
 
 typedef struct FvpFrame {
     uint32_t ret;
@@ -22,6 +23,7 @@ typedef struct FvpFrame {
 } FvpFrame;
 
 #define FVP_THREAD_SLOTS 32 /* ThreadStart/ThreadExit 的 threadNo 0..31 */
+#define FVP_TIMER_COUNT 16  /* TimerSet/TimerGet 的 timerId 0..15 */
 
 typedef struct FvpThread {
     int id;          /* 诊断用：线程编号 */
@@ -69,6 +71,10 @@ typedef struct FvpTextLine {
     FvpValue layer;
     FvpStr *text;
 } FvpTextLine;
+
+/* 16 个引擎定时器的状态（TimerSet/TimerGet/TimerSuspend）。语义与换算在
+ * src/timer.c；elapsed 由 vm.virtual_ms 推导，默认没开 --timeline 时时钟恒 0
+ * → TimerGet 返回 0，与旧的「未实现返回 0」行为一致。 */
 
 /* ------------------------------------------------------------------ */
 /* Optional render-layer attachment (src/gfx.c)                        */
@@ -244,6 +250,10 @@ typedef struct FvpVM {
     uint64_t thread_starts; /* 诊断：ThreadStart 成功创建过多少次 */
     uint64_t thread_exits;  /* 诊断：ThreadExit 收掉过多少个线程 */
     uint64_t thread_resets; /* 诊断：ThreadStart(0)/(无槽可回收) 触发过多少次 */
+    /* 16 个定时器（TimerSet 139 / TimerGet 138 / TimerSuspend 140）。 */
+    FvpTimer timer[FVP_TIMER_COUNT];
+    int timer_suspended;  /* TimerSuspend(1) 置位、(0) 清除 */
+    uint64_t timer_sets;  /* 诊断：TimerSet 调用次数 */
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);
@@ -292,6 +302,12 @@ void fvp_vm_count_unknown(FvpVM *vm, uint16_t cid);
  * 两者都返回 1 = 语义执行了，0 = threads_on 关着（调用方照旧当空桩）。 */
 int fvp_vm_thread_start(FvpVM *vm, int no, uint32_t pc);
 int fvp_vm_thread_exit(FvpVM *vm, FvpThread *self, int which);
+
+/* ---- 定时器（TimerSet 139 / TimerGet 138 / TimerSuspend 140）----------
+ * 实现在 src/timer.c，VM 只负责把 vm.virtual_ms 当 now_ms 传下去。 */
+int fvp_vm_timer_set(FvpVM *vm, int id, int ms);
+int fvp_vm_timer_get(FvpVM *vm, int id, int opt);
+void fvp_vm_timer_suspend(FvpVM *vm, int on);
 
 /* Stack helpers (shared with syscall.c). */
 void fvp_thread_push(FvpThread *t, FvpValue v);

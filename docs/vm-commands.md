@@ -338,7 +338,7 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | 27 | 78 | PrimSetBlend | 2 | (primId, blend 0/1) | 设混合模式，写 `prim.blend(+8)`（arg2 必须 int 0/1） | 0x43ba4a `mov %dl,0x61dd6c(%eax,%ecx,1)`（=prim+8） |
 | 28 | 123 | TextPrint | 2 | (twIdx 0..31, text) | 向文本窗口追加字符串。text 可为 type4（脚本内联字面量）或 type5（字符串句柄）；追加前用 lstrlenA 检查 <0x200 | 0x43cad4 `mov 0x98(%edx,%eax,4),%ebp`；0x43cadf type==4 → `engine->[0x68dfac]+value`；type==5 → `engine->[0x6a49ec+value*4]`；0x43cb01 lstrlenA；0x43cb51 call 0x433610(tw, str) |
 | 29 | 24 | IntToText | 2 | (value, opt 1..10) | **返回字符串句柄**：把整数格式化为十进制文本（wsprintfA），分配字符串句柄并压返回值（type5） | 0x437646 `push engine+0x481374; call wsprintfA`（格式串 0x472c4c="%d"）；0x437669 call 0x4445e0 分配句柄；0x43767a `movb $0x5,0x814` |
-| 30 | 139 | TimerSet | 2 | (timerId 0..15, timeMs 1..100000) | 启动 16 个定时器之一：`engine+0x1a997f+id*12` 处 {active=1, elapsed=0, duration=ms} | 0x43cfbc `lea 0x1a997f(%eax,%eax,2),%eax; lea (%ecx,%eax,4)` → `movb $0x1,(%eax); movl $0,0x4; mov %edx,0x8` |
+| 30 | 139 | TimerSet | 2 | (timerId 0..15, timeMs 1..100000) | 启动 16 个定时器之一：`engine+0x1a997f+id*12` 处 {active=1, elapsed=0, duration=ms} | 0x43cfbc `lea 0x1a997f(%eax,%eax,2),%eax; lea (%ecx,%eax,4)` → `movb $0x1,(%eax); movl $0,0x4; mov %edx,0x8`；**已实现**：`src/timer.c`，ms 钳到 1..100000 |
 
 ### 补充（同批分析，非前 30 命中）
 
@@ -358,7 +358,7 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | 135 | ThreadSleep | 1 | (ms)：线程 flags |=4，`ctx+0x80c = ms`，`ctx+0x810 = 1`（挂起） |
 | 136 | ThreadStart | 2 | (threadNo 0..31, entryOffset)：threadNo==0 先重置全部 32 个线程(0x444860)，再 0x4453f0(ctx, offset) 以 offset 为 PC 建线程 |
 | 137 | ThreadWait | 1 | (ms)：flags |=2，ctx+0x80c=ms，ctx+0x810=1（等待） |
-| 138 | TimerGet | 2 | (timerId 0..15, opt 1..10000)：**返回 int** 定时器已过时间；给了第 2 参数则返回 elapsed*arg2/duration（百分比） |
+| 138 | TimerGet | 2 | (timerId 0..15, opt 1..10000)：**返回 int** 定时器已过时间；给了第 2 参数则返回 elapsed*arg2/duration（百分比）。**已实现**：`src/timer.c`，elapsed 由 `vm.virtual_ms` 推导（`--timeline` 关闭时恒 0 → 返回 0，与旧行为一致）；opt 换算用 64 位算再夹到 INT32_MAX |
 | 14 | Dissolve | 7 | (timeMs 1..300000, mask 1..255 或遮罩文件名, l,t,r,b)：屏幕溶解/淡入淡出；`engine+0x101018`=时间、`+0x101010`=状态(3/4/5/6)、`+0x100ff0..ff6`=矩形 |
 | 17 | ExitMode | 1 | (mode 0..4)：退出/返回相关引擎标志 engine->[0x81]/[0x82]/[0x6a7e72] |
 | 75 | PrimGroupOut | 1 | (groupId 1..0xFFF)：组解散/移出 → 0x437290 |

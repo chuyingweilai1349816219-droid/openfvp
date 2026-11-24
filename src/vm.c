@@ -1298,6 +1298,42 @@ int fvp_vm_thread_exit(FvpVM *vm, FvpThread *self, int which)
     return 1;
 }
 
+/* ------------------------------------------------------------------ */
+/* 定时器：TimerSet(139) / TimerGet(138) / TimerSuspend(140)           */
+/*                                                                    */
+/* 静态分析语义见 docs/vm-commands.md §5。这里只维护「起点 + 时长 + 激活」 */
+/* 三个字段，已过时间一律从虚拟时钟 vm->virtual_ms 推导；没有 --timeline */
+/* 时时钟恒 0，于是 TimerGet 返回 0，与旧的「未实现返回 0」行为一致。   */
+/* ------------------------------------------------------------------ */
+
+int fvp_vm_timer_set(FvpVM *vm, int id, int ms)
+{
+    if (vm == NULL) {
+        return 0;
+    }
+    if (fvp_timer_set(vm->timer, FVP_TIMER_COUNT, id, ms, vm->virtual_ms)) {
+        vm->timer_sets += 1u;
+        return 1;
+    }
+    return 0;
+}
+
+int fvp_vm_timer_get(FvpVM *vm, int id, int opt)
+{
+    if (vm == NULL) {
+        return 0;
+    }
+    return fvp_timer_get(vm->timer, FVP_TIMER_COUNT, id, opt, vm->virtual_ms);
+}
+
+void fvp_vm_timer_suspend(FvpVM *vm, int on)
+{
+    if (vm == NULL) {
+        return;
+    }
+    vm->timer_suspended = on ? 1 : 0;
+}
+
 void fvp_vm_add_text(FvpVM *vm, const FvpValue *layer, FvpStr *text)
 {
     if (vm->ntext == vm->text_cap) {

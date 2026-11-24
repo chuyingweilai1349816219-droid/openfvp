@@ -38,6 +38,7 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --timeline       use the virtual clock (ThreadSleep/ThreadWait wake by ms)\n"
             "  --no-threads     disable coroutine slots 0..31 (A/B against the old stub)\n"
             "  --unknown-all    print every unknown command id (not just the top 15)\n"
+            "  --dump-textattr  print every configured text window (color/size/speed)\n"
             "  --dump-globals FILE  write \"index value\" lines for set globals\n",
             prog);
 }
@@ -163,6 +164,7 @@ typedef struct FvpUnkTop {
 } FvpUnkTop;
 
 static int g_unknown_all;
+static int g_dump_textattr; /* --dump-textattr: dump every configured text window */
 
 static void fvp_print_summary(const FvpVM *vm)
 {
@@ -182,6 +184,20 @@ static void fvp_print_summary(const FvpVM *vm)
     printf("virtual ms %llu\n", (unsigned long long)vm->virtual_ms);
     printf("text attrs %d window(s) configured\n",
            fvp_textattr_configured_count(vm->textattr, FVP_TEXT_WINDOWS));
+    if (g_dump_textattr) {
+        int wi;
+
+        for (wi = 0; wi < FVP_TEXT_WINDOWS; ++wi) {
+            const FvpTextAttr *ta = &vm->textattr[wi];
+
+            if (ta->set_mask == 0u) {
+                continue;
+            }
+            printf("  tw %2d: mask=0x%x color=%d,%d,%d size=%dx%d speed=%d ms\n",
+                   wi, ta->set_mask, ta->r, ta->g, ta->b, ta->w, ta->h,
+                   ta->speed_ms);
+        }
+    }
     printf("save state slot=%d str=%d/%d/%d thumb=%dx%d\n", vm->save_slot,
            vm->save_str[0] != NULL, vm->save_str[1] != NULL,
            vm->save_str[2] != NULL, vm->save_thumb_w, vm->save_thumb_h);
@@ -405,6 +421,8 @@ int main(int argc, char **argv)
             threads = -1;
         } else if (strcmp(a, "--unknown-all") == 0) {
             g_unknown_all = 1;
+        } else if (strcmp(a, "--dump-textattr") == 0) {
+            g_dump_textattr = 1;
         } else if (strcmp(a, "--savebin") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "fvm: missing --savebin value\n");

@@ -1361,6 +1361,31 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             return;
         }
         break;
+    /* 139 TimerSet(timerId 0..15, ms 1..100000)：启动 16 个定时器之一。
+     * 138 TimerGet(timerId, opt 1..10000)：返回已过毫秒；给了 opt 则按
+     * elapsed*opt/duration 换算（docs/vm-commands.md §5）。
+     * 140 TimerSuspend(arg)：arg==1 暂停、0 恢复（engine+0x6a66bc）。
+     * 已过时间一律由虚拟时钟推导（--timeline 关闭时恒 0）。 */
+    case 139:
+        if (argc >= 2) {
+            (void)fvp_vm_timer_set(vm, (int)args[0].i, (int)args[1].i);
+        }
+        return;
+    case 138:
+        if (argc >= 1) {
+            int id = (int)args[0].i;
+            int opt = (argc >= 2) ? (int)args[1].i : 0;
+
+            t->temp = fvp_make_int(fvp_vm_timer_get(vm, id, opt));
+            return;
+        }
+        t->temp = fvp_make_int(0);
+        return;
+    case 140:
+        if (argc >= 1) {
+            fvp_vm_timer_suspend(vm, (int)args[0].i == 1);
+        }
+        return;
     /* 135 ThreadSleep(ms) / 137 ThreadWait(ms)：
      * 时间模型开启时按虚拟时钟定时唤醒，否则保持旧的 yield 语义。 */
     case 135:
