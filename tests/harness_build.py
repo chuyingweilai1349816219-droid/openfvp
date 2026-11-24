@@ -23,10 +23,12 @@ TESTS = os.path.join(HERE)
 OUT = os.path.join(FVP, 'out', 'fuzz')
 
 CORE_SRC = [os.path.join(SRC, n) for n in
-            ('fvp.c', 'encoding.c', 'hcb.c', 'vm.c', 'syscall.c', 'flags.c')]
+            ('fvp.c', 'encoding.c', 'hcb.c', 'vm.c', 'syscall.c', 'flags.c',
+             'textattr.c', 'save.c', 'save_vm.c', 'thumb.c', 'motion.c')]
 CORE_HDR = [os.path.join(SRC, n) for n in
             ('fvp.h', 'encoding.h', 'hcb.h', 'vm.h', 'syscall.h',
-             'flags.h', 'gen_cmd_table.h', 'gen_cp932.h', 'gen_gbk.h')]
+             'flags.h', 'textattr.h', 'save.h', 'save_vm.h', 'thumb.h',
+             'motion.h', 'gen_cmd_table.h', 'gen_cp932.h', 'gen_gbk.h')]
 ALLOC = os.path.join(TESTS, 'fuzz_alloc.h')
 
 BASE_FLAGS = ['-std=c99', '-O1', '-g', '-Wall', '-Wextra',
