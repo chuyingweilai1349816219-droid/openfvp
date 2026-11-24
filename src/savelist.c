@@ -6,6 +6,7 @@
 #include "fvp.h"
 #include "save.h"
 #include "savelist.h"
+#include "savetail.h"
 
 void fvp_savelist_init(FvpSaveList *l)
 {
@@ -124,6 +125,15 @@ int fvp_savelist_add_slot_bytes(FvpSaveList *l, const unsigned char *buf,
     e->minute = s.minute;
     decode_into(e->chapter, sizeof(e->chapter), enc, s.str[0], s.len[0]);
     decode_into(e->line, sizeof(e->line), enc, s.str[2], s.len[2]);
+    if (s.tail != NULL && s.tail_len > 0) {
+        FvpSaveTailInfo info;
+
+        if (fvp_savetail_parse(&info, s.tail, s.tail_len, enc) &&
+            info.graph_index >= 0) {
+            strncpy(e->graph, info.str[info.graph_index], sizeof(e->graph) - 1);
+            e->graph[sizeof(e->graph) - 1] = '\0';
+        }
+    }
     e->has_thumb = s.thumb != NULL;
     e->file_bytes = len;
     l->count += 1;
@@ -163,10 +173,19 @@ char *fvp_savelist_row_text(const FvpSaveList *l, int i, char *buf,
     }
     e = &l->items[i];
     if (e->year > 0 && e->month >= 1 && e->month <= 12) {
+        char g[32];
+        char c[FVP_SAVELIST_CHAPTER_MAX + 4];
+
+        if (e->graph[0] != '\0') {
+            snprintf(g, sizeof g, "[%s] ", e->graph);
+        } else {
+            g[0] = '\0';
+        }
+        snprintf(c, sizeof c, "%s%s", g,
+                 e->chapter[0] != '\0' ? e->chapter : "-");
         snprintf(buf, cap, "No.%03d   %04u/%02u/%02u %02u:%02u   %s", e->slot,
                  (unsigned)e->year, (unsigned)e->month, (unsigned)e->day,
-                 (unsigned)e->hour, (unsigned)e->minute,
-                 e->chapter[0] != '\0' ? e->chapter : "-");
+                 (unsigned)e->hour, (unsigned)e->minute, c);
     } else {
         snprintf(buf, cap, "No.%03d   (no timestamp)   %s", e->slot,
                  e->chapter[0] != '\0' ? e->chapter : "-");

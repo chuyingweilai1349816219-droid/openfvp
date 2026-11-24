@@ -13,6 +13,7 @@
 
 #include "../src/save.h"
 #include "../src/savelist.h"
+#include "../src/savetail.h"
 
 static int g_fail = 0;
 static int g_pass = 0;
@@ -72,6 +73,64 @@ static int write_slot(const char *path, int year, int month, int day, int hour,
     }
     s.tail = dup_bytes("\x01\x02\x03\x04\x01", 5);
     s.tail_len = 5;
+
+    need = fvp_save_slot_size(&s);
+    buf = (unsigned char *)malloc(need);
+    wrote = fvp_save_slot_store(&s, buf, need);
+    if (wrote != need) {
+        free(buf);
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        free(buf);
+        return 0;
+    }
+    if (fwrite(buf, 1, need, f) != need) {
+        fclose(f);
+        free(buf);
+        return 0;
+    }
+    fclose(f);
+    free(buf);
+    return 1;
+}
+
+/* 合成一个"槽尾里带字符串池"的槽（图名 BG063_000b + 对话行）。 */
+static int write_slot_with_graph(const char *path, int year, int month, int day,
+                                 int hour, int minute)
+{
+    FvpSaveSlot s;
+    unsigned char *buf;
+    size_t need;
+    size_t wrote;
+    FILE *f;
+    int i;
+
+    memset(&s, 0, sizeof(s));
+    s.year = (unsigned short)year;
+    s.month = (unsigned char)month;
+    s.day = (unsigned char)day;
+    s.hour = (unsigned char)hour;
+    s.minute = (unsigned char)minute;
+    s.str[0] = dup_bytes("\x83v\x83\x8d\x83\x8d\x81[\x83O", 10);
+    s.len[0] = 10;
+    s.thumb_w = 2;
+    s.thumb_h = 2;
+    s.thumb = (unsigned char *)malloc(16);
+    for (i = 0; i < 16; ++i) {
+        s.thumb[i] = (unsigned char)(i & 0xFF);
+    }
+    for (i = 3; i < 16; i += 4) {
+        s.thumb[i] = 0xFF;
+    }
+    /* 槽尾：0x19440 字节，0x19408 处是字符串池 */
+    s.tail_len = 0x19440;
+    s.tail = (unsigned char *)calloc(1, s.tail_len);
+    s.tail[0x19408] = 0x20;
+    s.tail[0x1940c] = 1;
+    s.tail[0x19410] = 11;
+    memcpy(s.tail + 0x19412, "BG063_000b\0", 11);
 
     need = fvp_save_slot_size(&s);
     buf = (unsigned char *)malloc(need);
@@ -180,6 +239,85 @@ int main(void)
     CHECK(fvp_savelist_hit(NULL, 0, 0) == -1, "NULL list hit");
     fvp_savelist_row_text(NULL, 0, row, sizeof(row));
     CHECK(row[0] == '\0', "NULL list row_text empty");
+
+    /* --- 8. 槽尾字符串池：解析图名 + 对话行（savetail） --- */
+    {
+        unsigned char *t = (unsigned char *)calloc(1, 0x19440);
+        FvpSaveTailInfo info;
+        unsigned char *pool;
+        size_t off;
+
+        /* tag 0x20 @0x19408, count 2 @0x1940c */
+        t[0x19408] = 0x20;
+        t[0x1940c] = 2;
+        off = 0x19410;
+        /*** entry 1: "BG063_000b" + NUL (len 11) ***/
+        t[off] = 11;
+        memcpy(t + off + 2, "BG063_000b\0", 11);
+        off += 2 + 11;
+        off += 2; /* 实测条目间有 0 填充 */
+        /*** entry 2: cp932 "　……。" + NUL (len 9) ***/
+        t[off] = 9;
+        memcpy(t + off + 2, "\xa1\xa1\xa1\xad\xa1\xad\xa1\xa3\0", 9);
+        (void)pool;
+
+        memset(&info, 0, sizeof(info));
+        CHECK(fvp_savetail_parse(&info, t, 0x19440, FVP_ENC_CP932) == 1,
+              "savetail parses synthetic pool");
+        CHECK(info.count == 2, "savetail count=%d", info.count);
+        CHECK(info.graph_index == 0, "savetail graph_index=%d",
+              info.graph_index);
+        CHECK(strcmp(info.str[0], "BG063_000b") == 0, "graph name '%s'",
+              info.str[0]);
+        CHECK(strcmp(info.str[1],
+                     "\xef\xbd\xa1\xef\xbd\xa1\xef\xbd\xa1\xef\xbd\xad"
+                     "\xef\xbd\xa1\xef\xbd\xad\xef\xbd\xa1\xef\xbd\xa3") == 0,
+              "dialogue line decoded to UTF-8: '%s'", info.str[1]);
+
+        /* 坏 tag */
+        t[0x19408] = 0x21;
+        CHECK(fvp_savetail_parse(&info, t, 0x19440, FVP_ENC_CP932) == 0,
+              "wrong tag rejected");
+        t[0x19408] = 0x20;
+        /* count 0 */
+        t[0x1940c] = 0;
+        CHECK(fvp_savetail_parse(&info, t, 0x19440, FVP_ENC_CP932) == 0,
+              "count 0 rejected");
+        t[0x1940c] = 2;
+        /* count 太大 */
+        t[0x1940d] = 1;
+        CHECK(fvp_savetail_parse(&info, t, 0x19440, FVP_ENC_CP932) == 0,
+              "count > max rejected");
+        t[0x1940d] = 0;
+        /* tail 太短 */
+        CHECK(fvp_savetail_parse(&info, t, 0x19408, FVP_ENC_CP932) == 0,
+              "short tail rejected");
+        /* NULL 安全 */
+        CHECK(fvp_savetail_parse(NULL, t, 0x19440, FVP_ENC_CP932) == 0,
+              "NULL out rejected");
+        CHECK(fvp_savetail_parse(&info, NULL, 0x19440, FVP_ENC_CP932) == 0,
+              "NULL tail rejected");
+        free(t);
+    }
+
+    /* --- 9. 存档记录里带上图名，行文本要显示出来 --- */
+    {
+        FvpSaveList l;
+
+        fvp_savelist_init(&l);
+        fvp_savelist_set_thumb_size(&l, 2, 2);
+        CHECK(write_slot_with_graph(path, 2023, 3, 19, 23, 43) == 1,
+              "write slot with pool");
+        CHECK(fvp_savelist_add_slot_file(&l, path, 905, FVP_ENC_CP932) == 1,
+              "scan slot with pool");
+        CHECK(strcmp(l.items[0].graph, "BG063_000b") == 0,
+              "entry graph '%s'", l.items[0].graph);
+        CHECK(fvp_savelist_row_text(&l, 0, row, sizeof(row)) == row,
+              "row text with graph");
+        CHECK(strstr(row, "BG063_000b") != NULL, "row shows graph: '%s'", row);
+        CHECK(strstr(row, "2023/03/19 23:43") != NULL,
+              "row still shows timestamp: '%s'", row);
+    }
 
     remove(path);
     printf("test_savelist: %d passed, %d failed\n", g_pass, g_fail);

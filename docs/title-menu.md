@@ -249,6 +249,9 @@ hoshimemo 的 asset 指向各自贴图 → 走贴图模式。
 - Windows 下 CJK 路径只能走宽字符 API，所以**目录枚举与读文件在外壳里做**
   （`FindFirstFileW` + `_wfopen`），`savelist.c` 只吃"槽文件字节"
   （`fvp_savelist_add_slot_bytes`），保持可移植；
+- 槽尾的字符串池（`src/savetail.c`，见 `docs/save-format.md` §2.5.1）里能解出
+  当时的**背景图名**（例如 s905 的 `BG063_000b`），行文本会显示成
+  `No.905   2023/03/19 23:43   [BG063_000b] プロローグ`；解不出来就不显示；
 - 选中一行只记日志（`save list: selected No.481 ...`）并**停在列表里**——
   槽尾 500–597 KB 的引擎状态快照还没解，恢复不了，所以不启动脚本（如实标注）；
 - 调试/截图入口：`--title-save-list`（等价于启动即打开 Continue 列表）；

@@ -27,6 +27,7 @@ typedef struct FvpSaveEntry {
     unsigned char hour;
     unsigned char minute;
     char chapter[FVP_SAVELIST_CHAPTER_MAX]; /* UTF-8，空串 = 没有 */
+    char graph[24];          /* 槽尾字符串池里的图名（如 BG063_000b），空串 = 没有 */
     char line[FVP_SAVELIST_LINE_MAX];       /* UTF-8，空串 = 没有 */
     int has_thumb;
     size_t file_bytes;

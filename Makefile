@@ -88,7 +88,7 @@ WIN32_DIR   = src/platform/win32
 WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
                $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
-              src/titlemenu.c src/savelist.c \
+              src/titlemenu.c src/savelist.c src/savetail.c \
                src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c \
                src/timer.c src/history.c
 WIN32_RES   = src/bin.c src/hzc1.c src/inflate.c
@@ -169,8 +169,8 @@ SAVELIST_TEST = bin/test_savelist$(EXE)
 
 test_savelist: $(SAVELIST_TEST)
 
-$(SAVELIST_TEST): tests/test_savelist.c src/savelist.c src/savelist.h src/save.c src/encoding.c src/fvp.c $(SAVE_OBJ)
-	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_savelist.c src/savelist.c src/save.c src/encoding.c src/fvp.c $(LDFLAGS) -lm
+$(SAVELIST_TEST): tests/test_savelist.c src/savelist.c src/savelist.h src/savetail.c src/savetail.h src/save.c src/encoding.c src/fvp.c $(SAVE_OBJ)
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_savelist.c src/savelist.c src/savetail.c src/save.c src/encoding.c src/fvp.c $(LDFLAGS) -lm
 
 clean-savelist:
 	-rm -f $(SAVELIST_TEST)

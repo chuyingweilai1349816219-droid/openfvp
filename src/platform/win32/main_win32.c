@@ -2084,6 +2084,16 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         (void)title_scan_saves(&save_list, opts.game_dir, game_u8,
                                slenc);
         fvp_logf("save list: %d slot(s) readable", save_list.count);
+        if (save_list.count > 0) {
+            char first[256];
+            char last[256];
+
+            fvp_savelist_row_text(&save_list, 0, first, sizeof(first));
+            fvp_savelist_row_text(&save_list, save_list.count - 1, last,
+                                  sizeof(last));
+            fvp_logf("save list: first=%s", first);
+            fvp_logf("save list: last=%s", last);
+        }
         if (opts.title_save_list && save_list.count > 0) {
             save_list_active = 1;
         }

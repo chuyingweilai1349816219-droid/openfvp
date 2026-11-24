@@ -372,6 +372,12 @@ def stage_title_menu(shell, games, check):
         check(m is not None and int(m.group(1)) == t['save_list'],
               '%d save slot(s) readable (%s)'
               % (t['save_list'], m.group(0) if m else 'missing'))
+        if t['save_list'] > 0:
+            m = log_match(r'save list: first=No\.\d+\s+\d{4}/\d{2}/\d{2}',
+                          log2)
+            check(m is not None,
+                  'first save-list row has a slot number and a timestamp (%s)'
+                  % ((m.group(0) if m else 'missing')))
         m = log_match(r'continue=\w+ \(\d+ slot\(s\), (\d+) readable\)',
                       log2)
         check(m is not None and int(m.group(1)) == t['save_list'],
