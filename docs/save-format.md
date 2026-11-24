@@ -373,6 +373,27 @@ write_bytes(buf, n*4);                  // BGR(A)，alpha 恒 0xFF
 `engine+0xFCA` 分支才真正落盘；`0x4396F0` 与 `0x43DE90` 是两条独立路径
 （前者写 `save.bin`，后者写槽）。
 
+#### `SaveData` 在本作里到底被用了几次（2026-11-24 实测）
+
+用 `fvm --dump-savedata` 统计真实脚本：**90 万步、200 万步都只有 3 次调用**，
+而且参数完全固定：
+
+```
+savedata 0: kind=2 idx=900 value=1
+savedata 1: kind=2 idx=903 value=1
+savedata 2: kind=2 idx=904 value=1
+```
+
+含义推定：`kind=2` 是"已读文本/进度标记"，`idx` 是编号、`value=1` 是"置真"，
+即**只用来打三个已读标记**，不是"把整个游戏状态摊平"的入口。所以
+槽尾那 500–597 KB 的引擎状态**不是**由 `SaveData` 拼出来的，而是
+`0x43DE90` 直接序列化引擎内部结构 —— 这也解释了为什么解 `SaveData` 的
+kind 语义并不能直接换来"能写存档"。
+
+C 侧现状：`src/syscall.c` 的 `case 95` 把这 3 条记录进 `FvpVM.save_data[]`
+（上限 256 条 + 溢出计数），`fvm --dump-savedata` 打印；外壳退出总结打印
+`savedata N record(s) of M call(s)`。
+
 ---
 
 ## 3. 全局设置 `save.bin`

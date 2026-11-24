@@ -39,6 +39,7 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --no-threads     disable coroutine slots 0..31 (A/B against the old stub)\n"
             "  --unknown-all    print every unknown command id (not just the top 15)\n"
             "  --dump-textattr  print every configured text window (color/size/speed)\n"
+            "  --dump-savedata  print every SaveData(95) record (kind/idx/value)\n"
             "  --dump-globals FILE  write \"index value\" lines for set globals\n",
             prog);
 }
@@ -165,6 +166,7 @@ typedef struct FvpUnkTop {
 
 static int g_unknown_all;
 static int g_dump_textattr; /* --dump-textattr: dump every configured text window */
+static int g_dump_savedata; /* --dump-savedata: dump every SaveData(95) record */
 
 static void fvp_print_summary(const FvpVM *vm)
 {
@@ -201,6 +203,17 @@ static void fvp_print_summary(const FvpVM *vm)
     printf("save state slot=%d str=%d/%d/%d thumb=%dx%d\n", vm->save_slot,
            vm->save_str[0] != NULL, vm->save_str[1] != NULL,
            vm->save_str[2] != NULL, vm->save_thumb_w, vm->save_thumb_h);
+    printf("savedata   %d record(s) of %llu call(s)\n", vm->save_data_n,
+           (unsigned long long)vm->save_data_seen);
+    if (g_dump_savedata && vm->save_data_n > 0) {
+        int si;
+
+        for (si = 0; si < vm->save_data_n; ++si) {
+            printf("  savedata %2d: kind=%d idx=%d value=%lld\n", si,
+                   vm->save_data[si].kind, vm->save_data[si].idx,
+                   (long long)vm->save_data[si].value);
+        }
+    }
     {
         size_t ti;
 
@@ -423,6 +436,8 @@ int main(int argc, char **argv)
             g_unknown_all = 1;
         } else if (strcmp(a, "--dump-textattr") == 0) {
             g_dump_textattr = 1;
+        } else if (strcmp(a, "--dump-savedata") == 0) {
+            g_dump_savedata = 1;
         } else if (strcmp(a, "--savebin") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "fvm: missing --savebin value\n");

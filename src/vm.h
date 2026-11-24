@@ -72,6 +72,16 @@ typedef struct FvpTextLine {
     FvpStr *text;
 } FvpTextLine;
 
+/* SaveData(95) 的记录。脚本用它把游戏状态摊平成"可存的数据"；本作实测每个存档
+ * 只发几次，所以用一个固定上限的环形表既能全收也能报告溢出。字段含义见
+ * docs/save-format.md §4（kind 0..13 的语义仍未解）。 */
+#define FVP_SAVE_DATA_MAX 256
+typedef struct FvpSaveData {
+    int kind;
+    int idx;
+    int64_t value;
+} FvpSaveData;
+
 /* 16 个引擎定时器的状态（TimerSet/TimerGet/TimerSuspend）。语义与换算在
  * src/timer.c；elapsed 由 vm.virtual_ms 推导，默认没开 --timeline 时时钟恒 0
  * → TimerGet 返回 0，与旧的「未实现返回 0」行为一致。 */
@@ -258,6 +268,10 @@ typedef struct FvpVM {
      * 走的是 fvp_sys_gfx()，若不再计一次「已处理」，未实现直方图会把
      * PrimSetNull 这类已经实现的命令报成缺口。 */
     int gfx_handled;
+    /* SaveData(95) 的记录（见上面 FvpSaveData）。 */
+    FvpSaveData save_data[FVP_SAVE_DATA_MAX];
+    int save_data_n;          /* 已记录条数（最多 FVP_SAVE_DATA_MAX） */
+    uint64_t save_data_seen;  /* 收到的总次数（用来报告溢出） */
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);

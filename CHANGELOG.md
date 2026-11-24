@@ -8,6 +8,13 @@
 
 ### 新增
 
+- **`SaveData`(95) 记录 + `fvm --dump-savedata`**：查明脚本到底想存什么
+  - 实测（90 万 / 200 万步都是 3 次）：`kind=2 idx=900 value=1`、`903`、`904`
+    —— 只用来打三个"已读/进度"标记，**不是**把游戏状态摊平的入口
+  - 推论：槽尾那 500–597 KB 引擎状态由 `0x43DE90` 直接序列化内部结构，所以
+    "解 `SaveData` 的 kind 语义"并不能换来"能写存档"（已写进 `docs/save-format.md` §2.5）
+  - 实现：`FvpVM.save_data[256]` + 溢出计数，`fvm --dump-savedata` 打印，
+    外壳退出总结打印 `savedata N record(s) of M call(s)`
 - **逐字显示（打字机效果）：`TextSpeed`(129) + `TextSuspendChr`(130) 的渲染侧落地**
   - `gfx` 侧：文本窗口新增 `speed_ms` / `shown_chars` / `total_chars` / `accum_ms`；
     `gfx_text_advance(g, dt_ms)` 按"每字毫秒"推进，`gfx_render()` 只画前 N 个字符

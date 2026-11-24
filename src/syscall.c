@@ -1312,6 +1312,24 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             vm->save_thumb_h = h;
         }
         return;
+    /* 95 SaveData(id, idx, value?)：脚本"把游戏状态摊平成可存数据"的入口。
+     * .hcb 内嵌命令表声明 argc=3，但本作编译进的 argc 表只有 2 —— 所以 VM 层
+     * 能拿到的是前两个操作数。这里只记录、判断不了语义（docs/save-format.md §4
+     * 的 kind 0..13 仍未解），但把它记下来就能回答"脚本到底想存什么"。 */
+    case 95:
+        if (argc >= 1) {
+            vm->save_data_seen += 1u;
+            if (vm->save_data_n < FVP_SAVE_DATA_MAX) {
+                FvpSaveData *d = &vm->save_data[vm->save_data_n];
+
+                d->kind = (int)args[0].i;
+                d->idx = (argc >= 2) ? (int)args[1].i : 0;
+                d->value = (argc >= 3) ? (int64_t)args[2].i
+                                       : (int64_t)d->idx;
+                vm->save_data_n += 1;
+            }
+        }
+        return;
     case 112:
         if (argc >= 4) {
             fvp_textattr_set_color(vm->textattr, FVP_TEXT_WINDOWS,
