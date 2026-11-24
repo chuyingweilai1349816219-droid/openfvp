@@ -75,7 +75,7 @@ fvp.exe --game <游戏目录> [选项]
 | `--save-encoding ENC` | 存档字符串编码：`cp932` / `gbk`（默认跟随脚本编码）。同一句日文写成 `83 76 83 8d …` 或 `a5 d7 a5 ed …` |
 | `--font FILE` | 加载 GFXF 字体图集，可重复；默认自动找 exe 目录的 `gfx-font-*.bin` |
 | `--text-prims` | 文本窗口画在 `PrimSetText(86)` 绑定的**图元绝对位置**上（原版做法），不再按层号固定版式画。默认关 —— 关时与冻结像素基线一致。汇总多一行 `text prims N drawn, M bound` |
-| `--title-menu` | 启动后先显示**引擎侧标题菜单**（`New Game/Continue/Album/Option/Exit`），点 `New Game`（或回车）才开始跑脚本，`Exit` 关窗口。默认关 —— 关时行为与之前完全一致。菜单几何按原版实测（右对齐 x=1769、行距 100、字号 56），见 [`docs/title-menu.md`](title-menu.md)。汇总多一行 `title menu enabled (... picked ...)` |
+| `--title-menu` | 启动后先显示**引擎侧标题菜单**（`New Game/Continue/Album/Option/Exit`），点 `New Game`（或回车）才开始跑脚本，`Exit` 关窗口。默认关 —— 关时行为与之前完全一致。菜单几何按原版实测（右对齐 x=1769、行距 100、字号 56），见 [`docs/title-menu.md`](title-menu.md)。汇总多一行 `title menu enabled (profile=..., align=..., continue=..., picked ...)`；`continue=` 由 `<game_dir>\save\sNNN.bin` 的个数决定 |
 | `--no-feed-text` | 关闭壳的临时文本桥（等 syscall 层接好 gfx 后应关闭） |
 | `--log FILE` | 日志路径，默认 `<exe目录>\fvp-win32.log`（不可写时退到 %TEMP%） |
 | `--console` | 同时输出到启动它的控制台（GUI 子系统程序默认没有 stdout） |

@@ -62,6 +62,7 @@ GAMES = [
          # 标题菜单 profile（原版实测：右对齐 1769、行距 100、没有菜单贴图）
          title=dict(profile='iroseka', align='right', pitch=100,
                     right_edge=1769, textures=0,
+                    continue_enabled=True,
                     centres=[531, 631, 732, 831, 931])),
     dict(name='hoshimemo',  # 《星空的记忆 HD》
          dir=os.path.join(DOWNLOADS, 'hoshimemo_installed'),
@@ -71,6 +72,7 @@ GAMES = [
          # 原版实测：居中 960、行距 90、5 张菜单贴图
          title=dict(profile='hoshimemo', align='centre', pitch=90,
                     centre_x=960, textures=5,
+                    continue_enabled=False,
                     centres=[597, 687, 777, 867, 957])),
     dict(name='sakura',  # 《樱花，萌放。（さくら、もゆ。）》
          dir=os.path.join(DOWNLOADS, '樱花，萌放（さくら、もゆ。）'),
@@ -310,6 +312,10 @@ def stage_title_menu(shell, games, check):
                   'profile is %s (got %s)' % (t['profile'], m.group(1)))
             check(m.group(2) == t['align'],
                   'align is %s (got %s)' % (t['align'], m.group(2)))
+        want = 'enabled' if t['continue_enabled'] else 'disabled'
+        check(('continue=%s' % want) in log,
+              'continue is %s in the title summary (save slots under save/)'
+              % want)
         if t['textures'] > 0:
             m = log_match(r'title: (\d+)/5 menu textures loaded', log)
             check(m is not None and int(m.group(1)) == t['textures'],

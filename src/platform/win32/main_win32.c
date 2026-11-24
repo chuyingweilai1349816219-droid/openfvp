@@ -1666,6 +1666,37 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
 
 static int title_textures_on;
 
+/* 数一下 <game_dir>\save 里有几个存档槽（sNNN.bin）。
+ * 标题菜单的 Continue 就靠它决定能不能点。 */
+static int title_count_save_slots(const wchar_t *game_dir)
+{
+    wchar_t pattern[PATH_CAP];
+    WIN32_FIND_DATAW fd;
+    HANDLE h;
+    int n = 0;
+
+    if (game_dir == NULL || game_dir[0] == L'\0') {
+        return 0;
+    }
+    if (!path_join_w(pattern, PATH_CAP, game_dir, L"save\\s*.bin")) {
+        return 0;
+    }
+    h = FindFirstFileW(pattern, &fd);
+    if (h == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+    do {
+        if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+            n += 1;
+            if (n >= 999) {
+                break;
+            }
+        }
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+    return n;
+}
+
 /* ------------------------------------------------------------------ */
 /* 引擎侧标题菜单：把 profile 里的贴图装进图形槽，并绑成图元              */
 /* ------------------------------------------------------------------ */
@@ -1854,8 +1885,17 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 title_profile = fvp_title_profile_find(hint_u8);
             }
         }
+        {
+            int slots = title_count_save_slots(opts.game_dir);
+
+            title.enabled[FVP_TITLE_CONTINUE] = slots > 0 ? 1 : 0;
+            fvp_logf("title: continue %s (%d slot(s) under save/)",
+                     slots > 0 ? "enabled" : "disabled", slots);
+        }
         if (title_profile != NULL) {
             fvp_title_apply_profile(&title, title_profile);
+            title.enabled[FVP_TITLE_CONTINUE] =
+                title_count_save_slots(opts.game_dir) > 0 ? 1 : 0;
             fvp_logf("title: profile '%s' (align=%s, pitch=%d, top=%d)",
                      title_profile->game,
                      title_profile->align == FVP_TITLE_ALIGN_CENTER
@@ -2311,6 +2351,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                          (int)((now - title_shown_at) * 1000.0));
                 if (pick == FVP_TITLE_EXIT) {
                     win.quit = 1;
+                } else if (pick == FVP_TITLE_CONTINUE) {
+                    /* 读档界面还没做：记一条日志、保持菜单（不覆盖
+                     * “Continue 已启用”这个已验证的状态）。 */
+                    fvp_logf("title: continue requested (%d slot(s)) "
+                             "but the load UI is not implemented yet",
+                             title_count_save_slots(opts.game_dir));
+                    title_active = 1;
+                    title_picked = -1;
                 } else {
                     fvp_vm_start(&vm);
                     fvp_logf("vm: started at pc=0x%x (from title menu)",
@@ -2448,12 +2496,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             /* 标题菜单是引擎侧 UI 覆盖层，必须在 render 之后画。 */
             if (title_active) {
                 if (title_shown_at == 0.0) {
+                    /* 几何/可用性已在启动时按 profile 设好；
+                     * 这里只记录菜单开始显示的时刻。 */
                     title_shown_at = now;
-                    fvp_title_init(&title);
-                    title.font_px = 56;
-                    if (title_profile != NULL) {
-                        fvp_title_apply_profile(&title, title_profile);
-                    } /* 实测：墨迹高 40..42 → 字号 56 */
                 }
                 title_draw_overlay(gfx, &title, title_profile, title_hover);
             }
@@ -2665,13 +2710,15 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                gfx_stats(gfx)->text_prims, gfx_text_prim_bindings(gfx),
                opts.text_prims ? "on" : "off");
         APPEND("title menu     %s (profile=%s, align=%s, %d item(s), "
-               "pitch %d, picked %s)\n",
+               "pitch %d, continue=%s (%d slot(s)), picked %s)\n",
                opts.title_menu ? "enabled" : "off",
                title_profile != NULL ? title_profile->game : "generic",
                (title_profile != NULL &&
                 title_profile->align == FVP_TITLE_ALIGN_CENTER)
                    ? "centre" : "right",
                FVP_TITLE_ITEMS, title.pitch,
+               title.enabled[FVP_TITLE_CONTINUE] ? "enabled" : "disabled",
+               title_count_save_slots(opts.game_dir),
                title_picked >= 0
                    ? (title_profile != NULL
                           ? title_profile->items[title_picked].label

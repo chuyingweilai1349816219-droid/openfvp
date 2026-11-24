@@ -53,6 +53,19 @@
 
 ### 新增
 
+- **标题菜单的 Continue 改成按存档可用性启用/禁用（进多游戏门禁）**
+  - 新增 `title_count_save_slots()`：数 `<game_dir>\save\sNNN.bin`；
+    0 个槽 → Continue 置灰、点它只记日志（读档界面还没做）、不启动脚本；
+    有槽 → 正常可点
+  - 修掉一个重复初始化 bug：第一帧还会再 `fvp_title_init()` 一次，把刚设好的
+    enabled[] 冲回全可用（表象是"没有存档也显示 Continue 可用"）。现在几何/
+    可用性只在启动时设一次
+  - 汇总行补 `continue=enabled/disabled (N slot(s))`，实测：
+    五彩斑斓的世界（`save/` 里 7 个槽）→ enabled；星空的记忆（没有 save 目录）
+    → disabled
+  - `verify_multigame.py` 的标题菜单阶段新增断言：
+    `continue is enabled/disabled in the title summary`（按作品期望值）
+
 - **多游戏门禁新增"标题菜单"阶段：两部作品的 profile 与菜单几何都成了硬断言**
   - `tests/verify_multigame.py` 新增 `stage_title_menu()`：两部目标作品各跑一次
     `--title-menu --screenshot`，断言外壳退出码、汇总行里的 profile/align、
