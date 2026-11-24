@@ -1636,6 +1636,15 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     /* 23 GraphRGB(graphId 0..0xFFF, r, g, b)：handler 0x43a3d0，分量 0..200、
      * 缺省 100；只记录（见 src/vm.h 的 graph_rgb 注释）。
      * 109 SysProjFolder(str)：handler 0x43c7f0，只接受字符串参数。 */
+    /* 110 TextBuff(twIdx 0..31, a, b)：handler 0x43c830 → call 0x430ea0(tw,a,b)，
+     * a/b 缺省 8、上限 0x400，写 tw+0x5dc/0x5de。只记录。 */
+    case 110:
+        if (argc >= 1) {
+            (void)fvp_vm_text_buff(vm, &args[0], argc >= 2 ? &args[1] : NULL,
+                                    argc >= 3 ? &args[2] : NULL);
+            return;
+        }
+        break;
     case 23:
         if (argc >= 4) {
             (void)fvp_vm_graph_rgb(vm, &args[0], &args[1], &args[2], &args[3]);

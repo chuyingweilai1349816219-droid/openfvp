@@ -400,6 +400,22 @@ clean-graphcolor:
 .PHONY: test_graphcolor clean-graphcolor
 
 # ---------------------------------------------------------------------------
+# TextBuff(110) 的文本窗口缓冲尺寸状态
+#   make test_textbuff
+# ---------------------------------------------------------------------------
+TEXTBUFF_TEST = bin/test_textbuff$(EXE)
+
+test_textbuff: $(TEXTBUFF_TEST)
+
+$(TEXTBUFF_TEST): tests/test_textbuff.c src/vm.c src/vm.h $(OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_textbuff.c $(filter-out src/main.o,$(OBJ)) $(LDFLAGS) -lm
+
+clean-textbuff:
+	-rm -f $(TEXTBUFF_TEST)
+
+.PHONY: test_textbuff clean-textbuff
+
+# ---------------------------------------------------------------------------
 # make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
 # CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
 #   make check
@@ -411,7 +427,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
-             $(CONTROL_TEST) $(GRAPHCOLOR_TEST)
+             $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

@@ -438,19 +438,25 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
-### GraphRGB(23) / SysProjFolder(109)（**已实现：只记录状态**）
+### TextBuff(110)（**已实现：只记录尺寸**）
 
-| id | 命令 | argc | 语义 / 证据 |
-| ---: | --- | ---: | --- |
-| 23 | GraphRGB | 4 | `(graphId 0..0xFFF, r, g, b)`。handler **0x43a3d0**：槽号必须 int 且在 0..0xFFF；三个分量**各自**"是 int 且在 0..200"才采用，否则取默认 **100**（= 不调制）；然后 `call 0x428910(engine+0x101064+id*0x51c, r,g,b)` 并 tail-call `0x437330(engine+0x45c, id)` 通知刷新（和 GraphLoad 同一个"槽变了"回调） |
-| 109 | SysProjFolder | 1 | `(folder)`。handler **0x43c7f0**：只接受 type 4/5（字符串）参数，其余直接返回；取到字符串后 tail-call `0x433c60(engine+0x6a7e78, str)` |
+handler **0x43c830**（argc 3）：
 
-本站两个都**只记录**：`FvpVM` 里有 `graph_rgb[4096][3] + graph_rgb_set[]`（每个槽的
-三通道）与 `proj_folder`（arena 里的字符串拷贝），外壳汇总打印
-`graph rgb N call(s), folder=...`。不消费的理由：渲染端没有"100 是不是 1.0 倍、
-200 是过曝还是叠色"的证据；工程目录字符串具体影响哪条资源路径也没解出。
+```
+43c834  cmpb $0x2,(%eax)        ; twIdx 必须是 int
+43c840  cmp  $0x1f,%ecx         ; 且 0..31，否则整条返回
+43c845  cmpb $0x2,0x8(%eax)     ; 第 2 个参数是 int?
+43c864  test %edx,%edx          ;   且 >= 0 才采用
+43c85d  mov  $0x8,%esi/%edi     ; 否则默认 8（第 3 个参数同理）
+43c87b  call 0x430ea0(tw, a, b)
+```
 
-实测（iroseka 45 s）：`GraphRGB` 调 4 次、`SysProjFolder` 调 1 次（参数是空串）。
+setter **0x430ea0**：`a`/`b` 任一 **> 0x400** 就整条放弃；否则写 u16
+`tw+0x5dc = a`、`tw+0x5de = b`，并释放旧缓冲（`tw+0x520`）后重建。
+
+所以这是"文本窗口的缓冲尺寸"（两个 0..0x400 的数，缺省 8/8），而不是排版参数。
+本站只把两个数记进 `FvpVM.text_buff[32]`（我们的文本是按行存的动态串，没有固定缓冲
+这一层），外壳/`fvm` 汇总打印 `text buff N call(s)`。
 
 ### GraphRGB(23) / SysProjFolder(109)（**已实现：只记录状态**）
 

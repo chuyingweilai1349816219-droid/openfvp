@@ -1078,6 +1078,41 @@ int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
     return 1;
 }
 
+int fvp_vm_text_buff(FvpVM *vm, const FvpValue *idx, const FvpValue *a,
+                     const FvpValue *b)
+{
+    int wi;
+    long w = 8;
+    long h = 8;
+
+    if (vm == NULL || idx == NULL) {
+        return 0;
+    }
+    if (idx->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    wi = (int)idx->i;
+    if (wi < 0 || wi >= FVP_TEXT_WINDOWS) {
+        return 0;
+    }
+    vm->text_buff_calls += 1u;
+    if (a != NULL && a->type == (uint8_t)FVP_INT && a->i >= 0) {
+        w = (long)a->i;
+    }
+    if (b != NULL && b->type == (uint8_t)FVP_INT && b->i >= 0) {
+        h = (long)b->i;
+    }
+    /* 0x430ea0：任一分量 > 0x400 就整条放弃（连记录也不做）。 */
+    if (w > 0x400 || h > 0x400) {
+        vm->text_buff_calls -= 1u;
+        return 0;
+    }
+    vm->text_buff[wi].w = (unsigned short)w;
+    vm->text_buff[wi].h = (unsigned short)h;
+    vm->text_buff[wi].set = 1u;
+    return 1;
+}
+
 int fvp_vm_set_proj_folder(FvpVM *vm, const FvpValue *arg)
 {
     FvpStr *s;

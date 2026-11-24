@@ -2289,6 +2289,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.control_calls[1],
                (unsigned long long)vm.control_calls[2],
                (unsigned long long)vm.control_calls[3]);
+        APPEND("text buff      %llu call(s)\n",
+               (unsigned long long)vm.text_buff_calls);
         APPEND("graph rgb      %llu call(s), folder=%s (folder calls %llu)\n",
                (unsigned long long)vm.graph_rgb_calls,
                vm.proj_folder != NULL ? vm.proj_folder : "-",

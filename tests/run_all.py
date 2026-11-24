@@ -312,6 +312,17 @@ def build_steps(args):
                                'components with 100 fallback; project folder '
                                'string'))
 
+    # 4i4. TextBuff(110) text-window buffer sizes (recorded, not applied)
+    test_textbuff = tools.get('test_textbuff')
+    if not test_textbuff or not os.path.isfile(test_textbuff):
+        steps.append(Step('test_textbuff', None, 0,
+                          skip_reason='bin/test_textbuff.exe missing '
+                                      '(run: make test_textbuff)'))
+    else:
+        steps.append(Step('test_textbuff', [test_textbuff], 120,
+                          note='TextBuff 110: window 0..31, 8/8 defaults, '
+                               '0..0x400 range, whole command dropped >0x400'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):

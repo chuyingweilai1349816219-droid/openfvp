@@ -268,6 +268,19 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* TextBuff(110)：文本窗口的缓冲尺寸。静态分析结论：
+     *   handler 0x43c830 入口校验 twIdx 必须是 int 且在 0..31；
+     *   第 2/3 个参数各自"是 int 且 >= 0"才采用，否则用默认 **8**；
+     *   然后 call 0x430ea0(tw, a, b)：两者都 > 0x400 时整条命令直接放弃，
+     *   否则写 u16 `tw+0x5dc = a` / `tw+0x5de = b` 并重建缓冲（释放 tw+0x520 的旧块）。
+     * 本站只记录（我们的文本是按行存的动态串，没有"固定缓冲"这层结构）。 */
+    struct {
+        unsigned short w;
+        unsigned short h;
+        unsigned char set;
+    } text_buff[FVP_TEXT_WINDOWS];
+    uint64_t text_buff_calls;
+
     /* GraphRGB(23)：每个图形槽的颜色调制。静态分析（handler 0x43a3d0）结论：
      * 槽号必须 int 0..0xFFF；三个分量各自"是 int 且在 0..200 内"才采用，否则取
      * 默认 100（= 不调制）；然后 call 0x428910(engine+0x101064+slot*0x51c, r,g,b)
@@ -336,6 +349,10 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* TextBuff(110)：记录文本窗口缓冲尺寸，返回 1 = 生效。
+ * a / b 为 NULL 时用默认 8；任一分量 > 0x400 时整条命令放弃（返回 0）。 */
+int fvp_vm_text_buff(FvpVM *vm, const FvpValue *idx, const FvpValue *a,
+                     const FvpValue *b);
 /* SysProjFolder(109)：记录工程目录字符串，返回 1 = 生效（参数是字符串）。 */
 int fvp_vm_set_proj_folder(FvpVM *vm, const FvpValue *arg);
 int fvp_vm_stalled(const FvpVM *vm);

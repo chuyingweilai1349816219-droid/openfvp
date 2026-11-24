@@ -53,6 +53,19 @@
 
 ### 新增
 
+- **`TextBuff`(110) 落地（本轮，只记录尺寸）**
+  - handler **0x43c830**：`TextBuff(twIdx, a, b)`，twIdx 必须 int 且在 0..31；
+    a/b 各自"是 int 且 >= 0"才采用，否则默认 **8**；随后 `call 0x430ea0(tw, a, b)`
+  - setter **0x430ea0**：a/b 任一 **> 0x400** 时整条命令放弃；否则写 u16
+    `tw+0x5dc = a` / `tw+0x5de = b` 并重建缓冲（释放 `tw+0x520` 的旧块）——
+    这是"文本窗口缓冲尺寸"，不是排版参数
+  - 实现：`FvpVM` 新增 `text_buff[32]`（w/h/set）与 `text_buff_calls`，两个外壳汇总
+    打印 `text buff N call(s)`；不重建缓冲（我们的文本是按行存的动态串）
+  - 实测（控制台）：`fvm --steps 900000` 汇总出现 `text buff 6 call(s)`，文本仍是
+    **195 行**、`stall none`；此前它在 `unknown cmds` 里
+  - 单测 `tests/test_textbuff.c` **21 项**（`make check` 现在 **16 个单测**，
+    `run_all.py` **31 步**）
+
 - **`GraphRGB`(23) / `SysProjFolder`(109) 落地（本轮，只记录状态）**
   - `GraphRGB(graphId, r, g, b)`：handler **0x43a3d0**。槽号必须 int 0..0xFFF；
     三个分量**各自**"是 int 且在 0..200"才采用，否则默认 **100**；随后

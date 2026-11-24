@@ -235,6 +235,9 @@ static void fvp_print_summary(const FvpVM *vm)
            (unsigned long long)vm->control_calls[1],
            (unsigned long long)vm->control_calls[2],
            (unsigned long long)vm->control_calls[3]);
+    /* TextBuff 110 */
+    printf("text buff  %llu call(s)\n",
+           (unsigned long long)vm->text_buff_calls);
     /* GraphRGB 23 / SysProjFolder 109 */
     printf("graph rgb  %llu call(s), folder=%s (folder calls %llu)\n",
            (unsigned long long)vm->graph_rgb_calls,
