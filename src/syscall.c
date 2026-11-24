@@ -45,6 +45,7 @@
 #pragma weak gfx_text_set_pos
 #pragma weak gfx_text_set_size
 #pragma weak gfx_text_set_speed
+#pragma weak gfx_text_set_shadow
 #pragma weak gfx_text_busy
 /* 动画补间（src/motion.c + gfx 侧）：只有链接了 gfx.c 的程序才有这些符号。 */
 #pragma weak gfx_get_prim
@@ -1348,6 +1349,31 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         if (argc >= 2) {
             fvp_textattr_set_speed(vm->textattr, FVP_TEXT_WINDOWS,
                                    (int)args[0].i, (int)args[1].i);
+        }
+        return;
+    /* 125 TextShadowDist(twIdx, dx, dy)：静态分析 0x43CE10，两个分量各钳 -32..32
+     * （写 tw+0x5a8 / +0x5aa）。渲染层用它在文字偏移处补一层暗色。 */
+    case 125:
+        if (argc >= 2) {
+            int id = (int)args[0].i;
+            int dx = (int)args[1].i;
+            int dy = (argc >= 3) ? (int)args[2].i : 0;
+
+            if (fvp_textattr_set_shadow(vm->textattr, FVP_TEXT_WINDOWS, id, dx,
+                                        dy) &&
+                vm->gfx_bridge != NULL && gfx_text_set_shadow != NULL &&
+                id >= 0 && id < FVP_TEXT_WINDOWS) {
+                gfx_text_set_shadow(vm->gfx_bridge->gfx, id,
+                                    vm->textattr[id].shadow_x,
+                                    vm->textattr[id].shadow_y);
+            }
+        }
+        return;
+    /* 127 TextSkip(twIdx, mode 0..3)：静态分析 0x43CDD0，写 tw+0x5d7。 */
+    case 127:
+        if (argc >= 2) {
+            fvp_textattr_set_skip(vm->textattr, FVP_TEXT_WINDOWS,
+                                  (int)args[0].i, (int)args[1].i);
         }
         return;
     case 15:  /* DissolveWait: already finished */

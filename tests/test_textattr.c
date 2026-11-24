@@ -53,14 +53,52 @@ int main(void)
     CHECK(a[1].w == FVP_TEXT_W_MAX && a[1].h == FVP_TEXT_H_MAX, "size high=%dx%d",
           a[1].w, a[1].h);
 
-    /* 4. 速度：0..300000。 */
+    /* 4. 速度：-1..300000（静态分析 0x43CE70：超范围是整条命令被忽略，不是钳制）。 */
     CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, 40) == 1, "set_speed");
     CHECK(a[2].speed_ms == 40, "speed %d", a[2].speed_ms);
-    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, -7) == 1, "speed low");
-    CHECK(a[2].speed_ms == 0, "speed low=%d", a[2].speed_ms);
-    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, 500000) == 1,
-          "speed high");
-    CHECK(a[2].speed_ms == FVP_TEXT_SPEED_MAX, "speed high=%d", a[2].speed_ms);
+    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, -1) == 1,
+          "-1 = use engine setting (accepted)");
+    CHECK(a[2].speed_ms == -1, "speed -1 kept (%d)", a[2].speed_ms);
+    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, -7) == 0,
+          "-7 rejected (engine ignores the whole command)");
+    CHECK(a[2].speed_ms == -1, "rejected value did not overwrite (%d)",
+          a[2].speed_ms);
+    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, 500000) == 0,
+          "500000 rejected");
+    CHECK(a[2].speed_ms == -1, "still -1 after the rejection (%d)",
+          a[2].speed_ms);
+    CHECK(fvp_textattr_set_speed(a, FVP_TEXT_WINDOWS, 2, FVP_TEXT_SPEED_MAX) == 1,
+          "300000 accepted");
+    CHECK(a[2].speed_ms == FVP_TEXT_SPEED_MAX, "speed max=%d", a[2].speed_ms);
+
+    /* 4b. 阴影偏移（TextShadowDist 125）：两个分量各 -32..32，独立判定。 */
+    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, 2, 3) == 1,
+          "set_shadow");
+    CHECK(a[3].shadow_x == 2 && a[3].shadow_y == 3, "shadow %d,%d",
+          a[3].shadow_x, a[3].shadow_y);
+    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, 99, -5) == 1,
+          "one component out of range still applies the other");
+    CHECK(a[3].shadow_x == 2 && a[3].shadow_y == -5,
+          "x kept, y updated (%d,%d)", a[3].shadow_x, a[3].shadow_y);
+    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, -32, 32) == 1,
+          "boundaries accepted");
+    CHECK(a[3].shadow_x == -32 && a[3].shadow_y == 32, "boundaries %d,%d",
+          a[3].shadow_x, a[3].shadow_y);
+    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, -33, 33) == 0,
+          "both out of range = rejected");
+    CHECK(a[3].shadow_x == -32 && a[3].shadow_y == 32,
+          "unchanged after the rejection (%d,%d)", a[3].shadow_x, a[3].shadow_y);
+
+    /* 4c. TextSkip(127)：0..3，超范围拒绝。 */
+    CHECK(fvp_textattr_set_skip(a, FVP_TEXT_WINDOWS, 4, 2) == 1, "set_skip");
+    CHECK(a[4].skip_mode == 2, "skip mode %d", a[4].skip_mode);
+    CHECK(fvp_textattr_set_skip(a, FVP_TEXT_WINDOWS, 4, 4) == 0,
+          "mode 4 rejected");
+    CHECK(a[4].skip_mode == 2, "skip unchanged (%d)", a[4].skip_mode);
+    CHECK(fvp_textattr_set_skip(a, FVP_TEXT_WINDOWS, 4, -1) == 0,
+          "mode -1 rejected");
+    CHECK(fvp_textattr_set_skip(a, FVP_TEXT_WINDOWS, 4, FVP_TEXT_SKIP_MAX) == 1,
+          "mode 3 accepted");
 
     /* 5. 窗口号越界：拒绝，且不改任何窗口。 */
     CHECK(fvp_textattr_set_color(a, FVP_TEXT_WINDOWS, 32, 1, 2, 3) == 0,

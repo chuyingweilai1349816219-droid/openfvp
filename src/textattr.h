@@ -29,6 +29,14 @@ extern "C" {
 #define FVP_TEXTATTR_COLOR 0x01u
 #define FVP_TEXTATTR_SIZE 0x02u
 #define FVP_TEXTATTR_SPEED 0x04u
+#define FVP_TEXTATTR_SHADOW 0x08u
+#define FVP_TEXTATTR_SKIP 0x10u
+
+/* TextShadowDist 的两个分量都是 -32..32（静态分析 0x43CE10：cmp $0xffffffe0 / cmp $0x20）。
+ * TextSkip 的模式是 0..3（静态分析 0x43CDD0：cmp $0x3）。 */
+#define FVP_TEXT_SHADOW_MIN (-32)
+#define FVP_TEXT_SHADOW_MAX 32
+#define FVP_TEXT_SKIP_MAX 3
 
 typedef struct FvpTextAttr {
     int r;
@@ -36,7 +44,10 @@ typedef struct FvpTextAttr {
     int b;
     int w;       /* 字号宽（12..64） */
     int h;       /* 字号高（8..32） */
-    int speed_ms; /* 每字毫秒（0..300000） */
+    int speed_ms; /* 每字毫秒（0..300000，-1 = 用引擎设置） */
+    int shadow_x; /* TextShadowDist 的 x 分量（-32..32） */
+    int shadow_y; /* TextShadowDist 的 y 分量（-32..32） */
+    int skip_mode; /* TextSkip 的模式（0..3） */
     unsigned int set_mask;
 } FvpTextAttr;
 
@@ -49,6 +60,10 @@ int fvp_textattr_set_color(FvpTextAttr *attrs, int count, int idx, int r, int g,
                            int b);
 int fvp_textattr_set_size(FvpTextAttr *attrs, int count, int idx, int w, int h);
 int fvp_textattr_set_speed(FvpTextAttr *attrs, int count, int idx, int ms);
+/* TextShadowDist(twIdx, dx, dy) / TextSkip(twIdx, mode)：见上面静态分析出处。 */
+int fvp_textattr_set_shadow(FvpTextAttr *attrs, int count, int idx, int dx,
+                            int dy);
+int fvp_textattr_set_skip(FvpTextAttr *attrs, int count, int idx, int mode);
 
 /* 被脚本设置过至少一个字段的窗口数（日志 / 验收用）。 */
 int fvp_textattr_configured_count(const FvpTextAttr *attrs, int count);

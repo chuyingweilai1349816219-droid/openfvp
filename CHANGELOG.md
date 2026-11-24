@@ -49,9 +49,22 @@
 | `check-docs.py` | PASS：29 篇文档、0 缺失路径、DeepSeek 声明齐全 |
 | 外壳长跑 | 15 分钟级采样：59.7–59.9 fps、`slow=0`、`underruns=0`、`exit=run-seconds` |
 
-## [未发布] — 协程槽落地（1.0.0 之前）
+## [未发布] — 文本呈现命令（1.0.0 之后）
 
 ### 新增
+
+- **`TextShadowDist`(125) 与 `TextSkip`(127) 落地**（静态分析逐条确认，不是猜的）
+  - `TextShadowDist(twIdx, dx, dy)`：两个分量各 **-32..32**，分别写 `tw+0x5a8` / `tw+0x5aa`；
+    超范围的分量单独被忽略（另一分量仍生效）。出处 **0x43CE10**
+  - `TextSkip(twIdx, mode 0..3)`：字节写 `tw+0x5d7`，超范围整条命令忽略。出处 **0x43CDD0**
+  - 渲染侧：`gfx_text_set_shadow()`，偏移非 0 时先在偏移处压一层暗色再画正文；
+    **偏移为 0 时完全不画阴影层，像素基线与之前一致**（`verify_gfx` 仍是 293 px / PSNR 49.94 / SSIM 0.99971）
+  - 顺带修正 `TextSpeed`(129) 的取值语义：静态分析 0x43CE70 是 `cmp $-1; jl ret` +
+    `cmp $300000; jg ret`，即**超范围整条命令被忽略**，而且 **-1 是合法值**
+    （引擎里表示"用设置里的文字速度"）—— 之前把它钳成 0 是错的
+  - 测试：`tests/test_textattr.c` 扩到 **47 项**（含 -1 / -7 / 500000 的拒绝语义、
+    阴影两分量独立判定、skip 0..3 边界）
+- **`SaveData`(95) 记录 + `fvm --dump-savedata`**：查明脚本到底想存什么
 
 - **`SaveData`(95) 记录 + `fvm --dump-savedata`**：查明脚本到底想存什么
   - 实测（90 万 / 200 万步都是 3 次）：`kind=2 idx=900 value=1`、`903`、`904`

@@ -171,6 +171,11 @@ int gfx_text_shown_chars(const Gfx *g, int layer);
 int gfx_text_total_chars(const Gfx *g, int layer);
 int gfx_text_busy(const Gfx *g, int layer); /* 1 = 还在逐字显示 */
 
+/* TextShadowDist(125)：文字阴影偏移（两个分量 -32..32，静态分析 0x43CE10 写
+ * tw+0x5a8 / tw+0x5aa）。两个分量都是 0 时不画阴影层，默认像素不变。 */
+void gfx_text_set_shadow(Gfx *g, int layer, int dx, int dy);
+void gfx_text_get_shadow(const Gfx *g, int layer, int *dx, int *dy);
+
 /* 纹理缓存上限（字节）。默认 512 MiB，见 gfx.c 的 GFX_TEX_CACHE_DEFAULT_BYTES。
  * 超上限时按 LRU 淘汰 refs == 1 的条目（被图元/组/部件引用的永远不会被淘汰，
  * 需要时会重新解码），因此像素输出不变。cap 传 0 = 不限制。

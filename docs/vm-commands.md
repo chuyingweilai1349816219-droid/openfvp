@@ -353,7 +353,8 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | 122 | TextPos | 3 | (twIdx, x, y)：u16 写 `tw+0x5e8`(x)/`tw+0x5ea`(y) |
 | 124 | TextRepaint | 0 | 强制重绘文本：`0x441790(engine)` |
 | 126 | TextSize | 3 | (twIdx, w 12..64, h 8..32)：字节写 `tw+0x592`(w)/`tw+0x594`(h)。**已实现**：存进 `FvpTextAttr`，按范围钳制 |
-| 127 | TextSkip | 2 | (twIdx, mode 0..3)：字节写 `tw+0x5d7` |
+| 127 | TextSkip | 2 | (twIdx 0..31, mode 0..3)：字节写 `tw+0x5d7`。**已实现**：`fvp_textattr_set_skip()` 存进 `FvpTextAttr.skip_mode`（超范围整条命令忽略）。静态分析出处 **0x43CDD0**：`cmp $2,(%eax)` 校验 arg0 是 int、`test %ecx; jl` / `cmp $0x1f; jg` 校验 twIdx、`test %edx; jl` / `cmp $3,%edx; jg` 校验 mode、`mov %al,0x5d7(%ecx)` 落盘 |
+| 125 | TextShadowDist | 2 | (twIdx, dx, dy)：两个分量各 **-32..32**，分别写 `tw+0x5a8`（x）/ `tw+0x5aa`（y），都是 16 位。**已实现**：`fvp_textattr_set_shadow()` + `gfx_text_set_shadow()`（偏移为 0 时不画阴影层，默认像素不变）。静态分析出处 **0x43CE10**：`cmp $0xffffffe0,%edx; jl` / `cmp $0x20,%edx; jg` 两个分量各判一次，超范围只跳过分量。⚠️ 命令表声明 argc=2，但 handler 会读第 3 个操作数 —— 实测脚本只给 2 个参数，dy 缺省按 0 处理 |
 | 129 | TextSpeed | 2 | (twIdx, speed 0..300000)：dword 写 `tw+0x5e0`（每字毫秒） |
 | 135 | ThreadSleep | 1 | (ms)：线程 flags |=4，`ctx+0x80c = ms`，`ctx+0x810 = 1`（挂起） |
 | 136 | ThreadStart | 2 | (threadNo 0..31, entryOffset)：threadNo==0 先重置全部 32 个线程(0x444860)，再 0x4453f0(ctx, offset) 以 offset 为 PC 建线程 |

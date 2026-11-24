@@ -478,6 +478,9 @@ typedef struct GfxTextWin {
     int shown_chars; /* 当前可见的字符数（按 UTF-8 码点算） */
     int total_chars; /* 最近一次 TextPrint 的字符数 */
     int accum_ms;    /* 累计的、还没凑够一个字的毫秒数 */
+    /* TextShadowDist(125)：文字阴影偏移（-32..32）。两个分量都是 0 时不画阴影层，
+     * 所以默认配置下像素与改动前一致。 */
+    int shadow[2];
 } GfxTextWin;
 
 struct Gfx {
@@ -2397,6 +2400,16 @@ static void draw_text_window(Gfx *g, int idx)
                 cg = 40;
                 cb = 60;
             }
+            /* TextShadowDist：先在偏移位置压一层暗色，再画正文。偏移为 0 时
+             * 这一层完全不画（默认路径不变）。 */
+            if (tw->shadow[0] != 0 || tw->shadow[1] != 0) {
+                int sx = x + tw->shadow[0];
+                int sy = y + tw->shadow[1];
+                int s_r = 16, s_g = 20, s_b = 30;
+
+                draw_text_run(g, f, sx, sy, lines[i].s, s_r, s_g, s_b, 255, 0,
+                              0, 0, 0, 0);
+            }
             draw_text_run(g, f, x, y, lines[i].s, cr, cg, cb, 255, 1, 255, 255,
                           255, 120);
             y += size + 6;
@@ -3502,6 +3515,48 @@ void gfx_text_advance(Gfx *g, int dt_ms)
             tw->accum_ms -= per;
             tw->shown_chars += 1;
         }
+    }
+}
+
+/* TextShadowDist(125)：文字阴影偏移（两个分量 -32..32，静态分析 0x43CE10）。
+ * 都是 0 时不画阴影层 —— 默认配置下渲染结果与改动前完全一致。 */
+void gfx_text_set_shadow(Gfx *g, int layer, int dx, int dy)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return;
+    }
+    if (dx < -32) {
+        dx = -32;
+    }
+    if (dx > 32) {
+        dx = 32;
+    }
+    if (dy < -32) {
+        dy = -32;
+    }
+    if (dy > 32) {
+        dy = 32;
+    }
+    g->tw[layer].shadow[0] = dx;
+    g->tw[layer].shadow[1] = dy;
+}
+
+void gfx_text_get_shadow(const Gfx *g, int layer, int *dx, int *dy)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        if (dx != NULL) {
+            *dx = 0;
+        }
+        if (dy != NULL) {
+            *dy = 0;
+        }
+        return;
+    }
+    if (dx != NULL) {
+        *dx = g->tw[layer].shadow[0];
+    }
+    if (dy != NULL) {
+        *dy = g->tw[layer].shadow[1];
     }
 }
 
