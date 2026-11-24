@@ -74,7 +74,7 @@
 | 存档层（**文件格式已实现**） | `save/sNNN.bin` 与 `save/save.bin` 的解析 + 重写：**6 个真实存档槽逐字节回环一致**；`save.bin` 解出 **1471 条**全局变量（**145 int + 846 未解 + 480 未设**）、200×113 缩略图尺寸、字体名 `メイリオ`；**全局变量桥**把 145 条 int 灌进 VM（`fvm --savebin`），**桌面外壳启动时自动读档**并播种全局变量与 256 B flag 位图；50 + 49 + 19 + 13 项断言含畸形输入拒绝 | [`src/save.c`](src/save.c) · [`src/save_vm.c`](src/save_vm.c) · [`docs/save-format.md`](docs/save-format.md) §7 · [`tests/verify_save.ps1`](tests/verify_save.ps1) · [`tests/verify_save_vm.ps1`](tests/verify_save_vm.ps1) |
 | 全局 flag（**已实现**） | `FlagGet`/`FlagSet`（命令 18/19）读写 2048 bit / 256 B 位图，索引 0..0x7FF，越界安全；与 `save.bin` 里那段位图是同一张图（28 + 37 项断言） | [`src/flags.c`](src/flags.c) · [`docs/vm-commands.md`](docs/vm-commands.md) · [`tests/test_flags.c`](tests/test_flags.c) |
 | **跨作品验证** | 第二部作品《星空のメモリア HD》同样跑通：命令表 **148 条逐条完全相同**、opcode 同套、VM **零修改**输出 164 行正确台词 | [`docs/06-cross-validation.md`](docs/06-cross-validation.md) · [`tools/fvpprobe.py`](tools/fvpprobe.py) |
-| 健壮性测试 | **27,300 次** HCB 变异（0 崩溃 / 0 越界）、**339 个**资产畸形用例、**43 个** VM 边界用例；`tests/run_all.py` 一键 **16/16 PASS / 53.3 s**（含存档层 50 + 49 + 19 + 13 与 flag 28 + 37 项检查） | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
+| 健壮性测试 | **27,300 次** HCB 变异（0 崩溃 / 0 越界）、**339 个**资产畸形用例、**43 个** VM 边界用例；`tests/run_all.py` 一键 **25 PASS / 0 FAIL / 1 SKIP**（85.9 s；SKIP 是缺 numpy 的 `verify_assets`），共 26 步，含存档层 50 + 49 + 19 + 13、flag 28 + 37、历史 164 项检查 | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
 | 中文脚本重建（方法已验证） | 被汉化补丁打坏的 GBK 脚本重建为 3,712,944 字节、948,219 条指令、命令表与冻结表一致的结构合法 `.hcb`（产物不入库） | [`docs/cn-script-rebuild.md`](docs/cn-script-rebuild.md) |
 | Android 外壳（设计，进行中） | APK 流水线 / JNI / EGL 原生窗口 / 触摸 / 资产目录的设计（非当前主线）；外壳不在本仓库 | [`docs/android-shell.md`](docs/android-shell.md) · [`docs/roadmap.md`](docs/roadmap.md) |
 
@@ -93,10 +93,13 @@
    动画（`Motion*`）有补间骨架（`--motion` 可开），但 `mode 1..5` 的缓动曲线**没有证据**，
    现在一律线性插值。
 2. **命令语义仍有缺口，但清单是准确的。** [`src/syscall.c`](src/syscall.c) 里渲染相关的命令已接 gfx，
-   动画接补间表，音频接 snd，定时器接 `src/timer.c`。外壳 90 秒 / 480,942 步实测**只剩 25 种**
-   未实现命令，且高频的全是文本显示细节（`TextFont`/`TextShadowDist`/`TextFormat`/
-   `TextFunction`/`TextSkip`）—— 具体表在 [`docs/roadmap.md`](docs/roadmap.md)。
-   `Movie*`（视频）与 `V3D*` 仍是桩。
+   动画接补间表，音频接 snd，定时器接 `src/timer.c`，台词历史接 `src/history.c`
+   （`HistorySet`/`HistoryGet` 的 100 条环形缓冲，`fvm --dump-history` 可导出）。外壳 90 秒 /
+   480,942 步实测**只剩 20 种**未实现命令，且高频的是文本排版细节（`TextFont`/`TextFormat`/
+   `TextFunction`）与 `PrimHit`(76) —— 具体表在 [`docs/roadmap.md`](docs/roadmap.md)，
+   `PrimHit` 的完整算法已解出但**还没落地**（[`docs/render-model.md`](docs/render-model.md) §8）。
+   `Movie*`（视频）与 `V3D*` 仍是桩。`MenuMessSkip`/`SysAtSkipName`/`TitleMenu` 已证明原版
+   就是空操作（handler 0x437950 = `ret $0x4`）。
 3. **协程已实现，但本作的协程体被脚本自己关掉了。** 32 个协程槽
    （`ThreadStart`/`ThreadExit`/`ThreadNext`）已按静态分析语义接上（默认开启，`--no-threads` 可关），
    900k / 2M 两档的开/关文本**逐字节相同**，也与冻结基准相同 —— 因为这份脚本里每个协程入口

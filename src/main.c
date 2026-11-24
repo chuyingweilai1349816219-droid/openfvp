@@ -40,6 +40,7 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --unknown-all    print every unknown command id (not just the top 15)\n"
             "  --dump-textattr  print every configured text window (color/size/speed)\n"
             "  --dump-savedata  print every SaveData(95) record (kind/idx/value)\n"
+            "  --dump-history   print every history record (HistorySet 26 / Get 25)\n"
             "  --dump-globals FILE  write \"index value\" lines for set globals\n",
             prog);
 }
@@ -167,6 +168,7 @@ typedef struct FvpUnkTop {
 static int g_unknown_all;
 static int g_dump_textattr; /* --dump-textattr: dump every configured text window */
 static int g_dump_savedata; /* --dump-savedata: dump every SaveData(95) record */
+static int g_dump_history;  /* --dump-history: dump every history record */
 
 static void fvp_print_summary(const FvpVM *vm)
 {
@@ -212,6 +214,38 @@ static void fvp_print_summary(const FvpVM *vm)
             printf("  savedata %2d: kind=%d idx=%d value=%lld\n", si,
                    vm->save_data[si].kind, vm->save_data[si].idx,
                    (long long)vm->save_data[si].value);
+        }
+    }
+    /* 台词历史（HistorySet 26 / HistoryGet 25）：100 条环形记录，环形槽位见
+     * src/history.h。默认只报计数，--dump-history 才逐条打印。 */
+    printf("history    count=%u pos=%u filled=%d set=%llu get=%llu\n",
+           (unsigned)vm->history.count, (unsigned)vm->history.pos,
+           fvp_history_filled(&vm->history),
+           (unsigned long long)vm->history.sets,
+           (unsigned long long)vm->history.gets);
+    if (g_dump_history) {
+        int hi;
+
+        /* 直接扫 100 个环形槽：count 只表示"开过多少条"，本作脚本从不发
+         * HistorySet(null)，所以 count 恒 0、pos 恒 0，只有槽 0 有内容。
+         * 按槽打印才能看到"引擎当前到底记了什么"。 */
+        for (hi = 0; hi < FVP_HISTORY_SLOTS; ++hi) {
+            const FvpHistoryEntry *e = &vm->history.entry[hi];
+
+            if (e->text0 == NULL && e->text1 == NULL && e->value == -1) {
+                continue;
+            }
+            printf("  history slot %3d: value=%s%lld text1=\"", hi,
+                   (e->value == -1) ? "(unset)" : "",
+                   (e->value == -1) ? 0LL : (long long)e->value);
+            if (e->text1 != NULL) {
+                fwrite(e->text1, 1, strlen(e->text1), stdout);
+            }
+            printf("\" text0=\"");
+            if (e->text0 != NULL) {
+                fwrite(e->text0, 1, strlen(e->text0), stdout);
+            }
+            printf("\"\n");
         }
     }
     {
@@ -438,6 +472,8 @@ int main(int argc, char **argv)
             g_dump_textattr = 1;
         } else if (strcmp(a, "--dump-savedata") == 0) {
             g_dump_savedata = 1;
+        } else if (strcmp(a, "--dump-history") == 0) {
+            g_dump_history = 1;
         } else if (strcmp(a, "--savebin") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "fvm: missing --savebin value\n");

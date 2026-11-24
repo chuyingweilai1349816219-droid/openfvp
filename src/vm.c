@@ -723,6 +723,7 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     fvp_map_init(&vm->garr);
     fvp_map_init(&vm->larr);
     fvp_textattr_reset(vm->textattr, FVP_TEXT_WINDOWS);
+    fvp_history_init(&vm->history);
     vm->save_slot = -1;
     vm->save_thumb_w = 96; /* 引擎初值 96x72（docs/save-format.md §2.3） */
     vm->save_thumb_h = 72;
@@ -1064,6 +1065,7 @@ void fvp_vm_free(FvpVM *vm)
     fvp_snd_bridge_free(vm->snd_bridge);
     fvp_map_free(&vm->garr);
     fvp_map_free(&vm->larr);
+    fvp_history_free(&vm->history);
     fvp_arena_free(&vm->arena);
     free(vm->text);
     free(vm->unknown_count);

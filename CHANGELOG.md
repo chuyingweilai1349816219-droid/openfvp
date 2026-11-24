@@ -53,6 +53,27 @@
 
 ### 新增
 
+- **台词历史 `HistorySet`(26) / `HistoryGet`(25) 落地 + `fvm --dump-history`**
+  - 新模块 `src/history.c` / `src/history.h`：100 条环形记录，每条 = {人物名, 台词,
+    行 id}（12 字节，`engine+0x6a49c0` = {count, pos, base}）
+  - 语义逐条来自静态分析：写入接口 **0x43A5E0**（null → 开新一条：`count=min(count+1,100)`、
+    `pos=(pos+1)%100`、清槽；kind 0/1 只收字符串；kind 2 只收 ≥0 的整数），
+    读取接口 **0x43A490** + 取字段 **0x438090 / 0x4380C0 / 0x4380F0**
+    （`idx` 必须 `< count`，槽位 `pos − idx` 负数 +100 回绕，字段为空时返回**空串**）
+  - **实测（900k 步，两部作品）**：`HistorySet` 480 / 425 次，形态固定为
+    `(0, 人名) (1, 台词) (2, 行 id)` 加 `(0|1, 整数)` 的无操作调用；`HistoryGet` 动态
+    调用 **0** 次；**从不发 `HistorySet(null)`** → `count` 恒 0。这是原版行为，不是移植
+    缺陷（原版程序里能让 count 增长的唯一路径就是这条 null 调用）
+  - `fvm --dump-history` 导出的槽 0 与真实台词一致：
+    `value=2000130 text1="　指をさす。" text0="　　 澪　　 "`
+  - 测试 `tests/test_history.c` **164 项**（已并入 `make check` 与 `run_all`）：
+    环回绕 / count 上限 / 槽位映射 / 类型与 kind 过滤 / 截断 / NULL 安全
+- **`TitleMenu`(141) / `MenuMessSkip`(41) / `SysAtSkipName`(108) 定性为「原版即空操作」**
+  - 三者注册的 handler 都是 **0x437950**，而该函数体只有一条 `ret $0x4`
+    ——不读参数、不写状态、不设返回值。所以这三个命令以前被算进「未实现」是统计口径
+    问题，现在按原版语义显式空转（不是补上了功能，而是证明原版也没有功能）
+  - 外壳 90 s / 480,942 步实测 `unimpl cmds` 现在是 **20 种**（同一脚本、同一时长的历史
+    记录是 25 种；差额里 125/127/130/95 是前几轮落地的，本轮 26 不再出现在列表里）
 - **多作品兼容自动化门禁 `tests/verify_multigame.py`**（第二部作品的硬门禁）
   - 对两部目标作品各跑两遍 `fvm --steps 900000`：`iroseka.hcb` 与 `Hoshimemo_HD.hcb`
   - 断言：① 两个 HCB 都能解码（`script_len` / 指令数 / `main_start` 合理）

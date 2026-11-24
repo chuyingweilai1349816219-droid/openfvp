@@ -25,18 +25,20 @@ FLAGS_OBJ  = src/flags.o
 TEXTATTR_OBJ = src/textattr.o
 THUMB_OBJ = src/thumb.o
 TIMER_OBJ = src/timer.o
+HISTORY_OBJ = src/history.o
 
 OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ) \
-           $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ)
+           $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ)
 LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ) \
-           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ)
+           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ)
 
 BIN = bin/fvm$(EXE)
 LIB = bin/libfvp.a
 
 HEADERS = src/fvp.h src/encoding.h src/hcb.h src/vm.h src/syscall.h \
           src/snd.h src/bin.h src/inflate.h src/hzc1.h \
-          src/textattr.h src/timer.h src/motion.h src/save.h src/save_vm.h \
+          src/textattr.h src/timer.h src/history.h src/motion.h src/save.h \
+          src/save_vm.h \
           src/flags.h src/thumb.h \
           src/gen_cp932.h src/gen_gbk.h src/gen_cmd_table.h
 
@@ -87,7 +89,7 @@ WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
                $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
                src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c \
-               src/timer.c
+               src/timer.c src/history.c
 WIN32_RES   = src/bin.c src/hzc1.c src/inflate.c
 WIN32_GFX_H = $(wildcard src/gfx.h)
 
@@ -301,6 +303,22 @@ clean-tex-cache:
 .PHONY: test_tex_cache clean-tex-cache
 
 # ---------------------------------------------------------------------------
+# 台词历史记录（HistorySet 26 / HistoryGet 25 的 100 条环形缓冲）
+#   make test_history
+# ---------------------------------------------------------------------------
+HISTORY_TEST = bin/test_history$(EXE)
+
+test_history: $(HISTORY_TEST)
+
+$(HISTORY_TEST): tests/test_history.c src/history.c src/history.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_history.c src/history.c $(LDFLAGS)
+
+clean-history:
+	-rm -f $(HISTORY_TEST)
+
+.PHONY: test_history clean-history
+
+# ---------------------------------------------------------------------------
 # make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
 # CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
 #   make check
@@ -310,7 +328,7 @@ clean-tex-cache:
 # test_snd 要一个 ogg/wav（游戏数据或 work/ 里的样本，都不入库）。
 UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
-             $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST)
+             $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

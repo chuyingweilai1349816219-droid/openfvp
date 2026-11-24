@@ -1387,6 +1387,13 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     case 62:  /* MovieState: pretend the WMV already finished */
         t->temp = fvp_make_int(1);
         return;
+    /* 41 MenuMessSkip / 108 SysAtSkipName / 141 TitleMenu：静态分析 0x437950 就是
+     * 一条 `ret $0x4` —— 原版这三个 handler 是**纯空操作**（不读参数、不写状态、
+     * 不设返回值）。所以这里的空桩不是"还没做"，而是与引擎一致。 */
+    case 41:
+    case 108:
+    case 141:
+        return;
     case 144: /* V3DMotionStop */
     case 143: /* V3DMotionPause */
     case 146: /* V3DSet */
@@ -1471,6 +1478,85 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         return;
     case 13: /* Debmess */
         fvp_sys_debmess(vm, args, argc);
+        return;
+    /* 26 HistorySet(kind, value)：台词历史（回想）的写入。静态分析 0x43A5E0：
+     *   arg0 == null  → "开新的一条"：count = min(count+1,100)、pos = (pos+1)%100、
+     *                   该槽清成 {NULL, NULL, -1}
+     *   arg0 == 0 / 1 → 仅当 arg1 是**字符串**时写 text0 / text1（整串替换）
+     *   arg0 == 2     → 仅当 arg1 是整型且 >= 0 时写 value
+     *   其它 kind 或类型不符 → 整条命令被忽略（不报错）
+     * 本作的字节码只发 0/1/2 三种整型 kind，从不发 null —— 实测两部作品
+     * 900k 步的形态统计（docs/vm-commands.md §5）：
+     *   kind=0 + 字符串（人名）、kind=1 + 字符串（台词）、kind=2 + 整数（行 id），
+     *   以及 `pushtrue` 造成的 kind=0/1 + 整数（原版按类型不符整条忽略）。
+     * 没有一条 null 调用，所以 count 恒为 0、pos 恒为 0：历史只保留"当前这
+     * 一条"，与原版一致（不是我们的偷懒）。 */
+    case 26:
+        vm->history.sets += 1u;
+        if (argc < 1) {
+            (void)fvp_history_begin(&vm->history); /* null 形态的防御分支 */
+            return;
+        }
+        if (args[0].type != (uint8_t)FVP_INT) {
+            return; /* 原版只认 type 0（null）与 type 2（int），其它一律忽略 */
+        }
+        {
+            int kind = (int)args[0].i;
+
+            if (kind == 0 || kind == 1) {
+                if (argc >= 2 && args[1].type == (uint8_t)FVP_STR) {
+                    (void)fvp_history_set_text(&vm->history, kind,
+                                               args[1].str->data,
+                                               (size_t)args[1].str->len);
+                }
+            } else if (kind == 2) {
+                if (argc >= 2 && args[1].type == (uint8_t)FVP_INT) {
+                    (void)fvp_history_set_value(&vm->history, (int)args[1].i);
+                }
+            }
+        }
+        return;
+    /* 25 HistoryGet(kind, idx)：读台词历史。静态分析 0x43A490 / 0x438090 /
+     * 0x4380C0 / 0x4380F0：
+     *   arg0 == null  → 返回条数 count（整型）
+     *   arg0 = 0/1    → 返回该条 text0 / text1 的**字符串**（字段未设置时是空串，
+     *                   不是 null）；idx 越界返回"无返回值"
+     *   arg0 = 2      → 返回 value（整型）；字段为 -1（未设置）或 idx 越界返回"无"
+     *   idx 必须 0 <= idx < count；槽位是 pos - idx（负数回绕 +100），即 idx 0
+     *   是最近一条。 */
+    case 25:
+        vm->history.gets += 1u;
+        if (argc < 1) {
+            t->temp = fvp_make_int((int64_t)vm->history.count);
+            return;
+        }
+        if (args[0].type != (uint8_t)FVP_INT) {
+            return;
+        }
+        {
+            int kind = (int)args[0].i;
+
+            if (kind < 0 || kind > 2) {
+                return;
+            }
+            if (argc < 2 || args[1].type != (uint8_t)FVP_INT) {
+                return;
+            }
+            if (kind == 0 || kind == 1) {
+                const char *s = fvp_history_text(&vm->history, kind,
+                                                 (int)args[1].i);
+
+                if (s != NULL) {
+                    t->temp = fvp_make_str(fvp_sys_str(vm, s));
+                }
+            } else {
+                int32_t v = 0;
+
+                if (fvp_history_value(&vm->history, (int)args[1].i, &v)) {
+                    t->temp = fvp_make_int((int64_t)v);
+                }
+            }
+        }
         return;
     case 22: /* GraphLoad */
         t->temp = fvp_make_int(1);

@@ -331,6 +331,17 @@ def build_steps(args):
                           note='off = fully shown; on = per-char by TextSpeed; '
                                'UTF-8 bounds, speed 0, multi-window'))
 
+    # 4n. 台词历史（HistorySet 26 / HistoryGet 25 的环形缓冲）
+    test_history = tools.get('test_history')
+    if not test_history or not os.path.isfile(test_history):
+        steps.append(Step('test_history', None, 0,
+                          skip_reason='bin/test_history.exe missing '
+                                      '(run: make test_history)'))
+    else:
+        steps.append(Step('test_history', [test_history], 120,
+                          note='100-slot ring: count cap, pos wrap, slot = pos-idx, '
+                               'kind/type filters, NULL safety'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

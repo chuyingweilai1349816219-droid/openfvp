@@ -93,7 +93,7 @@ try {
             -o $audioExe tests\audio_vm.c `
             src\fvp.c src\encoding.c src\hcb.c src\vm.c src\syscall.c src\flags.c `
             src\snd.c src\bin.c`
-            src\textattr.c src\save.c src\save_vm.c src\thumb.c src\timer.c -lm
+            src\textattr.c src\save.c src\save_vm.c src\thumb.c src\timer.c src\history.c -lm
         if ($LASTEXITCODE -ne 0) { throw 'building audio_vm.exe failed' }
     }
     if (-not (Test-Path $audioExe)) {

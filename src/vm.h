@@ -9,6 +9,7 @@
 #include "flags.h"
 #include "fvp.h"
 #include "hcb.h"
+#include "history.h"
 #include "snd.h"
 #include "textattr.h"
 #include "timer.h"
@@ -272,6 +273,10 @@ typedef struct FvpVM {
     FvpSaveData save_data[FVP_SAVE_DATA_MAX];
     int save_data_n;          /* 已记录条数（最多 FVP_SAVE_DATA_MAX） */
     uint64_t save_data_seen;  /* 收到的总次数（用来报告溢出） */
+    /* 台词历史记录（HistorySet 26 / HistoryGet 25）。100 条环形记录，语义与
+     * 静态分析出处见 src/history.h；记录本身是存档槽尾快照的一部分（原版在
+     * 0x43F264 处序列化 count/pos/base）。 */
+    FvpHistory history;
 } FvpVM;
 
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);

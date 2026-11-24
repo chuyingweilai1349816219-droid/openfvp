@@ -32,6 +32,7 @@
 每个 5 s 窗口 fps ≥ 55 且 slow ≤ 2、`underruns=0`、脚本有产出、日志无 error/fatal |
 | **动画（动态门）** | `verify_motion.ps1` | `render_vm --motion`（固定步数 + 固定 dt） | 真实脚本 | ① 关动画两次同参数帧一致（harness 确定）② 1,000 步 开=关（t≈0 不漂移）③ 60,000 步 开≠关（动画可见） |
 | **协程（开关中立）** | `verify_threads.py` | `bin/fvm.exe` 跑 900k / 2M 两档，各跑「默认（协程开）」与 `--no-threads` | 真实脚本 | ① 默认模式 `start == exit`（每个协程都退出，没有空转）② 开/关文本**逐字节相同** ③ 两档都与 `ref/ref-900k.txt` / `ref/ref-2m.txt` 逐字节相同 |
+| **台词历史** | `test_history` | 直接构造 `FvpHistory`，不经过 VM | 164 项 | ① init：count/pos=0、每条 value=-1 ② 字符串整串替换（不是追加）、`kind` 只收 0/1、value 只收 ≥0 ③ 空串/NULL 也写进去 ④ count=0 时任何 idx 都取不到 ⑤ "开新的一条"推进 pos、清该槽、count 上限 100 ⑥ **槽位 = pos − idx，idx 0 是最近一条** ⑦ 写满 100 条后 pos 回绕、count 停在上限 ⑧ 超长串截断到 `FVP_HISTORY_TEXT_MAX` ⑨ free 可重复、NULL 安全 |
 | **多作品兼容** | `verify_multigame.py` | 对**两部**目标作品（`iroseka.hcb`、`Hoshimemo_HD.hcb`）各跑两遍 `bin/fvm.exe --steps 900000` | 真实脚本 | ① 两个 HCB 都能解码：`script_len` / 指令数 / `main_start` 落在合理范围 ② 每部作品两次运行输出**逐字节相同**（同一 SHA-256）③ 900k 步时的基准文本行数（iroseka 195 行 / 6,496 B、hoshimemo 164 行 / 6,644 B）不得漂移 ④ 0 个 U+FFFD、日文字符占比 > 50%。**这是「第二部作品也能跑」的硬门禁**；步数不足 900k 时只断言「有文本产出」 |
 | **纹理缓存上限** | `test_tex_cache` | 假 host 造固定 100×100 图，`gfx_graph_load` 反复装载 | 26 项 | ① cap=0 时全缓存 ② 设上限后 `tex_bytes` 不超上限且按 LRU 淘汰 ③ **被引用的图（refs>0）永不被淘汰** ④ 引用释放后可淘汰 ⑤ 淘汰后重新解码、缓存命中不重复解码 ⑥ NULL 安全 |
 | **定时器** | `test_timer` | 直接构造 `FvpTimer[16]`，给不同 `now_ms` | 37 项 | ① set 记起点、ms 钳到 1..100000 ② elapsed = now-start，时钟早于起点夹 0 ③ `opt` 换算 = elapsed*opt/duration（含取整与 INT32 夹紧）④ 未激活/越界 id 返回 0 ⑤ 重新 set 重置起点 ⑥ 16 个互不干扰 ⑦ NULL/0 计数安全 |
