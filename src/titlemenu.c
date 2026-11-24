@@ -47,6 +47,189 @@ void fvp_title_init(FvpTitleMenu *m)
     m->ink_y0_off = 19;
 }
 
+/* ------------------------------------------------------------------ */
+/* 每作品 profile（数字全部来自原版截图实测）                            */
+/* ------------------------------------------------------------------ */
+
+/* 五彩斑斓的世界 HD（iroseka）：右对齐、行距 100、贴图 340x80（文字 + 发光烘焙
+ * 在同一张图里），第 1 项墨迹上沿 511。实测表见 docs/title-menu.md §1。 */
+const FvpTitleProfile fvp_title_profile_iroseka = {
+    "iroseka", FVP_TITLE_ALIGN_RIGHT, 1920, 1080, 100, 511, 1769, 960,
+    {
+        { "New Game", "title_start", "", 340, 80, 1461, 1769, 511, 552 },
+        { "Continue", "title_start1", "", 340, 80, 1514, 1769, 611, 652 },
+        { "Album", "title_start2", "", 340, 80, 1580, 1768, 712, 753 },
+        { "Option", "title_start3", "", 340, 80, 1575, 1768, 811, 852 },
+        { "Exit", "title_start4", "", 340, 80, 1662, 1768, 912, 951 }
+    }
+};
+
+/* 星空的记忆 HD（hoshimemo）：**全部居中于 x=960**、行距 90、贴图 275x40 级
+ * （文字/发光是分开的两张图：title_start + title_start_ray），第 1 项墨迹上沿 581。
+ * 2026-11-24 用 work/measure_hoshi.py 在原始标题帧上量出来的。 */
+const FvpTitleProfile fvp_title_profile_hoshimemo = {
+    "hoshimemo", FVP_TITLE_ALIGN_CENTER, 1920, 1080, 90, 581, 1769, 960,
+    {
+        { "GAME START", "title_start", "title_start_ray", 275, 40, 830, 1088,
+          581, 614 },
+        { "CONTINUE", "title_continue", "title_continue_ray", 230, 40, 856,
+          1064, 671, 704 },
+        { "ALBUM", "title_album", "title_album_ray", 160, 40, 891, 1028, 761,
+          793 },
+        { "OPTION", "title_option", "title_option_ray", 170, 40, 884, 1036, 851,
+          884 },
+        { "EXIT", "title_end", "title_end_ray", 110, 40, 914, 1005, 941, 973 }
+    }
+};
+
+static int ascii_lower(int c)
+{
+    return (c >= 'A' && c <= 'Z') ? c - 'A' + 'a' : c;
+}
+
+static int str_contains_ci(const char *haystack, const char *needle)
+{
+    size_t hl;
+    size_t nl;
+    size_t i;
+
+    if (haystack == NULL || needle == NULL) {
+        return 0;
+    }
+    hl = strlen(haystack);
+    nl = strlen(needle);
+    if (nl == 0 || nl > hl) {
+        return 0;
+    }
+    for (i = 0; i + nl <= hl; ++i) {
+        size_t j;
+
+        for (j = 0; j < nl; ++j) {
+            if (ascii_lower((unsigned char)haystack[i + j]) !=
+                ascii_lower((unsigned char)needle[j])) {
+                break;
+            }
+        }
+        if (j == nl) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+const FvpTitleProfile *fvp_title_profile_find(const char *hint)
+{
+    if (hint == NULL) {
+        return NULL;
+    }
+    if (str_contains_ci(hint, "iroseka") ||
+        str_contains_ci(hint, "irotoridori")) {
+        return &fvp_title_profile_iroseka;
+    }
+    if (str_contains_ci(hint, "hoshimemo") ||
+        str_contains_ci(hint, "hoshimemoria") ||
+        str_contains_ci(hint, "hoshizora")) {
+        return &fvp_title_profile_hoshimemo;
+    }
+    return NULL;
+}
+
+void fvp_title_apply_profile(FvpTitleMenu *m, const FvpTitleProfile *p)
+{
+    if (m == NULL || p == NULL) {
+        return;
+    }
+    m->client_w = p->client_w;
+    m->client_h = p->client_h;
+    m->pitch = p->pitch;
+    m->y_first = p->ink_top0;
+    m->x_right = p->right_x;
+    /* 居中模式：所有项的墨迹都居中在 center_x，文字模式用这个基准 */
+    if (p->align == FVP_TITLE_ALIGN_CENTER) {
+        m->x_right = p->center_x;
+    }
+    m->hover = -1;
+    m->selected = -1;
+}
+
+int fvp_title_profile_ink_rect(const FvpTitleProfile *p, int item, int *x0,
+                               int *y0, int *x1, int *y1)
+{
+    const FvpTitleItemDef *d;
+
+    if (p == NULL || item < 0 || item >= FVP_TITLE_ITEMS) {
+        return 0;
+    }
+    d = &p->items[item];
+    if (x0 != NULL) {
+        *x0 = d->ink_x0;
+    }
+    if (y0 != NULL) {
+        *y0 = d->ink_y0;
+    }
+    if (x1 != NULL) {
+        *x1 = d->ink_x1;
+    }
+    if (y1 != NULL) {
+        *y1 = d->ink_y1;
+    }
+    return 1;
+}
+
+int fvp_title_profile_image_pos(const FvpTitleProfile *p, int item, int *x,
+                                int *y)
+{
+    const FvpTitleItemDef *d;
+    int ink_w;
+    int ink_h;
+    int pad_x;
+    int pad_y;
+
+    if (p == NULL || item < 0 || item >= FVP_TITLE_ITEMS) {
+        return 0;
+    }
+    d = &p->items[item];
+    /* 贴图和墨迹的差按"四周均分"分摊：贴图把文字居中，四周留白对称。
+     * 用两部作品实测数据验算过：
+     *   iroseka  item0: ink 309x42，tex 340x80 → pad (15,19)
+     *            → 贴图位置 (1461-15, 511-19) = (1446, 492)（实测 1445,492）
+     *   hoshimemo item0: ink 259x34，tex 275x40 → pad (8,3)
+     *            → (830-8, 581-3) = (822,578)，贴图中心 959 ≈ 960 */
+    ink_w = d->ink_x1 - d->ink_x0 + 1;
+    ink_h = d->ink_y1 - d->ink_y0 + 1;
+    pad_x = (d->tex_w - ink_w) / 2;
+    pad_y = (d->tex_h - ink_h) / 2;
+    if (x != NULL) {
+        *x = d->ink_x0 - pad_x;
+    }
+    if (y != NULL) {
+        *y = d->ink_y0 - pad_y;
+    }
+    return 1;
+}
+
+int fvp_title_profile_hit(const FvpTitleProfile *p, int mx, int my)
+{
+    int i;
+
+    if (p == NULL) {
+        return -1;
+    }
+    for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+        const FvpTitleItemDef *d = &p->items[i];
+        int pad_y = (p->pitch - (d->ink_y1 - d->ink_y0 + 1)) / 2;
+
+        if (pad_y < 0) {
+            pad_y = 0;
+        }
+        if (mx >= d->ink_x0 - 24 && mx <= d->ink_x1 + 24 &&
+            my >= d->ink_y0 - pad_y && my <= d->ink_y1 + pad_y) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void fvp_title_set_images(FvpTitleMenu *m, int on)
 {
     if (m != NULL) {

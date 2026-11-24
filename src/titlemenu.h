@@ -74,6 +74,60 @@ typedef struct FvpTitleMenu {
 /* 菜单标签（原版是衬线拉丁体，不是 font/ 里的 Sarasa；见文档 §5.1 待查） */
 const char *fvp_title_label(int item);
 
+/* ------------------------------------------------------------------ */
+/* 每作品 profile（2026-11-24 实测：两部作品的标题菜单**布局不一样**）  */
+/* ------------------------------------------------------------------ */
+
+/* 对齐方式：iroseka 右对齐到 x=1769；hoshimemo 全部**居中**于 x=960。 */
+typedef enum FvpTitleAlign {
+    FVP_TITLE_ALIGN_RIGHT = 0,
+    FVP_TITLE_ALIGN_CENTER = 1
+} FvpTitleAlign;
+
+#define FVP_TITLE_ASSET_MAX 24
+
+/* 一项的实测几何（客户区 1920x1080 坐标）+ 它用的贴图素材名。 */
+typedef struct FvpTitleItemDef {
+    const char *label;                    /* 菜单文字（英文原样） */
+    char asset[FVP_TITLE_ASSET_MAX];      /* graph.bin 里的贴图名 */
+    char asset_glow[FVP_TITLE_ASSET_MAX]; /* 发光层素材名（没有就空串） */
+    int tex_w, tex_h;                     /* 贴图尺寸 */
+    int ink_x0, ink_x1, ink_y0, ink_y1;   /* 实测墨迹包围盒 */
+} FvpTitleItemDef;
+
+/* 一部作品的标题菜单 profile。所有数字都来自原版截图实测。 */
+typedef struct FvpTitleProfile {
+    const char *game;      /* 识别用的关键字（小写子串） */
+    FvpTitleAlign align;
+    int client_w, client_h;
+    int pitch;             /* 行距 */
+    int ink_top0;          /* 第 1 项墨迹上沿 */
+    int right_x;           /* 右对齐基准（右对齐模式） */
+    int center_x;          /* 居中基准（居中模式） */
+    FvpTitleItemDef items[FVP_TITLE_ITEMS];
+} FvpTitleProfile;
+
+extern const FvpTitleProfile fvp_title_profile_iroseka;
+extern const FvpTitleProfile fvp_title_profile_hoshimemo;
+
+/* 按游戏目录/脚本名里的关键字找 profile（大小写不敏感）；找不到返回 NULL。 */
+const FvpTitleProfile *fvp_title_profile_find(const char *hint);
+
+/* 把 profile 的几何灌进菜单状态（会重设 hover/selected）。 */
+void fvp_title_apply_profile(FvpTitleMenu *m, const FvpTitleProfile *p);
+
+/* 第 item 项按 profile 算出来的墨迹矩形（客户区坐标）。 */
+int fvp_title_profile_ink_rect(const FvpTitleProfile *p, int item, int *x0,
+                               int *y0, int *x1, int *y1);
+
+/* 第 item 项贴图的左上角：让贴图内墨迹正好落在实测位置上。 */
+int fvp_title_profile_image_pos(const FvpTitleProfile *p, int item, int *x,
+                                int *y);
+
+/* 用 profile 的实测几何做命中判定（不需要字体/测宽）：
+ * 墨迹矩形左右各放宽 24 px、纵向补足到整行 pitch。返回 0..4 / -1。 */
+int fvp_title_profile_hit(const FvpTitleProfile *p, int mx, int my);
+
 /* 用实测几何初始化：x_right=1769、y_first=511（墨迹上沿）、pitch=100、
  * font_px=56、client 1920x1080，全部项可用、hover/selected = -1。
  * 图像模式的常数（340x80 @ (1445,492+i*100)）也一并填好，use_images 默认 0。 */

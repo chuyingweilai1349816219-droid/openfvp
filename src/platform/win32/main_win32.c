@@ -1573,12 +1573,18 @@ static int title_measure(void *ctx, const char *utf8, int px, int *width)
 }
 
 /* 把菜单画到当前画布上。必须**在 gfx_render() 之后**调用——render 会按图元/
- * 文本窗口重建画布，先画会被抹掉（见 docs/title-menu.md §2.1）。 */
-static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m)
+ * 文本窗口重建画布，先画会被抹掉（见 docs/title-menu.md §2.1）。
+ *
+ * 有 profile 时按**该作品实测的墨迹矩形**画（右对齐 or 居中、行距/字号都按实测），
+ * 没有 profile 时退回通用的右对齐布局。 */
+static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
+                               const FvpTitleProfile *prof, int hover)
 {
 #ifdef FVP_STUB_GFX
     (void)gfx;
     (void)m;
+    (void)prof;
+    (void)hover;
 #else
     int i;
 
@@ -1587,7 +1593,9 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m)
     }
     for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
         int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
-        int hovered = (i == m->hover);
+        int hovered = (i == hover);
+        int px;
+        const char *label;
         int r = hovered ? 255 : 235;
         int gr = hovered ? 250 : 235;
         int b = hovered ? 255 : 240;
@@ -1595,12 +1603,40 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m)
         if (!m->enabled[i]) {
             r = gr = b = 120; /* 不可用项压暗（例如没存档时的 Continue） */
         }
-        if (!fvp_title_item_rect(m, i, title_measure, gfx, &x0, &y0, &x1,
-                                 &y1)) {
-            continue;
+        if (prof != NULL) {
+            if (!fvp_title_profile_ink_rect(prof, i, &x0, &y0, &x1, &y1)) {
+                continue;
+            }
+            label = prof->items[i].label;
+            /* 墨迹高 ≈ 字号 * 3/4 → 反推字号（iroseka 42→56、hoshimemo 34→45） */
+            px = (y1 - y0 + 1) * 4 / 3;
+            if (px < 8) {
+                px = 8;
+            }
+        } else {
+            if (!fvp_title_item_rect(m, i, title_measure, gfx, &x0, &y0, &x1,
+                                     &y1)) {
+                continue;
+            }
+            label = fvp_title_label(i);
+            px = m->font_px;
         }
-        (void)gfx_draw_text_line(gfx, fvp_title_label(i), x0, y0, m->font_px, r,
-                                 gr, b, 255);
+        {
+            int tw = gfx_text_width(gfx, label, px);
+            int dx = x0;
+
+            /* 按 profile 的对齐方式落笔：右对齐贴到实测的墨迹右边界，
+             * 居中则以实测墨迹中心为准（字体不同宽度必然不同，但对齐
+             * 基准必须一致）。 */
+            if (tw > 0 && prof != NULL) {
+                if (prof->align == FVP_TITLE_ALIGN_RIGHT) {
+                    dx = x1 - tw + 1;
+                } else {
+                    dx = (x0 + x1) / 2 - tw / 2;
+                }
+            }
+            (void)gfx_draw_text_line(gfx, label, dx, y0, px, r, gr, b, 255);
+        }
     }
 #endif
 }
@@ -1664,6 +1700,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     FvpTitleMenu title;
     int title_active = 0;
     int title_picked = -1;
+    int title_hover = -1;
+    const FvpTitleProfile *title_profile = NULL;
     double title_shown_at = 0.0;
     double last_report = 0.0;
     PerfStats perf;
@@ -1725,9 +1763,32 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         return parsed == 1 ? 0 : 2;
     }
     verbose = opts.verbose;
-    /* 标题菜单状态：几何先按原版实测初始化好，--title-menu 打开时才启用。 */
+    /* 标题菜单：有该作品的 profile 就套用（iroseka 右对齐 / hoshimemo 居中），否则用通用默认。 */
     fvp_title_init(&title);
     title_active = opts.title_menu;
+    if (title_active) {
+        {
+            char hint_u8[PATH_CAP * 4];
+
+            if (wide_to_utf8(opts.game_dir, hint_u8, sizeof(hint_u8))) {
+                title_profile = fvp_title_profile_find(hint_u8);
+            }
+            if (title_profile == NULL &&
+                wide_to_utf8(opts.script, hint_u8, sizeof(hint_u8))) {
+                title_profile = fvp_title_profile_find(hint_u8);
+            }
+        }
+        if (title_profile != NULL) {
+            fvp_title_apply_profile(&title, title_profile);
+            fvp_logf("title: profile '%s' (align=%s, pitch=%d, top=%d)",
+                     title_profile->game,
+                     title_profile->align == FVP_TITLE_ALIGN_CENTER
+                         ? "centre" : "right",
+                     title_profile->pitch, title_profile->ink_top0);
+        } else {
+            fvp_logf("title: no per-title profile, using generic layout");
+        }
+    }
 
     /* 存档字符串编码：显式 --save-encoding 优先，否则跟随脚本编码。 */
     save_enc = (opts.enc_mode == ENC_GBK) ? FVP_ENC_GBK : FVP_ENC_CP932;
@@ -2131,15 +2192,28 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         if (title_active) {
             int pick = -1;
 
-            (void)fvp_title_move(&title, vm.cx, vm.cy, title_measure, gfx);
+            if (title_profile != NULL) {
+                /* 有该作品的 profile：直接用它实测的墨迹矩形命中 */
+                title_hover = fvp_title_profile_hit(title_profile, vm.cx,
+                                                    vm.cy);
+                title.hover = title_hover;
+            } else {
+                (void)fvp_title_move(&title, vm.cx, vm.cy, title_measure,
+                                     gfx);
+                title_hover = title.hover;
+            }
             if (click_edges > 0) {
-                pick = fvp_title_click(&title, vm.cx, vm.cy, title_measure,
-                                       gfx);
-                if (pick < 0 && title.hover >= 0) {
-                    pick = title.hover;
+                if (title_profile != NULL) {
+                    pick = title_hover;
+                } else {
+                    pick = fvp_title_click(&title, vm.cx, vm.cy,
+                                           title_measure, gfx);
+                }
+                if (pick < 0 && title_hover >= 0) {
+                    pick = title_hover;
                 }
             }
-            if (pick < 0 && in->key_down && title.hover < 0) {
+            if (pick < 0 && in->key_down && title_hover < 0) {
                 pick = FVP_TITLE_NEW_GAME; /* 回车且没悬停：直接开新游戏 */
             }
             if (pick >= 0) {
@@ -2289,9 +2363,12 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 if (title_shown_at == 0.0) {
                     title_shown_at = now;
                     fvp_title_init(&title);
-                    title.font_px = 56; /* 实测：墨迹高 40..42 → 字号 56 */
+                    title.font_px = 56;
+                    if (title_profile != NULL) {
+                        fvp_title_apply_profile(&title, title_profile);
+                    } /* 实测：墨迹高 40..42 → 字号 56 */
                 }
-                title_draw_overlay(gfx, &title);
+                title_draw_overlay(gfx, &title, title_profile, title_hover);
             }
             canvas = gfx_canvas(gfx, &cw, &ch);
             render_ms = (now_sec() - r0) * 1000.0;
@@ -2401,7 +2478,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         gfx_render(gfx);
         /* 截图也要带上引擎侧 UI 覆盖层（和屏幕上看到的一致）。 */
         if (title_active) {
-            title_draw_overlay(gfx, &title);
+            title_draw_overlay(gfx, &title, title_profile, title_hover);
         }
         canvas = gfx_canvas(gfx, &cw, &ch);
         if (canvas != NULL && opts.screenshot[0] != L'\0') {
@@ -2500,10 +2577,19 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         APPEND("text prims     %d drawn, %d bound (PrimSetText 86, --text-prims %s)\n",
                gfx_stats(gfx)->text_prims, gfx_text_prim_bindings(gfx),
                opts.text_prims ? "on" : "off");
-        APPEND("title menu     %s (%d item(s) right-aligned to x=%d, pitch %d, "
-               "picked %s)\n", opts.title_menu ? "enabled" : "off",
-               FVP_TITLE_ITEMS, title.x_right, title.pitch,
-               title_picked >= 0 ? fvp_title_label(title_picked) : "-");
+        APPEND("title menu     %s (profile=%s, align=%s, %d item(s), "
+               "pitch %d, picked %s)\n",
+               opts.title_menu ? "enabled" : "off",
+               title_profile != NULL ? title_profile->game : "generic",
+               (title_profile != NULL &&
+                title_profile->align == FVP_TITLE_ALIGN_CENTER)
+                   ? "centre" : "right",
+               FVP_TITLE_ITEMS, title.pitch,
+               title_picked >= 0
+                   ? (title_profile != NULL
+                          ? title_profile->items[title_picked].label
+                          : fvp_title_label(title_picked))
+                   : "-");
         if (gfx_stats(gfx)->ntofu_cp > 0) {
             int ti;
 

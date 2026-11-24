@@ -53,6 +53,27 @@
 
 ### 新增
 
+- **标题菜单改成"每作品 profile"：量了第二部作品，证明两作布局不一样**
+  - 用同一套方法量了《星空的记忆 HD》的原版标题画面（`work/measure_hoshi.py`）：
+    **居中于 x=960**（iroseka 是右对齐 1769）、**行距 90**（iroseka 100）、
+    首行墨迹上沿 581、墨迹高 33..34；菜单项文字也不同
+    （`GAME START / CONTINUE / ALBUM / OPTION / EXIT`）；
+    素材是 `title_start`(275×40) + `title_start_ray`(1920×20) 分离式，
+    iroseka 则是 `title_start`(340×80) 字+发光烘焙在一张图
+  - `titlemenu` 新增 `FvpTitleProfile`（对齐方式/行距/首行上沿/每项标签/贴图素材名/
+    贴图尺寸/实测墨迹矩形）+ 两份 profile（iroseka / hoshimemo）+
+    `fvp_title_profile_find()`（按游戏目录或脚本名关键字，大小写不敏感）、
+    `fvp_title_apply_profile()`、`fvp_title_profile_hit()`（直接用实测墨迹矩形命中，
+    不需要字体）、`fvp_title_profile_image_pos()`
+  - 桌面外壳 `--title-menu` 自动选 profile 并按它的对齐方式落笔（右对齐贴墨迹右边界 /
+    居中按墨迹中心），汇总行打印 `profile=..., align=...`
+  - 实测对照：iroseka 墨迹右边界 1767/1767/1768/1766/1762（原版 1769/1769/1768/1768/1768，
+    ≤6 px）、行距 100/101/102/100；hoshimemo 中心 957/958/957/958/957
+    （原版 959/960/959/960/959，≤3 px）、行距 90/89/91/89
+  - `tests/test_titlemenu` 136 → **208 项**（两份 profile 的几何/命中/差异断言：
+    行距、对齐方式、首个标签必须真不一样，防止"只对一款调"）
+  - `docs/title-menu.md` §4 记录两作实测表、profile 机制与"加第三部作品"的步骤
+
 - **查清标题菜单的真实实现：菜单项是预渲染贴图（不是文字）+ 模块补图像模式**
   - 逐项 dump `graph.bin` 找到标题素材：`title_start`(340×80) 就是「New Game」整张图、
     `title_start1..5` 是其余菜单项、`title_logo1`(1150×283) 是作品 logo、

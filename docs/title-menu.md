@@ -157,12 +157,59 @@ best match: 2243/2434 = 92.2%   文字落在 (1460, 511)
 
 ---
 
-## 4. 还差什么（按顺序）
+## 4. 每作品 profile：**两部作品的标题菜单布局不一样**
 
-1. **主标题背景是哪个 graph 还没指认**：`a_top_s1` 是 ALBUM MODE 那版（夜空），
-   白天天空那版还没在 graph.bin 里找到（`a_top_p1/p2` 尺寸对不上 1920×1080）。
-2. **外壳改成画贴图**：现在 `--title-menu` 用文字模式（内建字体 56 px）画，
-   几何对得上但字形不同；接上 `gfx_graph_load` + 图元之后改成贴 `title_start*`。
+2026-11-24 用同样的方法量了《星空的记忆 HD》的原版标题画面
+（`work/measure_hoshi.py`，原始帧 `out/orig-hoshi2/frame-004.png`），结果和 iroseka
+差别很大：
+
+| | 五彩斑斓的世界 HD | 星空的记忆 HD |
+|---|---|---|
+| 对齐 | **右对齐**到 x=1769 | **居中**于 x=960 |
+| 行距 | 100 | **90** |
+| 第 1 项墨迹上沿 | 511 | 581 |
+| 墨迹高 | 40..42（字号 56） | **33..34**（字号约 45） |
+| 菜单项 | New Game / Continue / Album / Option / Exit | **GAME START** / CONTINUE / ALBUM / OPTION / **EXIT** |
+| 贴图 | `title_start`(340×80) 等，**字 + 发光烘焙在同一张图** | `title_start`(275×40) + `title_start_ray`(1920×20)，**字与发光分开**；其余项同理 `title_continue`/`title_album`/`title_option`/`title_end` |
+
+星空的记忆实测墨迹（客户区 1920×1080）：
+
+| 项目 | 墨迹 y | 高 | 墨迹 x | 中心 |
+|---|---|---|---|---|
+| GAME START | 581..614 | 34 | 830..1088 | (959, 597) |
+| CONTINUE | 671..704 | 34 | 856..1064 | (960, 687) |
+| ALBUM | 761..793 | 33 | 891..1028 | (959, 777) |
+| OPTION | 851..884 | 34 | 884..1036 | (960, 867) |
+| EXIT | 941..973 | 33 | 914..1005 | (959, 957) |
+
+所以 `titlemenu` 模块把几何抽成 **profile**（`FvpTitleProfile`）：
+`fvp_title_profile_find("Hoshimemo_HD.hcb")` → `fvp_title_profile_hoshimemo`，
+`("iroseka.hcb")` → `fvp_title_profile_iroseka`；每个 profile 里带
+对齐方式、行距、首行墨迹上沿、每一项的标签 / 贴图素材名 / 贴图尺寸 / 实测墨迹矩形。
+外壳按游戏目录自动选 profile，`fvp_title_apply_profile()` 灌几何，
+命中用 `fvp_title_profile_hit()`（直接用实测墨迹矩形，不需要字体）。
+
+**本引擎渲染实测对照**（`--title-menu` + 截图 + `work/measure_ours_box.py`）：
+
+| | 原版 | 本引擎 | 差 |
+|---|---|---|---|
+| iroseka 墨迹右边界 | 1769 / 1769 / 1768 / 1768 / 1768 | 1767 / 1767 / 1768 / 1766 / 1762 | ≤ 6 px |
+| iroseka 行距 | 100 | 100 / 101 / 102 / 100 | ±2 |
+| hoshimemo 中心 x | 959 / 960 / 959 / 960 / 959 | 957 / 958 / 957 / 958 / 957 | ≤ 3 px |
+| hoshimemo 行距 | 90 | 90 / 89 / 91 / 89 | ±1 |
+
+（字宽/墨迹高不同是字体差异——原版是衬线贴图，本引擎退化时用内建位图字体；
+**对齐基准与行距是对齐的**，这正是 profile 要保证的东西。）
+
+新增第三部作品时只需要：量出它的墨迹表 → 在 `titlemenu.c` 里加一个 profile →
+`fvp_title_profile_find()` 加一个关键字。缺 profile 时退回 iroseka 的通用布局并打日志。
+
+### 4.1 还差什么
+
+1. **主标题背景还没指认**：`a_top_s1` 是 ALBUM MODE 那版（夜空），白天那版还没在
+   graph.bin 里找到（`a_top_p1/p2` 尺寸对不上 1920×1080）。
+2. **外壳改成画贴图**：现在 `--title-menu` 用文字模式（内建位图字体，字号由实测墨迹高反推）
+   画，几何对得上但字形不同；接上 `gfx_graph_load` + 图元后改成贴 `title_start*`。
 3. **Continue 的可用性**：取决于 `save/` 目录里有没有槽（目前一律可用）。
 4. **过渡动画**：原版点 `New Game` 后是白屏过渡再进 OP 影片，这一步依赖 WMV（还没做）。
 

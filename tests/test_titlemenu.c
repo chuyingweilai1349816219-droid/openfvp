@@ -228,6 +228,103 @@ int main(void)
         CHECK(im.use_images == 0, "images off again");
     }
 
+    /* --- 9. 每作品 profile：两部作品的标题菜单**布局不一样**（实测） --- */
+    {
+        const FvpTitleProfile *ir = fvp_title_profile_find("iroseka.hcb");
+        const FvpTitleProfile *ho =
+            fvp_title_profile_find("C:\\games\\Hoshimemo_HD.hcb");
+        FvpTitleMenu pm;
+        int i3;
+
+        CHECK(ir == &fvp_title_profile_iroseka, "find iroseka");
+        CHECK(ho == &fvp_title_profile_hoshimemo, "find hoshimemo (case/mixed)");
+        CHECK(fvp_title_profile_find("sakura.hcb") == NULL, "unknown game NULL");
+        CHECK(fvp_title_profile_find(NULL) == NULL, "NULL hint");
+
+        /* --- iroseka：右对齐、行距 100、第 1 项墨迹上沿 511 --- */
+        CHECK(ir->align == FVP_TITLE_ALIGN_RIGHT, "iroseka right aligned");
+        CHECK(ir->pitch == 100 && ir->ink_top0 == 511, "iroseka pitch/top %d/%d",
+              ir->pitch, ir->ink_top0);
+        CHECK(ir->right_x == 1769, "iroseka right_x=%d", ir->right_x);
+        CHECK(strcmp(ir->items[0].label, "New Game") == 0, "iroseka item 0");
+        CHECK(strcmp(ir->items[4].label, "Exit") == 0, "iroseka item 4");
+        for (i3 = 0; i3 < FVP_TITLE_ITEMS; ++i3) {
+            int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+
+            CHECK(fvp_title_profile_ink_rect(ir, i3, &x0, &y0, &x1, &y1) == 1,
+                  "iroseka ink rect %d", i3);
+            CHECK(x1 == kOrigX0[i3] + kOrigW[i3] - 1,
+                  "iroseka item %d ink right %d", i3, x1);
+            CHECK(abs_diff(y0, kOrigCy[i3] - kOrigInkH[i3] / 2) <= 1,
+                  "iroseka item %d ink y0 %d (want %d)", i3, y0,
+                  kOrigCy[i3] - kOrigInkH[i3] / 2);
+            CHECK(ir->items[i3].asset[0] != '\0', "iroseka item %d has asset",
+                  i3);
+        }
+
+        /* --- hoshimemo：**居中**、行距 90、第 1 项墨迹上沿 581 --- */
+        CHECK(ho->align == FVP_TITLE_ALIGN_CENTER, "hoshimemo centred");
+        CHECK(ho->pitch == 90 && ho->ink_top0 == 581, "hoshimemo pitch/top %d/%d",
+              ho->pitch, ho->ink_top0);
+        CHECK(ho->center_x == 960, "hoshimemo center_x=%d", ho->center_x);
+        CHECK(strcmp(ho->items[0].label, "GAME START") == 0,
+              "hoshimemo item 0 label '%s'", ho->items[0].label);
+        CHECK(strcmp(ho->items[4].label, "EXIT") == 0, "hoshimemo item 4 label");
+        for (i3 = 0; i3 < FVP_TITLE_ITEMS; ++i3) {
+            int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+            int cx;
+
+            CHECK(fvp_title_profile_ink_rect(ho, i3, &x0, &y0, &x1, &y1) == 1,
+                  "hoshimemo ink rect %d", i3);
+            cx = (x0 + x1) / 2;
+            CHECK(cx >= 958 && cx <= 961, "hoshimemo item %d centred at %d", i3,
+                  cx);
+            CHECK(y0 == 581 + i3 * 90, "hoshimemo item %d ink top %d", i3, y0);
+            CHECK(ho->items[i3].asset_glow[0] != '\0',
+                  "hoshimemo item %d has a separate glow asset", i3);
+        }
+
+        /* --- 贴图位置：由"墨迹 + 贴图尺寸对称留白"反推，和实测对得上 --- */
+        {
+            int ix = 0, iy = 0;
+
+            CHECK(fvp_title_profile_image_pos(ir, 0, &ix, &iy) == 1,
+                  "iroseka image pos");
+            CHECK(abs_diff(ix, 1445) <= 1 && abs_diff(iy, 492) <= 1,
+                  "iroseka item0 texture at (%d,%d) want (1445,492)", ix, iy);
+            CHECK(fvp_title_profile_image_pos(ho, 0, &ix, &iy) == 1,
+                  "hoshimemo image pos");
+            CHECK(abs_diff(ix + ho->items[0].tex_w / 2, 960) <= 2,
+                  "hoshimemo item0 texture centre %d want 960",
+                  ix + ho->items[0].tex_w / 2);
+            CHECK(abs_diff(iy, 578) <= 1, "hoshimemo item0 texture y=%d want 578",
+                  iy);
+        }
+
+        /* profile 命中：用实测墨迹矩形，不需要字体 */
+        CHECK(fvp_title_profile_hit(ir, 1615, 531) == 0, "profile hit ir 0");
+        CHECK(fvp_title_profile_hit(ir, 1715, 931) == 4, "profile hit ir 4");
+        CHECK(fvp_title_profile_hit(ir, 100, 531) == -1, "profile miss ir");
+        CHECK(fvp_title_profile_hit(ho, 959, 597) == 0, "profile hit ho 0");
+        CHECK(fvp_title_profile_hit(ho, 959, 957) == 4, "profile hit ho 4");
+        CHECK(fvp_title_profile_hit(ho, 959, 1050) == -1, "profile miss ho");
+        CHECK(fvp_title_profile_hit(NULL, 0, 0) == -1, "profile hit NULL");
+
+        /* --- apply_profile 会改掉菜单状态的几何 --- */
+        fvp_title_init(&pm);
+        fvp_title_apply_profile(&pm, ho);
+        CHECK(pm.pitch == 90 && pm.y_first == 581, "apply hoshimemo pitch/top");
+        CHECK(pm.hover == -1 && pm.selected == -1, "apply resets selection");
+        fvp_title_apply_profile(&pm, ir);
+        CHECK(pm.pitch == 100 && pm.x_right == 1769, "apply iroseka geometry");
+
+        /* 两部作品的关键差别必须真的不一样（防止"只对一款调"） */
+        CHECK(ir->pitch != ho->pitch, "pitches differ (100 vs 90)");
+        CHECK(ir->align != ho->align, "alignments differ (right vs centre)");
+        CHECK(strcmp(ir->items[0].label, ho->items[0].label) != 0,
+              "first labels differ (New Game vs GAME START)");
+    }
+
     printf("test_titlemenu: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
