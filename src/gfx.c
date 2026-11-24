@@ -479,9 +479,12 @@ typedef struct GfxTextWin {
     int shown_chars; /* 当前可见的字符数（按 UTF-8 码点算） */
     int total_chars; /* 最近一次 TextPrint 的字符数 */
     int accum_ms;    /* 累计的、还没凑够一个字的毫秒数 */
-    /* TextShadowDist(125)：文字阴影偏移（-32..32）。两个分量都是 0 时不画阴影层，
-     * 所以默认配置下像素与改动前一致。 */
-    int shadow[2];
+    /* TextShadowDist(125)：阴影距离 0..12（原版写 tw+0x597）。
+     * TextSpace(128)：字间距/行间距，两个分量各 -32..32（原版写 tw+0x5A8/+0x5AA）。
+     * 两者都**只记录、不渲染** —— 原版的阴影形状/颜色与间距的实际用法都没有证据，
+     * 参考实现 work/render.py 也是只存不画。见 docs/render-model.md §7.1。 */
+    int shadow_dist;
+    int space[2];
 } GfxTextWin;
 
 struct Gfx {
@@ -3655,48 +3658,56 @@ void gfx_text_advance(Gfx *g, int dt_ms)
     }
 }
 
-/* TextShadowDist(125)：文字阴影偏移（两个分量 -32..32，静态分析 0x43CE10）。
- * 只**记录**数值，渲染层不画阴影：脚本给的是 (12,0)，照字面画出来是一份向右
- * 12 px 的实心深色重影（用户实测报「对话框内文字有残影」）；原版阴影的颜色 /
- * 透明度 / 合成方式没有任何静态分析证据，参考实现 work/render.py 也只存不画。
- * 详见 docs/render-model.md §7.1。 */
-void gfx_text_set_shadow(Gfx *g, int layer, int dx, int dy)
+/* TextShadowDist(125)：阴影距离 0..12（静态分析 0x43CBB0 → 0x4248B0 写 tw+0x597）。
+ * 只**记录**数值，渲染层不画阴影：原版阴影的形状/颜色/透明度都没有证据，
+ * 参考实现 work/render.py 也只存不画。见 docs/render-model.md §7.1。 */
+void gfx_text_set_shadow(Gfx *g, int layer, int dist)
 {
     if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
         return;
     }
-    if (dx < -32) {
-        dx = -32;
+    if (dist < 0) {
+        dist = 0;
     }
-    if (dx > 32) {
-        dx = 32;
+    if (dist > 12) {
+        dist = 12;
     }
-    if (dy < -32) {
-        dy = -32;
-    }
-    if (dy > 32) {
-        dy = 32;
-    }
-    g->tw[layer].shadow[0] = dx;
-    g->tw[layer].shadow[1] = dy;
+    g->tw[layer].shadow_dist = dist;
 }
 
-void gfx_text_get_shadow(const Gfx *g, int layer, int *dx, int *dy)
+/* TextSpace(128)：字间距/行间距，两个分量各 -32..32（静态分析 0x43CE10 写
+ * tw+0x5A8 / tw+0x5AA）。同样只记录、不渲染。 */
+void gfx_text_set_space(Gfx *g, int layer, int x, int y)
 {
     if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
-        if (dx != NULL) {
-            *dx = 0;
-        }
-        if (dy != NULL) {
-            *dy = 0;
+        return;
+    }
+    if (x < -32) {
+        x = -32;
+    }
+    if (x > 32) {
+        x = 32;
+    }
+    if (y < -32) {
+        y = -32;
+    }
+    if (y > 32) {
+        y = 32;
+    }
+    g->tw[layer].space[0] = x;
+    g->tw[layer].space[1] = y;
+}
+
+void gfx_text_get_shadow(const Gfx *g, int layer, int *dist)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        if (dist != NULL) {
+            *dist = 0;
         }
         return;
     }
-    if (dx != NULL) {
-        *dx = g->tw[layer].shadow[0];
-    }
-    if (dy != NULL) {
-        *dy = g->tw[layer].shadow[1];
+    if (dist != NULL) {
+        *dist = g->tw[layer].shadow_dist;
     }
 }
 

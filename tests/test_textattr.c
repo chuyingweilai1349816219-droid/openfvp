@@ -71,25 +71,44 @@ int main(void)
           "300000 accepted");
     CHECK(a[2].speed_ms == FVP_TEXT_SPEED_MAX, "speed max=%d", a[2].speed_ms);
 
-    /* 4b. 阴影偏移（TextShadowDist 125）：两个分量各 -32..32，独立判定。 */
-    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, 2, 3) == 1,
-          "set_shadow");
-    CHECK(a[3].shadow_x == 2 && a[3].shadow_y == 3, "shadow %d,%d",
-          a[3].shadow_x, a[3].shadow_y);
-    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, 99, -5) == 1,
-          "one component out of range still applies the other");
-    CHECK(a[3].shadow_x == 2 && a[3].shadow_y == -5,
-          "x kept, y updated (%d,%d)", a[3].shadow_x, a[3].shadow_y);
-    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, -32, 32) == 1,
-          "boundaries accepted");
-    CHECK(a[3].shadow_x == -32 && a[3].shadow_y == 32, "boundaries %d,%d",
-          a[3].shadow_x, a[3].shadow_y);
-    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, -33, 33) == 0,
-          "both out of range = rejected");
-    CHECK(a[3].shadow_x == -32 && a[3].shadow_y == 32,
-          "unchanged after the rejection (%d,%d)", a[3].shadow_x, a[3].shadow_y);
+    /* 4b. 阴影距离（TextShadowDist 125，handler 0x43CBB0）：**单个 0..12，钳制**。
+     *     >12 当 12、<0 当 0（原版程序里是 jl/jg 之后取 0 / 12 再转 0x4248B0）。 */
+    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, 12) == 1,
+          "set_shadow 12");
+    CHECK(a[3].shadow_dist == 12, "shadow dist %d", a[3].shadow_dist);
+    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, 99) == 1,
+          "99 clamped (not rejected)");
+    CHECK(a[3].shadow_dist == FVP_TEXT_SHADOW_MAX, "clamped to %d (%d)",
+          FVP_TEXT_SHADOW_MAX, a[3].shadow_dist);
+    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, -7) == 1,
+          "-7 clamped (not rejected)");
+    CHECK(a[3].shadow_dist == 0, "clamped to 0 (%d)", a[3].shadow_dist);
+    CHECK(fvp_textattr_set_shadow(a, FVP_TEXT_WINDOWS, 3, 0) == 1,
+          "distance 0 accepted");
+    CHECK((a[3].set_mask & FVP_TEXTATTR_SHADOW) != 0u, "shadow mask set");
 
-    /* 4c. TextSkip(127)：0..3，超范围拒绝。 */
+    /* 4c. 字间距 / 行间距（TextSpace 128，handler 0x43CE10）：两个分量各
+     *     -32..32，**独立判定**：超范围的那一个跳过，另一个照样生效。 */
+    CHECK(fvp_textattr_set_space(a, FVP_TEXT_WINDOWS, 5, 12, 0) == 1,
+          "set_space 12,0");
+    CHECK(a[5].space_x == 12 && a[5].space_y == 0, "space %d,%d", a[5].space_x,
+          a[5].space_y);
+    CHECK(fvp_textattr_set_space(a, FVP_TEXT_WINDOWS, 5, 99, -5) == 1,
+          "x out of range still applies y");
+    CHECK(a[5].space_x == 12 && a[5].space_y == -5,
+          "x kept, y updated (%d,%d)", a[5].space_x, a[5].space_y);
+    CHECK(fvp_textattr_set_space(a, FVP_TEXT_WINDOWS, 5, -32, 32) == 1,
+          "space boundaries accepted");
+    CHECK(a[5].space_x == -32 && a[5].space_y == 32, "space boundaries %d,%d",
+          a[5].space_x, a[5].space_y);
+    CHECK(fvp_textattr_set_space(a, FVP_TEXT_WINDOWS, 5, -33, 33) == 0,
+          "both out of range = rejected");
+    CHECK(a[5].space_x == -32 && a[5].space_y == 32,
+          "space unchanged after the rejection (%d,%d)", a[5].space_x,
+          a[5].space_y);
+    CHECK((a[5].set_mask & FVP_TEXTATTR_SPACE) != 0u, "space mask set");
+
+    /* 4d. TextSkip(127)：0..3，超范围拒绝。 */
     CHECK(fvp_textattr_set_skip(a, FVP_TEXT_WINDOWS, 4, 2) == 1, "set_skip");
     CHECK(a[4].skip_mode == 2, "skip mode %d", a[4].skip_mode);
     CHECK(fvp_textattr_set_skip(a, FVP_TEXT_WINDOWS, 4, 4) == 0,
@@ -110,8 +129,8 @@ int main(void)
     CHECK(fvp_textattr_set_color(NULL, FVP_TEXT_WINDOWS, 0, 1, 2, 3) == 0,
           "NULL rejected");
 
-    /* 6. configured_count 只数设过的窗口（本例 1,2,3,4）。 */
-    CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 4,
+    /* 6. configured_count 只数设过的窗口（本例 1,2,3,4,5：4b 用了 3、4c 用了 5）。 */
+    CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 5,
           "configured=%d", fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS));
     CHECK(fvp_textattr_configured_count(NULL, FVP_TEXT_WINDOWS) == 0,
           "configured(NULL)=0");

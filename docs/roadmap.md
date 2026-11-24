@@ -50,28 +50,30 @@
 | 4 条 opcode 语义未确认（0x11/0x12/0x17/0x18） | 少量逻辑可能走偏（占指令 0.18%） | 已按数组读写实现，未验证 |
 | 命令语义靠静态分析推断 | 演出可能有偏差 | 45 条已确认，其余是桩 |
 
-### 真机上还缺哪些命令（2026-11-24 实测，90 s / 480,942 步）
+### 真机上还缺哪些命令（2026-11-24 实测，45 s / 240,201 步）
 
-外壳带 gfx+音频跑 90 秒（`--unknown-all`），退出总结里的 `unimpl cmds` 现在只剩
-**20 种**（同一脚本同时长的历史记录是 25 种；减少的是 26 / 95 / 125 / 127 / 130
-这几个最近落地的命令）。剩下的没有一条是渲染几何/动画核心命令：
+外壳带 gfx+音频跑 45 秒（`--unknown-all`），退出总结里的 `unimpl cmds` 现在只剩
+**18 种**（同一脚本同时长的历史记录是 20 种；本轮减少的是 **128 TextSpace**，
+之前几轮已经落地 26 / 76 / 95 / 125 / 127 / 130）。剩下的没有一条是渲染几何/动画
+核心命令，高频项只剩字体与排版参数：
 
 | id | 命令 | 次数 | 缺什么 |
 | ---: | --- | ---: | --- |
-| 76 | **PrimHit** | 110 | **鼠标命中测试**（算法已从静态分析确认，见 `docs/render-model.md` §8，尚未落地） |
-| 113 | TextFont | 74 | 字体选择（现在固定用 3 个内置图集） |
-| 118 | TextFormat | 71 | 文本排版参数（7 个参数） |
-| 119 | TextFunction | 69 | 文本功能开关（4 个参数） |
-| 8 | ControlMask | 69 | 输入屏蔽位 |
-| 9 | ControlPulse | 66 | 手柄脉冲（无关键鼠） |
-| 46 | MotionAnimStop | 29 | 停止某一类补间（渲染侧已有 `gfx_motion` 基础设施） |
+| 113 | TextFont | 43 | 字体选择（现在固定用内置图集，字面值只记录） |
+| 118 | TextFormat | 40 | 文本排版参数（7 个参数） |
+| 119 | TextFunction | 38 | 文本功能开关（4 个参数） |
+| 8 | ControlMask | 38 | 输入屏蔽位 |
+| 9 | ControlPulse | 35 | 手柄脉冲（无关键鼠） |
+| 46 | MotionAnimStop | 25 | 停止某一类补间（渲染侧已有 `gfx_motion` 基础设施） |
 | 21 | GaijiLoad | 24 | 外字（造字）加载 |
-| 142 | V3DMotion | 11 | 3D 运动（本作无 3D 场景） |
-| 55 / 58 | MotionMoveS2Stop / MotionMoveZStop | 7 / 6 | 停止缩放/Z 补间 |
+| 142 | V3DMotion | 7 | 3D 运动（本作无 3D 场景） |
+| 55 / 58 | MotionMoveS2Stop / MotionMoveZStop | 7 / 6 | 停止缩放 / Z 补间 |
 | 110 | TextBuff | 6 | 文本缓冲配置 |
 | 43 | MotionAlphaStop | 4 | 停止 alpha 补间 |
-| 128 | TextSpace | 2 | 字间距 |
 | 10 / 11 / 17 / 23 / 109 / 147 | CursorChange / CursorMove / ExitMode / GraphRGB / SysProjFolder / WindowMode | 各 1 | 光标、退出模式、颜色调制、工程目录、窗口模式 |
+
+已从这张表里消失、但**只记录不渲染**的命令（渲染端证据不足，见 `docs/render-model.md`）：
+`TextShadowDist`(125) 的阴影距离、`TextSpace`(128) 的字间距/行间距（实测 tw9 = 32,1）。
 
 > 注意这张表只能由外壳（挂了 gfx）产出：fvm 不挂 gfx，它的 `--unknown-all` 直方图会把
 > `PrimSetNull`(80) / `PrimSetDraw`(79) / `PrimGroupIn`(73) 这些**已经实现**的命令也报成缺口
@@ -100,13 +102,13 @@
   逐字节相同、行数基线不漂移、0 个替换字符）与 **台词历史** `test_history`（164 项）。
   这是"第二部作品也能跑"从一次性手工记录变成可复跑门禁的那一步。
   命令覆盖方面：26（HistorySet）/ 25（HistoryGet）已按静态分析落地，
-  41 / 108 / 141 证明是原版空操作；外壳 90 s 的 `unimpl cmds` 从 25 种降到 **20 种**。
+  41 / 108 / 141 证明是原版空操作；外壳实测 `unimpl cmds` 从 25 种降到 **18 种**（含 76 PrimHit 落地、128 TextSpace 落地）。
 - **1.1+**（后续，按优先级）：
   1. 静态分析 `0x43DE90` 的槽序列化 → 游戏内存/读档（唯一阻断级）
   2. **`PrimHit`(76) 落地** → 选择支/菜单可点（算法已解出，见 `docs/render-model.md` §8；
      只剩最后一层的逐像素掩码测试没解）；90 s 实测调用 110 次
   3. 动画 `mode 1..5` 缓动曲线（需要原版实机对照才能定）
-  4. 文本显示细节命令：`TextFont`/`TextFormat`/`TextFunction`/`TextSpace`
+  4. 文本显示细节命令：`TextFont`(113) / `TextFormat`(118) / `TextFunction`(119)；`TextSpace`(128) 与 `TextShadowDist`(125) 已记录但未参与排版/绘制
   5. 游戏内菜单/设置/存档界面（`Menu*` 语义；`TitleMenu` 已证明是空操作）
   6. 资源卸载策略（长跑内存）
   7. WMV 视频、语音播放、Android 后端

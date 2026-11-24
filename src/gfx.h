@@ -171,12 +171,18 @@ int gfx_text_shown_chars(const Gfx *g, int layer);
 int gfx_text_total_chars(const Gfx *g, int layer);
 int gfx_text_busy(const Gfx *g, int layer); /* 1 = 还在逐字显示 */
 
-/* TextShadowDist(125)：文字阴影偏移（两个分量 -32..32，静态分析 0x43CE10 写
- * tw+0x5a8 / tw+0x5aa）。**只记录数值，不参与渲染**：脚本给的是 (12,0)，
- * 照字面画会得到一份向右 12 px 的实心重影（用户实测报「残影」），而原版阴影的
- * 颜色/透明度/合成方式没有任何静态分析证据。理由与实测见 docs/render-model.md §7.1。 */
-void gfx_text_set_shadow(Gfx *g, int layer, int dx, int dy);
-void gfx_text_get_shadow(const Gfx *g, int layer, int *dx, int *dy);
+/* TextShadowDist(125)：**阴影距离 0..12**（静态分析 handler 0x43CBB0 → 0x4248B0
+ * 把一字节写进 tw+0x597）。TextSpace(128)：**字间距/行间距**，两个分量各 -32..32
+ * （静态分析 handler 0x43CE10 写 tw+0x5A8/+0x5AA）。
+ *
+ * ⚠️ 2026-11-24 修正：以前把 0x43CE10 当成 TextShadowDist 并按"两个分量偏移"去
+ * 渲染，结果把脚本的阴影距离 12 画成了向右 12 px 的实心重影（用户报「残影」）。
+ * 现在两条命令都**只记录数值、不参与渲染** —— 原版阴影的形状/颜色/透明度与间距
+ * 的真实用法都没有静态分析证据，参考实现 work/render.py 也只存不画。
+ * 详见 docs/render-model.md §7.1。 */
+void gfx_text_set_shadow(Gfx *g, int layer, int dist);
+void gfx_text_get_shadow(const Gfx *g, int layer, int *dist);
+void gfx_text_set_space(Gfx *g, int layer, int x, int y);
 
 /* 纹理缓存上限（字节）。默认 512 MiB，见 gfx.c 的 GFX_TEX_CACHE_DEFAULT_BYTES。
  * 超上限时按 LRU 淘汰 refs == 1 的条目（被图元/组/部件引用的永远不会被淘汰，

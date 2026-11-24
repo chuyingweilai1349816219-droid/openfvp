@@ -28,8 +28,9 @@ void fvp_textattr_reset(FvpTextAttr *attrs, int count)
         attrs[i].w = 12;
         attrs[i].h = 12;
         attrs[i].speed_ms = 0;
-        attrs[i].shadow_x = 0;
-        attrs[i].shadow_y = 0;
+        attrs[i].shadow_dist = 0;
+        attrs[i].space_x = 0;
+        attrs[i].space_y = 0;
         attrs[i].skip_mode = 0;
         attrs[i].set_mask = 0u;
     }
@@ -75,27 +76,41 @@ int fvp_textattr_set_speed(FvpTextAttr *attrs, int count, int idx, int ms)
     return 1;
 }
 
-/* TextShadowDist(twIdx, dx, dy)：静态分析 0x43CE10，两个分量各钳到 -32..32，
- * 分别写 tw+0x5a8（x）与 tw+0x5aa（y），都是 16 位。超范围的分量被忽略
- * （另一个分量仍然生效），与原版程序里两个独立的 jl/jg 判定一致。 */
-int fvp_textattr_set_shadow(FvpTextAttr *attrs, int count, int idx, int dx,
-                            int dy)
+/* TextShadowDist(twIdx, dist)：静态分析 **0x43CBB0**（不是 0x43CE10！）。
+ *   arg0 必须是 int 0..0x1F（twIdx）；
+ *   arg1 不是 int 时按 0 处理；是 int 时 <0 当 0、>12 当 12（钳制）；
+ *   最后转 0x4248B0(tw, dist)，那里就是 `mov %al,0x597(%ecx)` —— 只存一字节。 */
+int fvp_textattr_set_shadow(FvpTextAttr *attrs, int count, int idx, int dist)
+{
+    if (attrs == NULL || idx < 0 || idx >= count || idx >= FVP_TEXT_WINDOWS) {
+        return 0;
+    }
+    attrs[idx].shadow_dist = clamp(dist, FVP_TEXT_SHADOW_MIN,
+                                   FVP_TEXT_SHADOW_MAX);
+    attrs[idx].set_mask |= FVP_TEXTATTR_SHADOW;
+    return 1;
+}
+
+/* TextSpace(twIdx, x, y)：静态分析 **0x43CE10**。两个分量各自独立判定：
+ * 某个分量超出 -32..32 时只跳过该分量，另一个仍然写进去
+ * （两个独立的 jl/jg 分支，互不影响）；两个都被跳过时返回 0。 */
+int fvp_textattr_set_space(FvpTextAttr *attrs, int count, int idx, int x, int y)
 {
     int wrote = 0;
 
     if (attrs == NULL || idx < 0 || idx >= count || idx >= FVP_TEXT_WINDOWS) {
         return 0;
     }
-    if (dx >= FVP_TEXT_SHADOW_MIN && dx <= FVP_TEXT_SHADOW_MAX) {
-        attrs[idx].shadow_x = dx;
+    if (x >= FVP_TEXT_SPACE_MIN && x <= FVP_TEXT_SPACE_MAX) {
+        attrs[idx].space_x = x;
         wrote = 1;
     }
-    if (dy >= FVP_TEXT_SHADOW_MIN && dy <= FVP_TEXT_SHADOW_MAX) {
-        attrs[idx].shadow_y = dy;
+    if (y >= FVP_TEXT_SPACE_MIN && y <= FVP_TEXT_SPACE_MAX) {
+        attrs[idx].space_y = y;
         wrote = 1;
     }
     if (wrote) {
-        attrs[idx].set_mask |= FVP_TEXTATTR_SHADOW;
+        attrs[idx].set_mask |= FVP_TEXTATTR_SPACE;
     }
     return wrote;
 }

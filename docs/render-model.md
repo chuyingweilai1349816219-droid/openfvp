@@ -320,39 +320,63 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
 8. `graph-not-found`：`taiken_start`、`title_trial`、部分 `SHINKU_e01*`、`graph/BG062_500(-b)`
    确实不在 6 个图像包里（多半在 `graph_vis*` 之外的包或运行时合成），属资源缺失而非解析错误。
 
-### 7.1 `TextShadowDist`(125)：只记录，不画（2026-11-24 修复）
+### 7.1 `TextShadowDist`(125) / `TextSpace`(128)：只记录，不画（2026-11-24 两次修正）
 
 **现象**：外壳实跑时，对话框里的文字看起来有「残影」——每个字右边都拖着一份深色重影
 （用户实测报告）。抓帧放大 4 倍后确认是**一份向右偏移的实心深色文字副本**。
 
-**根因**：`TextShadowDist` 的两个参数被当成"阴影偏移"直接拿去渲染了
+**第一层根因（已修）**：把 `TextShadowDist` 当成"两个分量的偏移"直接拿去渲染了
 （`draw_text_window()` 里在 `(x+dx, y+dy)` 先用 `(16,20,30)` alpha=255 画一遍再画正文）。
-而脚本实际传的值是：
+撤掉绘制后用户确认「现在没有了」。
+
+**第二层根因（本轮修的）**：连语义都读错了。静态分析逐条核对后：
+
+| id | 命令 | handler | 语义 |
+|---:|---|---|---|
+| 125 | `TextShadowDist` | **0x43CBB0** | `(twIdx, dist)`：dist **0..12**（<0 当 0、>12 当 12），转 `0x4248B0` → 只写 `tw+0x597` 一字节 |
+| 128 | `TextSpace` | **0x43CE10** | `(twIdx, x, y)`：两个分量各 **-32..32**，分别写 `tw+0x5A8` / `tw+0x5AA`（i16），超范围的分量单独跳过 |
+
+以前把 **0x43CE10 当成了 TextShadowDist**，于是：
+- 125 被实现成"两个 -32..32 的分量"（那其实是 128 的语义）；
+- 128 一直没有 case，一直被算作"未实现"；
+- 而脚本对 125 传的是 **`dist=12`**（阴影距离拉满），被我们当成 `dx=12, dy=0` 画成了向右 12 px 的重影。
+
+**实测（900k 步，`fvm --dump-textattr`）**：
 
 ```
-$ bin/fvm.exe iroseka.hcb --steps 900000 --quiet --dump-textattr
-  tw  0: mask=0x1f color=10,51,100 size=64x32 speed=-1 ms shadow=12,0 skip=3
-  tw  8: mask=0xf  ... shadow=12,0 skip=0
-  tw  9: mask=0xf  ... shadow=12,0 skip=0
+tw  0: mask=0x1f color=10,51,100 size=64x32 speed=-1 ms shadow=12 space=0,0  skip=3
+tw  8: mask=0x0f color=10,51,100 size=64x8  speed=1  ms shadow=12 space=0,0  skip=0
+tw  9: mask=0x2f color=17,18,100 size=64x8  speed=1  ms shadow=12 space=32,1 skip=0
+tw 10: mask=0x07 color=10,1,1    size=64x8  speed=0  ms shadow=0  space=0,0  skip=0
 ```
 
-即 **`shadow=(12,0)`** —— 向右 12 px 的实心重影，显然不是原版的阴影。
+- 三条命令都被脚本用到：**阴影距离 12**、**tw9（章节标题）字间距 32 / 行间距 1**、skip 3
+- `tw9` 的 `space=32,1` 正是"章节标题字拉得很开"的来源 —— 说明这套字段解释是对的
 
-**为什么撤回（而不是改成"浅一点"）**：
-- 原版阴影的**颜色 / 透明度 / 合成方式**没有任何静态分析证据：`0x43CE10` 只把两个数值写进
-  `tw+0x5a8` / `tw+0x5aa`，读取方（渲染端）还没逆出来；
-- 我们自己的 Python 参考实现 `work/render.py` 里，`TextWindow.shadow` **只存不用**
-  （`@h('TextShadowDist')` 只做 `self.tw(a[0]).shadow = _int(a[1])`），绘制时根本没用它；
-- 因此"画出来"只会让帧偏离参考实现、也与实测观感不符。**只记录数值**是唯一同时满足
+**为什么两条都只记录、不渲染**：
+- 阴影：只知道**距离**（0..12），**形状/颜色/透明度/合成方式**都没有静态分析证据
+  （`0x4248B0` 只把值存进 `tw+0x597`，读取端还没逆出来）；
+- 间距：`0x43CE10` 只写两个 i16，排版端怎么用（加在字宽上？行高上？缩放前还是后？）也没有证据；
+- 我们自己的 Python 参考实现 `work/render.py` 里，`TextWindow.shadow` 与 `space`
+  都是**只存不用**（`@h('TextShadowDist')` 只做 `self.tw(a[0]).shadow = _int(a[1])`，
+  绘制代码完全没引用它们）；
+- 所以"画出来"只会让帧偏离参考实现、也与实测观感不符。**只记录数值**是唯一同时满足
   「忠实记录命令语义」和「不伪造像素」的做法。
 
-**改动**：`draw_text_window()` 删掉阴影层绘制；`gfx_text_set_shadow()` 保留为纯记录接口
-（`-32..32` 钳制、逐分量判定都不变，`test_textattr` 47 项照旧通过）。
+**改动**：
+- `FvpTextAttr` 拆成 `shadow_dist`(0..12) / `space_x` / `space_y`(-32..32)，掩码新增
+  `FVP_TEXTATTR_SPACE`；
+- `syscall.c` 的 `case 125` 改成单参数钳制，新增 `case 128`（逐分量判定）；
+- `gfx_text_set_shadow(g, layer, dist)` / 新增 `gfx_text_set_space(g, layer, x, y)`，
+  两者都只存不画；`draw_text_window()` 里不再有任何阴影层；
+- `test_textattr` 扩到 **56 项**（含 125 的钳制语义、128 的逐分量跳过）。
 
 **验证**：`verify_gfx.ps1 -SkipDump` 仍是 **293 px / PSNR 49.94 dB / SSIM 0.99971 / 24/24 图元
-0 px**（528k 帧上 `shadow` 还是 0，所以改与不改的像素一致 —— 也就是说这个 bug 只在跑得更久、
-`TextShadowDist` 被调用之后才显形，静态门禁抓不到它，是用户实跑抓到的）。
-修复后重新抓帧（`out/zoom-fixed.png`）文字干净，用户确认「现在没有了」。
+0 px**（528k 帧上 `shadow=12` 但 `space=0,0`、且两者都不参与绘制，所以像素不变）；
+外壳 45 s 的 `unimpl cmds` 从 20 种降到 **18 种**（128 消失）。
+
+> 这个 bug 静态门禁抓不到：它只在 `TextShadowDist` 被调用**并且**我们去画它时才会显形，
+> 528k 帧的像素对比看不到"多画了一层"。是用户实跑抓到的 —— 记在这里当经验。
 
 ---
 

@@ -46,6 +46,7 @@
 #pragma weak gfx_text_set_size
 #pragma weak gfx_text_set_speed
 #pragma weak gfx_text_set_shadow
+#pragma weak gfx_text_set_space
 #pragma weak gfx_text_busy
 /* 动画补间（src/motion.c + gfx 侧）：只有链接了 gfx.c 的程序才有这些符号。 */
 #pragma weak gfx_get_prim
@@ -1352,23 +1353,49 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
                                    (int)args[0].i, (int)args[1].i);
         }
         return;
-    /* 125 TextShadowDist(twIdx, dx, dy)：静态分析 0x43CE10，两个分量各钳 -32..32
-     * （写 tw+0x5a8 / +0x5aa）。**只记录数值，不渲染** —— 脚本给的是 (12,0)，
-     * 照字面在偏移处压一层实心暗色会得到向右 12 px 的重影（用户实测报「残影」）；
-     * 原版阴影颜色/透明度无证据，参考实现也只存不画。见 docs/render-model.md §7.1。 */
+    /* 125 TextShadowDist(twIdx, dist)：**阴影距离**，静态分析 handler **0x43CBB0**
+     * （2026-11-24 修正：以前把 0x43CE10 当成这个命令，那其实是 TextSpace）：
+     *   arg0 必须是 int 0..0x1F；arg1 不是 int 时按 0 处理，是 int 时 <0 当 0、
+     *   >12 当 12，然后转 0x4248B0(tw, dist) → `mov %al,0x597(%ecx)`（只存一字节）。
+     * 只记录、不渲染：原版阴影的**形状/颜色/透明度**都还没有证据（只知道距离），
+     * 参考实现 work/render.py 也只存不画。见 docs/render-model.md §7.1。 */
     case 125:
-        if (argc >= 2) {
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
             int id = (int)args[0].i;
-            int dx = (int)args[1].i;
-            int dy = (argc >= 3) ? (int)args[2].i : 0;
+            int dist = (argc >= 2 && args[1].type == (uint8_t)FVP_INT)
+                           ? (int)args[1].i
+                           : 0;
 
-            if (fvp_textattr_set_shadow(vm->textattr, FVP_TEXT_WINDOWS, id, dx,
-                                        dy) &&
+            if (fvp_textattr_set_shadow(vm->textattr, FVP_TEXT_WINDOWS, id,
+                                        dist) &&
                 vm->gfx_bridge != NULL && gfx_text_set_shadow != NULL &&
                 id >= 0 && id < FVP_TEXT_WINDOWS) {
                 gfx_text_set_shadow(vm->gfx_bridge->gfx, id,
-                                    vm->textattr[id].shadow_x,
-                                    vm->textattr[id].shadow_y);
+                                    vm->textattr[id].shadow_dist);
+            }
+        }
+        return;
+    /* 128 TextSpace(twIdx, x, y)：**字间距 / 行间距**，静态分析 handler **0x43CE10**：
+     *   arg1 / arg2 各自独立判定，落在 -32..32 才写 tw+0x5A8 / tw+0x5AA（i16），
+     *   超范围的那一个分量跳过、另一个仍然生效。
+     * 只记录、不渲染（参考实现同样只存不画）。 */
+    case 128:
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
+            int id = (int)args[0].i;
+            int sx = (argc >= 2 && args[1].type == (uint8_t)FVP_INT)
+                         ? (int)args[1].i
+                         : 0;
+            int sy = (argc >= 3 && args[2].type == (uint8_t)FVP_INT)
+                         ? (int)args[2].i
+                         : 0;
+
+            if (fvp_textattr_set_space(vm->textattr, FVP_TEXT_WINDOWS, id, sx,
+                                       sy) &&
+                vm->gfx_bridge != NULL && gfx_text_set_space != NULL &&
+                id >= 0 && id < FVP_TEXT_WINDOWS) {
+                gfx_text_set_space(vm->gfx_bridge->gfx, id,
+                                   vm->textattr[id].space_x,
+                                   vm->textattr[id].space_y);
             }
         }
         return;

@@ -53,20 +53,28 @@
 
 ### 修复
 
-- **对话框文字「残影」：撤回 `TextShadowDist`(125) 的阴影绘制**（用户实跑报障 → 定位 → 复验）
+- **对话框文字「残影」：撤回阴影绘制 + 修正 `TextShadowDist`/`TextSpace` 的语义读错**
+  （用户实跑报障 → 定位 → 修 → 复验）
   - 现象：外壳实跑时对话框里每个字右边都拖着一份深色重影；抓帧放大 4× 确认是**向右偏移的
-    实心深色文字副本**
-  - 根因：把 `TextShadowDist` 的两个参数当阴影偏移直接渲染了。实测脚本传的是
-    **`shadow=(12,0)`**（`fvm --dump-textattr`：tw 0 / 8 / 9 都是 `12,0`），于是每行文字右移
-    12 px 再画一遍 `(16,20,30)` alpha=255 的实心副本
-  - 修复：`draw_text_window()` 不再画阴影层；`gfx_text_set_shadow()` 保留为**纯记录**接口
-    （-32..32 逐分量钳制不变，`test_textattr` 47 项照旧通过）。理由：原版阴影的颜色/透明度/
-    合成方式没有任何静态分析证据（`0x43CE10` 只写 `tw+0x5a8/+0x5aa`），参考实现
-    `work/render.py` 也只存不画 —— 画出来既偏离基线又不合观感
+    实心深色文字副本**。修复后用户确认「现在没有了」
+  - **根因①（画错了）**：把命令参数当"阴影偏移"直接渲染 —— 在 `(x+dx, y+dy)` 先用
+    `(16,20,30)` alpha=255 画一遍实心副本再画正文。`draw_text_window()` 里这一层已删除
+  - **根因②（读错了 handler）**：`0x43CE10` 其实是 **TextSpace(128)**（两个分量各 -32..32 →
+    `tw+0x5A8`/`tw+0x5AA`），而 `TextShadowDist(125)` 的 handler 是 **0x43CBB0**：
+    `(twIdx, dist 0..12)`，`<0` 当 0、`>12` 当 12，转 `0x4248B0` 只写 `tw+0x597` 一字节。
+    所以脚本传的 **`dist=12`** 是"阴影距离拉满"，不是 `dx=12` —— 被我们画成了向右 12 px 的重影
+  - 修复：`FvpTextAttr` 拆成 `shadow_dist`(0..12) / `space_x` / `space_y`(-32..32)（掩码新增
+    `FVP_TEXTATTR_SPACE`）；`case 125` 改成单参数钳制、**新增 `case 128`**（逐分量判定：超范围
+    的那个分量跳过、另一个仍生效）；`gfx_text_set_shadow()` 只存距离，新增
+    `gfx_text_set_space()` 存间距，**两者都不参与绘制**（原版阴影的形状/颜色/透明度、以及间距
+    在排版里的用法都没有证据；参考实现 `work/render.py` 同样只存不画）
+  - **实测（900k 步，`fvm --dump-textattr`）**：`tw0 shadow=12 space=0,0 skip=3`、
+    `tw8 shadow=12 space=0,0`、**`tw9 shadow=12 space=32,1`**（章节标题字间距拉满 32、行间距 1）
+    —— 这套解释正好对上"章节标题字拉得很开"的观感，说明字段没读反
+  - 测试：`tests/test_textattr.c` **56 项**（125 的钳制语义 + 128 的逐分量跳过）
   - 验证：`verify_gfx.ps1 -SkipDump` 仍是 **293 px / PSNR 49.94 / SSIM 0.99971 / 24/24 图元
-    0 px**（528k 帧上 shadow 还是 0，这个 bug 只在跑更久之后显形，静态门禁抓不到）；
-    修复后重新抓帧文字干净，用户确认「现在没有了」
-  - 顺带：`fvm --dump-textattr` 现在也打印 `shadow=dx,dy` 与 `skip`
+    0 px**；外壳 45 s 的 `unimpl cmds` 从 20 种降到 **18 种**（128 消失）
+  - `fvm --dump-textattr` 现在打印 `shadow=dist space=x,y skip=mode`
 
 ### 新增
 
