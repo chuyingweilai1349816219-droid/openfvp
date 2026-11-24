@@ -54,6 +54,12 @@ typedef struct FvpSaveSlot {
     size_t tail_len;
 } FvpSaveSlot;
 
+/* 槽文件路径：引擎里格式串是 **"%s/save/s%03d.bin"**（iroseka_HD.exe 的
+ * 0x45da64，见 docs/save-format.md §1/§2.5）：第一个参数是游戏目录，第二个是
+ * 槽号 0..999。本函数**照抄**这个拼接方式（不做斜杠去重），返回 1 = 成功，
+ * 0 = 参数非法或缓冲区不够。 */
+int fvp_save_slot_path(char *buf, size_t cap, const char *game_dir, int slot);
+
 /* 解析一个槽文件缓冲。
  *
  *   thumb_w / thumb_h  已知的缩略图尺寸；传 0 表示未知，此时按「alpha 恒为

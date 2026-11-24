@@ -63,6 +63,41 @@ save/save.bin  = 1471 条全局变量(8B/条) + 20 字节设置头 + 1MB 已读�
 | `0x43F7D2` | 槽写完后落盘（`wsprintfA` → `0x433FB0` 写文件） |
 | `0x43EE90` | 槽读入（`wsprintfA` → `0x4344C0` 载入） |
 
+**C 侧已经落地的部分**（2026-11-24）：`fvp_save_slot_path()`（`src/save.c`）就是
+上面那张表的「文件名」一节 —— 按 `"%s/save/s%03d.bin"` 拼路径、槽号只收 0..999，
+单测在 `tests/test_save.c` 的 selftest 里（路径拼接、槽 0/999、1000/-1、
+NULL、缓冲太小 共 10 项）。
+
+### 1.1 存档请求的消费路径（`engine` 帧更新里的那一段，2026-11-24 复核）
+
+`SaveWrite`/`Load` 只是**置请求标志**，真正的动作发生在引擎帧更新的
+`0x43F7C2` 一带（`bl` = 0 作比较值）：
+
+```
+43f7c2: cmpb %bl,0xfc8(%esi)   ; engine+0xfc8（槽列表/模板是否就绪）
+43f7c8: je   0x43f7de
+43f7cc: mov  %bl,0xfc8(%esi)   ; 清掉
+43f7d2: call 0x43de90          ; 写槽的头部/版本字段
+43f7d7: movb $0x1,0xfc9(%esi)  ; engine+0xfc9 = 1（快照就绪）
+43f7de: cmpb %bl,0xfca(%esi)   ; engine+0xfca = SaveWrite 请求
+43f7e6: cmpb %bl,0xfc9(%esi)   ; 且快照就绪
+43f7ee: mov  0xfcc(%esi),%ecx  ; engine+0xfcc = 槽号
+43f7f4: mov  %bl,0xfca(%esi)   ; 清请求
+...
+43f812: call 0x4488b7          ; wsprintfA 拼 "%s/save/s%03d.bin"
+43f821: call 0x433fb0          ; 把内存里的槽写进这个路径
+43f830: call 0x438300          ; engine+0x14（save.bin 对象）的收尾
+43f837: call 0x4396f0          ; save.bin 序列化
+```
+
+所以「游戏内保存不生效」在本站的两个真实缺口是：
+
+1. **外壳没有消费请求**：`fvp_vm_take_save_request()` 拿到槽号后要用
+   `fvp_save_slot_path()` 拼路径、再用模板槽写文件（模板写入的代码在
+   `src/platform/win32/main_win32.c` 的 `write_save_preview()`）；
+2. **内存快照未解**：`0x43DE90` + 之后那一大段（约 500–597 KB）才是"读回来能接着玩"
+   的关键，`src/save.c` 目前按不透明字节原样透传。
+
 ---
 
 ## 2. 存档槽 `sNNN.bin`

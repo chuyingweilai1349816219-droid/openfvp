@@ -126,6 +126,23 @@ static void slot_clear(FvpSaveSlot *s)
     memset(s, 0, sizeof(*s));
 }
 
+int fvp_save_slot_path(char *buf, size_t cap, const char *game_dir, int slot)
+{
+    int n;
+
+    if (buf == NULL || cap == 0u || game_dir == NULL) {
+        return 0;
+    }
+    if (slot < 0 || slot > 999) {
+        return 0;
+    }
+    n = snprintf(buf, cap, "%s/save/s%03d.bin", game_dir, slot);
+    if (n < 0 || (size_t)n >= cap) {
+        return 0;
+    }
+    return 1;
+}
+
 int fvp_save_slot_load(FvpSaveSlot *s, const unsigned char *buf, size_t len,
                        int thumb_w, int thumb_h)
 {

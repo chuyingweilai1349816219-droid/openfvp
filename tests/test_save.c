@@ -79,6 +79,30 @@ static unsigned char *dup_bytes(const char *s, size_t n)
 static void selftest(void)
 {
     FvpSaveSlot s;
+    /* 槽路径：引擎的格式串是 "%s/save/s%03d.bin"（iroseka_HD.exe 0x45da64） */
+    {
+        char path[128];
+
+        CHECK(fvp_save_slot_path(path, sizeof path, "C:/games/iro", 3) == 1,
+              "slot path ok");
+        CHECK(strcmp(path, "C:/games/iro/save/s003.bin") == 0,
+              "slot path = %s", path);
+        CHECK(fvp_save_slot_path(path, sizeof path, "g", 0) == 1 &&
+              strcmp(path, "g/save/s000.bin") == 0, "slot 0 = %s", path);
+        CHECK(fvp_save_slot_path(path, sizeof path, "g", 999) == 1 &&
+              strcmp(path, "g/save/s999.bin") == 0, "slot 999 = %s", path);
+        CHECK(fvp_save_slot_path(path, sizeof path, "g", 1000) == 0,
+              "slot 1000 rejected");
+        CHECK(fvp_save_slot_path(path, sizeof path, "g", -1) == 0,
+              "slot -1 rejected");
+        CHECK(fvp_save_slot_path(path, sizeof path, NULL, 1) == 0,
+              "NULL dir rejected");
+        CHECK(fvp_save_slot_path(NULL, sizeof path, "g", 1) == 0,
+              "NULL buf rejected");
+        CHECK(fvp_save_slot_path(path, 0, "g", 1) == 0, "zero cap rejected");
+        CHECK(fvp_save_slot_path(path, 8, "C:/games/iro", 3) == 0,
+              "too small buffer rejected");
+    }
     FvpSaveSlot t;
     unsigned char *buf;
     size_t need;

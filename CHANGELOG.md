@@ -53,6 +53,21 @@
 
 ### 新增
 
+- **存档槽路径助手 `fvp_save_slot_path()` + 存档请求消费流程复核（本轮）**
+  - `src/save.c` 新增 `fvp_save_slot_path(buf, cap, game_dir, slot)`：照抄引擎的
+    格式串 **`"%s/save/s%03d.bin"`**（iroseka_HD.exe `0x45DA64`），槽号只收 0..999，
+    缓冲不够/参数非法返回 0；`tests/test_save.c` 的 selftest 加 **10 项**（0/999 槽、
+    1000/-1 拒绝、NULL、缓冲太小），单测数 58 → **68**
+  - 复核了"请求 → 落盘"的完整链路（`docs/save-format.md` §1.1）：帧更新 `0x43F7C2` 起
+    检查 `engine+0xfc8`（模板就绪）→ 调 `0x43DE90` 写头部 → 置 `+0xfc9`（快照就绪）；
+    然后再看 `+0xfca`（= `SaveWrite` 请求）与 `+0xfcc`（槽号），
+    `wsprintfA` 拼 `%s/save/s%03d.bin` → `0x433FB0` 写文件 → `0x438300`/`0x4396F0`
+    收尾 save.bin
+  - 由此把"游戏内保存不生效"拆成两个明确缺口：① 外壳没消费请求（现在有了拼路径的
+    助手，接上模板写入即可）② 内存快照（`0x43DE90` 之后约 500–597 KB）仍未解
+  - 门禁：`make check` 19 个单测 PASS、`compare.py` 字节一致、`run_all.py --fast`
+    34 PASS、`verify_gfx` 293 px / PSNR 49.94 / SSIM 0.99971 全不变
+
 - **字体表四条命令落地：`TextFontCount/Get/Name/Set`(114/115/116/117)（缺口 24 → 20）**
   - 静态分析确认原版 `engine+0x94` 是 `vector<font>`：Count 返回条数、Get 返回
     `engine+0x6a66c4`（当前字体号）、Name 收 `0..count-1`、**Set 的下界是 -5**
