@@ -136,6 +136,7 @@ typedef struct GfxStats {
      * 兼容性排查时要能指名道姓，而不是只知道"有 N 个豆腐块"。 */
     uint32_t tofu_cp[8];
     int ntofu_cp;
+    int text_prims;   /* 本帧按"文本图元位置"画了几个文本窗口（--text-prims） */
     long long pixels; /* destination pixels touched by the last render   */
 } GfxStats;
 
@@ -170,6 +171,13 @@ int gfx_tex_count(const Gfx *g);
  * speed_ms == 0 表示不等待（一次显示完）。 */
 void gfx_typewriter_set_enabled(Gfx *g, int on);
 int gfx_typewriter_enabled(const Gfx *g);
+/* 文本图元定位（外壳 --text-prims，默认关）：打开后，被 PrimSetText(86) 挂到
+ * 图元上的文本窗口画在**该图元的绝对位置**（父链 x/y 累加），不再单独按版面表画
+ * 一遍。关闭时保持冻结基线的老路径（每层按 gfx_layout_default 画）。 */
+void gfx_set_text_prims(Gfx *g, int on);
+int gfx_text_prims_enabled(const Gfx *g);
+/* 当前绑定到文本窗口的图元个数（type==5 且 tw>=0），诊断用。 */
+int gfx_text_prim_bindings(const Gfx *g);
 void gfx_text_set_speed(Gfx *g, int layer, int ms);
 void gfx_text_advance(Gfx *g, int dt_ms);
 /* 以下三个是给外壳/测试看的诊断值。 */

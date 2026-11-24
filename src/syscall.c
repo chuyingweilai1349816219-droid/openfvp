@@ -513,6 +513,8 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         (void)gfx_set_prim(g, id, GFX_F_TYPE, 5);
         (void)gfx_set_prim(g, id, GFX_F_TW,
                            argc > 1 ? fvp_gfx_int(&a[1]) : 0);
+        /* 原版 0x43BDF5：`movb $0xff,0x7(%eax)` —— 建文本图元时 alpha 直接置 255。 */
+        (void)gfx_set_prim(g, id, GFX_F_ALPHA, 255);
         if (argc > 2 && fvp_gfx_is_int(&a[2])) {
             (void)gfx_set_prim(g, id, GFX_F_X, fvp_gfx_int(&a[2]));
         }

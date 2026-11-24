@@ -1689,6 +1689,9 @@ int fvp_vm_text_buff(FvpVM *vm, const FvpValue *idx, const FvpValue *a,
     vm->text_buff[wi].w = (unsigned short)w;
     vm->text_buff[wi].h = (unsigned short)h;
     vm->text_buff[wi].set = 1u;
+    if (getenv("FVP_DEBUG_TEXT") != NULL) {
+        fprintf(stderr, "TextBuff: layer=%d w=%ld h=%ld\n", wi, w, h);
+    }
     return 1;
 }
 

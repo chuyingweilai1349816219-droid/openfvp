@@ -187,12 +187,15 @@ def have_font_atlas():
                for fn in os.listdir(b))
 
 
-def run_shell_frame(exe, game_dir, script_name, seconds, shot, log_path):
+def run_shell_frame(exe, game_dir, script_name, seconds, shot, log_path,
+                    extra=None):
     """跑外壳 N 秒并抓一帧。返回 (rc 或 None=超时, 日志文本)。"""
     cmd = [exe, '--game', game_dir, '--run-seconds', str(seconds),
            '--no-audio', '--screenshot', shot, '--log', log_path]
     if script_name:
         cmd += ['--script', script_name]
+    if extra:
+        cmd += list(extra)
     try:
         p = subprocess.run(cmd, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE, timeout=seconds + 240)
@@ -396,6 +399,20 @@ def main():
                 m = log_match(r'^\[\s*[0-9.]+\] screenshot: .* (\d+)x(\d+) '
                               r'\((\d+) bytes\) ok', log)
                 check(m is not None, 'screenshot log line present (%s)'
+                      % ((m.group(0) if m else 'missing')))
+
+                # 再来一次短跑，开 --text-prims：文本窗口按 PrimSetText(86) 绑定的
+                # 图元位置画（原版做法），必须真的画出至少一个。
+                shot2 = os.path.join(OUT_DIR, 'mg-%s-textprims.bmp' % name)
+                log2_path = os.path.join(OUT_DIR,
+                                         'mg-%s-textprims.log' % name)
+                rc2, log2 = run_shell_frame(
+                    shell, g['dir'], os.path.basename(g['script']), 4, shot2,
+                    log2_path, extra=['--text-prims'])
+                check(rc2 == 0, 'shell --text-prims exit 0 (got %s)' % rc2)
+                m = log_match(r'^text prims\s+(\d+) drawn, (\d+) bound', log2)
+                check(m is not None and int(m.group(1)) > 0,
+                      'text prims drawn (%s)'
                       % ((m.group(0) if m else 'missing')))
                 print('')
 

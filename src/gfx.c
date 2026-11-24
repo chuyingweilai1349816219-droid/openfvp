@@ -534,6 +534,9 @@ struct Gfx {
     FvpMotion motion; /* 动画补间表；motion_on = 0 时只走时间轴、不动图元 */
     int motion_on;
     int typewriter_on; /* 逐字显示总开关（外壳 --typewriter，默认关） */
+    /* 文本图元定位总开关（外壳 --text-prims，默认关）：打开后挂在图元上的文本窗口
+     * 画在图元的绝对位置（原版做法），没挂图元的层仍按版面表画。 */
+    int text_prims_on;
     char err[256];
 };
 
@@ -2615,7 +2618,7 @@ static int text_visible(const GfxTextWin *tw)
     return tw->used && tw->nlines > 0;
 }
 
-static void draw_text_window(Gfx *g, int idx)
+static void draw_text_window(Gfx *g, int idx, const int *origin)
 {
     GfxTextWin *tw = &g->tw[idx];
     GfxTextLayout lay;
@@ -2723,6 +2726,12 @@ static void draw_text_window(Gfx *g, int idx)
         x = tw->pos[0];
         y = tw->pos[1];
     }
+    /* 文本图元（PrimSetText 86）给出的绝对原点优先：原版把文本窗口挂在图元上，
+     * 位置由图元的 x/y（含父链）决定，所以 `--text-prims` 打开时用这个原点。 */
+    if (origin != NULL) {
+        x = origin[0];
+        y = origin[1];
+    }
     if (idx == 9) {
         for (i = 0; i < nlines; i++) {
             int wpx = text_width(g, f, lines[i].s);
@@ -2760,14 +2769,71 @@ static void draw_text_window(Gfx *g, int idx)
     g->stats.texts++;
 }
 
+/* 文本图元（type 5）的绝对坐标：沿父链累加 x/y。父链断了就用已累加的值。 */
+static void prim_abs_xy(const Gfx *g, int prim_id, int *ox, int *oy)
+{
+    int x = 0;
+    int y = 0;
+    int p = prim_id;
+    int guard = 0;
+
+    while (p > 0 && p < GFX_PRIM_MAX && guard++ < GFX_PRIM_MAX) {
+        x += g->prim[p].x;
+        y += g->prim[p].y;
+        p = g->prim[p].parent;
+    }
+    if (ox != NULL) {
+        *ox = x;
+    }
+    if (oy != NULL) {
+        *oy = y;
+    }
+}
+
 static void draw_text_all(Gfx *g)
 {
     int i;
+    unsigned char bound[GFX_TEXT_MAX];
+
+    memset(bound, 0, sizeof bound);
     if (text_visible(&g->tw[0]) || text_visible(&g->tw[8])) {
         draw_dialog_box(g);
     }
+    /* `--text-prims`：按原版的做法，把"挂到图元上的文本窗口"画在图元的绝对位置上，
+     * 并且不再单独画一遍（否则同一层会画两次）。默认关闭 —— 冻结的像素基线用的
+     * 是"按版面表画"的老路径，开关打开只影响显式要求的运行。 */
+    if (g->text_prims_on) {
+        for (i = 1; i < GFX_PRIM_MAX; i++) {
+            const GfxPrim *p = &g->prim[i];
+            int origin[2];
+
+            if (p->type == 5 && getenv("FVP_DEBUG_TEXT") != NULL) {
+                fprintf(stderr,
+                        "text prim %d: tw=%d draw=%d alpha=%d visible=%d\n", i,
+                        p->tw, p->draw, p->alpha,
+                        (p->tw >= 0 && p->tw < GFX_TEXT_MAX)
+                            ? text_visible(&g->tw[p->tw]) : -1);
+            }
+            if (p->type != 5 || !p->draw) {
+                continue;
+            }
+            if (p->tw < 0 || p->tw >= GFX_TEXT_MAX) {
+                continue;
+            }
+            if (!text_visible(&g->tw[p->tw])) {
+                continue;
+            }
+            prim_abs_xy(g, i, &origin[0], &origin[1]);
+            draw_text_window(g, p->tw, origin);
+            bound[p->tw] = 1u;
+            g->stats.text_prims += 1;
+        }
+    }
     for (i = 0; i < GFX_TEXT_MAX; i++) {
-        draw_text_window(g, i);
+        if (bound[i]) {
+            continue;
+        }
+        draw_text_window(g, i, NULL);
     }
 }
 
@@ -2802,6 +2868,7 @@ void gfx_render(Gfx *g)
     g->stats.resize_cache_hits = 0;
     g->stats.fallback_glyphs = 0;
     g->stats.tofu_glyphs = 0;
+    g->stats.text_prims = 0;
     xf_identity(&xf);
     walk_tree(g, 0, 0, &xf);
     seen = (unsigned char *)calloc(GFX_PRIM_MAX, 1);
@@ -3956,6 +4023,38 @@ size_t gfx_tex_cap_bytes(const Gfx *g)
 }
 
 /* ---- 逐字显示（打字机效果）------------------------------------------ */
+
+/* 文本图元定位（原版做法）：PrimSetText(86) 把文本窗口挂到图元上，位置由图元
+ * 决定。默认关 —— 冻结的像素基线用老路径；`--text-prims` 打开后按图元位置画。 */
+void gfx_set_text_prims(Gfx *g, int on)
+{
+    if (g == NULL) {
+        return;
+    }
+    g->text_prims_on = on ? 1 : 0;
+}
+
+int gfx_text_prims_enabled(const Gfx *g)
+{
+    return (g != NULL) ? g->text_prims_on : 0;
+}
+
+/* 当前绑定到文本窗口的图元个数（type==5 且 tw>=0），诊断用。 */
+int gfx_text_prim_bindings(const Gfx *g)
+{
+    int i;
+    int n = 0;
+
+    if (g == NULL) {
+        return 0;
+    }
+    for (i = 1; i < GFX_PRIM_MAX; ++i) {
+        if (g->prim[i].type == 5 && g->prim[i].tw >= 0) {
+            n += 1;
+        }
+    }
+    return n;
+}
 
 void gfx_typewriter_set_enabled(Gfx *g, int on)
 {

@@ -53,6 +53,28 @@
 
 ### 新增
 
+- **文本窗口的屏幕位置来源查清并实现：`PrimSetText`(86) 把文本挂到图元上（`--text-prims`）**
+  - handler **0x43BDC0**：把图元重建成 **type 5 = 文本图元**——
+    `prim+0x32` = 文本窗口号、`prim+0x14/0x16` = x/y、`prim+0x07` = alpha 255、
+    `prim+0x08` = blend 0。**位置由图元（含父链）决定**，不是脚本给窗口设坐标
+  - 佐证：`TextPos`(122) 在两部目标作品里 **0 次调用**；而《星空的记忆 HD》的层 6
+    （「丘の上」）就来自一个绑定 prim 553 的文本图元 → 之前"层 6 压在正文上"的真正原因
+  - 本站新增 `--text-prims` 开关（默认关）：打开后被绑定的文本窗口画在
+    **图元绝对坐标**（父链 x/y 累加）上，并且不再按版面表画第二遍；关着时保持冻结基线
+  - 实测（8 s 抓帧）：《星空的记忆 HD》「丘の上」从左下正文位置移到海面上方，
+    与正文不再重叠；《五彩斑斓的世界 HD》与原来基本一致（其图元位置与固定版式接近）
+  - 顺带补上 `PrimSetText` 的 alpha：原版建图元时写 `prim+0x07 = 0xFF`，
+    所以这类图元的 alpha 不该是 0（我们的实现在 86 里显式置 255）
+  - 新增 `gfx_set_text_prims()` / `gfx_text_prim_bindings()` 与汇总行
+    `text prims N drawn, M bound`；`FVP_DEBUG_TEXT=1` 会打印每个文本图元的
+    tw/draw/alpha/visible
+  - `tests/verify_multigame.py` 的桌面阶段多一条：`--text-prims` 短跑 4 s，
+    断言 `text prims … drawn` > 0（两作实测都是 1 drawn / 2 bound）
+  - **冻结基线不变**：开关默认关，`verify_gfx` 仍是 293 px / PSNR 49.94 / SSIM 0.99971；
+    `compare.py` 字节一致；`make check` 全绿
+  - 已知遗留：图元 alpha 乘进文字颜色还没做（文本图元目前恒 255）；`--text-prims`
+    目前只在桌面上暴露，`render_vm` 的像素门仍走默认路径
+
 - **更正 `TextOutSize`(120) 的语义：它不是宽高（顺带解答"层 6 版面重叠"的真实成因）**
   - handler **0x43C960** 写的是 `tw+0x595` / `tw+0x596`，校验区间 **0..0xC** / **0..0x8**
     （两个分量各自独立，越界只跳过那一个），**不是** 宽/高

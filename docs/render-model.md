@@ -90,6 +90,32 @@ $PY fvp/work/run_render.py --at 534000 --debug
 实测层用途：**0 = 正文、8 = 人名、9 = 章节/地点标题**（见 §7 的导出帧）。
 `TextColor(i, r, g, b)`、`TextSize(i, w, h)`、`TextSpeed` 等只影响排版/颜色，渲染层按层号用固定版式近似（§9）。
 
+**文本窗口的屏幕位置来自"文本图元"，不是来自脚本（2026-11-24 确证）。**
+`PrimSetText(86)`（handler **0x43BDC0**）把一个图元重建成 **type 5 = 文本图元**：
+
+```
+43bde9: mov %cx,0x32(%eax)   ; prim+0x32 = 文本窗口号（0..31）
+43bded: mov %dx,0x14(%eax)   ; prim+0x14 = x（0，随后由 arg3 覆盖）
+43bdf1: mov %cx,0x16(%eax)   ; prim+0x16 = y（0，随后由 arg4 覆盖）
+43bdf5: movb $0xff,0x7(%eax) ; prim+0x07 = alpha 255
+43bdf9: mov %cl,0x8(%eax)    ; prim+0x08 = blend 0
+```
+
+也就是说**文本窗口是"挂在图元上"画的**：位置由图元的 x/y（含父链累加）决定，alpha /
+draw / 父组平移都跟着图元走。`TextPos`(122) 在两部目标作品里 **0 次调用**，这解释了
+为什么"按层号固定版式"永远对不上层 6 这类窗口。
+
+本站两种画法：
+
+| 模式 | 位置来源 | 用途 |
+|---|---|---|
+| 默认（冻结基线） | `gfx_layout_default(layer)` 的固定版式 | 与 Python 参考渲染器逐像素可比（`verify_gfx` 293 px 差） |
+| `--text-prims` | `PrimSetText(86)` 绑定的图元绝对坐标 | 更接近原版；《星空的记忆 HD》的「丘の上」不再压在正文上 |
+
+开关打开时被绑定的层**不再按版面表画第二遍**（`draw_text_all()` 里的 `bound[]`），
+汇总行 `text prims N drawn, M bound` 给出这一帧实际用图元画了几个窗口。
+图元 alpha 直接乘进文字颜色这一步还没做（文本图元目前恒 255，见 `PrimSetText` 的注释）。
+
 ### 1.4 parts（立绘表情差分）
 
 `PartsLoad(partsId 0..0x3F, name)`：载入一张 **fmt=2 的多帧图**（`0x4294a0` 处 `cmpw $0x2` 校验），

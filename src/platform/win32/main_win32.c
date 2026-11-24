@@ -105,6 +105,7 @@ typedef struct Options {
     int verbose;
     int unknown_all; /* --unknown-all: 退出总结打印全部未实现命令 */
     int typewriter; /* --typewriter: 逐字显示（默认关，关时像素基准不变） */
+    int text_prims; /* --text-prims: 按文本图元（PrimSetText 86）定位，默认关 */
 } Options;
 
 /* ------------------------------------------------------------------ */
@@ -416,6 +417,7 @@ static const wchar_t *usage_text(void)
             L"  --no-threads        关闭协程槽 0..31（A/B 用；默认开启，本作脚本行为中立）\n"
             L"  --unknown-all       退出总结打印全部未实现命令（默认只打 top 12）\n"
             L"  --typewriter        逐字显示文本（按 TextSpeed，默认关；关时像素基准不变）\n"
+           L"  --text-prims        文本窗口画在 PrimSetText(86) 绑定的图元位置上（默认关）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --startup-trace FILE 把启动各阶段写进 FILE（日志打开之前也能落盘，\n"
@@ -493,6 +495,7 @@ static void defaults(Options *o)
     o->threads = 1;
     o->tex_cache_mb = 256;
     o->typewriter = 0;
+    o->text_prims = 0;
     o->feed_text = 1;
 }
 
@@ -654,6 +657,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->unknown_all = 1;
         } else if (wcscmp(a, L"--typewriter") == 0) {
             o->typewriter = 1;
+        } else if (wcscmp(a, L"--text-prims") == 0) {
+            o->text_prims = 1;
         } else if (wcscmp(a, L"--tex-cache-mb") == 0) {
             NEED_VALUE();
             if (!parse_int_w(v, &o->tex_cache_mb) || o->tex_cache_mb < 0 ||
@@ -1841,6 +1846,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         fvp_logf("gfx: texture cache cap %d MiB%s", opts.tex_cache_mb,
                  opts.tex_cache_mb == 0 ? " (unlimited)" : "");
         gfx_typewriter_set_enabled(gfx, opts.typewriter);
+    gfx_set_text_prims(gfx, opts.text_prims);
+    fvp_logf("gfx: text prims %s", opts.text_prims ? "on" : "off");
         fvp_logf("gfx: typewriter %s", opts.typewriter ? "on" : "off");
         nfonts_loaded = load_fonts(gfx, &opts, exe_dir, fonts);
         fvp_logf("gfx: %d font atlas(es) registered", nfonts_loaded);
@@ -2365,6 +2372,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         APPEND("glyphs         %d tofu, %d from fallback atlas\n",
                gfx_stats(gfx)->tofu_glyphs,
                gfx_stats(gfx)->fallback_glyphs);
+        APPEND("text prims     %d drawn, %d bound (PrimSetText 86, --text-prims %s)\n",
+               gfx_stats(gfx)->text_prims, gfx_text_prim_bindings(gfx),
+               opts.text_prims ? "on" : "off");
         if (gfx_stats(gfx)->ntofu_cp > 0) {
             int ti;
 
