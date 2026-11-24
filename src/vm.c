@@ -737,6 +737,7 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     vm->window_mode_last = -1;
     vm->exit_mode_last = -1;
     vm->rand_state = 1u;
+    vm->request_slot = -1;
     vm->save_thumb_w = 96; /* 引擎初值 96x72（docs/save-format.md §2.3） */
     vm->save_thumb_h = 72;
     /* 协程槽默认开启：实测（docs/05-threads.md §10）对本作脚本行为中立 ——
@@ -1090,6 +1091,71 @@ static char *arena_cstr(FvpVM *vm, const FvpValue *v)
     }
     s = fvp_arena_str(&vm->arena, v->str->data, v->str->len);
     return (char *)s->data;
+}
+
+static int request_slot_of(const FvpValue *slot, int *out)
+{
+    long v;
+
+    if (slot == NULL || slot->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    v = (long)slot->i;
+    if (v < 0 || v > 999) {
+        return 0;
+    }
+    *out = (int)v;
+    return 1;
+}
+
+int fvp_vm_request_load(FvpVM *vm, const FvpValue *slot)
+{
+    int s;
+
+    if (vm == NULL || !request_slot_of(slot, &s)) {
+        return 0;
+    }
+    vm->load_calls += 1u;
+    vm->load_request = 1u;
+    vm->request_slot = s;
+    return 1;
+}
+
+int fvp_vm_request_save(FvpVM *vm, const FvpValue *slot)
+{
+    int s;
+
+    if (vm == NULL || !request_slot_of(slot, &s)) {
+        return 0;
+    }
+    vm->save_calls += 1u;
+    vm->save_request = 1u;
+    vm->request_slot = s;
+    return 1;
+}
+
+int fvp_vm_take_load_request(FvpVM *vm)
+{
+    int s;
+
+    if (vm == NULL || vm->load_request == 0u) {
+        return -1;
+    }
+    s = vm->request_slot;
+    vm->load_request = 0u;
+    return s;
+}
+
+int fvp_vm_take_save_request(FvpVM *vm)
+{
+    int s;
+
+    if (vm == NULL || vm->save_request == 0u) {
+        return -1;
+    }
+    s = vm->request_slot;
+    vm->save_request = 0u;
+    return s;
 }
 
 int fvp_vm_rand(FvpVM *vm)

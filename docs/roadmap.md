@@ -228,22 +228,22 @@ iroseka 的文本只推进到 **1,170 行**就停住了（`--click` 从 4000 调
 
 ```
 commands             148
-handler in a switch  121
+handler in a switch  123
 generic *Test rule   1
 documented no-op     0
-MISSING              26
+MISSING              24
 ```
 
-26 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
+24 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
 
 `CursorShow(12) ExitDialog(16) InputFlash(27) InputGetRepeat(33) InputSetClick(37)
-LipAnim(38) LipSync(39) Load(40) MotionPause(60) MovieStop(63) PartsMotion(66)
+LipAnim(38) LipSync(39) MotionPause(60) MovieStop(63) PartsMotion(66)
 PartsMotionPause(67) PartsMotionStop(68) PartsRGB(70) PrimGroupMove(74)
-PrimSetSnow(84) SaveWrite(96) Snow(97) SnowStart(98) SnowStop(99)
+PrimSetSnow(84) Snow(97) SnowStart(98) SnowStop(99)
 TextFontCount(114) TextFontGet(115) TextFontName(116) TextFontSet(117)
 TextPause(121) ThreadRaise(134)`
 
-其中 `Rand(92)` / `TextRepaint(124)` 已在 2026-11-24 补齐（见 CHANGELOG），
+已补齐的：`Rand(92)` / `TextRepaint(124)` / **`Load(40)` / `SaveWrite(96)`**（见 CHANGELOG）。
 `TextFont*`(114..117) 需要一个"字体表"模型（原版是 engine+0x94 的 vector<font>，
 名字来自 exe 注册表）才能忠实实现，暂列缺口。
 

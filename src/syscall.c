@@ -1696,6 +1696,21 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * 本站没有 3D 场景，只记录。 */
     /* 92 Rand()：handler 0x437a20 → 返回 CRT rand()（0..0x7FFF）。
      * 124 TextRepaint()：handler 0x437a50 → 让文本重画；本站每帧全画，空操作。 */
+    /* 40 Load(slot 0..999) / 96 SaveWrite(slot 0..999)：handler 0x43a870 /
+     * 0x43c1e0 —— 只把"请求 + 槽号"记进引擎字段（+0xfcb / +0xfca / +0xfcc），
+     * 真正的文件读写由外壳/界面那一侧做。 */
+    case 40:
+        if (argc >= 1) {
+            (void)fvp_vm_request_load(vm, &args[0]);
+            return;
+        }
+        break;
+    case 96:
+        if (argc >= 1) {
+            (void)fvp_vm_request_save(vm, &args[0]);
+            return;
+        }
+        break;
     case 92:
         t->temp = fvp_make_int(fvp_vm_rand(vm));
         return;

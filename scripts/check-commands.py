@@ -40,7 +40,7 @@ ALLOWLIST = {
 
 # 已知缺口数（2026-11-24 审计）。这是"棘轮"：实现掉一条就把这个数改小；
 # 缺口数一旦变大（有人删了 case 或换了生成表），--strict 会失败。
-MISSING_BASELINE = 26
+MISSING_BASELINE = 24
 
 BLOCK_NAMES = ['fvp_gfx_argc', 'fvp_sys_gfx', 'fvp_sys_snd', 'fvp_syscall']
 HANDLER_BLOCKS = BLOCK_NAMES[1:]     # 前三个之外的都算"有处理"

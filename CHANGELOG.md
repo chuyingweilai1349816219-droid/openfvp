@@ -53,6 +53,24 @@
 
 ### 新增
 
+- **`Load`(40) / `SaveWrite`(96) 落地（本轮，缺口 26 → 24）—— 交互闭环的第一环**
+  - `Load(slot 0..999)`：handler **0x43a870**，置 `engine+0xfcb = 1` 与
+    `engine+0xfcc = slot`，再置当前线程 ctx 的 `+0x68e7d0 = 1`
+  - `SaveWrite(slot 0..999)`：handler **0x43c1e0**，置 `engine+0xfca = 1` 与
+    `engine+0xfcc = slot`；若 `engine+0xfc9 != 0` 还要 `call 0x438540(engine+0x14, slot)`
+    立即落盘
+  - **关键结论**：这两条命令本身**不读写文件**，只把"请求 + 槽号"写进引擎字段，
+    真正的读写在界面/外壳一侧 —— 所以"游戏内保存不生效"的根因不是这两条没实现，
+    而是**外壳没有消费请求 + 内存快照（0x43DE90）未解**
+  - 实现：`FvpVM` 新增 `load_request / save_request / request_slot` +
+    `fvp_vm_take_load_request()/take_save_request()`（取走语义），两个外壳汇总打印
+    `save/load request slot=...`；单测 `tests/test_vmmisc.c` 扩到 **2090 项**
+  - 实测：90 万 / 400 万步 headless 跑都没触发（在更后面的交互流程里）；用合成脚本
+    `pushint8 5; syscall 40; pushint8 7; syscall 96` 验证接线成功：
+    `save/load request slot=7 (load 1 call(s), save 1 call(s))`
+  - `scripts/check-commands.py` 棘轮 26 → **24**；`make check` 19 个单测、
+    `compare.py` 字节一致、`verify_gfx` 293 px / PSNR 49.94 / SSIM 0.99971 全不变
+
 - **`render_vm --watch-gaiji`：按文本内容找外字帧（本轮，工具就位但没找到帧）**
   - 每帧检查文本窗口内容，命中已注册外字码点就停在那一帧，存
     `gaiji-hit-on.png` / `gaiji-hit-off.png`（关外字再渲一次）供逐像素 A/B；

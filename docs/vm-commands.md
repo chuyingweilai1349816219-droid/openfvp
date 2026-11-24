@@ -438,6 +438,23 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### Load(40) / SaveWrite(96)（**已实现：请求标志**）
+
+| id | 命令 | argc | 语义 / 证据 |
+| ---: | --- | ---: | --- |
+| 40 | Load | 1 | `(slot 0..0x3E7=999)`。handler **0x43a870**：参数必须是 int 且在 0..999，然后 `engine+0xfcb = 1`（读档请求）、`engine+0xfcc = slot`，并把当前线程 ctx 的 `+0x68e7d0 = 1` |
+| 96 | SaveWrite | 1 | `(slot 0..999)`。handler **0x43c1e0**：`engine+0xfca = 1`（存档请求）、`engine+0xfcc = slot`；**另外**若 `engine+0xfc9 != 0` 还会 `call 0x438540(engine+0x14, slot)` 立即落盘 |
+
+两条命令**本身不读写文件**，只是把"请求 + 槽号"写进引擎字段，由界面/外壳一侧执行。
+本站照这个模型实现：`FvpVM` 里有 `load_request / save_request / request_slot`，
+并提供 `fvp_vm_take_load_request()` / `fvp_vm_take_save_request()` 给外壳取走
+（取走语义和 `InputGetWheel` 一致）；两个外壳的汇总额外打印
+`save/load request slot=... (load N call(s), save N call(s))`。
+
+实测：iroseka 90 万 / 400 万步 headless 跑都没有触发这两条（它们在更后面的
+交互流程里）；用合成脚本 `pushint8 5; syscall 40; pushint8 7; syscall 96`
+验证接线：汇总显示 `request slot=7 (load 1 call(s), save 1 call(s))`。
+
 ### Rand(92) / TextRepaint(124)（**已实现**）
 
 | id | 命令 | argc | 语义 / 证据 |

@@ -268,6 +268,20 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* Load(40) / SaveWrite(96)：存档请求。静态分析（handler 0x43a870 / 0x43c1e0）：
+     *   两条都要求参数是 int 且 0..0x3E7（999）的槽号，然后
+     *     engine+0xfcc = 槽号
+     *     Load(40)      → engine+0xfcb = 1（读档请求），再置线程 ctx 的 +0x68e7d0 = 1
+     *     SaveWrite(96) → engine+0xfca = 1（存档请求）；若 engine+0xfc9 != 0，
+     *                     还额外 call 0x438540(engine+0x14, 槽号) 立即落盘
+     * 也就是说这两条命令**本身不读写文件**，只是把"请求 + 槽号"记进引擎字段，
+     * 由界面/外壳那一侧去执行。本站照这个模型做：记录请求，由外壳用 take 取走。 */
+    unsigned char load_request;   /* engine+0xfcb */
+    unsigned char save_request;   /* engine+0xfca */
+    int request_slot;             /* engine+0xfcc：最近一次请求的槽号，-1 = 没有 */
+    uint64_t load_calls;
+    uint64_t save_calls;
+
     /* Rand(92)：handler 0x437a20 —— 把 retval 标成 int，然后 `call 0x4483da`
      * （MSVC CRT 的 `rand()`），返回值直接当 retval。也就是"返回一个 0..RAND_MAX
      * 的整数"，MSVC 的 RAND_MAX = 0x7FFF。本站用固定种子的 xorshift32 实现，
@@ -390,6 +404,14 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* Load(40) / SaveWrite(96)：记下请求（槽号 0..999），返回 1 = 参数合法。
+ * fvp_vm_take_load_request / take_save_request 由外壳取走请求并清标志
+ * （取走语义和 InputGetWheel 一致）；没有待处理请求时返回 -1。 */
+int fvp_vm_request_load(FvpVM *vm, const FvpValue *slot);
+int fvp_vm_request_save(FvpVM *vm, const FvpValue *slot);
+int fvp_vm_take_load_request(FvpVM *vm);
+int fvp_vm_take_save_request(FvpVM *vm);
+
 /* Rand(92)：返回 0..0x7FFF 的伪随机数（固定种子，可复现）。 */
 int fvp_vm_rand(FvpVM *vm);
 /* GaijiLoad(21)：记录外字加载参数，返回 1 = 生效（两个字符串 + size 12..64）。 */

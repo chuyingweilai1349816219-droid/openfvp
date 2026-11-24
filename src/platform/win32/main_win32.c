@@ -2358,6 +2358,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.control_calls[1],
                (unsigned long long)vm.control_calls[2],
                (unsigned long long)vm.control_calls[3]);
+        APPEND("save/load      request slot=%d (load %llu call(s), save "
+               "%llu call(s))\n", vm.request_slot,
+               (unsigned long long)vm.load_calls,
+               (unsigned long long)vm.save_calls);
         APPEND("rand           state=%u ; text repaint %llu call(s)\n",
                (unsigned)vm.rand_state,
                (unsigned long long)vm.text_repaint_calls);
