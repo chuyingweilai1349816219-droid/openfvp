@@ -578,7 +578,8 @@ static void usage(const char *prog)
     fprintf(stderr,
             "usage: %s <script.hcb> [--game DIR] [--steps N] [--click N]\n"
             "       [--enc cp932|gbk] [--frame-steps N] [--out DIR]\n"
-            "       [--hold-text N] [--motion] [--motion-dt MS] [--no-png] [--quiet]\n",
+            "       [--hold-text N] [--motion] [--motion-dt MS] [--typewriter]\n"
+            "       [--typewriter-dt MS] [--no-png] [--quiet]\n",
             prog);
 }
 
@@ -594,6 +595,8 @@ int main(int argc, char **argv)
     int hold_window = 30000;
     int motion = 0;
     int motion_dt = 16;
+    int typewriter = 0;   /* --typewriter: 逐字显示（确定性验证用） */
+    int tw_dt = 16;       /* --typewriter-dt: 每帧推进的毫秒数 */
     int no_png = 0;
     int quiet = 0;
     int i;
@@ -650,7 +653,11 @@ int main(int argc, char **argv)
             no_png = 1;
         } else if (strcmp(a, "--motion") == 0) {
             motion = 1;
-        } else if (strcmp(a, "--motion-dt") == 0 && i + 1 < argc) {
+        } else if (strcmp(a, "--typewriter") == 0) {
+            typewriter = 1;
+        } else if (strcmp(a, "--typewriter-dt") == 0 && i + 1 < argc) {
+            tw_dt = (int)strtol(argv[++i], NULL, 10);
+} else if (strcmp(a, "--motion-dt") == 0 && i + 1 < argc) {
             motion_dt = (int)strtol(argv[++i], NULL, 10);
         } else if (strcmp(a, "--quiet") == 0) {
             quiet = 1;
@@ -762,6 +769,7 @@ int main(int argc, char **argv)
     vm.click_period = click;
     fvp_vm_attach_gfx(&vm, g);
     gfx_motion_set_enabled(g, motion);
+    gfx_typewriter_set_enabled(g, typewriter);
     shadow.vm = &vm;
     if (vm.gfx_bridge != NULL) {
         vm.gfx_bridge->on_text = shadow_on_text;
@@ -783,6 +791,7 @@ int main(int argc, char **argv)
             break; /* no runnable thread left */
         }
         gfx_motion_advance(g, motion_dt);
+        gfx_text_advance(g, tw_dt);
         nheld = shadow_hold_apply(&shadow, held);
         r0 = now_ms();
         gfx_render(g);

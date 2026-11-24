@@ -44,6 +44,8 @@
 #pragma weak gfx_text_set_out_size
 #pragma weak gfx_text_set_pos
 #pragma weak gfx_text_set_size
+#pragma weak gfx_text_set_speed
+#pragma weak gfx_text_busy
 /* 动画补间（src/motion.c + gfx 侧）：只有链接了 gfx.c 的程序才有这些符号。 */
 #pragma weak gfx_get_prim
 #pragma weak gfx_motion_add
@@ -563,8 +565,11 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
                               fvp_gfx_int(&a[2]));
         }
         break;
-    case 129: /* TextSpeed: no gfx entry point (text is drawn as static
-               * lines, like render.py); intentionally a no-op */
+    case 129: /* TextSpeed(layer, ms)：存进 32 个窗口属性，同时交给渲染层，
+               * 逐字显示（--typewriter）打开时按这个速度推进。 */
+        if (argc > 1) {
+            gfx_text_set_speed(g, id, fvp_gfx_int(&a[1]));
+        }
         break;
     default:
         return 0; /* 主 switch 也没有 case 的命令：仍算未实现 */
@@ -1367,6 +1372,16 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             return;
         }
         break;
+    /* 130 TextSuspendChr(layer)：等这个文本窗口把字逐字显示完。
+     * 只在渲染层开了逐字显示（外壳 --typewriter）且窗口还没打完时才挂起；
+     * 默认关闭时 gfx_text_busy() 在链接了 gfx 的程序里也返回 0，所以旧的
+     * 「立即继续」行为不变（fvm.exe 没链接 gfx.c，弱符号为空）。 */
+    case 130:
+        if (argc >= 1 && vm->gfx_bridge != NULL && gfx_text_busy != NULL &&
+            gfx_text_busy(vm->gfx_bridge->gfx, (int)args[0].i)) {
+            t->blocked = 1;
+        }
+        return;
     /* 139 TimerSet(timerId 0..15, ms 1..100000)：启动 16 个定时器之一。
      * 138 TimerGet(timerId, opt 1..10000)：返回已过毫秒；给了 opt 则按
      * elapsed*opt/duration 换算（docs/vm-commands.md §5）。

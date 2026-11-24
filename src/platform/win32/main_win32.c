@@ -103,6 +103,7 @@ typedef struct Options {
     int console;
     int verbose;
     int unknown_all; /* --unknown-all: 退出总结打印全部未实现命令 */
+    int typewriter; /* --typewriter: 逐字显示（默认关，关时像素基准不变） */
 } Options;
 
 /* ------------------------------------------------------------------ */
@@ -354,6 +355,7 @@ static const wchar_t *usage_text(void)
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
             L"  --no-threads        关闭协程槽 0..31（A/B 用；默认开启，本作脚本行为中立）\n"
             L"  --unknown-all       退出总结打印全部未实现命令（默认只打 top 12）\n"
+            L"  --typewriter        逐字显示文本（按 TextSpeed，默认关；关时像素基准不变）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --console           同时输出到启动它的控制台窗口\n"
@@ -427,6 +429,7 @@ static void defaults(Options *o)
     o->timeline = 0;
     o->threads = 1;
     o->tex_cache_mb = 256;
+    o->typewriter = 0;
     o->feed_text = 1;
 }
 
@@ -580,6 +583,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->threads = 0;
         } else if (wcscmp(a, L"--unknown-all") == 0) {
             o->unknown_all = 1;
+        } else if (wcscmp(a, L"--typewriter") == 0) {
+            o->typewriter = 1;
         } else if (wcscmp(a, L"--tex-cache-mb") == 0) {
             NEED_VALUE();
             if (!parse_int_w(v, &o->tex_cache_mb) || o->tex_cache_mb < 0 ||
@@ -1759,6 +1764,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         gfx_tex_set_cap_bytes(gfx, (size_t)opts.tex_cache_mb * 1024u * 1024u);
         fvp_logf("gfx: texture cache cap %d MiB%s", opts.tex_cache_mb,
                  opts.tex_cache_mb == 0 ? " (unlimited)" : "");
+        gfx_typewriter_set_enabled(gfx, opts.typewriter);
+        fvp_logf("gfx: typewriter %s", opts.typewriter ? "on" : "off");
         nfonts_loaded = load_fonts(gfx, &opts, exe_dir, fonts);
         fvp_logf("gfx: %d font atlas(es) registered", nfonts_loaded);
         fvp_logf("gfx: text bridge %s (temporary until the syscall layer "
@@ -2076,6 +2083,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
         /* 动画补间：默认关闭时只走时间轴，不改图元字段。 */
         gfx_motion_advance(gfx, (int)(frame_dt * 1000.0));
+        /* 逐字显示：用同一帧 dt 推进；关闭时 gfx_text_advance() 直接返回。 */
+        gfx_text_advance(gfx, (int)(frame_dt * 1000.0));
         perf_add(&perf, present_ms, frame_dt * 1000.0);
         perf_add(&wperf, present_ms, frame_dt * 1000.0);
         frame += 1;

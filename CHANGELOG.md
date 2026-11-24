@@ -8,6 +8,18 @@
 
 ### 新增
 
+- **逐字显示（打字机效果）：`TextSpeed`(129) + `TextSuspendChr`(130) 的渲染侧落地**
+  - `gfx` 侧：文本窗口新增 `speed_ms` / `shown_chars` / `total_chars` / `accum_ms`；
+    `gfx_text_advance(g, dt_ms)` 按"每字毫秒"推进，`gfx_render()` 只画前 N 个字符
+    （UTF-8 码点边界安全，2/3/4 字节序列不会切半个字）
+  - `TextSuspendChr(130)`：窗口还在逐字显示时把线程挂起（走现有的 yield 机制）
+  - **默认关闭**（外壳 `--typewriter` 打开）：关闭时 `shown_chars == total_chars`，
+    绘制逻辑不看这些字段，`gfx_text_advance()` 直接返回 —— **已验收的帧一个像素都不变**
+  - 实测：外壳 `--typewriter` 跑 12 s / 57.42 fps 正常，`--screenshot` 导出帧里台词完整
+    显示（1920×1080，见 `out/tw-shell-on.png`）；未实现命令从 25 种降到 23 种（130 消失）
+  - 测试 `tests/test_typewriter.c` **31 项**（已并入 `run_all`）：默认关闭不推进、
+    按 ms 逐字、余数不丢、speed 0 立刻显示、UTF-8 混排计数、关掉时拉满、多窗口独立、NULL 安全
+  - `render_vm` 新增 `--typewriter` / `--typewriter-dt`，用于确定性回放
 - **引擎定时器 `TimerSet`(139) / `TimerGet`(138) / `TimerSuspend`(140)**
   - 语义来自静态分析（`docs/vm-commands.md` §5）：16 个定时器，set 记 `{active, start, duration}`，
     get 返回已过毫秒、给了第二参数则返回 `elapsed*opt/duration`

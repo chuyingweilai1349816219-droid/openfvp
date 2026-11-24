@@ -269,6 +269,22 @@ clean-timer:
 .PHONY: test_timer clean-timer
 
 # ---------------------------------------------------------------------------
+# 逐字显示（TextSpeed + TextSuspendChr 的渲染侧）
+#   make test_typewriter
+# ---------------------------------------------------------------------------
+TYPEWRITER_TEST = bin/test_typewriter$(EXE)
+
+test_typewriter: $(TYPEWRITER_TEST)
+
+$(TYPEWRITER_TEST): tests/test_typewriter.c src/gfx.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_typewriter.c $(GFX_OBJ) $(LDFLAGS) -lm
+
+clean-typewriter:
+	-rm -f $(TYPEWRITER_TEST)
+
+.PHONY: test_typewriter clean-typewriter
+
+# ---------------------------------------------------------------------------
 # 纹理缓存 LRU 上限（长跑内存不再无界增长）
 #   make test_tex_cache
 # ---------------------------------------------------------------------------

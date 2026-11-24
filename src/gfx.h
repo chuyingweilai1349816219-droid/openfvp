@@ -157,6 +157,20 @@ const uint32_t *gfx_canvas(Gfx *g, int *w, int *h);
 size_t gfx_tex_bytes(const Gfx *g);
 int gfx_tex_count(const Gfx *g);
 
+/* ---- 逐字显示（打字机效果）-------------------------------------------
+ * 默认关闭：关闭时 TextPrint 的整行文本一次全部可见，已验收的帧一个像素都不变。
+ * 打开后：TextPrint 的新行从 0 个字符开始，调用方每帧 gfx_text_advance(dt_ms)
+ * 按 TextSpeed(129) 的“每字毫秒”推进；gfx_render() 只画前 shown_chars 个字符。
+ * speed_ms == 0 表示不等待（一次显示完）。 */
+void gfx_typewriter_set_enabled(Gfx *g, int on);
+int gfx_typewriter_enabled(const Gfx *g);
+void gfx_text_set_speed(Gfx *g, int layer, int ms);
+void gfx_text_advance(Gfx *g, int dt_ms);
+/* 以下三个是给外壳/测试看的诊断值。 */
+int gfx_text_shown_chars(const Gfx *g, int layer);
+int gfx_text_total_chars(const Gfx *g, int layer);
+int gfx_text_busy(const Gfx *g, int layer); /* 1 = 还在逐字显示 */
+
 /* 纹理缓存上限（字节）。默认 512 MiB，见 gfx.c 的 GFX_TEX_CACHE_DEFAULT_BYTES。
  * 超上限时按 LRU 淘汰 refs == 1 的条目（被图元/组/部件引用的永远不会被淘汰，
  * 需要时会重新解码），因此像素输出不变。cap 传 0 = 不限制。

@@ -307,6 +307,17 @@ def build_steps(args):
         steps.append(Step('test_timer', [test_timer], 120,
                           note='16 timers: set/elapsed/percent/clamp/overflow'))
 
+    # 4m. typewriter (逐字显示，默认关闭 -> 像素基线不变)
+    test_typewriter = tools.get('test_typewriter')
+    if not test_typewriter or not os.path.isfile(test_typewriter):
+        steps.append(Step('test_typewriter', None, 0,
+                          skip_reason='bin/test_typewriter.exe missing '
+                                      '(run: make test_typewriter)'))
+    else:
+        steps.append(Step('test_typewriter', [test_typewriter], 120,
+                          note='off = fully shown; on = per-char by TextSpeed; '
+                               'UTF-8 bounds, speed 0, multi-window'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()

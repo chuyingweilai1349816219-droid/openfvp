@@ -472,6 +472,12 @@ typedef struct GfxTextWin {
     int out_size[2];
     GfxTextLayout lay;
     int lay_custom;
+    /* 逐字显示（打字机效果）。typewriter_on == 0 时这些字段不参与绘制，
+     * 文本一次全部可见 —— 已验收的帧因此一个像素都不变。 */
+    int speed_ms;    /* TextSpeed(129)：每字毫秒，0 = 不等待 */
+    int shown_chars; /* 当前可见的字符数（按 UTF-8 码点算） */
+    int total_chars; /* 最近一次 TextPrint 的字符数 */
+    int accum_ms;    /* 累计的、还没凑够一个字的毫秒数 */
 } GfxTextWin;
 
 struct Gfx {
@@ -498,6 +504,7 @@ struct Gfx {
     unsigned long tex_evictions; /* 因上限被淘汰的图像数 */
     FvpMotion motion; /* 动画补间表；motion_on = 0 时只走时间轴、不动图元 */
     int motion_on;
+    int typewriter_on; /* 逐字显示总开关（外壳 --typewriter，默认关） */
     char err[256];
 };
 
@@ -2259,6 +2266,9 @@ static void draw_name_plate(Gfx *g, int x, int y, int tw, int size)
     paint_round_box(g, x - 26, y - 10, x + tw + 26, y + size + 14, 12, 238,
                     242, 250, 232, 1, 120, 160, 215, 220, 2);
 }
+static int utf8_count_chars(const char *s);
+static char *utf8_truncate(const char *s, int n);
+
 static int text_visible(const GfxTextWin *tw)
 {
     return tw->used && tw->nlines > 0;
@@ -2271,12 +2281,23 @@ static void draw_text_window(Gfx *g, int idx)
     GfxFont *f;
     GfxLine *lines = NULL;
     char **raw = NULL;
+    char *clip = NULL;   /* 逐字显示时截断后的最后一行 */
     int nraw = 0, nlines = 0;
     int size, i, x, y;
     int nkeep;
+    int budget = 0;      /* 还剩几个可见字符（只在新行里扣） */
+    int clipped = 0;
 
     if (!text_visible(tw)) {
         return;
+    }
+    /* 逐字显示：只把前 shown_chars 个字符交给排版。关闭时 budget 无限。 */
+    if (g->typewriter_on && tw->shown_chars < tw->total_chars) {
+        budget = tw->shown_chars;
+        clipped = 1;
+        if (budget <= 0) {
+            return; /* 还没开始显示 */
+        }
     }
     lay = tw->lay_custom ? tw->lay : gfx_layout_default(idx);
     size = lay.size;
@@ -2307,6 +2328,40 @@ static void draw_text_window(Gfx *g, int idx)
             lines[nlines++] = wl[j];
         }
         free(wl);
+    }
+    if (clipped) {
+        /* 按字符预算裁掉尾部：只保留前 budget 个码点，最后一行可能被切开。 */
+        int used = 0;
+
+        for (i = 0; i < nlines; i++) {
+            int n = utf8_count_chars(lines[i].s);
+
+            if (used + n <= budget) {
+                used += n;
+                continue;
+            }
+            if (used >= budget) {
+                free(lines[i].s);
+                lines[i].s = NULL;
+                continue;
+            }
+            clip = utf8_truncate(lines[i].s, budget - used);
+            free(lines[i].s);
+            lines[i].s = clip;
+            clip = NULL;
+            used = budget;
+        }
+        /* 裁空的行从中间去掉 */
+        {
+            int w = 0;
+
+            for (i = 0; i < nlines; i++) {
+                if (lines[i].s != NULL) {
+                    lines[w++] = lines[i];
+                }
+            }
+            nlines = w;
+        }
     }
     if (nlines == 0) {
         return;
@@ -2824,6 +2879,75 @@ int gfx_prim_group_out(Gfx *g, int child)
 
 /* ---- text API -------------------------------------------------------- */
 
+static int utf8_step(unsigned char c);
+
+/* UTF-8 码点计数（逐字显示用）。孤立的续字节按 1 个字符算，且不允许跨过
+ * 字符串结尾（否则会读到缓冲区外）。 */
+static int utf8_step(unsigned char c)
+{
+    if (c < 0x80u) {
+        return 1;
+    }
+    if ((c & 0xE0u) == 0xC0u) {
+        return 2;
+    }
+    if ((c & 0xF0u) == 0xE0u) {
+        return 3;
+    }
+    if ((c & 0xF8u) == 0xF0u) {
+        return 4;
+    }
+    return 1; /* 孤立续字节 */
+}
+
+static int utf8_count_chars(const char *s)
+{
+    int n = 0;
+
+    if (s == NULL) {
+        return 0;
+    }
+    while (*s != '\0') {
+        int step = utf8_step((unsigned char)*s);
+
+        while (step > 1 && s[step - 1] == '\0') {
+            step -= 1; /* 截断的多字节序列：只吃掉真实存在的字节 */
+        }
+        s += step;
+        n += 1;
+    }
+    return n;
+}
+
+/* 返回 s 的前 n 个码点的 malloc 副本（按 UTF-8 边界截断）。 */
+static char *utf8_truncate(const char *s, int n)
+{
+    size_t len;
+    size_t i = 0;
+    char *out;
+
+    if (s == NULL) {
+        return NULL;
+    }
+    len = strlen(s);
+    while (i < len && n > 0) {
+        int step = utf8_step((unsigned char)s[i]);
+
+        if (i + (size_t)step > len) {
+            step = (int)(len - i);
+        }
+        i += (size_t)step;
+        n -= 1;
+    }
+    out = (char *)malloc(i + 1);
+    if (out == NULL) {
+        return NULL;
+    }
+    memcpy(out, s, i);
+    out[i] = '\0';
+    return out;
+}
+
 static char *ruby_strip(const char *s)
 {
     size_t n = strlen(s);
@@ -2879,6 +3003,15 @@ void gfx_text_append(Gfx *g, int layer, const char *utf8)
     }
     tw->lines[tw->nlines] = body;
     tw->nlines++;
+    /* 逐字显示：新的一行从"尚未显示"的状态开始，等 gfx_text_advance() 推进。
+     * total_chars 统计的是**整个窗口**的字符数（历史行也算），这样裁剪预算
+     * 能按行顺序正确扣减。关闭时（默认）shown 直接跟上 total，绘制逻辑不看
+     * 这两个字段，所以已验收的帧不受影响。 */
+    tw->total_chars += utf8_count_chars(body);
+    tw->accum_ms = 0;
+    if (!g->typewriter_on) {
+        tw->shown_chars = tw->total_chars;
+    }
 }
 
 void gfx_draw_text(Gfx *g, int layer, const char *utf8)
@@ -2901,6 +3034,9 @@ void gfx_text_clear(Gfx *g, int layer)
         tw->lines[i] = NULL;
     }
     tw->nlines = 0;
+    tw->shown_chars = 0;
+    tw->total_chars = 0;
+    tw->accum_ms = 0;
 }
 
 void gfx_text_set_color(Gfx *g, int layer, int r, int gr, int b)
@@ -3276,6 +3412,97 @@ size_t gfx_tex_bytes(const Gfx *g)
 size_t gfx_tex_cap_bytes(const Gfx *g)
 {
     return (g != NULL) ? g->tex_cap : 0;
+}
+
+/* ---- 逐字显示（打字机效果）------------------------------------------ */
+
+void gfx_typewriter_set_enabled(Gfx *g, int on)
+{
+    int i;
+
+    if (g == NULL) {
+        return;
+    }
+    g->typewriter_on = on ? 1 : 0;
+    if (!on) {
+        /* 关掉时把所有窗口的可见字符数拉到满，避免留下"半句"画面 */
+        for (i = 0; i < GFX_TEXT_MAX; ++i) {
+            g->tw[i].shown_chars = g->tw[i].total_chars;
+            g->tw[i].accum_ms = 0;
+        }
+    }
+}
+
+int gfx_typewriter_enabled(const Gfx *g)
+{
+    return (g != NULL) ? g->typewriter_on : 0;
+}
+
+void gfx_text_set_speed(Gfx *g, int layer, int ms)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return;
+    }
+    if (ms < 0) {
+        ms = 0;
+    }
+    g->tw[layer].speed_ms = ms;
+}
+
+int gfx_text_shown_chars(const Gfx *g, int layer)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return 0;
+    }
+    return g->tw[layer].shown_chars;
+}
+
+int gfx_text_total_chars(const Gfx *g, int layer)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return 0;
+    }
+    return g->tw[layer].total_chars;
+}
+
+/* 该窗口是否还在逐字显示途中（没有文本 / 已显示完 -> 0）。 */
+int gfx_text_busy(const Gfx *g, int layer)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return 0;
+    }
+    if (!g->typewriter_on) {
+        return 0;
+    }
+    return g->tw[layer].shown_chars < g->tw[layer].total_chars;
+}
+
+void gfx_text_advance(Gfx *g, int dt_ms)
+{
+    int i;
+
+    if (g == NULL || !g->typewriter_on || dt_ms <= 0) {
+        return;
+    }
+    for (i = 0; i < GFX_TEXT_MAX; ++i) {
+        GfxTextWin *tw = &g->tw[i];
+        int per;
+
+        if (tw->shown_chars >= tw->total_chars) {
+            continue;
+        }
+        per = tw->speed_ms;
+        if (per <= 0) {
+            tw->shown_chars = tw->total_chars; /* 速度 0 = 不等，一次显示完 */
+            tw->accum_ms = 0;
+            continue;
+        }
+        tw->accum_ms += dt_ms;
+        while (tw->accum_ms >= per && tw->shown_chars < tw->total_chars) {
+            tw->accum_ms -= per;
+            tw->shown_chars += 1;
+        }
+    }
 }
 
 void gfx_tex_set_cap_bytes(Gfx *g, size_t cap)
