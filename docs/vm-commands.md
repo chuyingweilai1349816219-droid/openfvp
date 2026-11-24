@@ -438,6 +438,17 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### SnowStart(98) / SnowStop(99) / PrimSetSnow(84)（**已实现：只记录开关**）
+
+| id | 命令 | argc | 语义 / 证据 | 本站实现 |
+| ---: | --- | ---: | --- | --- |
+| 98 | SnowStart | 2 | handler **0x43C4F0**：arg1 必须 int 且在 **0..1**（雪花层），然后 `snow[layer]` 表（`engine+0x688F1C + layer*0x5048`）**开关字节 = 1**；arg2 这条命令不用 | `snow_on[layer] = 1` + 计数 |
+| 99 | SnowStop | 2 | handler **0x43C520**：同一处写 **0** | `snow_on[layer] = 0` + 计数 |
+| 84 | PrimSetSnow | 4 | handler **0x43BC40**：arg1 必须 int 在 **1..0xFFF**（primId）、arg2 必须 int 在 **0..1**，然后往该图元的积雪参数写 | `prim_snow[primId] = on` + 计数 |
+
+本站没有粒子/积雪渲染，三条都只记录状态（`snow_on[2]` / `prim_snow[4096]`），
+外壳与 `fvm` 汇总打印 `snow layer=..,.. (start N / stop N), prim N call(s)`。
+
 ### CursorShow(12) / ExitDialog(16) / MovieStop(63)（**已实现**）
 
 | id | 命令 | argc | 语义 / 证据 | 本站实现 |

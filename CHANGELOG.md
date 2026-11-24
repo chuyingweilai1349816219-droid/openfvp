@@ -53,6 +53,19 @@
 
 ### 新增
 
+- **`SnowStart`(98) / `SnowStop`(99) / `PrimSetSnow`(84) 落地（缺口 12 → 9）**
+  - `SnowStart(layer 0..1, …)`：handler **0x43C4F0**，写 `engine+0x688F1C + layer*0x5048`
+    处的开关字节 = 1（两层雪花系统）；`SnowStop` 写 0（handler **0x43C520**）
+  - `PrimSetSnow(primId 1..0xFFF, on 0..1, …)`：handler **0x43BC40**，校验后写该图元的
+    积雪参数；本站只记录 on
+  - 本站没有粒子/积雪渲染 → 三条只记录（`snow_on[2]` / `prim_snow[4096]` + 计数），
+    两个外壳汇总打印 `snow layer=…`
+  - 单测 `tests/test_vmmisc.c` 2159 → **2183 项**；棘轮 12 → **9**；门禁全绿
+  - **附：快照对齐尝试 4** —— 6 个槽的"最长连续零段"是 89,960–90,117 B（= 32×0xB28 的
+    98.4%），但位置在距文件尾 43,276–45,002 B 处，落在 §2.4.1 的稀疏块一带，说明
+    "零区 = 协程上下文"不能按顺序直接对齐；副产品是
+    `tail_len − zero_run_end ≈ 43,300 ± 1,700` 这个可用的自检不变量，已写进文档
+
 - **`CursorShow`(12) / `ExitDialog`(16) / `MovieStop`(63) 落地（缺口 15 → 12）**
   - `CursorShow(v)`：handler **0x4374F0**，**只看参数类型**（null→0、其它→1）再 tail-call
     `0x441860(engine,值)`；本站没有 null 值模型 → 恒为 1（与 ControlMask 同一处限制）

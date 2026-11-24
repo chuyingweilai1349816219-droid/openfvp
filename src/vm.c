@@ -1095,6 +1095,43 @@ static char *arena_cstr(FvpVM *vm, const FvpValue *v)
     return (char *)s->data;
 }
 
+static int on_off_of(const FvpValue *v, int *out);
+
+int fvp_vm_snow(FvpVM *vm, const FvpValue *layer, int on)
+{
+    if (vm == NULL || layer == NULL || layer->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    if (layer->i < 0 || layer->i > 1) {
+        return 0;
+    }
+    if (on) {
+        vm->snow_start_calls += 1u;
+    } else {
+        vm->snow_stop_calls += 1u;
+    }
+    vm->snow_on[(int)layer->i] = on ? 1u : 0u;
+    return 1;
+}
+
+int fvp_vm_prim_snow(FvpVM *vm, const FvpValue *prim, const FvpValue *on)
+{
+    int id;
+    int val = 0;
+
+    if (vm == NULL || prim == NULL || prim->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    id = (int)prim->i;
+    if (id < 1 || id >= FVP_PRIM_COUNT) {
+        return 0;
+    }
+    (void)on_off_of(on, &val);
+    vm->prim_snow_calls += 1u;
+    vm->prim_snow[id] = (unsigned char)val;
+    return 1;
+}
+
 int fvp_vm_cursor_show(FvpVM *vm, const FvpValue *v)
 {
     if (vm == NULL || v == NULL) {

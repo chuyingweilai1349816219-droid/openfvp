@@ -1707,6 +1707,25 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      *     同时转给 gfx（打字机推进时跳过暂停的窗口）。 */
     /* 27 InputFlash() / 33 InputGetRepeat() / 37 InputSetClick(v 0/1)。 */
     /* 12 CursorShow(v) / 16 ExitDialog() / 63 MovieStop()。 */
+    /* 98 SnowStart(layer, …) / 99 SnowStop(layer, …) / 84 PrimSetSnow(primId, on, …)。 */
+    case 98:
+        if (argc >= 1) {
+            (void)fvp_vm_snow(vm, &args[0], 1);
+            return;
+        }
+        break;
+    case 99:
+        if (argc >= 1) {
+            (void)fvp_vm_snow(vm, &args[0], 0);
+            return;
+        }
+        break;
+    case 84:
+        if (argc >= 2) {
+            (void)fvp_vm_prim_snow(vm, &args[0], &args[1]);
+            return;
+        }
+        break;
     case 12:
         if (argc >= 1) {
             (void)fvp_vm_cursor_show(vm, &args[0]);

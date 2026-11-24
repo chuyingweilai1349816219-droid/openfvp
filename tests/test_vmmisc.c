@@ -85,6 +85,47 @@ int main(void)
     CHECK(a.text_repaint_calls == 2, "repaint counter (%llu)",
           (unsigned long long)a.text_repaint_calls);
 
+    /* --- 4e. SnowStart(98) / SnowStop(99) / PrimSetSnow(84) --- */
+    {
+        FvpValue l0 = fvp_make_int(0);
+        FvpValue l1 = fvp_make_int(1);
+        FvpValue l2 = fvp_make_int(2);
+        FvpValue on1 = fvp_make_int(1);
+        FvpValue off0 = fvp_make_int(0);
+        FvpValue p2 = fvp_make_int(2);
+        FvpValue p4096 = fvp_make_int(4096);
+
+        CHECK(a.snow_on[0] == 0u && a.snow_on[1] == 0u, "fresh snow off");
+        CHECK(fvp_vm_snow(&a, &l0, 1) == 1, "snow layer 0 on");
+        CHECK(a.snow_on[0] == 1u && a.snow_on[1] == 0u, "layer 0 only");
+        CHECK(fvp_vm_snow(&a, &l1, 1) == 1, "snow layer 1 on");
+        CHECK(a.snow_on[1] == 1u, "layer 1 on");
+        CHECK(fvp_vm_snow(&a, &l0, 0) == 1, "snow layer 0 off");
+        CHECK(a.snow_on[0] == 0u, "layer 0 off");
+        CHECK(fvp_vm_snow(&a, &l2, 1) == 0, "layer 2 rejected");
+        CHECK(fvp_vm_snow(&a, &slot_neg, 1) == 0, "layer -1 rejected");
+        CHECK(fvp_vm_snow(&a, &fl, 1) == 0, "float layer rejected");
+        CHECK(fvp_vm_snow(&a, NULL, 1) == 0, "NULL layer rejected");
+        CHECK(a.snow_start_calls == 2 && a.snow_stop_calls == 1,
+              "snow counters (%llu/%llu)",
+              (unsigned long long)a.snow_start_calls,
+              (unsigned long long)a.snow_stop_calls);
+        CHECK(fvp_vm_snow(NULL, &l0, 1) == 0, "NULL vm snow");
+
+        CHECK(a.prim_snow_calls == 0, "fresh prim snow counter");
+        CHECK(fvp_vm_prim_snow(&a, &p2, &on1) == 1, "prim snow on");
+        CHECK(a.prim_snow[2] == 1u, "prim 2 snow on");
+        CHECK(fvp_vm_prim_snow(&a, &p2, &off0) == 1, "prim snow off");
+        CHECK(a.prim_snow[2] == 0u, "prim 2 snow off");
+        CHECK(fvp_vm_prim_snow(&a, &slot_neg, &on1) == 0, "prim 0 rejected");
+        CHECK(fvp_vm_prim_snow(&a, &p4096, &on1) == 0, "prim 4096 rejected");
+        CHECK(fvp_vm_prim_snow(&a, &p2, NULL) == 1, "NULL on -> 0 但仍生效");
+        CHECK(a.prim_snow[2] == 0u, "NULL on stored as 0");
+        CHECK(a.prim_snow_calls == 3, "prim snow counter (%llu)",
+              (unsigned long long)a.prim_snow_calls);
+        CHECK(fvp_vm_prim_snow(NULL, &p2, &on1) == 0, "NULL vm prim snow");
+    }
+
     /* --- 4d. CursorShow(12) / ExitDialog(16) / MovieStop(63) --- */
     {
         FvpValue on1 = fvp_make_int(1);

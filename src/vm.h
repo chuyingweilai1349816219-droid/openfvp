@@ -274,6 +274,19 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* SnowStart(98) / SnowStop(99) / PrimSetSnow(84)。静态分析：
+     *   98 SnowStart(layer 0..1, …) → handler 0x43C4F0：`snow[layer]+0x688F1C 处 = 1`，
+     *      层号按 `layer*0x5048` 索引（两层雪花系统的参数表）
+     *   99 SnowStop(layer 0..1, …)  → handler 0x43C520：同一处写 0
+     *   84 PrimSetSnow(primId 1..0xFFF, on 0..1, …) → handler 0x43BC40：校验后
+     *      调 0x43????（每个图元的积雪参数），本站只记录 on
+     * 本站没有粒子/积雪渲染，三条都只记录状态 + 计数（写入用位，不猜画面）。 */
+    unsigned char snow_on[2];        /* SnowStart/Stop 的开关 */
+    unsigned char prim_snow[FVP_PRIM_COUNT]; /* PrimSetSnow 的 on */
+    uint64_t snow_start_calls;
+    uint64_t snow_stop_calls;
+    uint64_t prim_snow_calls;
+
     /* CursorShow(12) / ExitDialog(16) / MovieStop(63)。静态分析：
      *   12 CursorShow(v) → handler 0x4374F0：**只看类型**（null → 0、其它 → 1），
      *      然后 tail-call 0x441860(engine, 值)。本站的值模型没有 null，
@@ -456,6 +469,11 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* SnowStart(98) / SnowStop(99)：layer 0..1；返回 1 = 生效。 */
+int fvp_vm_snow(FvpVM *vm, const FvpValue *layer, int on);
+/* PrimSetSnow(84)：primId 1..0xFFF + on 0..1；返回 1 = 生效。 */
+int fvp_vm_prim_snow(FvpVM *vm, const FvpValue *prim, const FvpValue *on);
+
 /* CursorShow(12)：按"值非空"置显示位（我们的模型里恒为 1）。 */
 int fvp_vm_cursor_show(FvpVM *vm, const FvpValue *v);
 /* ExitDialog(16)：只计数（原版按 0x442860 的条件置线程标记）。 */
