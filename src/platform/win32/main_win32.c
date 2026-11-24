@@ -2372,6 +2372,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.control_calls[1],
                (unsigned long long)vm.control_calls[2],
                (unsigned long long)vm.control_calls[3]);
+        APPEND("cursor         show=%d ; exit dialog %llu call(s) ; movie "
+               "stop %llu call(s)\n", (int)vm.cursor_show,
+               (unsigned long long)vm.exit_dialog_calls,
+               (unsigned long long)vm.movie_stop_calls);
         APPEND("input          click=%d repeat=%d flash=%llu setclick=%llu\n",
                (int)vm.input_click, vm.input_repeat,
                (unsigned long long)vm.input_flash_calls,

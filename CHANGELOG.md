@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **`CursorShow`(12) / `ExitDialog`(16) / `MovieStop`(63) 落地（缺口 15 → 12）**
+  - `CursorShow(v)`：handler **0x4374F0**，**只看参数类型**（null→0、其它→1）再 tail-call
+    `0x441860(engine,值)`；本站没有 null 值模型 → 恒为 1（与 ControlMask 同一处限制）
+  - `ExitDialog()`：handler **0x437560**，条件成立时置线程 ctx 的 `+0x68E7D0 = 1` → 只计数
+  - `MovieStop()`：handler **0x43B300**，`call 0x4220F0(engine+0x8C->0x2D4)` 停 WMV →
+    本站没有视频在放，空操作 + 计数（语义上正好成立）
+  - 单测 `tests/test_vmmisc.c` 2149 → **2159 项**；两个外壳汇总多一行 `cursor show=…`
+  - 棘轮 15 → **12**；门禁全绿
+  - **附：快照锚点尝试 3 也失败**（协程上下文的 type/pc/sp 三元判据太弱，命中 28.6 万个
+    位置，0x34 周期），已把"判据必须要求连续多条记录成立 + 用 0x16500 块长度做联合
+    校验"的教训写进 `docs/save-format.md`
+
 - **`InputFlash`(27) / `InputGetRepeat`(33) / `InputSetClick`(37) 落地（缺口 18 → 15）**
   - `InputFlash()`：handler **0x4376A0**，`call 0x442400(engine+0x120)`，无返回值 → 只计数
   - `InputGetRepeat()`：handler **0x437860**，**返回 int**（`engine+0x448`）→ 返回记录值（默认 0）

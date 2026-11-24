@@ -274,6 +274,18 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* CursorShow(12) / ExitDialog(16) / MovieStop(63)。静态分析：
+     *   12 CursorShow(v) → handler 0x4374F0：**只看类型**（null → 0、其它 → 1），
+     *      然后 tail-call 0x441860(engine, 值)。本站的值模型没有 null，
+     *      脚本压出来的都是具体值 → 恒为 1（与 ControlMask 同一处限制，已记录）。
+     *   16 ExitDialog()  → handler 0x437560：`if (0x442860(engine))` 时置
+     *      线程 ctx 的 +0x68E7D0 = 1（"本帧有事要做"的标记）；没有返回值。
+     *   63 MovieStop()   → handler 0x43B300：`call 0x4220F0(engine+0x8C->0x2D4)`
+     *      停掉 WMV 播放器。本站没有视频播放，停 = 空操作（语义上正好成立）。 */
+    unsigned char cursor_show;   /* 1 = 显示光标（默认 1） */
+    uint64_t exit_dialog_calls;
+    uint64_t movie_stop_calls;
+
     /* InputFlash(27) / InputGetRepeat(33) / InputSetClick(37)：输入微调。静态分析：
      *   27 InputFlash()        → handler 0x4376A0，`call 0x442400(engine+0x120)`，无返回值
      *   33 InputGetRepeat()    → handler 0x437860，**返回 int**（engine+0x448）
@@ -444,6 +456,13 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* CursorShow(12)：按"值非空"置显示位（我们的模型里恒为 1）。 */
+int fvp_vm_cursor_show(FvpVM *vm, const FvpValue *v);
+/* ExitDialog(16)：只计数（原版按 0x442860 的条件置线程标记）。 */
+void fvp_vm_exit_dialog(FvpVM *vm);
+/* MovieStop(63)：没有视频在放 → 空操作，只计数。 */
+void fvp_vm_movie_stop(FvpVM *vm);
+
 /* InputFlash(27)：只计数（原版 call 0x442400(engine+0x120)）。 */
 void fvp_vm_input_flash(FvpVM *vm);
 /* InputGetRepeat(33)：返回 engine+0x448 的记录值（默认 0）。 */

@@ -438,6 +438,14 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### CursorShow(12) / ExitDialog(16) / MovieStop(63)（**已实现**）
+
+| id | 命令 | argc | 语义 / 证据 | 本站实现 |
+| ---: | --- | ---: | --- | --- |
+| 12 | CursorShow | 1 | handler **0x4374F0**：**只看参数类型**（`cmpb $0x0,(%eax)`，null → 0、其它 → 1），然后 tail-call `0x441860(engine, 值)` | 存 `cursor_show`；我们的值模型没有 null → 恒 1（与 ControlMask 同一处限制，文档已注明） |
+| 16 | ExitDialog | 0 | handler **0x437560**：`if (0x442860(engine))` 时置线程 ctx 的 `+0x68E7D0 = 1`；无返回值 | 只计数（条件依赖的引擎状态未建模） |
+| 63 | MovieStop | 0 | handler **0x43B300**：`call 0x4220F0(engine+0x8C->0x2D4)` 停 WMV | 空操作 + 计数（本站没有视频在放，语义上正好成立） |
+
 ### InputFlash(27) / InputGetRepeat(33) / InputSetClick(37)（**已实现**）
 
 | id | 命令 | argc | 语义 / 证据 | 本站实现 |

@@ -1706,6 +1706,19 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * 121 TextPause(twIdx 0..31, on 0..1)：handler 0x43C9C0 → tw+0x5DA，
      *     同时转给 gfx（打字机推进时跳过暂停的窗口）。 */
     /* 27 InputFlash() / 33 InputGetRepeat() / 37 InputSetClick(v 0/1)。 */
+    /* 12 CursorShow(v) / 16 ExitDialog() / 63 MovieStop()。 */
+    case 12:
+        if (argc >= 1) {
+            (void)fvp_vm_cursor_show(vm, &args[0]);
+            return;
+        }
+        break;
+    case 16:
+        fvp_vm_exit_dialog(vm);
+        return;
+    case 63:
+        fvp_vm_movie_stop(vm);
+        return;
     case 27:
         fvp_vm_input_flash(vm);
         return;

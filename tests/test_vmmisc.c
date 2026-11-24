@@ -85,6 +85,34 @@ int main(void)
     CHECK(a.text_repaint_calls == 2, "repaint counter (%llu)",
           (unsigned long long)a.text_repaint_calls);
 
+    /* --- 4d. CursorShow(12) / ExitDialog(16) / MovieStop(63) --- */
+    {
+        FvpValue on1 = fvp_make_int(1);
+        FvpValue off0 = fvp_make_int(0);
+
+        CHECK(a.cursor_show == 1u, "cursor shown by default (%u)",
+              (unsigned)a.cursor_show);
+        CHECK(fvp_vm_cursor_show(&a, &off0) == 1, "CursorShow(0) accepted");
+        CHECK(a.cursor_show == 1u,
+              "值非 null -> 1（本站没有 null，恒 1）");
+        CHECK(fvp_vm_cursor_show(&a, &on1) == 1, "CursorShow(1) accepted");
+        CHECK(fvp_vm_cursor_show(&a, NULL) == 0, "NULL arg rejected");
+        CHECK(fvp_vm_cursor_show(NULL, &on1) == 0, "NULL vm rejected");
+
+        CHECK(a.exit_dialog_calls == 0 && a.movie_stop_calls == 0,
+              "fresh dialog/movie counters");
+        fvp_vm_exit_dialog(&a);
+        fvp_vm_exit_dialog(&a);
+        CHECK(a.exit_dialog_calls == 2, "exit dialog counter (%llu)",
+              (unsigned long long)a.exit_dialog_calls);
+        fvp_vm_movie_stop(&a);
+        CHECK(a.movie_stop_calls == 1, "movie stop counter (%llu)",
+              (unsigned long long)a.movie_stop_calls);
+        fvp_vm_exit_dialog(NULL);
+        fvp_vm_movie_stop(NULL);
+        CHECK(1, "NULL calls survive");
+    }
+
     /* --- 4c. InputFlash(27) / InputGetRepeat(33) / InputSetClick(37) --- */
     {
         FvpValue on1 = fvp_make_int(1);

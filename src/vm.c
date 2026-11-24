@@ -739,6 +739,7 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     vm->rand_state = 1u;
     vm->request_slot = -1;
     vm->cur_font = -1;
+    vm->cursor_show = 1u;
     vm->save_thumb_w = 96; /* 引擎初值 96x72（docs/save-format.md §2.3） */
     vm->save_thumb_h = 72;
     /* 协程槽默认开启：实测（docs/05-threads.md §10）对本作脚本行为中立 ——
@@ -1092,6 +1093,30 @@ static char *arena_cstr(FvpVM *vm, const FvpValue *v)
     }
     s = fvp_arena_str(&vm->arena, v->str->data, v->str->len);
     return (char *)s->data;
+}
+
+int fvp_vm_cursor_show(FvpVM *vm, const FvpValue *v)
+{
+    if (vm == NULL || v == NULL) {
+        return 0;
+    }
+    /* 原版：type == 0（null）→ 0，其它 → 1。本站产生不出 null，照实写 1。 */
+    vm->cursor_show = 1u;
+    return 1;
+}
+
+void fvp_vm_exit_dialog(FvpVM *vm)
+{
+    if (vm != NULL) {
+        vm->exit_dialog_calls += 1u;
+    }
+}
+
+void fvp_vm_movie_stop(FvpVM *vm)
+{
+    if (vm != NULL) {
+        vm->movie_stop_calls += 1u;
+    }
 }
 
 void fvp_vm_input_flash(FvpVM *vm)
