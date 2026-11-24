@@ -37,6 +37,7 @@
 | **多作品兼容** | `verify_multigame.py` | 对**两部**目标作品（`iroseka.hcb`、`Hoshimemo_HD.hcb`）各跑两遍 `bin/fvm.exe --steps 900000` | 真实脚本 | ① 两个 HCB 都能解码：`script_len` / 指令数 / `main_start` 落在合理范围 ② 每部作品两次运行输出**逐字节相同**（同一 SHA-256）③ 900k 步时的基准文本行数（iroseka 195 行 / 6,496 B、hoshimemo 164 行 / 6,644 B）不得漂移 ④ 0 个 U+FFFD、日文字符占比 > 50%。**这是「第二部作品也能跑」的硬门禁**；步数不足 900k 时只断言「有文本产出」 |
 | **纹理缓存上限** | `test_tex_cache` | 假 host 造固定 100×100 图，`gfx_graph_load` 反复装载 | 26 项 | ① cap=0 时全缓存 ② 设上限后 `tex_bytes` 不超上限且按 LRU 淘汰 ③ **被引用的图（refs>0）永不被淘汰** ④ 引用释放后可淘汰 ⑤ 淘汰后重新解码、缓存命中不重复解码 ⑥ NULL 安全 |
 | **定时器** | `test_timer` | 直接构造 `FvpTimer[16]`，给不同 `now_ms` | 37 项 | ① set 记起点、ms 钳到 1..100000 ② elapsed = now-start，时钟早于起点夹 0 ③ `opt` 换算 = elapsed*opt/duration（含取整与 INT32 夹紧）④ 未激活/越界 id 返回 0 ⑤ 重新 set 重置起点 ⑥ 16 个互不干扰 ⑦ NULL/0 计数安全 |
+| **文本窗口属性** | `test_textattr` | 直接构造 `FvpTextAttr[32]`，逐命令调 setter | 65 项 | ① TextColor/TextSize 钳制 ② TextSpeed 超范围**整条忽略**且 -1 合法 ③ TextShadowDist(125) 单个 0..12 **钳制**（99→12、-7→0） ④ TextSpace(128) 两分量各 -32..32、超范围的**只跳过该分量** ⑤ TextFont(113) 两个字体号 -5..31、同样逐分量 ⑥ TextSkip(127) 0..3、超范围整条忽略 ⑦ 窗口号越界/NULL 拒绝 ⑧ configured_count 只数设过的窗口 |
 | **逐字显示（打字机）** | `test_typewriter` | `Gfx` + `gfx_text_append/advance`，不比对像素 | 31 项 | ① 默认关闭：整行一次可见、`advance` 是空操作 ② 打开后从 0 字开始、按 TextSpeed 的每字毫秒推进、余数不丢 ③ `speed 0` = 立刻显示完 ④ ASCII/2 字节/3 字节混排的 UTF-8 码点计数 ⑤ 关掉时立刻拉满 ⑥ 多窗口各自推进 ⑦ 负速度/NULL/越界安全。**默认关闭时像素基线与 `verify_gfx` 一致**（静态门另测） |
 | 检测器自检 | `fuzz_selftest.c` | 两个分配器构建 | 故意在 32 字节块后写 1 字节 | 页保护构建必须以访问违例退出，金丝雀构建必须以 72 退出——否则「0 故障」没有意义 |
 

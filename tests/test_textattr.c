@@ -119,6 +119,27 @@ int main(void)
     CHECK(fvp_textattr_set_skip(a, FVP_TEXT_WINDOWS, 4, FVP_TEXT_SKIP_MAX) == 1,
           "mode 3 accepted");
 
+    /* 4e. 字体号（TextFont 113，handler 0x43DA70）：两个分量各自 -5..31 独立判定。
+     *     实测脚本只用 -1（正文）/ -2（章节标题）/ 1（第二字段）。 */
+    CHECK(fvp_textattr_set_font(a, FVP_TEXT_WINDOWS, 6, -1, 1) == 1,
+          "set_font(-1,1)");
+    CHECK(a[6].font_id == -1 && a[6].font_id2 == 1, "font %d,%d", a[6].font_id,
+          a[6].font_id2);
+    CHECK((a[6].set_mask & FVP_TEXTATTR_FONT) != 0u, "font mask set");
+    CHECK(fvp_textattr_set_font(a, FVP_TEXT_WINDOWS, 6, -5, 0) == 1,
+          "-5 is the accepted lower bound");
+    CHECK(a[6].font_id == -5 && a[6].font_id2 == 0, "font %d,%d", a[6].font_id,
+          a[6].font_id2);
+    CHECK(fvp_textattr_set_font(a, FVP_TEXT_WINDOWS, 6, 32, 1) == 1,
+          "id over the bound is skipped, id2 still applies");
+    CHECK(a[6].font_id == -5 && a[6].font_id2 == 1,
+          "id kept, id2 updated (%d,%d)", a[6].font_id, a[6].font_id2);
+    CHECK(fvp_textattr_set_font(a, FVP_TEXT_WINDOWS, 6, -6, 99) == 0,
+          "both out of range = rejected");
+    CHECK(a[6].font_id == -5 && a[6].font_id2 == 1,
+          "font unchanged after the rejection (%d,%d)", a[6].font_id,
+          a[6].font_id2);
+
     /* 5. 窗口号越界：拒绝，且不改任何窗口。 */
     CHECK(fvp_textattr_set_color(a, FVP_TEXT_WINDOWS, 32, 1, 2, 3) == 0,
           "idx 32 rejected");
@@ -129,8 +150,8 @@ int main(void)
     CHECK(fvp_textattr_set_color(NULL, FVP_TEXT_WINDOWS, 0, 1, 2, 3) == 0,
           "NULL rejected");
 
-    /* 6. configured_count 只数设过的窗口（本例 1,2,3,4,5：4b 用了 3、4c 用了 5）。 */
-    CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 5,
+    /* 6. configured_count 只数设过的窗口（本例 1,2,3,4,5,6）。 */
+    CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 6,
           "configured=%d", fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS));
     CHECK(fvp_textattr_configured_count(NULL, FVP_TEXT_WINDOWS) == 0,
           "configured(NULL)=0");

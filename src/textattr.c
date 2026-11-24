@@ -32,6 +32,8 @@ void fvp_textattr_reset(FvpTextAttr *attrs, int count)
         attrs[i].space_x = 0;
         attrs[i].space_y = 0;
         attrs[i].skip_mode = 0;
+        attrs[i].font_id = 0;
+        attrs[i].font_id2 = 0;
         attrs[i].set_mask = 0u;
     }
 }
@@ -128,6 +130,34 @@ int fvp_textattr_set_skip(FvpTextAttr *attrs, int count, int idx, int mode)
     attrs[idx].skip_mode = mode;
     attrs[idx].set_mask |= FVP_TEXTATTR_SKIP;
     return 1;
+}
+
+/* TextFont(twIdx, fontId, fontId2)：静态分析 **0x43DA70**。
+ *   arg0 必须是 int 0..0x1F（twIdx）；
+ *   arg1 是 int 且 >= -5 且 <= (引擎字体数-1) → 0x4247F0 写 tw+0x590（u16）；
+ *   arg2 是 int 且 >= -5 且 <= (引擎字体数-1) → 0x424860 写 tw+0x593（u8）；
+ *   两个分量各自独立判定，超范围的那一个跳过。VM 层用 FVP_TEXT_FONT_MAX 代替
+ *   "字体数-1"（真正的上界在渲染层，见 textattr.h 的说明）。 */
+int fvp_textattr_set_font(FvpTextAttr *attrs, int count, int idx, int id,
+                          int id2)
+{
+    int wrote = 0;
+
+    if (attrs == NULL || idx < 0 || idx >= count || idx >= FVP_TEXT_WINDOWS) {
+        return 0;
+    }
+    if (id >= FVP_TEXT_FONT_MIN && id <= FVP_TEXT_FONT_MAX) {
+        attrs[idx].font_id = id;
+        wrote = 1;
+    }
+    if (id2 >= FVP_TEXT_FONT_MIN && id2 <= FVP_TEXT_FONT_MAX) {
+        attrs[idx].font_id2 = id2;
+        wrote = 1;
+    }
+    if (wrote) {
+        attrs[idx].set_mask |= FVP_TEXTATTR_FONT;
+    }
+    return wrote;
 }
 
 int fvp_textattr_configured_count(const FvpTextAttr *attrs, int count)

@@ -47,6 +47,7 @@
 #pragma weak gfx_text_set_speed
 #pragma weak gfx_text_set_shadow
 #pragma weak gfx_text_set_space
+#pragma weak gfx_text_set_font
 #pragma weak gfx_text_busy
 /* 动画补间（src/motion.c + gfx 侧）：只有链接了 gfx.c 的程序才有这些符号。 */
 #pragma weak gfx_get_prim
@@ -1359,6 +1360,33 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      *   >12 当 12，然后转 0x4248B0(tw, dist) → `mov %al,0x597(%ecx)`（只存一字节）。
      * 只记录、不渲染：原版阴影的**形状/颜色/透明度**都还没有证据（只知道距离），
      * 参考实现 work/render.py 也只存不画。见 docs/render-model.md §7.1。 */
+    /* 113 TextFont(twIdx, fontId, fontId2)：**字体选择**，静态分析 handler **0x43DA70**：
+     *   arg0 必须是 int 0..0x1F（twIdx）；
+     *   arg1 = int 且 **-5 <= v <= (引擎字体数-1)** → 0x4247F0 写 `tw+0x590`（u16）；
+     *   arg2 = int 且同一区间 → 0x424860 写 `tw+0x593`（u8）；
+     *   两个分量各自独立判定，超范围的那个跳过。
+     * 只记录、不渲染：引擎的字体号 -1/-2 对应哪套字模没有证据（我们只有 4 个图集），
+     * 所以渲染层仍按字号挑字体。实测两部作品只用到 -1（正文）/ -2（章节标题）/ 1。 */
+    case 113:
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
+            int id = (int)args[0].i;
+            int fid = (argc >= 2 && args[1].type == (uint8_t)FVP_INT)
+                          ? (int)args[1].i
+                          : 0;
+            int fid2 = (argc >= 3 && args[2].type == (uint8_t)FVP_INT)
+                           ? (int)args[2].i
+                           : 0;
+
+            if (fvp_textattr_set_font(vm->textattr, FVP_TEXT_WINDOWS, id, fid,
+                                      fid2) &&
+                vm->gfx_bridge != NULL && gfx_text_set_font != NULL &&
+                id >= 0 && id < FVP_TEXT_WINDOWS) {
+                gfx_text_set_font(vm->gfx_bridge->gfx, id,
+                                  vm->textattr[id].font_id,
+                                  vm->textattr[id].font_id2);
+            }
+        }
+        return;
     case 125:
         if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
             int id = (int)args[0].i;

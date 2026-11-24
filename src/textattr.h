@@ -9,6 +9,7 @@
  *   TextShadowDist(twIdx, dist 0..12)            → **阴影距离**，写 tw+0x597（0x4248B0）
  *   TextSpace(twIdx, x -32..32, y -32..32)       → 字间距/行间距，写 tw+0x5A8 / tw+0x5AA
  *   TextSkip(twIdx, mode 0..3)                   → 写 tw+0x5D7
+ *   TextFont(twIdx, fontId, fontId2)             → tw+0x590（u16）/ tw+0x593（u8）
  *
  * ⚠️ 2026-11-24 修正：以前把 `0x43CE10` 当成 TextShadowDist，其实它是 **TextSpace**；
  * TextShadowDist 的 handler 是 `0x43CBB0`（单个 0..12 距离，转 0x4248B0 只写一个字节）。
@@ -40,6 +41,7 @@ extern "C" {
 #define FVP_TEXTATTR_SHADOW 0x08u
 #define FVP_TEXTATTR_SKIP 0x10u
 #define FVP_TEXTATTR_SPACE 0x20u
+#define FVP_TEXTATTR_FONT 0x40u
 
 /* TextShadowDist 的距离 0..12（静态分析 0x43CBB0：<0 当 0、>12 当 12 后转 0x4248B0）。
  * TextSpace 的两个分量各 -32..32（静态分析 0x43CE10：cmp $0xffffffe0 / cmp $0x20）。
@@ -49,6 +51,12 @@ extern "C" {
 #define FVP_TEXT_SPACE_MIN (-32)
 #define FVP_TEXT_SPACE_MAX 32
 #define FVP_TEXT_SKIP_MAX 3
+/* TextFont 的下界是 -5（静态分析 0x43DAB0/0x43DACA：`cmp $0xfffffffb,%eax; jl`）；
+ * 上界是**引擎字体列表长度 - 1**（`fontCount = (end-begin)/4 - 1`），VM 层看不到那份
+ * 列表，所以这里用 FVP_TEXT_FONT_MAX 作保守上界，真正的上界判定留给渲染层。
+ * 实测两部作品只用到 -1 / -2（见 docs/vm-commands.md §5）。 */
+#define FVP_TEXT_FONT_MIN (-5)
+#define FVP_TEXT_FONT_MAX 31
 
 typedef struct FvpTextAttr {
     int r;
@@ -61,6 +69,8 @@ typedef struct FvpTextAttr {
     int space_x;   /* TextSpace 的第一个分量（-32..32） */
     int space_y;   /* TextSpace 的第二个分量（-32..32） */
     int skip_mode; /* TextSkip 的模式（0..3） */
+    int font_id;   /* TextFont 的第一个字体号（原版写 tw+0x590，u16） */
+    int font_id2;  /* TextFont 的第二个字体号（原版写 tw+0x593，u8） */
     unsigned int set_mask;
 } FvpTextAttr;
 
@@ -73,7 +83,8 @@ void fvp_textattr_reset(FvpTextAttr *attrs, int count);
  *   TextSpeed            : 超范围整条忽略（-1 合法）
  *   TextShadowDist       : <0 → 0，>12 → 12（钳制，不是忽略）
  *   TextSpace            : 每个分量独立判定，超范围的那个分量跳过、另一个仍生效
- *   TextSkip             : 超范围整条忽略 */
+ *   TextSkip             : 超范围整条忽略
+ *   TextFont             : 每个字体号独立判定（-5 以下跳过该分量，另一个仍生效） */
 int fvp_textattr_set_color(FvpTextAttr *attrs, int count, int idx, int r, int g,
                            int b);
 int fvp_textattr_set_size(FvpTextAttr *attrs, int count, int idx, int w, int h);
@@ -81,6 +92,8 @@ int fvp_textattr_set_speed(FvpTextAttr *attrs, int count, int idx, int ms);
 int fvp_textattr_set_shadow(FvpTextAttr *attrs, int count, int idx, int dist);
 int fvp_textattr_set_space(FvpTextAttr *attrs, int count, int idx, int x, int y);
 int fvp_textattr_set_skip(FvpTextAttr *attrs, int count, int idx, int mode);
+int fvp_textattr_set_font(FvpTextAttr *attrs, int count, int idx, int id,
+                          int id2);
 
 /* 被脚本设置过至少一个字段的窗口数（日志 / 验收用）。 */
 int fvp_textattr_configured_count(const FvpTextAttr *attrs, int count);

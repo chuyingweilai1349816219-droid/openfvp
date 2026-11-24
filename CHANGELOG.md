@@ -78,6 +78,21 @@
 
 ### 新增
 
+- **`TextFont`(113) 落地：只记录、不换字模**
+  - handler **0x43DA70**：arg0 必须是 int 0..0x1F；arg1（int，**-5 <= v <= 引擎字体数-1**）
+    → `0x4247F0` 写 `tw+0x590`（**u16**）；arg2（同一区间）→ `0x424860` 写
+    `tw+0x593`（**u8**）；两个分量各自独立判定，超范围的跳过
+  - **实测（900k 步，两部作品）**：`(0,-1,1)` 正文、`(8,-1,1)` 人名、
+    **`(9,-2,1)` 章节标题**、`(10,-1,1)` —— 字体号是**负数**（-1 / -2），
+    正是 `-5` 那个下界给的特殊值留的空间；第二字段恒 1
+  - 只记录不换字模：负数字体号对应哪套字模没有证据（我们只有 3 个从游戏数据里解出来的
+    图集），渲染仍按**字号**挑字集 —— 所以像素基线不变
+  - `FvpTextAttr.font_id / font_id2`（掩码 `FVP_TEXTATTR_FONT`）+
+    `fvp_textattr_set_font()` + `gfx_text_set_font()`；`fvm --dump-textattr` 打印
+    `font=id,id2`
+  - 测试 `tests/test_textattr.c` **56 → 65 项**（-5 下界、逐分量跳过、越界拒绝）
+  - 外壳 45 s 实测 `unimpl cmds` 从 18 种降到 **17 种**（113 消失）
+
 - **台词历史 `HistorySet`(26) / `HistoryGet`(25) 落地 + `fvm --dump-history`**
   - 新模块 `src/history.c` / `src/history.h`：100 条环形记录，每条 = {人物名, 台词,
     行 id}（12 字节，`engine+0x6a49c0` = {count, pos, base}）

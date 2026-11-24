@@ -95,7 +95,7 @@
 2. **命令语义仍有缺口，但清单是准确的。** [`src/syscall.c`](src/syscall.c) 里渲染相关的命令已接 gfx，
    动画接补间表，音频接 snd，定时器接 `src/timer.c`，台词历史接 `src/history.c`
    （`HistorySet`/`HistoryGet` 的 100 条环形缓冲，`fvm --dump-history` 可导出）。外壳 90 秒 /
-   实测**只剩 18 种**未实现命令（45 s / 240,201 步），且高频的是文本排版细节（`TextFont`/`TextFormat`/
+   实测**只剩 17 种**未实现命令（45 s / 240,201 步），且高频的是文本排版细节（`TextFormat`/
    `TextFunction`）与 `PrimHit`(76) —— 具体表在 [`docs/roadmap.md`](docs/roadmap.md)，
    `PrimHit` 的完整算法已解出但**还没落地**（[`docs/render-model.md`](docs/render-model.md) §8）。
    `Movie*`（视频）与 `V3D*` 仍是桩。`MenuMessSkip`/`SysAtSkipName`/`TitleMenu` 已证明原版

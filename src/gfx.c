@@ -485,6 +485,10 @@ typedef struct GfxTextWin {
      * 参考实现 work/render.py 也是只存不画。见 docs/render-model.md §7.1。 */
     int shadow_dist;
     int space[2];
+    /* TextFont(113)：两个字体号（原版写 tw+0x590 / tw+0x593）。只记录，
+     * 渲染仍按字号挑图集 —— 引擎字体号 -1/-2 对应哪套字模没有证据。 */
+    int font_id;
+    int font_id2;
 } GfxTextWin;
 
 struct Gfx {
@@ -3673,6 +3677,23 @@ void gfx_text_set_shadow(Gfx *g, int layer, int dist)
         dist = 12;
     }
     g->tw[layer].shadow_dist = dist;
+}
+
+/* TextFont(113)：两个字体号（静态分析 0x43DA70 → 0x4247F0 写 tw+0x590，
+ * 0x424860 写 tw+0x593）。只记录、不参与选字体（字体号 -1/-2 的含义无证据）。 */
+void gfx_text_set_font(Gfx *g, int layer, int id, int id2)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return;
+    }
+    if (id < -5 || id > 31) {
+        id = -1;
+    }
+    if (id2 < -5 || id2 > 31) {
+        id2 = 0;
+    }
+    g->tw[layer].font_id = id;
+    g->tw[layer].font_id2 = id2;
 }
 
 /* TextSpace(128)：字间距/行间距，两个分量各 -32..32（静态分析 0x43CE10 写
