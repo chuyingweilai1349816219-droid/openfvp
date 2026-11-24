@@ -367,6 +367,19 @@ def build_steps(args):
                           note='Rand 92: 0..0x7FFF + deterministic per run; '
                                'TextRepaint 124: counter only'))
 
+    # 4i8. null / type-0 值模型（pushfalse → FVP_NULL）
+    test_nullvalue = tools.get('test_nullvalue')
+    if not test_nullvalue or not os.path.isfile(test_nullvalue):
+        steps.append(Step('test_nullvalue', None, 0,
+                          skip_reason='bin/test_nullvalue.exe missing '
+                                      '(run: make test_nullvalue)'))
+    else:
+        steps.append(Step('test_nullvalue', [test_nullvalue], 120,
+                          note='FVP_NULL = 原版 Variant type 0: pushfalse '
+                               'pushes null, null == int 0 in eq/cmp/str, '
+                               'LipAnim/LipSync/ControlMask/CursorShow null '
+                               'branches reachable, end-to-end 0x09 decode'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):
