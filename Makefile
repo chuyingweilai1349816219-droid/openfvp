@@ -448,6 +448,22 @@ clean-gaiji-render:
 .PHONY: test_gaiji_render clean-gaiji-render
 
 # ---------------------------------------------------------------------------
+# 文本图元定位（PrimSetText 86 / --text-prims）+ 图元 alpha 乘进文字
+#   make test_textprims
+# ---------------------------------------------------------------------------
+TEXTPRIMS_TEST = bin/test_textprims$(EXE)
+
+test_textprims: $(TEXTPRIMS_TEST)
+
+$(TEXTPRIMS_TEST): tests/test_textprims.c src/gfx.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_textprims.c $(GFX_OBJ) $(LDFLAGS) -lm
+
+clean-textprims:
+	-rm -f $(TEXTPRIMS_TEST)
+
+.PHONY: test_textprims clean-textprims
+
+# ---------------------------------------------------------------------------
 # Rand(92) / TextRepaint(124)
 #   make test_vmmisc
 # ---------------------------------------------------------------------------
@@ -476,7 +492,8 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
-             $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(VMMISC_TEST)
+             $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
+             $(VMMISC_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

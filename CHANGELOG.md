@@ -53,6 +53,23 @@
 
 ### 新增
 
+- **文本图元的 alpha 乘进文字（近似实现）+ 新增像素级单测 `test_textprims`（20 项）**
+  - `PrimSetText(86)` 建的文本图元带 `prim+0x07 = alpha`（原版用它做淡入淡出）；
+    现在 `draw_text_window()` 收一个 `alpha` 参数：正文层描边按 `120·alpha/255`、
+    标题层按 `200·alpha/255` 缩放，颜色按 `c·alpha/255` 压暗
+  - **原理性近似，照实写**：本引擎的字形覆盖是"一次性写屏"——`ink_px()` 在
+    `cov == 255` 时直接写 RGB、不参与 DST 混合，所以做不到物理正确的 src-over。
+    要正确就得改造 `ink_px`（会连带改变现有描边像素 → 动 293 px 冻结基线），
+    因此 `alpha < 255` 时只做"按比例压暗"，文档与 `docs/render-model.md` §1.3 都写明
+  - `alpha == 255`（默认路径与全部冻结基线）**一个像素都不变**：`compare.py` 仍字节一致、
+    `verify_gfx` 仍 293 px / PSNR 49.94 / SSIM 0.99971
+  - 新增单测 `tests/test_textprims.c`（**20 项**，`make check` 现在 **20 个单测**）：
+    用内建 8×16 字体 + `gfx_canvas_rgba` 的区域亮度和做像素级断言 ——
+    默认位置 / 图元位置 A-B 切换、不再重复画、连渲两次一致、`alpha=128` 比 255 暗、
+    `draw=0` 不画、`tw<0` 不算绑定、NULL 安全
+  - `Makefile` 新增 `test_textprims` 目标并接进 `UNIT_TESTS`；`README` 的单测数 9 → 20，
+    `docs/testing.md` 补这一行
+
 - **文本窗口的屏幕位置来源查清并实现：`PrimSetText`(86) 把文本挂到图元上（`--text-prims`）**
   - handler **0x43BDC0**：把图元重建成 **type 5 = 文本图元**——
     `prim+0x32` = 文本窗口号、`prim+0x14/0x16` = x/y、`prim+0x07` = alpha 255、

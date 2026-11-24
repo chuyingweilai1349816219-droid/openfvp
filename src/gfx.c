@@ -2618,7 +2618,8 @@ static int text_visible(const GfxTextWin *tw)
     return tw->used && tw->nlines > 0;
 }
 
-static void draw_text_window(Gfx *g, int idx, const int *origin)
+static void draw_text_window(Gfx *g, int idx, const int *origin,
+                             int alpha)
 {
     GfxTextWin *tw = &g->tw[idx];
     GfxTextLayout lay;
@@ -2736,8 +2737,10 @@ static void draw_text_window(Gfx *g, int idx, const int *origin)
         for (i = 0; i < nlines; i++) {
             int wpx = text_width(g, f, lines[i].s);
             int xc = (g->w - wpx) / 2;
-            draw_text_run(g, f, xc, y, lines[i].s, 255, 255, 255, 255, 2, 0, 0,
-                          0, 200);
+            int sca = (200 * alpha) / 255;
+
+            draw_text_run(g, f, xc, y, lines[i].s, 255, 255, 255, alpha, 2, 0,
+                          0, 0, sca);
             y += size + 8;
         }
     } else {
@@ -2747,18 +2750,30 @@ static void draw_text_window(Gfx *g, int idx, const int *origin)
         }
         for (i = 0; i < nlines; i++) {
             int cr = tw->color[0], cg = tw->color[1], cb = tw->color[2];
+            int sca = (120 * alpha) / 255;
+
             if (cr + cg + cb > 600) {
                 cr = 32;
                 cg = 40;
                 cb = 60;
+            }
+            /* 图元 alpha（`--text-prims` 的反向结果）：本引擎的字形覆盖是
+             * "一次性写屏"，`ink_px()` 在 cov == 255 时直接写 RGB、不参与 DST 混合，
+             * 所以这里把 alpha 折进颜色通道（按比例压暗）—— 视觉上就是淡出，
+             * 但**不是**物理正确的 src-over 混合。差别只在 alpha < 255 时出现，
+             * 冻结基线（alpha 恒 255）一个像素都不变。见 docs/render-model.md §1.3。 */
+            if (alpha < 255) {
+                cr = (cr * alpha) / 255;
+                cg = (cg * alpha) / 255;
+                cb = (cb * alpha) / 255;
             }
             /* TextShadowDist(125) 只记录偏移（gfx_text_set_shadow），**这里不画阴影层**。
              * 理由见 docs/render-model.md §7.1：脚本给的是 (12,0)，画出来是一份向右 12 px
              * 的实心深色重影（用户实测报「残影」）；而原版阴影的颜色/透明度/合成方式
              * 都没有静态分析证据，参考实现（work/render.py）也是只记录不渲染。因此宁可
              * 不画 —— 这是唯一能与像素基线保持一致的选择。 */
-            draw_text_run(g, f, x, y, lines[i].s, cr, cg, cb, 255, 1, 255, 255,
-                          255, 120);
+            draw_text_run(g, f, x, y, lines[i].s, cr, cg, cb, alpha, 1, 255,
+                          255, 255, sca);
             y += size + 6;
         }
     }
@@ -2824,7 +2839,7 @@ static void draw_text_all(Gfx *g)
                 continue;
             }
             prim_abs_xy(g, i, &origin[0], &origin[1]);
-            draw_text_window(g, p->tw, origin);
+            draw_text_window(g, p->tw, origin, p->alpha);
             bound[p->tw] = 1u;
             g->stats.text_prims += 1;
         }
@@ -2833,7 +2848,7 @@ static void draw_text_all(Gfx *g)
         if (bound[i]) {
             continue;
         }
-        draw_text_window(g, i, NULL);
+        draw_text_window(g, i, NULL, 255);
     }
 }
 
