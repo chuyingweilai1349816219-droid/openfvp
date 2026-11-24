@@ -137,6 +137,7 @@ def public_tools():
         'test_wheel': os.path.join(FVP, 'bin', 'test_wheel.exe'),
         'test_motion': os.path.join(FVP, 'bin', 'test_motion.exe'),
         'test_gfx_motion': os.path.join(FVP, 'bin', 'test_gfx_motion.exe'),
+        'test_tex_cache': os.path.join(FVP, 'bin', 'test_tex_cache.exe'),
     }
 
 

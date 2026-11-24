@@ -247,3 +247,19 @@ clean-gfx-motion:
 	-rm -f $(GFX_MOTION_TEST)
 
 .PHONY: test_gfx_motion clean-gfx-motion
+
+# ---------------------------------------------------------------------------
+# 纹理缓存 LRU 上限（长跑内存不再无界增长）
+#   make test_tex_cache
+# ---------------------------------------------------------------------------
+TEX_CACHE_TEST = bin/test_tex_cache$(EXE)
+
+test_tex_cache: $(TEX_CACHE_TEST)
+
+$(TEX_CACHE_TEST): tests/test_tex_cache.c src/gfx.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_tex_cache.c $(GFX_OBJ) $(LDFLAGS) -lm
+
+clean-tex-cache:
+	-rm -f $(TEX_CACHE_TEST)
+
+.PHONY: test_tex_cache clean-tex-cache

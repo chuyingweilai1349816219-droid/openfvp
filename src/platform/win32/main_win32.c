@@ -80,7 +80,8 @@ typedef struct Options {
     int motion; /* --motion: 启用补间（默认关） */
     int timeline; /* --timeline: 虚拟时钟由帧间推进（默认关） */
     int tone_hz;
-    int threads; /* --no-threads: 关协程槽（默认开） */
+    int threads;
+    int tex_cache_mb; /* --tex-cache-mb: texture cache cap in MiB, 0 = unlimited */ /* --no-threads: 关协程槽（默认开） */
     int audio_buffers;
     int audio_frames;
 
@@ -351,6 +352,7 @@ static const wchar_t *usage_text(void)
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
             L"  --no-threads        关闭协程槽 0..31（A/B 用；默认开启，本作脚本行为中立）\n"
+            L"  --tex-cache-mb N    texture cache cap in MiB（默认 512；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --console           同时输出到启动它的控制台窗口\n"
            L"  --verbose           更详细的日志\n"
@@ -422,6 +424,7 @@ static void defaults(Options *o)
     o->motion = 0;
     o->timeline = 0;
     o->threads = 1;
+    o->tex_cache_mb = 512;
     o->feed_text = 1;
 }
 
@@ -573,6 +576,12 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->timeline = 1;
         } else if (wcscmp(a, L"--no-threads") == 0) {
             o->threads = 0;
+        } else if (wcscmp(a, L"--tex-cache-mb") == 0) {
+            NEED_VALUE();
+            if (!parse_int_w(v, &o->tex_cache_mb) || o->tex_cache_mb < 0 ||
+                o->tex_cache_mb > 8192) {
+                bad_option("--tex-cache-mb", v);
+            }
         } else if (wcscmp(a, L"--save-encoding") == 0) {
             NEED_VALUE();
             wcsncpy(o->save_encoding, v, 15);
@@ -1742,6 +1751,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
         gfx = gfx_create(FVP_CANVAS_W, FVP_CANVAS_H, host);
         fvp_logf("gfx: canvas %dx%d (src/gfx.c)", FVP_CANVAS_W, FVP_CANVAS_H);
+        /* 纹理缓存上限：默认 512 MiB，--tex-cache-mb 0 = 不限制。 */
+        gfx_tex_set_cap_bytes(gfx, (size_t)opts.tex_cache_mb * 1024u * 1024u);
+        fvp_logf("gfx: texture cache cap %d MiB%s", opts.tex_cache_mb,
+                 opts.tex_cache_mb == 0 ? " (unlimited)" : "");
         nfonts_loaded = load_fonts(gfx, &opts, exe_dir, fonts);
         fvp_logf("gfx: %d font atlas(es) registered", nfonts_loaded);
         fvp_logf("gfx: text bridge %s (temporary until the syscall layer "
@@ -2109,9 +2122,11 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                      (unsigned long long)steps, (double)steps / secs,
                      (unsigned long long)vm.ntext,
                      (unsigned long long)vm.nthreads);
-            fvp_logf("tex: %d image(s), %.1f MiB cached",
+            fvp_logf("tex: %d image(s), %.1f MiB cached (cap %.0f MiB, %lu evicted)",
                      gfx_tex_count(gfx),
-                     (double)gfx_tex_bytes(gfx) / (1024.0 * 1024.0));
+                     (double)gfx_tex_bytes(gfx) / (1024.0 * 1024.0),
+                     (double)gfx_tex_cap_bytes(gfx) / (1024.0 * 1024.0),
+                     gfx_tex_evictions(gfx));
             fvp_logf("time: virtual %llu ms (timeline %s)",
                      (unsigned long long)vm.virtual_ms,
                      opts.timeline ? "on" : "off");

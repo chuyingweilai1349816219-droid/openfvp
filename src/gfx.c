@@ -39,6 +39,12 @@
 #define GFX_COEFF_MAX 64
 #define GFX_MAX_IMAGE_BYTES (512u * 1024u * 1024u)
 
+/* 纹理缓存默认上限。1920x1080 的 RGBA 整屏图约 8.3 MB，本作跑 2 分钟就会缓存
+ * 80+ 张（~110 MiB）。不设上限时内存随场景线性增长（实测 8 分钟 194→296 MiB），
+ * 所以默认给 256 MiB 的上限并按 LRU 淘汰：被图元引用的不会被淘汰，只回收没有
+ * 引用的缓存条目，需要时重新解码。 */
+#define GFX_TEX_CACHE_DEFAULT_BYTES (256u * 1024u * 1024u)
+
 /* ----------------------------------------------------------------------- */
 /* small helpers                                                           */
 /* ----------------------------------------------------------------------- */
@@ -426,6 +432,7 @@ typedef struct GfxTex {
     char *name;
     GfxImage img;
     int refs;
+    uint64_t use; /* LRU 计数：越大越新（tex_ref 命中/新建时刷新） */
 } GfxTex;
 
 typedef struct GfxOverlay {
@@ -486,6 +493,9 @@ struct Gfx {
     int group_xform;
     size_t tex_bytes; /* 缓存中图像的 RGBA 字节数 */
     int tex_count;
+    uint64_t tex_tick;    /* LRU 单调计数 */
+    size_t tex_cap;       /* 缓存上限（字节）；0 = 不限制 */
+    unsigned long tex_evictions; /* 因上限被淘汰的图像数 */
     FvpMotion motion; /* 动画补间表；motion_on = 0 时只走时间轴、不动图元 */
     int motion_on;
     char err[256];
@@ -593,6 +603,7 @@ Gfx *gfx_create(int w, int h, const GfxHost *host)
     }
     g->w = w;
     g->h = h;
+    g->tex_cap = GFX_TEX_CACHE_DEFAULT_BYTES;
     g->bg = 0xFF000000u; /* opaque black, R,G,B,A bytes = 0,0,0,255 */
     g->canvas = (uint8_t *)calloc((size_t)w * (size_t)h, 4);
     g->prim = (GfxPrim *)calloc(GFX_PRIM_MAX, sizeof(GfxPrim));
@@ -653,14 +664,14 @@ static GfxTex *tex_find(Gfx *g, const char *name)
     return NULL;
 }
 
-static void tex_unref(Gfx *g, GfxTex *t)
+/* 真正把一张图从缓存里摘掉并释放。只有两条路径会调它：LRU 淘汰，和
+ * gfx_destroy()。普通 tex_unref() 到达 0 引用时**不再释放**，图像留在缓存里
+ * 供下次复用，由淘汰策略决定什么时候回收 —— 这就是"缓存"的语义。 */
+static void tex_free(Gfx *g, GfxTex *t)
 {
     unsigned b;
 
     if (t == NULL) {
-        return;
-    }
-    if (--t->refs > 0) {
         return;
     }
     b = tex_hash(t->name) % GFX_TEX_BUCKETS;
@@ -696,11 +707,27 @@ static void tex_unref(Gfx *g, GfxTex *t)
     free(t);
 }
 
+/* 放弃一个外部引用。refs 归零只表示「没有图元/组/部件再用它了」，图像仍留在
+ * 缓存里（refs == 0 正是可淘汰状态），所以这里不释放。 */
+static void tex_unref(Gfx *g, GfxTex *t)
+{
+    (void)g;
+    if (t == NULL) {
+        return;
+    }
+    if (t->refs > 0) {
+        t->refs -= 1;
+    }
+}
+
+static int tex_evict(Gfx *g);
+
 static GfxTex *tex_ref(Gfx *g, const char *name)
 {
     GfxTex *t = tex_find(g, name);
     if (t != NULL) {
         t->refs++;
+        t->use = ++g->tex_tick;
         g->stats.cache_hits++;
         return t;
     }
@@ -734,6 +761,7 @@ static GfxTex *tex_ref(Gfx *g, const char *name)
     }
     strcpy(t->name, name);
     t->refs = 1;
+    t->use = ++g->tex_tick;
     g->tex_bytes += (size_t)t->img.w * (size_t)t->img.h * 4u *
                     (size_t)(t->img.frames > 0 ? t->img.frames : 1);
     g->tex_count += 1;
@@ -742,7 +770,41 @@ static GfxTex *tex_ref(Gfx *g, const char *name)
         t->next = g->tex_hash[b];
         g->tex_hash[b] = t;
     }
+    tex_evict(g);
     return t;
+}
+
+/* 缓存超上限时按 LRU 淘汰。只淘汰 refs == 0 的条目（没有任何图元/组/部件在
+ * 用）；refs > 0 的一律不动，所以淘汰永远安全：下次需要时会重新 load_image。
+ * 返回本次淘汰掉的图像数。 */
+static int tex_evict(Gfx *g)
+{
+    int evicted = 0;
+
+    while (g->tex_cap > 0 && g->tex_bytes > g->tex_cap) {
+        GfxTex *victim = NULL;
+        unsigned b;
+
+        for (b = 0; b < GFX_TEX_BUCKETS; b++) {
+            GfxTex *t;
+
+            for (t = g->tex_hash[b]; t != NULL; t = t->next) {
+                if (t->refs != 0) {
+                    continue;
+                }
+                if (victim == NULL || t->use < victim->use) {
+                    victim = t;
+                }
+            }
+        }
+        if (victim == NULL) {
+            break; /* 全被引用，暂时不能淘汰 */
+        }
+        g->tex_evictions += 1u;
+        evicted += 1;
+        tex_free(g, victim);
+    }
+    return evicted;
 }
 
 /* ----------------------------------------------------------------------- */
@@ -3209,6 +3271,25 @@ void gfx_archive_host_destroy(GfxArchiveHost *h)
 size_t gfx_tex_bytes(const Gfx *g)
 {
     return (g != NULL) ? g->tex_bytes : 0;
+}
+
+size_t gfx_tex_cap_bytes(const Gfx *g)
+{
+    return (g != NULL) ? g->tex_cap : 0;
+}
+
+void gfx_tex_set_cap_bytes(Gfx *g, size_t cap)
+{
+    if (g == NULL) {
+        return;
+    }
+    g->tex_cap = cap;
+    tex_evict(g);
+}
+
+unsigned long gfx_tex_evictions(const Gfx *g)
+{
+    return (g != NULL) ? g->tex_evictions : 0;
 }
 
 int gfx_tex_count(const Gfx *g)

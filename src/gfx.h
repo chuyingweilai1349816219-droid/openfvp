@@ -156,6 +156,14 @@ const uint32_t *gfx_canvas(Gfx *g, int *w, int *h);
 /* 诊断：文理缓存占用（字节）与引擎中的图像条数。 */
 size_t gfx_tex_bytes(const Gfx *g);
 int gfx_tex_count(const Gfx *g);
+
+/* 纹理缓存上限（字节）。默认 512 MiB，见 gfx.c 的 GFX_TEX_CACHE_DEFAULT_BYTES。
+ * 超上限时按 LRU 淘汰 refs == 1 的条目（被图元/组/部件引用的永远不会被淘汰，
+ * 需要时会重新解码），因此像素输出不变。cap 传 0 = 不限制。
+ * gfx_tex_set_cap_bytes() 会立即做一次淘汰，可用于测试与小内存设备。 */
+size_t gfx_tex_cap_bytes(const Gfx *g);
+void gfx_tex_set_cap_bytes(Gfx *g, size_t cap);
+unsigned long gfx_tex_evictions(const Gfx *g); /* 因上限被淘汰的图像数 */
 const uint8_t *gfx_canvas_rgba(Gfx *g, int *w, int *h);
 
 /* ---- primitive table ------------------------------------------------- */

@@ -286,6 +286,17 @@ def build_steps(args):
                           note='disabled = no movement; enabled = lerp to '
                                'midpoint/target for xy/alpha/scale'))
 
+    # 4k. texture cache LRU cap (long runs must not grow without bound)
+    test_tex_cache = tools.get('test_tex_cache')
+    if not test_tex_cache or not os.path.isfile(test_tex_cache):
+        steps.append(Step('test_tex_cache', None, 0,
+                          skip_reason='bin/test_tex_cache.exe missing '
+                                      '(run: make test_tex_cache)'))
+    else:
+        steps.append(Step('test_tex_cache', [test_tex_cache], 120,
+                          note='cap evicts LRU refs==0 entries only; '
+                               'referenced images survive'))
+
     # 5. VM edges
     vm_edge = os.path.join(HERE, 'test_vm_edge.py')
     guard = hb.find_cc()
