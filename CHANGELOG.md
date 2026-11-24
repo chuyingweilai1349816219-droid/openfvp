@@ -53,6 +53,21 @@
 
 ### 新增
 
+- **字体表四条命令落地：`TextFontCount/Get/Name/Set`(114/115/116/117)（缺口 24 → 20）**
+  - 静态分析确认原版 `engine+0x94` 是 `vector<font>`：Count 返回条数、Get 返回
+    `engine+0x6a66c4`（当前字体号）、Name 收 `0..count-1`、**Set 的下界是 -5**
+    （原版行为，照抄）
+  - 名字来源：原版是 exe 的字体注册表；本站改成**外壳把实际加载的位图字集注册进来**
+    （`gfx-font-32/34/56` → `fvp_vm_font_register("gfx-font-<size>")`），所以运行时
+    `TextFontCount` 给的是真实字集数；`fvm` 不注册 → 0 条（预期）
+  - 实现：`FvpVM` 新增 `font_name[16] / nfont_names / cur_font` +
+    4 个 `fvp_vm_font_*` API，syscall `case 114/115/116/117`；两个外壳汇总多一行
+    `fonts N name(s), current=M`
+  - 单测 `tests/test_vmmisc.c` 扩到 **2114 项**；合成脚本验证接线：
+    `fonts 0 name(s), current=-1`（fvm 不注册字体，Set(2) 在空表上被拒）
+  - `scripts/check-commands.py` 棘轮 24 → **20**；`make check` 19 个单测、
+    `compare.py` 字节一致、`verify_gfx` 293 px / PSNR 49.94 / SSIM 0.99971 全不变
+
 - **`Load`(40) / `SaveWrite`(96) 落地（本轮，缺口 26 → 24）—— 交互闭环的第一环**
   - `Load(slot 0..999)`：handler **0x43a870**，置 `engine+0xfcb = 1` 与
     `engine+0xfcc = slot`，再置当前线程 ctx 的 `+0x68e7d0 = 1`

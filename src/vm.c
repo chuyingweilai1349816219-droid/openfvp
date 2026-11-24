@@ -738,6 +738,7 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     vm->exit_mode_last = -1;
     vm->rand_state = 1u;
     vm->request_slot = -1;
+    vm->cur_font = -1;
     vm->save_thumb_w = 96; /* 引擎初值 96x72（docs/save-format.md §2.3） */
     vm->save_thumb_h = 72;
     /* 协程槽默认开启：实测（docs/05-threads.md §10）对本作脚本行为中立 ——
@@ -1091,6 +1092,62 @@ static char *arena_cstr(FvpVM *vm, const FvpValue *v)
     }
     s = fvp_arena_str(&vm->arena, v->str->data, v->str->len);
     return (char *)s->data;
+}
+
+int fvp_vm_font_register(FvpVM *vm, const char *name)
+{
+    size_t n;
+
+    if (vm == NULL || name == NULL) {
+        return -1;
+    }
+    if (vm->nfont_names >= FVP_MAX_FONT_NAMES) {
+        return -1;
+    }
+    n = strlen(name);
+    vm->font_name[vm->nfont_names] = (char *)fvp_xmalloc(n + 1u);
+    memcpy(vm->font_name[vm->nfont_names], name, n + 1u);
+    vm->nfont_names += 1;
+    return vm->nfont_names;
+}
+
+int fvp_vm_font_count(const FvpVM *vm)
+{
+    return vm == NULL ? 0 : vm->nfont_names;
+}
+
+int fvp_vm_font_set(FvpVM *vm, const FvpValue *idx)
+{
+    long v;
+
+    if (vm == NULL || idx == NULL || idx->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    v = (long)idx->i;
+    if (v < -5 || v > (long)vm->nfont_names - 1) {
+        return 0;
+    }
+    vm->cur_font = (int)v;
+    return 1;
+}
+
+int fvp_vm_font_get(const FvpVM *vm)
+{
+    return vm == NULL ? 0 : vm->cur_font;
+}
+
+const char *fvp_vm_font_name(const FvpVM *vm, const FvpValue *idx)
+{
+    long v;
+
+    if (vm == NULL || idx == NULL || idx->type != (uint8_t)FVP_INT) {
+        return NULL;
+    }
+    v = (long)idx->i;
+    if (v < 0 || v >= (long)vm->nfont_names) {
+        return NULL;
+    }
+    return vm->font_name[v];
 }
 
 static int request_slot_of(const FvpValue *slot, int *out)

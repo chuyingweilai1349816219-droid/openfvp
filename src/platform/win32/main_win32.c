@@ -1844,6 +1844,20 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         fvp_logf("gfx: typewriter %s", opts.typewriter ? "on" : "off");
         nfonts_loaded = load_fonts(gfx, &opts, exe_dir, fonts);
         fvp_logf("gfx: %d font atlas(es) registered", nfonts_loaded);
+        /* 把实际加载的字集名字注册进 VM 的字体表（TextFontCount/Name/Set/Get
+         * 114..117）。名字按像素尺寸给（gfx-font-32 / -34 / -56），因为外层文件
+         * 就叫 gfx-font-<size>.bin；原版的字体名来自 exe 注册表，我们没有那份表。 */
+        {
+            int fi;
+
+            for (fi = 0; fi < nfonts_loaded; ++fi) {
+                char fname[48];
+
+                snprintf(fname, sizeof fname, "gfx-font-%d",
+                         gfx_font_pixel_size(fonts[fi]));
+                (void)fvp_vm_font_register(&vm, fname);
+            }
+        }
         fvp_logf("gfx: text bridge %s (temporary until the syscall layer "
                  "feeds gfx)",
                  opts.feed_text ? "ON" : "OFF");
@@ -2358,6 +2372,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.control_calls[1],
                (unsigned long long)vm.control_calls[2],
                (unsigned long long)vm.control_calls[3]);
+        APPEND("fonts          %d name(s), current=%d\n",
+               fvp_vm_font_count(&vm), fvp_vm_font_get(&vm));
         APPEND("save/load      request slot=%d (load %llu call(s), save "
                "%llu call(s))\n", vm.request_slot,
                (unsigned long long)vm.load_calls,

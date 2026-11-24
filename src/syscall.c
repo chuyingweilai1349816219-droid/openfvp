@@ -1699,6 +1699,28 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     /* 40 Load(slot 0..999) / 96 SaveWrite(slot 0..999)：handler 0x43a870 /
      * 0x43c1e0 —— 只把"请求 + 槽号"记进引擎字段（+0xfcb / +0xfca / +0xfcc），
      * 真正的文件读写由外壳/界面那一侧做。 */
+    /* 114 TextFontCount() / 115 TextFontGet() / 116 TextFontName(idx) /
+     * 117 TextFontSet(idx)：原版操作 engine+0x94 的字体表（见 src/vm.h）。 */
+    case 114:
+        t->temp = fvp_make_int(fvp_vm_font_count(vm));
+        return;
+    case 115:
+        t->temp = fvp_make_int(fvp_vm_font_get(vm));
+        return;
+    case 116: {
+        const char *name =
+            fvp_vm_font_name(vm, argc >= 1 ? &args[0] : NULL);
+
+        t->temp = fvp_make_str(fvp_arena_str(&vm->arena, name != NULL ? name : "",
+                                             name != NULL ? strlen(name) : 0u));
+        return;
+    }
+    case 117:
+        if (argc >= 1) {
+            (void)fvp_vm_font_set(vm, &args[0]);
+            return;
+        }
+        break;
     case 40:
         if (argc >= 1) {
             (void)fvp_vm_request_load(vm, &args[0]);

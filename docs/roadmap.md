@@ -228,24 +228,23 @@ iroseka 的文本只推进到 **1,170 行**就停住了（`--click` 从 4000 调
 
 ```
 commands             148
-handler in a switch  123
+handler in a switch  127
 generic *Test rule   1
 documented no-op     0
-MISSING              24
+MISSING              20
 ```
 
-24 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
+20 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
 
 `CursorShow(12) ExitDialog(16) InputFlash(27) InputGetRepeat(33) InputSetClick(37)
 LipAnim(38) LipSync(39) MotionPause(60) MovieStop(63) PartsMotion(66)
 PartsMotionPause(67) PartsMotionStop(68) PartsRGB(70) PrimGroupMove(74)
-PrimSetSnow(84) Snow(97) SnowStart(98) SnowStop(99)
-TextFontCount(114) TextFontGet(115) TextFontName(116) TextFontSet(117)
-TextPause(121) ThreadRaise(134)`
+PrimSetSnow(84) Snow(97) SnowStart(98) SnowStop(99) TextPause(121)
+ThreadRaise(134)`
 
-已补齐的：`Rand(92)` / `TextRepaint(124)` / **`Load(40)` / `SaveWrite(96)`**（见 CHANGELOG）。
-`TextFont*`(114..117) 需要一个"字体表"模型（原版是 engine+0x94 的 vector<font>，
-名字来自 exe 注册表）才能忠实实现，暂列缺口。
+已补齐的：`Rand(92)` / `TextRepaint(124)` / `Load(40)` / `SaveWrite(96)` /
+**`TextFontCount`(114) / `TextFontGet`(115) / `TextFontName`(116) / `TextFontSet`(117)**
+（见 CHANGELOG）。剩下的都是 Snow/Lip/Movie/Parts 这类特效与输入微调命令。
 
 脚本里有 `MISSING_BASELINE = 28` 当**棘轮**：缺口数一旦变大（有人删了 case 或换了
 生成表）脚本会报 REGRESSION；实现掉一条就把这个数改小。`run_all.py` 已经有这一步。

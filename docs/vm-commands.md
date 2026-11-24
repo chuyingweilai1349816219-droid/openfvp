@@ -438,6 +438,23 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### TextFontCount(114) / TextFontGet(115) / TextFontName(116) / TextFontSet(117)（**已实现：字体表模型**）
+
+原版 `engine+0x94` 是一个 `vector<font>`：
+
+| id | 命令 | argc | 静态分析结论 | 本站实现 |
+| ---: | --- | ---: | --- | --- |
+| 114 | TextFontCount | 0 | `(end - begin) / 4` = 条数，写成 int 返回值 | 返回注册条数 |
+| 115 | TextFontGet | 0 | 读 `engine+0x6a66c4`（当前字体号），写 int 返回值 | 返回 `cur_font`（默认 -1） |
+| 116 | TextFontName | 1 | 要求 idx 在 `0..count-1`，取表里的名字（字符串句柄）；越界返回空串 | 返回注册的名字 |
+| 117 | TextFontSet | 1 | 要求 idx 在 **-5 .. count-1**（`-5` 是原版下界，大概是内置字体的负号区间），然后切换当前字体 | 记录 `cur_font` |
+
+**名字从哪来**：原版的名字来自 exe 的字体注册表（我们没有那份表）。本站改成
+「由外壳把**实际加载的位图字集**注册进来」：外壳加载完 `gfx-font-<size>.bin` 之后
+调用 `fvp_vm_font_register("gfx-font-<size>")`，所以运行时 `TextFontCount` 返回
+真实字集数（`fvm` 不注册 → 0 条，这是预期行为）。汇总里多一行 `fonts N name(s),
+current=M`。
+
 ### Load(40) / SaveWrite(96)（**已实现：请求标志**）
 
 | id | 命令 | argc | 语义 / 证据 |

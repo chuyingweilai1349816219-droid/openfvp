@@ -211,6 +211,9 @@ typedef struct FvpSndBridge {
 /* GraphRGB 的槽号上限（静态分析 0..0xFFF）。 */
 #define FVP_GRAPH_SLOTS 4096
 
+/* 字体表上限（外壳实际只会注册几套位图字集）。 */
+#define FVP_MAX_FONT_NAMES 16
+
 typedef struct FvpVM {
     FvpHcb *hcb;
     FvpValue globals[FVP_GLOBAL_COUNT];
@@ -268,6 +271,19 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* 字体表（TextFontCount 114 / TextFontGet 115 / TextFontName 116 /
+     * TextFontSet 117）。静态分析结论：原版 engine+0x94 是一个 vector<font>，
+     *   TextFontCount → (end-begin)/4（条数）
+     *   TextFontSet(idx) → 要求 idx >= -5 且 idx <= count-1，然后切换当前字体
+     *   TextFontGet      → 返回 engine+0x6a66c4（当前字体号）
+     *   TextFontName(idx) → 要求 idx 在 0..count-1，返回该字体的名字字符串
+     * 名字本身来自 exe 的注册表（我们没有那份表），所以由**外壳**把实际加载的
+     * 字集名字注册进来（fvp_vm_font_register）；fvm 不注册 → 表是空的。
+     * -5 这个下界是原版行为（大概是"内置字体"的负号区间），照抄。 */
+    char *font_name[FVP_MAX_FONT_NAMES];
+    int nfont_names;
+    int cur_font;
+
     /* Load(40) / SaveWrite(96)：存档请求。静态分析（handler 0x43a870 / 0x43c1e0）：
      *   两条都要求参数是 int 且 0..0x3E7（999）的槽号，然后
      *     engine+0xfcc = 槽号
@@ -404,6 +420,13 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* 字体表：注册一个名字（外壳调用），返回新表长；超过上限返回 -1。 */
+int fvp_vm_font_register(FvpVM *vm, const char *name);
+int fvp_vm_font_count(const FvpVM *vm);
+int fvp_vm_font_set(FvpVM *vm, const FvpValue *idx);
+int fvp_vm_font_get(const FvpVM *vm);
+const char *fvp_vm_font_name(const FvpVM *vm, const FvpValue *idx);
+
 /* Load(40) / SaveWrite(96)：记下请求（槽号 0..999），返回 1 = 参数合法。
  * fvp_vm_take_load_request / take_save_request 由外壳取走请求并清标志
  * （取走语义和 InputGetWheel 一致）；没有待处理请求时返回 -1。 */
