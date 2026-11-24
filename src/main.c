@@ -247,6 +247,18 @@ static void fvp_print_summary(const FvpVM *vm)
            (unsigned long long)vm->snow_start_calls,
            (unsigned long long)vm->snow_stop_calls,
            (unsigned long long)vm->prim_snow_calls);
+    if (vm->snow_calls > 0) {
+        printf("snow full  %d call(s), layer=%d, arg2..14 =", vm->snow_calls,
+               vm->snow_layer);
+        {
+            int i;
+
+            for (i = 1; i < 14; ++i) {
+                printf(" %d", vm->snow_vals[i]);
+            }
+            printf(", opt mask=0x%x\n", (unsigned)vm->snow_opt_mask);
+        }
+    }
     printf("cursor     show=%d ; exit dialog %llu call(s) ; movie stop %llu "
            "call(s)\n", (int)vm->cursor_show,
            (unsigned long long)vm->exit_dialog_calls,

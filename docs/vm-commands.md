@@ -457,13 +457,48 @@ parts 表与 prim 表在引擎结构里是连着的：`0x61D064 + id*0x34`（64 
 而 0x651D70 也正是存档快照里 6 个 tween manager 的第一个（`docs/save-format.md`
 §2.4.4）——以后真做 parts 动画，可以直接复用 `src/motion.c` 的 `FvpTween`。
 
-### SnowStart(98) / SnowStop(99) / PrimSetSnow(84)（**已实现：只记录开关**）
+### Snow(97) / SnowStart(98) / SnowStop(99) / PrimSetSnow(84)（**已实现：只记录状态**）
 
 | id | 命令 | argc | 语义 / 证据 | 本站实现 |
 | ---: | --- | ---: | --- | --- |
+| 97 | Snow | 18 | handler **0x43C230**，见下面拆解 | 校验通过后记录 18 个参数原值 + 计数 |
 | 98 | SnowStart | 2 | handler **0x43C4F0**：arg1 必须 int 且在 **0..1**（雪花层），然后 `snow[layer]` 表（`engine+0x688F1C + layer*0x5048`）**开关字节 = 1**；arg2 这条命令不用 | `snow_on[layer] = 1` + 计数 |
 | 99 | SnowStop | 2 | handler **0x43C520**：同一处写 **0** | `snow_on[layer] = 0` + 计数 |
 | 84 | PrimSetSnow | 4 | handler **0x43BC40**：arg1 必须 int 在 **1..0xFFF**（primId）、arg2 必须 int 在 **0..1**，然后往该图元的积雪参数写 | `prim_snow[primId] = on` + 计数 |
+
+**`Snow(97)` 的 18 个参数**（handler 0x43C230，全部靠 `cmpb $0x2` + `cmp lo/hi` 校验）：
+
+| 参数 | 区间 | 备注 |
+| --- | --- | --- |
+| arg1 | int **0..1** | 层号；后续层表基址 `engine+0x683F1C + arg1*0x5048`（比 SnowStart 的 `0x688F1C` 早 `0x5000`，同一块 0x5048 层结构里的不同子结构） |
+| arg2 / arg3 | int **0..0x1000** | 量级像坐标或数量 |
+| arg4 | int **0..0xFFF** | 与 `PrimSetSnow` 的 primId 同区间 |
+| arg5 / arg6 | int **2..0x40** | |
+| arg7 | int **1..0x10** | |
+| arg8 / arg9 | int **10..0x2710**，且 **arg8 ≤ arg9** | 交叉约束在 `0x43C356`：`cmp %eax,%ebp; jg` 直接拒绝 |
+| arg10 | int **1..0x400** | |
+| arg11 / arg12 / arg13 | int **-0x1000..0x1000** | 有符号区间（`push $0xfffff000`） |
+| arg14 | int **0..0x400** | |
+| arg15 | int **0..0xFF**（可选，缺省 0xFF） | 0x43C41A 处失败只跳过赋值 |
+| arg16 | int **0..0xFF**（可选） | 0x43C432 |
+| arg17 | int **10..0x2710**（可选） | 0x43C44F |
+| arg18 | int **0..0xFF**（可选） | 0x43C46D |
+
+arg1..arg14 **全部必填**：任何一个不是 int 或越界，整条命令被丢弃（`0x43C4DD` 直接返回），
+连计数都不进。全部通过后把 16 个整数压栈调 **0x431DB0(层结构, …)**（雪花参数表初始化）。
+`0x4381B0(v, lo, hi)` 就是那个纯判定的辅助函数：`type==2 && lo<=value<=hi`。
+
+脚本侧证据：iroseka 里这条命令**静态出现 1 次**（pc `0x035BC7`），脚本压了
+**16 个表达式 + arg17=0 + arg18=0**；`arg17=0` 落在 10..0x2710 之外 → 按可选参数缺省处理，
+说明编译器就是用常量 0 表示"这个可选参数不指定"。前 90 万步没执行到它（`unknown cmds`
+里也没有它），所以只能用合成脚本验证：`tests/test_vm_edge.py` 的 `syscall-snow-97`
+用例把 18 个区间内取值压栈后 `syscall 97`，从 `fvm` 汇总里断言
+`snow full  1 call(s), layer=0, arg2..14 = 100 200 300 2 2 1 10 100 1 …`。
+
+本站没有粒子/积雪渲染，四条都只记录状态（`snow_on[2]` / `prim_snow[4096]` /
+`snow_vals[18]` + 可选参数位图 `snow_opt_mask`），外壳与 `fvm` 汇总打印
+`snow layer=..,.. (start N / stop N), prim N call(s)`，Snow(97) 调用过时多一行
+`snow full  N call(s), layer=.., arg2..14 = … , opt mask=0x…`。
 
 本站没有粒子/积雪渲染，三条都只记录状态（`snow_on[2]` / `prim_snow[4096]`），
 外壳与 `fvm` 汇总打印 `snow layer=..,.. (start N / stop N), prim N call(s)`。

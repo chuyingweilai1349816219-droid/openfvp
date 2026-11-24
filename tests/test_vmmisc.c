@@ -177,6 +177,82 @@ int main(void)
         CHECK(fvp_vm_prim_group_move(NULL, &p1, &p1) == 0, "NULL vm group");
     }
 
+    /* --- 4g. Snow(97)：18 参数大命令（arg1..14 必填、arg15..18 可选） --- */
+    {
+        /* 基准取值：落在 handler 0x43C230 各条 cmp 的区间内部 */
+        const int base[18] = { 0, 100, 200, 300, 2, 2, 1, 10, 100,
+                               1, 0,   0,   0,   0, 0, 0, 0,   0 };
+        FvpValue v[18];
+        FvpValue bad[18];
+        int i;
+
+        for (i = 0; i < 18; ++i) {
+            v[i] = fvp_make_int(base[i]);
+        }
+        CHECK(a.snow_calls == 0, "fresh snow(97) counter");
+        CHECK(fvp_vm_snow_ex(&a, v, 14) == 1, "14 个必填参数 ok");
+        CHECK(a.snow_calls == 1, "snow(97) counter (%d)", a.snow_calls);
+        CHECK(a.snow_layer == 0 && a.snow_vals[1] == 100 &&
+              a.snow_vals[8] == 100 && a.snow_vals[13] == 0,
+              "记录 layer 与 arg2..14");
+        CHECK(a.snow_opt_mask == 0u, "没给可选参数 -> mask 0");
+
+        v[14] = fvp_make_int(0xFF);
+        v[15] = fvp_make_int(0xFF);
+        v[16] = fvp_make_int(0x2710);
+        v[17] = fvp_make_int(0xFF);
+        CHECK(fvp_vm_snow_ex(&a, v, 18) == 1, "18 个参数 ok");
+        CHECK(a.snow_opt_mask == 0xFu, "可选参数全给 -> mask 0xf (%u)",
+              (unsigned)a.snow_opt_mask);
+        CHECK(a.snow_vals[16] == 0x2710, "记录 arg17 (%d)", a.snow_vals[16]);
+        CHECK(a.snow_calls == 2, "snow(97) counter (%d)", a.snow_calls);
+
+        v[14] = fvp_make_int(256); /* arg15 越界 -> 只丢这一个可选参数 */
+        CHECK(fvp_vm_snow_ex(&a, v, 18) == 1, "可选参数越界仍生效");
+        CHECK(a.snow_opt_mask == 0xEu, "bit0 清掉 -> mask 0xe (%u)",
+              (unsigned)a.snow_opt_mask);
+        CHECK(a.snow_vals[14] == 0, "arg15 缺省记 0");
+
+        for (i = 0; i < 18; ++i) {
+            bad[i] = v[i];
+        }
+        bad[0] = fvp_make_int(2);
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "layer 2 拒绝");
+        bad[0] = v[0];
+        bad[3] = fvp_make_int(0x1000);
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "arg4 0x1000 拒绝");
+        bad[3] = v[3];
+        bad[4] = fvp_make_int(1);
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "arg5 1 拒绝（下界 2）");
+        bad[4] = v[4];
+        bad[6] = fvp_make_int(0);
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "arg7 0 拒绝（下界 1）");
+        bad[6] = v[6];
+        bad[8] = fvp_make_int(0x2711);
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "arg9 10001 拒绝");
+        bad[8] = v[8];
+        bad[7] = fvp_make_int(50);
+        bad[8] = fvp_make_int(10);
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "arg8 > arg9 拒绝");
+        bad[7] = v[7];
+        bad[8] = v[8];
+        bad[9] = fvp_make_int(0);
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "arg10 0 拒绝（下界 1）");
+        bad[9] = v[9];
+        bad[10] = fvp_make_int(-0x1001);
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "arg11 -4097 拒绝");
+        bad[10] = v[10];
+        bad[13] = fvp_make_int(0x401);
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "arg14 1025 拒绝");
+        bad[13] = v[13];
+        bad[1] = fl;
+        CHECK(fvp_vm_snow_ex(&a, bad, 18) == 0, "float 参数拒绝");
+        CHECK(fvp_vm_snow_ex(&a, v, 13) == 0, "只有 13 个参数拒绝");
+        CHECK(fvp_vm_snow_ex(&a, NULL, 18) == 0, "NULL args 拒绝");
+        CHECK(fvp_vm_snow_ex(NULL, v, 18) == 0, "NULL vm 拒绝");
+        CHECK(a.snow_calls == 3, "失败不进计数 (%d)", a.snow_calls);
+    }
+
     /* --- 4e. SnowStart(98) / SnowStop(99) / PrimSetSnow(84) --- */
     {
         FvpValue l0 = fvp_make_int(0);

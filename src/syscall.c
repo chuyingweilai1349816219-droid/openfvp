@@ -1741,6 +1741,12 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             return;
         }
         break;
+    case 97: /* Snow: 18-arg command, arg1..arg14 required (0x43C230) */
+        if (argc >= 14) {
+            (void)fvp_vm_snow_ex(vm, args, (int)argc);
+            return;
+        }
+        break;
     case 98:
         if (argc >= 1) {
             (void)fvp_vm_snow(vm, &args[0], 1);

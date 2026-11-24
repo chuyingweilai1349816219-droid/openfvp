@@ -307,6 +307,25 @@ typedef struct FvpVM {
     uint64_t snow_stop_calls;
     uint64_t prim_snow_calls;
 
+    /* Snow(97)：18 个参数的大命令（iroseka 实测调用过 1 次，脚本只压了 16 个值）。
+     * 静态分析 handler **0x43C230**：
+     *   - arg1 int 0..1（层号）→ 后面的层表基址 `engine+0x683F1C + arg1*0x5048`
+     *     （比 SnowStart 的 0x688F1C 早 0x5000，同一块 0x5048 层结构的不同子结构）
+     *   - arg2/arg3 int 0..0x1000、arg4 int 0..0xFFF（很像 primId 量级）
+     *   - arg5/arg6 int 2..0x40、arg7 int 1..0x10、arg8/arg9 int 10..0x2710
+     *     且额外要求 **arg8 <= arg9**（`0x43C356` 处 `cmp %eax,%ebp; jg` 拒绝）
+     *   - arg10 int 1..0x400、arg11..arg13 int -0x1000..0x1000、arg14 int 0..0x400
+     *   - arg1..arg14 **全部必填**（任何一个不是 int 或越界 → 整条命令丢弃）
+     *   - arg15..arg18 可选（`0x43C41A/432/44F/46D` 处失败只跳过赋值）：
+     *     arg15 0..0xFF（缺省 0xFF）、arg16 0..0xFF、arg17 10..0x2710、
+     *     arg18 0..0xFF
+     *   - 全部通过后把 16 个整数压栈调 **0x431DB0(层结构, …)**（雪花参数表初始化）
+     * 本站没有雪花渲染：只把校验通过的原值记下来（`snow_vals[18]` + 可选位图）。 */
+    int snow_calls;
+    int snow_layer;                     /* arg1 */
+    int snow_vals[18];                  /* 校验通过的参数原值（可选参数缺省记 0） */
+    unsigned short snow_opt_mask;       /* bit k = arg(15+k) 给出了合法值 */
+
     /* CursorShow(12) / ExitDialog(16) / MovieStop(63)。静态分析：
      *   12 CursorShow(v) → handler 0x4374F0：**只看类型**（null → 0、其它 → 1），
      *      然后 tail-call 0x441860(engine, 值)。本站的值模型没有 null，
@@ -505,6 +524,9 @@ int fvp_vm_prim_group_move(FvpVM *vm, const FvpValue *id,
 
 /* SnowStart(98) / SnowStop(99)：layer 0..1；返回 1 = 生效。 */
 int fvp_vm_snow(FvpVM *vm, const FvpValue *layer, int on);
+/* Snow(97)：18 个参数的大命令，arg1..arg14 必填、arg15..arg18 可选；
+ * 校验规则见 `FvpVM` 里的注释。返回 1 = 整条命令生效。 */
+int fvp_vm_snow_ex(FvpVM *vm, const FvpValue *args, int argc);
 /* PrimSetSnow(84)：primId 1..0xFFF + on 0..1；返回 1 = 生效。 */
 int fvp_vm_prim_snow(FvpVM *vm, const FvpValue *prim, const FvpValue *on);
 

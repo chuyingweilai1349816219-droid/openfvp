@@ -234,26 +234,27 @@ iroseka 的文本只推进到 **1,170 行**就停住了（`--click` 从 4000 调
 
 ```
 commands             148
-handler in a switch  143
+handler in a switch  144
 generic *Test rule   1
 documented no-op     0
-MISSING              4
+MISSING              3
 ```
 
-4 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
+3 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
 
-`LipAnim(38) LipSync(39) Snow(97) ThreadRaise(134)`
+`LipAnim(38) LipSync(39) ThreadRaise(134)`
 
 已补齐的：`Rand(92)` / `TextRepaint(124)` / `Load(40)` / `SaveWrite(96)` /
 `TextFontCount`(114) / `TextFontGet`(115) / `TextFontName`(116) / `TextFontSet`(117) /
 **`MotionPause`(60) / `TextPause`(121)** / `InputFlash`(27) / `InputGetRepeat`(33) / `InputSetClick`(37) /
 `CursorShow`(12) / `ExitDialog`(16) / `MovieStop`(63) /
 **`SnowStart`(98) / `SnowStop`(99) / `PrimSetSnow`(84)** /
-**`PartsMotion`(66) / `PartsMotionPause`(67) / `PartsMotionStop`(68) / `PartsRGB`(70) / `PrimGroupMove`(74)**（见 CHANGELOG）。
-剩下的只有 Snow(97)/LipAnim(38)/LipSync(39)/ThreadRaise(134)。
+**`PartsMotion`(66) / `PartsMotionPause`(67) / `PartsMotionStop`(68) / `PartsRGB`(70) / `PrimGroupMove`(74)** /
+**`Snow`(97)**（见 CHANGELOG）。
+剩下的只有 `LipAnim`(38) / `LipSync`(39) / `ThreadRaise`(134)。
 
-脚本里有 `MISSING_BASELINE = 4` 当**棘轮**：缺口数一旦变大（有人删了 case 或换了
+脚本里有 `MISSING_BASELINE = 3` 当**棘轮**：缺口数一旦变大（有人删了 case 或换了
 生成表）脚本会报 REGRESSION；实现掉一条就把这个数改小。`run_all.py` 已经有这一步。
 
 > 之前的说法"148 条里 146 条已实现"是把"实测调用过的命令"当成了全集，属于**口径错误**，
-> 本轮已在文档里更正为：**实测命中的命令 100% 有实现；按 id 静态审计是 143/148**。
+> 本轮已在文档里更正为：**实测命中的命令 100% 有实现；按 id 静态审计是 144/148**。

@@ -101,12 +101,13 @@ def program(*parts):
 
 def case(name, data, steps, expect_exit=0, expect_steps=None,
          expect_min_steps=None, expect_stderr=None, text_out=None,
-         text_contains=None, guard_steps=None):
+         text_contains=None, guard_steps=None, expect_stdout_contains=None):
     return {'name': name, 'data': data, 'steps': steps,
             'expect_exit': expect_exit, 'expect_steps': expect_steps,
             'expect_min_steps': expect_min_steps,
             'expect_stderr': expect_stderr, 'text_out': text_out,
             'text_contains': text_contains,
+            'expect_stdout_contains': expect_stdout_contains,
             'guard_steps': steps if guard_steps is None else guard_steps}
 
 
@@ -242,6 +243,16 @@ def build_cases():
              expect_steps=2))
     add(case('syscall-147',
              hcb(program(emit(0x03, 147), emit(0x04))), 100, expect_steps=2))
+    # Snow(97) 是 18 参数大命令：18 个 push + syscall + ret = 20 步。参数取
+    # handler 0x43C230 各条 cmp 的区间内部值，再从 fvm 汇总的自检行确认
+    # 它真的被当成一条合法命令吃掉（而不是走 unknown cmds）。
+    snow_args = (0, 100, 200, 300, 2, 2, 1, 10, 100, 1, 0, 0, 0, 0,
+                 0xFF, 0xFF, 0x2710, 0xFF)
+    add(case('syscall-snow-97',
+             hcb(program(*[emit(0x0a, v) for v in snow_args],
+                         emit(0x03, 97), emit(0x04))), 100, expect_steps=20,
+             expect_stdout_contains='snow full  1 call(s), layer=0, '
+                                    'arg2..14 = 100 200 300 2 2 1 10 100 1 '))
     add(case('syscall-threadwait-loop',
              hcb(emit(0x03, 137) + emit(0x06, 4)), 500, expect_steps=500))
     add(case('garr-string-key',
@@ -342,6 +353,11 @@ def verdict(c, res, text_ok):
             steps, c['expect_min_steps'])
     if not text_ok:
         return False, 'text output mismatch'
+    needle = c.get('expect_stdout_contains')
+    if needle:
+        out = (res['stdout'] or b'').decode('utf-8', 'replace')
+        if needle not in out:
+            return False, 'stdout 缺少 %r' % needle[:80]
     return True, 'steps=%s threads=%s' % (steps, s.get('threads'))
 
 

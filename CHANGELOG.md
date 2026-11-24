@@ -53,6 +53,28 @@
 
 ### 新增
 
+- **`Snow`(97) 落地（缺口 4 → 3）**
+  - 18 参数大命令，handler **0x43C230**：arg1..arg14 **必填**（逐段 `cmp` 区间见
+    `docs/vm-commands.md`），另有 **arg8 ≤ arg9** 的交叉约束（`0x43C356 cmp %eax,%ebp; jg`）；
+    arg15..arg18 **可选**（`0x43C41A/432/44F/46D` 处失败只跳过赋值，不拒整条命令）
+  - 反复出现的 `0x4381B0(v, lo, hi)` 是纯判定辅助函数：`type==2 && lo<=value<=hi`
+  - 全部通过 → 16 个整数压栈调 **0x431DB0(层结构, …)**；层结构基址
+    `engine+0x683F1C + arg1*0x5048`，比 `SnowStart` 的 `0x688F1C` 早 `0x5000`
+    （同一块 0x5048 层结构里的不同子结构）
+  - 本站没有雪花渲染，只记录：`snow_calls` / `snow_layer` / `snow_vals[18]` /
+    `snow_opt_mask`；外壳与 `fvm` 在调用过时多打印一行
+    `snow full  N call(s), layer=.., arg2..14 = … , opt mask=0x…`
+  - 脚本侧证据：iroseka 里这条命令**静态出现 1 次**（pc `0x035BC7`），压了
+    16 个表达式 + `arg17=0` + `arg18=0`；`arg17=0` 落在 10..0x2710 之外 → 按可选参数
+    缺省处理，**说明编译器用常量 0 表示"这个可选参数不指定"**。前 90 万步没执行到它，
+    所以改用合成脚本做端到端验证
+  - `tests/test_vm_edge.py` 新增 `syscall-snow-97` 用例（18 个 push + `syscall 97` +
+    `ret`，断言 20 步、退出码 0），并给这个测试框架加了 `expect_stdout_contains`
+    断言能力，从 `fvm` 汇总里确认
+    `snow full  1 call(s), layer=0, arg2..14 = 100 200 300 2 2 1 10 100 1 …`
+  - 单测 `tests/test_vmmisc.c` 2225 → **2251 项**（14 必填参数逐个越界 + 交叉约束 +
+    可选参数位图 + 失败不计数）；`test_vm_edge.py` 49 → **50 例**；棘轮 4 → **3**
+
 - **外壳验收恢复 + 45 s 长跑复测（环境自愈，未改任何代码）**
   - `bin\fvp.exe --game <iroseka> --run-seconds 6 --no-audio --screenshot` 退出码 0，
     写出 1920×1080 帧（8,294,400 B），`bin\fvp-win32.log` 79 行完整

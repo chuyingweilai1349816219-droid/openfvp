@@ -2384,6 +2384,16 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.snow_start_calls,
                (unsigned long long)vm.snow_stop_calls,
                (unsigned long long)vm.prim_snow_calls);
+        if (vm.snow_calls > 0) {
+            int si;
+
+            APPEND("snow full      %d call(s), layer=%d, arg2..14 =",
+                   vm.snow_calls, vm.snow_layer);
+            for (si = 1; si < 14; ++si) {
+                APPEND(" %d", vm.snow_vals[si]);
+            }
+            APPEND(", opt mask=0x%x\n", (unsigned)vm.snow_opt_mask);
+        }
         APPEND("cursor         show=%d ; exit dialog %llu call(s) ; movie "
                "stop %llu call(s)\n", (int)vm.cursor_show,
                (unsigned long long)vm.exit_dialog_calls,

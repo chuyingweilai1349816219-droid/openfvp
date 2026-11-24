@@ -1241,6 +1241,58 @@ int fvp_vm_prim_snow(FvpVM *vm, const FvpValue *prim, const FvpValue *on)
     return 1;
 }
 
+/* Snow(97) 的必填参数区间（arg1..arg14），逐条来自 handler 0x43C230 的
+ * `cmp` 序列；arg8 <= arg9 是额外的交叉约束。 */
+static const int snow_req_min[14] = { 0, 0, 0, 0, 2, 2, 1, 10, 10, 1, -0x1000,
+                                      -0x1000, -0x1000, 0 };
+static const int snow_req_max[14] = { 1, 0x1000, 0x1000, 0xFFF, 0x40, 0x40, 0x10,
+                                      0x2710, 0x2710, 0x400, 0x1000, 0x1000,
+                                      0x1000, 0x400 };
+/* 可选参数 arg15..arg18 的区间；不合法或没给就不置 bit（用内部缺省值）。 */
+static const int snow_opt_min[4] = { 0, 0, 10, 0 };
+static const int snow_opt_max[4] = { 0xFF, 0xFF, 0x2710, 0xFF };
+
+static int snow_int_in(const FvpValue *v, int lo, int hi)
+{
+    return v != NULL && v->type == (uint8_t)FVP_INT && v->i >= lo &&
+           v->i <= hi;
+}
+
+int fvp_vm_snow_ex(FvpVM *vm, const FvpValue *args, int argc)
+{
+    int i;
+
+    if (vm == NULL || args == NULL || argc < 14) {
+        return 0;
+    }
+    for (i = 0; i < 14; ++i) {
+        if (!snow_int_in(&args[i], snow_req_min[i], snow_req_max[i])) {
+            return 0;
+        }
+    }
+    /* arg8(x 起点/数量) 不能大于 arg9：0x43C356 `cmp %eax,%ebp; jg` 直接拒绝。 */
+    if (args[7].i > args[8].i) {
+        return 0;
+    }
+    vm->snow_calls += 1;
+    vm->snow_layer = (int)args[0].i;
+    for (i = 0; i < 14; ++i) {
+        vm->snow_vals[i] = (int)args[i].i;
+    }
+    vm->snow_opt_mask = 0u;
+    for (i = 0; i < 4; ++i) {
+        int slot = 14 + i;
+
+        vm->snow_vals[slot] = 0;
+        if (argc > slot &&
+            snow_int_in(&args[slot], snow_opt_min[i], snow_opt_max[i])) {
+            vm->snow_opt_mask |= (unsigned short)(1u << i);
+            vm->snow_vals[slot] = (int)args[slot].i;
+        }
+    }
+    return 1;
+}
+
 int fvp_vm_cursor_show(FvpVM *vm, const FvpValue *v)
 {
     if (vm == NULL || v == NULL) {
