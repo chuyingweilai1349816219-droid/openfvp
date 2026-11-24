@@ -219,6 +219,17 @@ typedef struct FvpVM {
     FvpThread *cur;
     uint64_t steps;
     uint64_t max_steps;
+    /* 卡死侦测（脚本自带的死循环）。连续 stall_after 步没有执行任何 syscall
+     * 就判定"卡住了"：stall_at = 命中的步数、stall_span = 那段无 syscall 的
+     * 步数、stall_pc = 最后执行的那条指令的地址。stall_after == 0 表示关闭。
+     * 为什么用"没 syscall"当判据：正常脚本每几十~几千步就有一条命令（画图、
+     * 文本、定时器…），连续几百万步一条命令都没有只可能是脚本在自旋。 */
+    uint64_t last_syscall_step;
+    uint64_t stall_after;
+    uint64_t stall_at;
+    uint64_t stall_span;
+    uint32_t stall_pc;
+    uint32_t last_pc;
     int64_t click_period;
     int64_t cx;
     int64_t cy;
@@ -287,6 +298,11 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);
 void fvp_vm_free(FvpVM *vm);
 void fvp_vm_start(FvpVM *vm);
 uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps);
+
+/* 打开卡死侦测：连续 n 步没有 syscall 就停下（n == 0 关闭，默认关闭）。
+ * 命中后 fvp_vm_stalled() 返回 1，细节看 FvpVM 的 stall_* 字段。 */
+void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
+int fvp_vm_stalled(const FvpVM *vm);
 
 /* 鼠标滚轮：外壳/测试累加增量（120 = 一格），脚本通过 InputGetWheel(36) 取走。
  * fvp_vm_wheel_take() 返回累计值并把累加器清零（取走语义）。 */

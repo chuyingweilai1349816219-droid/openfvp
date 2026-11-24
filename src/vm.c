@@ -458,6 +458,7 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         return;
     }
     vm->steps += 1;
+    vm->last_pc = ins->pc;
     if (vm->pctrace != NULL) {
         fprintf(vm->pctrace, "%x\n", (unsigned)t->pc);
     }
@@ -511,6 +512,7 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         break;
     }
     case 0x03: /* syscall */
+        vm->last_syscall_step = vm->steps; /* 卡死侦测的"有进展"信号 */
         fvp_syscall(vm, t, ins->w);
         t->pc += 3u;
         break;
@@ -1189,9 +1191,31 @@ uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps)
         stepped = 1;
         (void)stepped;
         fvp_step(vm, t);
+        /* 卡死侦测：脚本自旋（见 vm.h 的 stall_* 注释）。放在这里而不是
+         * fvp_step 里，是因为 fvp_step 还要被单测/工具直接调用。 */
+        if (vm->stall_after != 0u && vm->stall_at == 0u &&
+            vm->steps - vm->last_syscall_step > vm->stall_after) {
+            vm->stall_span = vm->steps - vm->last_syscall_step;
+            vm->stall_at = vm->steps;
+            vm->stall_pc = vm->last_pc;
+            break;
+        }
     }
     }
     return vm->steps;
+}
+
+void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n)
+{
+    if (vm == NULL) {
+        return;
+    }
+    vm->stall_after = n;
+}
+
+int fvp_vm_stalled(const FvpVM *vm)
+{
+    return vm != NULL && vm->stall_at != 0u;
 }
 
 /* ------------------------------------------------------------------ */

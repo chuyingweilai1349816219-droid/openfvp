@@ -86,6 +86,7 @@ typedef struct Options {
     int audio_frames;
 
     int burst_steps; /* VM steps per frame when not waiting for text/input */
+    int stall_after; /* 0 = 关闭；见 src/vm.h 的 stall_* */
     int text_pace_mode;
     int text_pace_ms;
 
@@ -343,6 +344,8 @@ static const wchar_t *usage_text(void)
            L"  --audio-tone HZ     自检音（例如 440），用于验证 waveOut 通路\n"
            L"  --audio-buffers N   waveOut 缓冲区数（默认 3）\n"
            L"  --run-seconds S     运行 S 秒后自动退出（回归测试用）\n"
+           L"  --stall-after N     连续 N 步没有 syscall 就判定脚本自旋并停下"
+           L"（默认 2000000，0 = 关）\n"
            L"  --screenshot FILE   退出时把最后一帧写成 32 位 BMP\n"
             L"  --thumb-shot FILE   退出时写 200x113 的存档缩略图 BMP\n"
             L"  --save-template FILE  用这个真实存档槽当模板（配 --save-preview）\n"
@@ -422,6 +425,7 @@ static void defaults(Options *o)
     o->audio_buffers = 3;
     o->audio_frames = 480; /* 10 ms at 48 kHz */
     o->burst_steps = 40000;
+    o->stall_after = 2000000;
     o->text_pace_mode = TEXT_PACE_AUTO;
     o->run_seconds = 0.0;
     o->save_preview_every = 0.0;
@@ -555,6 +559,12 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             NEED_VALUE();
             if (!parse_double_w(v, &o->run_seconds) || o->run_seconds < 0.0) {
                 bad_option("--run-seconds", v);
+                return 2;
+            }
+        } else if (wcscmp(a, L"--stall-after") == 0) {
+            NEED_VALUE();
+            if (!parse_int_w(v, &o->stall_after) || o->stall_after < 0) {
+                bad_option("--stall-after", v);
                 return 2;
             }
         } else if (wcscmp(a, L"--screenshot") == 0) {
@@ -1677,6 +1687,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
     memset(&vm, 0, sizeof(vm));
     fvp_vm_init(&vm, &hcb, 1);
+    fvp_vm_set_stall_limit(&vm, (uint64_t)opts.stall_after);
     vm.timeline_on = opts.timeline;
     vm.threads_on = opts.threads;
     fvp_logf("threads: coroutine slots %s", opts.threads ? "on" : "off (--no-threads)");
@@ -1986,6 +1997,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
             while (vm.steps < target && vm.nthreads > 0 && !win.quit) {
                 int is_poll = 0;
+                if (fvp_vm_stalled(&vm)) {
+                    break; /* 脚本自旋：VM 已停下，别再往里塞步数 */
+                }
                 int will_poll = 0;
                 uint64_t before;
 
@@ -2282,7 +2296,13 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             if (shown_u > vm.nunknown) {
                 shown_u = vm.nunknown;
             }
-            APPEND("unimpl cmds    %llu distinct:", (unsigned long long)vm.nunknown);
+            if (fvp_vm_stalled(&vm)) {
+            APPEND("stall          pc=0x%x after %llu steps without a syscall\n",
+                   (unsigned)vm.stall_pc, (unsigned long long)vm.stall_span);
+        } else {
+            APPEND("stall          none\n");
+        }
+        APPEND("unimpl cmds    %llu distinct:", (unsigned long long)vm.nunknown);
             for (ui = 0; ui < shown_u; ++ui) {
                 uint16_t cid = vm.unknown_order[ui];
 

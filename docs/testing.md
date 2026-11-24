@@ -35,7 +35,7 @@
 | **命中测试** | `test_prim_hit` | 假 host 造固定尺寸图 + 合成图元树，直接调 `gfx_prim_hit()` | 47 项 | ① `primId` 必须 1..0xFFF ② `parent == -1` 不可命中 ③ 起始图元 `draw==0`：flag=0 不命中、flag=1 命中 ④ 祖先 `draw==0` 一律不命中 ⑤ 父链 x/y 累加 ⑥ 矩形**左闭右开**（右/下边界外不命中） ⑦ 写过多 WH 取 `min(prim, 图)`、显式 WH=0 时矩形为空 ⑧ UV 后源坐标越界不命中 ⑨ type 2 看 alpha、type 5/0 恒不命中 ⑩ 组递归命中且**不加组自己的 x/y** ⑪ 悬空子树（链没到根）不命中 ⑫ 环状父子关系安全返回 0 ⑬ NULL 安全 |
 | **补间撤销** | `test_motion` | 直接构造 `FvpMotion`，不经过 gfx / VM | 47 项 | ① 时间轴推进/清零 ② `add` 参数非法（dur<0 / NULL）返回 0 ③ 到点给终值、线性插值中点 ④ 句柄自增唯一 ⑤ `reap` 只回收跑完的 ⑥ **`fvp_motion_cancel`：按图元+种类精确撤、`kind<0` 撤全部、空表/未知图元/NULL 返回 0、时间轴不受影响** ⑦ NULL 安全（2026-11 补上 Makefile 规则前，`run_all.py` 跑的是手编旧二进制） |
 | **台词历史** | `test_history` | 直接构造 `FvpHistory`，不经过 VM | 164 项 | ① init：count/pos=0、每条 value=-1 ② 字符串整串替换（不是追加）、`kind` 只收 0/1、value 只收 ≥0 ③ 空串/NULL 也写进去 ④ count=0 时任何 idx 都取不到 ⑤ "开新的一条"推进 pos、清该槽、count 上限 100 ⑥ **槽位 = pos − idx，idx 0 是最近一条** ⑦ 写满 100 条后 pos 回绕、count 停在上限 ⑧ 超长串截断到 `FVP_HISTORY_TEXT_MAX` ⑨ free 可重复、NULL 安全 |
-| **多作品兼容** | `verify_multigame.py` | 对**两部**目标作品（`iroseka.hcb`、`Hoshimemo_HD.hcb`）各跑两遍 `bin/fvm.exe --steps 900000` | 真实脚本 | ① 两个 HCB 都能解码：`script_len` / 指令数 / `main_start` 落在合理范围 ② 每部作品两次运行输出**逐字节相同**（同一 SHA-256）③ 900k 步时的基准文本行数（iroseka 195 行 / 6,496 B、hoshimemo 164 行 / 6,644 B）不得漂移 ④ 0 个 U+FFFD、日文字符占比 > 50%。**这是「第二部作品也能跑」的硬门禁**；步数不足 900k 时只断言「有文本产出」 |
+| **多作品兼容** | `verify_multigame.py` | 对**三部**目标作品（`iroseka.hcb`、`Hoshimemo_HD.hcb`、`Sakura.hcb`）各跑两遍 `bin/fvm.exe --steps 900000` | 真实脚本 | ① 两个 HCB 都能解码：`script_len` / 指令数 / `main_start` 落在合理范围 ② 三部作品的**内嵌命令表逐项相同**（148 条，名字+argc+顺序） ③ 每部作品两次运行输出**逐字节相同**（同一 SHA-256）③ 900k 步时的基准文本行数（iroseka 195 行 / 6,496 B、hoshimemo 164 行 / 6,644 B）不得漂移 ④ 0 个 U+FFFD、日文字符占比 > 50%。**这是「第二部作品也能跑」的硬门禁**；步数不足 900k 时只断言「有文本产出」 |
 | **纹理缓存上限** | `test_tex_cache` | 假 host 造固定 100×100 图，`gfx_graph_load` 反复装载 | 26 项 | ① cap=0 时全缓存 ② 设上限后 `tex_bytes` 不超上限且按 LRU 淘汰 ③ **被引用的图（refs>0）永不被淘汰** ④ 引用释放后可淘汰 ⑤ 淘汰后重新解码、缓存命中不重复解码 ⑥ NULL 安全 |
 | **定时器** | `test_timer` | 直接构造 `FvpTimer[16]`，给不同 `now_ms` | 37 项 | ① set 记起点、ms 钳到 1..100000 ② elapsed = now-start，时钟早于起点夹 0 ③ `opt` 换算 = elapsed*opt/duration（含取整与 INT32 夹紧）④ 未激活/越界 id 返回 0 ⑤ 重新 set 重置起点 ⑥ 16 个互不干扰 ⑦ NULL/0 计数安全 |
 | **文本窗口属性** | `test_textattr` | 直接构造 `FvpTextAttr[32]`，逐命令调 setter | 82 项 | ① TextColor/TextSize 钳制 ② TextSpeed 超范围**整条忽略**且 -1 合法 ③ TextShadowDist(125) 单个 0..12 **钳制**（99→12、-7→0） ④ TextSpace(128) 两分量各 -32..32、超范围的**只跳过该分量** ⑤ TextFont(113) 两个字体号 -5..31、同样逐分量 ⑥ TextSkip(127) 0..3、超范围整条忽略 ⑦ 窗口号越界/NULL 拒绝 ⑧ TextFormat(118) 六字段各自判范围（前两个就是 TextSpace 的那对字段） ⑨ TextFunction(119) 三开关 0..1/0..2/0..2 ⑩ configured_count 只数设过的窗口 |
@@ -88,7 +88,7 @@ python tests\fuzz_assets.py --no-build        :: 用现存 bin/c_assets.exe（�
 
 python tests\test_vm_edge.py
 python tests\verify_threads.py                :: 协程开/关逐字节一致（900k + 2M）
-python tests\verify_multigame.py              :: 两部作品 × 两次运行（900k）
+python tests\verify_multigame.py              :: 三部作品 × 两次运行（900k）
 python tests\verify_multigame.py --steps 300000  :: 冒烟档
 ```
 

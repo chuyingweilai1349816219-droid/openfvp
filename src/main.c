@@ -41,7 +41,10 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --dump-textattr  print every configured text window (color/size/speed)\n"
             "  --dump-savedata  print every SaveData(95) record (kind/idx/value)\n"
             "  --dump-history   print every history record (HistorySet 26 / Get 25)\n"
-            "  --dump-globals FILE  write \"index value\" lines for set globals\n",
+            "  --dump-globals FILE  write \"index value\" lines for set globals\n"
+            "  --stall-after N  stop after N steps without any syscall (default 2000000,\n"
+            "                   0 = off): catches scripts that spin in their own loop\n"
+            "  --stall-exit     exit with code 6 when a stall was detected\n",
             prog);
 }
 
@@ -229,6 +232,13 @@ static void fvp_print_summary(const FvpVM *vm)
            fvp_history_filled(&vm->history),
            (unsigned long long)vm->history.sets,
            (unsigned long long)vm->history.gets);
+    /* 卡死侦测：脚本自旋到没有任何 syscall 时由 VM 停下（见 src/vm.h）。 */
+    if (fvp_vm_stalled(vm)) {
+        printf("stall      pc=0x%x after %llu steps without a syscall\n",
+               (unsigned)vm->stall_pc, (unsigned long long)vm->stall_span);
+    } else {
+        printf("stall      none\n");
+    }
     printf("prim hit   %llu call(s), %llu hit(s)\n",
            (unsigned long long)vm->prim_hit_calls,
            (unsigned long long)vm->prim_hit_hits);
@@ -407,6 +417,8 @@ int main(int argc, char **argv)
     const char *savebin_path = NULL;
     const char *dump_globals_path = NULL;
     uint64_t steps = 2000000u;
+    uint64_t stall_after = 2000000u;
+    int stall_exit = 0;
     int64_t click = 0;
     int64_t cx = 960;
     int64_t cy = 540;
@@ -419,6 +431,7 @@ int main(int argc, char **argv)
     FvpHcb hcb;
     FvpVM vm;
     char err[256];
+    int stalled;
 
     for (i = 1; i < argc; ++i) {
         const char *a = argv[i];
@@ -440,6 +453,14 @@ int main(int argc, char **argv)
                 return 2;
             }
             i += 1;
+        } else if (strcmp(a, "--stall-after") == 0) {
+            if (i + 1 >= argc || !fvp_parse_u64(argv[i + 1], &stall_after)) {
+                fprintf(stderr, "fvm: bad --stall-after value\n");
+                return 2;
+            }
+            i += 1;
+        } else if (strcmp(a, "--stall-exit") == 0) {
+            stall_exit = 1;
         } else if (strcmp(a, "--click") == 0) {
             if (i + 1 >= argc || !fvp_parse_i64(argv[i + 1], &click)) {
                 fprintf(stderr, "fvm: bad --click value\n");
@@ -561,6 +582,7 @@ int main(int argc, char **argv)
             return 2;
         }
     }
+    fvp_vm_set_stall_limit(&vm, stall_after);
     fvp_vm_start(&vm);
     (void)fvp_vm_run(&vm, steps);
 
@@ -583,7 +605,8 @@ int main(int argc, char **argv)
         printf("text -> %s\n", text_out);
     }
 
+    stalled = fvp_vm_stalled(&vm);
     fvp_vm_free(&vm);
     fvp_hcb_free(&hcb);
-    return 0;
+    return (stalled && stall_exit) ? 6 : 0;
 }
