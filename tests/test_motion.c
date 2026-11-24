@@ -115,6 +115,46 @@ int main(void)
     CHECK(fvp_motion_active_count(NULL) == 0, "NULL active");
     CHECK(fvp_motion_value(NULL, 1, &x, &y) == 0, "NULL value");
 
+    /* 10. Motion*Stop 的语义：按图元 + 种类撤补间。 */
+    {
+        int a1;
+        int a2;
+        int mv;
+        int other;
+
+        fvp_motion_clear(&m);
+        a1 = fvp_motion_add(&m, 5, FVP_TWEEN_ALPHA, 0, 0, 0, 128, 100.0, 1, 1);
+        a2 = fvp_motion_add(&m, 5, FVP_TWEEN_ALPHA, -1, 0, 0, 255, 300.0, 1, 1);
+        mv = fvp_motion_add(&m, 5, FVP_TWEEN_MOVE_XY, 0, 0, 10, 20, 90.0, 1, 1);
+        other = fvp_motion_add(&m, 6, FVP_TWEEN_ALPHA, 0, 0, 0, 64, 100.0, 1, 1);
+        CHECK(a1 > 0 && a2 > 0 && mv > 0 && other > 0, "add 4 tweens");
+        CHECK(m.n == 4, "table has 4 (%zu)", m.n);
+
+        /* MotionAlphaStop(5)：只撤 prim 5 的 alpha，两条都撤掉。 */
+        CHECK(fvp_motion_cancel(&m, 5, FVP_TWEEN_ALPHA) == 2, "cancel 2 alpha");
+        CHECK(m.n == 2, "2 left (%zu)", m.n);
+        CHECK(fvp_motion_value(&m, a1, &x, &y) == 0, "a1 gone");
+        CHECK(fvp_motion_value(&m, a2, &x, &y) == 0, "a2 gone");
+        CHECK(fvp_motion_value(&m, mv, &x, &y) == 1, "move kept");
+        CHECK(fvp_motion_value(&m, other, &x, &y) == 1, "other prim kept");
+
+        /* kind < 0：撤 prim 5 的全部种类。 */
+        CHECK(fvp_motion_cancel(&m, 5, -1) == 1, "cancel rest of prim 5");
+        CHECK(m.n == 1, "only prim 6 left (%zu)", m.n);
+        CHECK(fvp_motion_value(&m, other, &x, &y) == 1, "prim 6 survived");
+
+        /* 没有这类补间 / 没有这个图元 / NULL：都返回 0，不改表。 */
+        CHECK(fvp_motion_cancel(&m, 5, FVP_TWEEN_ALPHA) == 0, "nothing to cancel");
+        CHECK(fvp_motion_cancel(&m, 99, -1) == 0, "unknown prim");
+        CHECK(fvp_motion_cancel(NULL, 5, -1) == 0, "NULL table");
+        CHECK(m.n == 1, "table untouched (%zu)", m.n);
+
+        /* 撤掉之后时间轴不受影响（Stop 只动补间表）。 */
+        fvp_motion_advance(&m, 50.0);
+        CHECK(fvp_motion_active_count(&m) == 1, "clock still drives the survivor");
+        fvp_motion_clear(&m);
+    }
+
     fvp_motion_free(&m);
     printf("\ntest_motion: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

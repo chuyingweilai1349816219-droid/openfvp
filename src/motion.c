@@ -158,6 +158,29 @@ size_t fvp_motion_active_count(const FvpMotion *m)
     return m->n - fvp_motion_done_count(m);
 }
 
+int fvp_motion_cancel(FvpMotion *m, int prim_id, int kind)
+{
+    size_t i;
+    size_t keep = 0;
+    int removed = 0;
+
+    if (m == NULL) {
+        return 0;
+    }
+    for (i = 0; i < m->n; ++i) {
+        int hit = (m->e[i].prim_id == prim_id) &&
+                  (kind < 0 || m->e[i].kind == kind);
+
+        if (hit) {
+            removed += 1;
+            continue;
+        }
+        m->e[keep++] = m->e[i];
+    }
+    m->n = keep;
+    return removed;
+}
+
 void fvp_motion_reap(FvpMotion *m)
 {
     size_t i;

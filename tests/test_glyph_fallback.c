@@ -91,10 +91,29 @@ static int write_atlas(const char *path, int size, const unsigned *cps,
     return 0;
 }
 
+/* 临时图集放到 %TEMP%（回落到当前目录），这样从任何工作目录跑都写得出文件 ——
+ * run_all.py 是从仓库根调这个程序的，以前写死 out/fuzz/ 就只有 fvp/ 下能过。 */
+static char g_tmp34[512];
+static char g_tmp16[512];
+
+static void make_tmp_paths(void)
+{
+    const char *t = getenv("TEMP");
+
+    if (t == NULL || t[0] == '\0') {
+        t = getenv("TMP");
+    }
+    if (t == NULL || t[0] == '\0') {
+        t = ".";
+    }
+    snprintf(g_tmp34, sizeof g_tmp34, "%s/fvp_atlas34.bin", t);
+    snprintf(g_tmp16, sizeof g_tmp16, "%s/fvp_atlas16.bin", t);
+}
+
 int main(void)
 {
-    const char *p34 = "out/fuzz/atlas34.bin";
-    const char *p16 = "out/fuzz/atlas16.bin";
+    const char *p34;
+    const char *p16;
     unsigned cps34[1];
     unsigned cps16[1];
     GfxFont *f34;
@@ -102,6 +121,9 @@ int main(void)
     Gfx *g;
     const GfxStats *st;
 
+    make_tmp_paths();
+    p34 = g_tmp34;
+    p16 = g_tmp16;
     cps34[0] = 'B';
     cps16[0] = 'A';
     CHECK(write_atlas(p34, 34, cps34, 1) == 0, "write 34px atlas");

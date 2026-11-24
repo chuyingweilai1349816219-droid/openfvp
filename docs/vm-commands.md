@@ -392,6 +392,23 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### Motion\*Stop（43 / 46 / 55 / 58，**已实现**）
+
+| id | 命令 | argc | 语义 / 证据 |
+| ---: | --- | ---: | --- |
+| 43 | MotionAlphaStop | 1 | (primId) 撤该图元的 alpha 补间。handler **0x43a990**；同组：`MotionAlpha`(42)、`MotionAlphaTest`(44, 0x43a9c0) |
+| 46 | MotionAnimStop | 1 | (primId) 撤帧动画。handler **0x43aae0** |
+| 55 | MotionMoveS2Stop | 1 | (primId) 撤缩放补间。handler **0x43b0a0** |
+| 58 | MotionMoveZStop | 1 | (primId) 撤 Z 补间。handler **0x43add0** |
+
+四条都是"动画被半路打断"时才调用：45 s 外壳实测 43×4、46×25、55×7、58×6。
+
+本引擎的接法：补间表只有三类（`MOVE_XY` / `ALPHA` / `SCALE`，`src/motion.c`），
+`fvp_motion_cancel(m, prim_id, kind)` 按"图元 + 种类"精确撤销（`kind < 0` = 全部），
+`gfx_motion_cancel()` 只是薄封装，`src/syscall.c` 里 43 → ALPHA、55 → SCALE，
+**46 / 58 没有对应种类 → 空操作**（原版同样是在空表上撤）。没有 gfx 上下文时
+（`fvm.exe`）仍报未实现。单测 `tests/test_motion.c` 16 项（共 47）。
+
 ---
 
 ## 6. 尚未完全确证 / 下一步

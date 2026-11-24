@@ -2868,6 +2868,14 @@ int gfx_get_prim(const Gfx *g, int id, int field, int *out)
 
 /* ---- 动画补间（gfx 侧）------------------------------------------------ */
 
+int gfx_motion_cancel(Gfx *g, int prim_id, int kind)
+{
+    if (g == NULL) {
+        return 0;
+    }
+    return fvp_motion_cancel(&g->motion, prim_id, kind);
+}
+
 int gfx_motion_add(Gfx *g, int prim_id, int kind, int from_x, int from_y,
                    int to_x, int to_y, int dur_ms, int mode)
 {

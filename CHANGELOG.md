@@ -51,7 +51,34 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 新增
+
+- **`Motion\*Stop`(43 / 46 / 55 / 58) 落地：按图元撤补间（本轮）**
+  - 四条命令 argc 全为 1、参数是 `primId`，handler 依次 **0x43a990 / 0x43aae0 /
+    0x43b0a0 / 0x43add0**（`work/vm_id_handler.json`）：`MotionAlphaStop`(43) /
+    `MotionAnimStop`(46) / `MotionMoveS2Stop`(55) / `MotionMoveZStop`(58)。
+    实测调用量（45 s 外壳）43×4、46×25、55×7、58×6 —— 都是"动画半路被打断"时才走
+  - 实现：补间表统一在 `src/motion.c`（`MOVE_XY` / `ALPHA` / `SCALE` 三类），新增
+    **`fvp_motion_cancel(m, prim_id, kind)`**（`kind < 0` = 所有种类），
+    `gfx_motion_cancel()` 只做薄封装；`src/syscall.c` 的
+    `case 43 / 46 / 55 / 58` 分派：43 → ALPHA、55 → SCALE、**46 / 58 → 本引擎没有
+    帧动画 / Z 补间 → 空操作**（原版也是在空表上撤，等价）。没有 gfx 上下文
+    （`fvm.exe`）时仍落回"未实现"分支，与以前一致
+  - 实测：外壳 45 s 的 `unimpl cmds` 从 **15 种降到 11 种**（43 / 46 / 55 / 58 全部
+    消失），剩 `9×57 8×46 21×24 142×8 110×6 23×4 109×1 147×1 10×1 11×1 17×1`
+  - 单测：`tests/test_motion.c` +16 项（共 **47** 项）；`run_all.py` 27 PASS / 0 FAIL
+
 ### 修复
+
+- **两处测试体系缺口（本轮顺手补上）**
+  - `tests/test_motion.c` 一直**没有 Makefile 规则**：`run_all.py` 里有它的步骤，
+    但 `make test_motion` 直接 "No rule to make target"，实际跑的是手编的旧二进制
+    （31 项，落后于源码）。现在补上 `test_motion` 目标并进 `make check`
+    —— `UNIT_TESTS` 从 12 个变 **13 个**
+  - `test_glyph_fallback` 把临时图集写死到相对路径 `out/fuzz/`，只有 cwd = `fvp/`
+    时才写得出来；`run_all.py` 是从仓库根跑的，于是稳定 3 项 FAIL
+    （"write 34px atlas" / "load atlases"）。改用 `%TEMP%`（回落到 `.`）后两个
+    工作目录都 PASS
 
 - **窗口正中的"黑方块"＝豆腐块：新增跨图集字形兜底**（用户问"中间那个方块是什么" →
   定位 → 修 → 抓帧复验）

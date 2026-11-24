@@ -77,6 +77,16 @@ void fvp_motion_reap(FvpMotion *m);
 /* 还在跑的条数。 */
 size_t fvp_motion_active_count(const FvpMotion *m);
 
+/* Motion*Stop(primId)：撤掉某个图元的某一类补间（正在跑的与已跑完的都撤）。
+ * kind < 0 表示"所有种类"。返回撤掉的条数。
+ * 对应原版程序里的 4 条命令：
+ *   MotionAlphaStop(43)  → FVP_TWEEN_ALPHA
+ *   MotionMoveS2Stop(55) → FVP_TWEEN_SCALE
+ *   MotionMoveZStop(58)  → Z 补间（本引擎没有 Z 补间，永远是空操作）
+ *   MotionAnimStop(46)   → 帧动画（同上）
+ * 语义与出处见 docs/vm-commands.md §5。 */
+int fvp_motion_cancel(FvpMotion *m, int prim_id, int kind);
+
 #ifdef __cplusplus
 }
 #endif

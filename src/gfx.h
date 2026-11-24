@@ -228,6 +228,10 @@ int gfx_get_prim(const Gfx *g, int id, int field, int *out);
  * gfx_motion_set_enabled(g, 1) 之后，gfx_motion_advance() 才会真正改图元字段，
  * 这样既有的像素级验收（参考帧）在动画关闭时逐字节不变。
  */
+/* Motion*Stop：撤掉某个图元的某一类补间（kind < 0 = 全部）。返回撤掉的条数。
+ * 实现在 src/motion.c 的 fvp_motion_cancel()。 */
+int gfx_motion_cancel(Gfx *g, int prim_id, int kind);
+
 int gfx_motion_add(Gfx *g, int prim_id, int kind, int from_x, int from_y,
                    int to_x, int to_y, int dur_ms, int mode);
 void gfx_motion_set_enabled(Gfx *g, int on);

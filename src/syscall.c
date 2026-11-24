@@ -55,6 +55,7 @@
 #pragma weak gfx_get_prim
 #pragma weak gfx_prim_hit
 #pragma weak gfx_motion_add
+#pragma weak gfx_motion_cancel
 #pragma weak gfx_motion_enabled
 
 /* Same story for the audio layer (src/snd.c): bin/fvm.exe links neither it
@@ -1605,6 +1606,29 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * 见 docs/render-model.md §8，实现在 gfx.c 的 gfx_prim_hit()。
      * 没有 gfx 上下文时（fvm.exe）保持旧行为：落到下面的"未实现"分支，返回值 0
      * —— 冻结基线因此一个字节都不动。 */
+    /* 43 MotionAlphaStop(primId) / 46 MotionAnimStop(primId) /
+     * 55 MotionMoveS2Stop(primId) / 58 MotionMoveZStop(primId)：撤掉该图元的
+     * 对应一类补间。语义见 docs/vm-commands.md §5：
+     *   43 → alpha 补间、55 → 缩放补间；46（帧动画）与 58（Z）本引擎没有对应补间，
+     *   所以是空操作 —— 原版这两条也只是"撤掉那种补间"，空表上撤即为空操作。
+     * 没有 gfx 上下文时（fvm.exe）落到下面的"未实现"分支，行为与以前一致。 */
+    case 43:
+    case 46:
+    case 55:
+    case 58:
+        if (vm->gfx_bridge != NULL && gfx_motion_cancel != NULL && argc >= 1 &&
+            args[0].type == (uint8_t)FVP_INT) {
+            int kind = -1;
+
+            if (cid == 43) {
+                kind = 1; /* FVP_TWEEN_ALPHA */
+            } else if (cid == 55) {
+                kind = 2; /* FVP_TWEEN_SCALE */
+            }
+            (void)gfx_motion_cancel(vm->gfx_bridge->gfx, (int)args[0].i, kind);
+            return;
+        }
+        break;
     case 76:
         if (vm->gfx_bridge == NULL || gfx_prim_hit == NULL || argc < 1 ||
             args[0].type != (uint8_t)FVP_INT) {
