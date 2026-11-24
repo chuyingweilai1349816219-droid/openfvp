@@ -157,6 +157,36 @@ int main(void)
           gfx_text_shown_chars(g, 0));
     gfx_text_clear(g, 0);
 
+    /* --- 9. TextOutSize(120)：两个装饰分量各自 0..12 / 0..8，逐分量校验 --- */
+    {
+        int oa = -1;
+        int ob = -1;
+
+        CHECK(gfx_text_get_out_size(g, 3, &oa, &ob) == 0,
+              "TextOutSize 未作用过时返回 0");
+        gfx_text_set_out_size(g, 3, 12, 8); /* 上界 */
+        CHECK(gfx_text_get_out_size(g, 3, &oa, &ob) == 1 &&
+              oa == 12 && ob == 8, "上界 (12,8) 记录 (%d,%d)", oa, ob);
+        gfx_text_set_out_size(g, 3, 13, 9); /* 两个都越界 -> 都保留旧值 */
+        CHECK(gfx_text_get_out_size(g, 3, &oa, &ob) == 1 &&
+              oa == 12 && ob == 8, "越界整对跳过 (%d,%d)", oa, ob);
+        gfx_text_set_out_size(g, 3, 5, 9); /* 只有 b 越界 -> a 生效 */
+        CHECK(gfx_text_get_out_size(g, 3, &oa, &ob) == 1 &&
+              oa == 5 && ob == 8, "分量独立：a=5 b 保持 8 (%d,%d)", oa, ob);
+        gfx_text_set_out_size(g, 3, -1, 3); /* 只有 a 越界 -> b 生效 */
+        CHECK(gfx_text_get_out_size(g, 3, &oa, &ob) == 1 &&
+              oa == 5 && ob == 3, "分量独立：b=3 a 保持 5 (%d,%d)", oa, ob);
+        oa = -1;
+        ob = -1;
+        CHECK(gfx_text_get_out_size(g, 99, &oa, &ob) == 0,
+              "越界层号返回 0 (%d,%d)", oa, ob);
+        CHECK(gfx_text_get_out_size(NULL, 0, &oa, &ob) == 0, "NULL gfx");
+        gfx_text_set_out_size(NULL, 0, 1, 1);
+        gfx_text_set_out_size(g, -1, 1, 1);
+        gfx_text_set_out_size(g, 99, 1, 1);
+        CHECK(1, "越界/NULL 的 set 不崩");
+    }
+
     /* 像素级验证在单元测试里做不了：没有加载图元树/字体链路就画不出字。
  * 默认关闭时像素不变由 verify_gfx 静态门保证；开启后的实机效果用外壳
  * --typewriter 跑一次 + --screenshot 看（已验证：台词能完整显示）。 */

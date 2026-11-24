@@ -477,7 +477,10 @@ typedef struct GfxTextWin {
     int size[2];
     int pos[2];
     int has_pos;
+    /* TextOutSize(120) 的两个装饰参数（历史字段名）：[0] = arg2 0..12（tw+0x595）、
+     * [1] = arg3 0..8（tw+0x596）。不是宽高，见 gfx_text_set_out_size() 的注释。 */
     int out_size[2];
+    int out_attr_set;
     GfxTextLayout lay;
     int lay_custom;
     /* 逐字显示（打字机效果）。typewriter_on == 0 时这些字段不参与绘制，
@@ -3570,14 +3573,53 @@ void gfx_text_set_pos(Gfx *g, int layer, int x, int y)
     g->tw[layer].pos[1] = y;
 }
 
-void gfx_text_set_out_size(Gfx *g, int layer, int w, int h)
+/* TextOutSize(120)：**名字是误导**。静态分析 handler 0x43C960 显示它既不写宽也不写高：
+ *   arg1 int 0..0x1F（twIdx）
+ *   arg2 int **0..0xC**  → 0x424850 → `mov %al,0x595(%ecx)`
+ *   arg3 int **0..0x8**  → 0x424880 → `mov %al,0x596(%ecx)`
+ * 两个分量各自独立判定，越界只跳过那一个（不是整条命令作废）。0x595/0x596 与
+ * TextSize 的 0x592/0x593/0x594、TextShadowDist 的 0x597 同属一段
+ * **0x28 字节的 text-style 块（tw+0x590..0x5B7）**：绘制时整块被
+ * `0x43396F: memcpy(stack, tw+0x590, 0x28)` 拷到栈上的绘制结构里，所以它们是
+ * 真正会被消费的"文字装饰参数"，不是死存储。
+ * 本站按原版语义存两个分量并逐分量钳制；`out_size[0]/[1]` 是新语义下的
+ * 装饰参数 a/b（历史字段名保留，gfx_dump 的场景 JSON 还引用它）。 */
+void gfx_text_set_out_size(Gfx *g, int layer, int a, int b)
 {
     if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
         return;
     }
     g->tw[layer].used = 1;
-    g->tw[layer].out_size[0] = w;
-    g->tw[layer].out_size[1] = h;
+    g->tw[layer].out_attr_set = 1;
+    if (a >= 0 && a <= 12) {
+        g->tw[layer].out_size[0] = a;
+    }
+    if (b >= 0 && b <= 8) {
+        g->tw[layer].out_size[1] = b;
+    }
+}
+
+int gfx_text_get_out_size(const Gfx *g, int layer, int *a, int *b)
+{
+    if (a != NULL) {
+        *a = 0;
+    }
+    if (b != NULL) {
+        *b = 0;
+    }
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return 0;
+    }
+    if (!g->tw[layer].out_attr_set) {
+        return 0;
+    }
+    if (a != NULL) {
+        *a = g->tw[layer].out_size[0];
+    }
+    if (b != NULL) {
+        *b = g->tw[layer].out_size[1];
+    }
+    return 1;
 }
 
 int gfx_text_set_layout(Gfx *g, int layer, const GfxTextLayout *lay)

@@ -224,7 +224,7 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
 | 71 | PartsSelect | 2 | `(partsId, frame)`：把该帧贴进 graph |
 | 111 | TextClear | 1 | 清空窗口 |
 | 112 | TextColor | 4 | `(tw, R, G, B)` |
-| 118/119/120 | TextFormat / TextFunction / TextOutSize | 7/4/3 | 排版参数（渲染层只记 out_size） |
+| 118/119/120 | TextFormat / TextFunction / TextOutSize | 7/4/3 | 排版参数（渲染层只记 out_size）。**120 的语义已更正**：不是宽高，是 `tw+0x595`(0..12) / `tw+0x596`(0..8) 两个装饰分量，且两作实际传的 (64,32)/(64,1) 全部越界 → 空操作，见 `docs/vm-commands.md` |
 | 121–131 | TextPause/TextPos/TextPrint/TextRepaint/TextShadowDist/TextSize/TextSkip/TextSpace/TextSpeed/TextSuspendChr | — | 见 §1.3 |
 | 123 | TextPrint | 2 | `(tw, text)`：`[读音|正文]` 会先被解析掉只留正文 |
 | 132/133/134/135/136/137 | Thread* | — | 见 §9；协程槽默认启用、对本作行为中立，见 [`docs/05-threads.md`](05-threads.md) §10 |

@@ -571,6 +571,11 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         }
         break;
     case 120: /* TextOutSize(layer, w, h) */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "TextOutSize: argc=%u layer=%d a1=%lld a2=%lld\n",
+                    (unsigned)argc, id, (long long)fvp_gfx_int(&a[1]),
+                    (long long)fvp_gfx_int(&a[2]));
+        }
         if (argc > 2) {
             gfx_text_set_out_size(g, id, fvp_gfx_int(&a[1]),
                                   fvp_gfx_int(&a[2]));

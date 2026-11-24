@@ -396,7 +396,8 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | 19 | FlagSet | 2 | (flagIdx 0..0x7FF, bool)：置/清 `engine+0x6a48c0` 的 bit（arg2 type==0 → 清位，否则置位）。**已实现**：arg2 为 int 0 即清位，越界是 no-op |
 | 110 | TextBuff | 3 | (twIdx, buffNo?, buffSize?)：`0x430ea0(tw, arg2(默认8), arg3(默认8))`，文本缓冲配置 |
 | 121 | TextPause | 2 | (twIdx, bool)：bool→`tw+0x5da`；arg2 为 null → 返回 int = `tw+0x5da` 并置线程文本状态 2 |
-| 122 | TextPos | 3 | (twIdx, x, y)：u16 写 `tw+0x5e8`(x)/`tw+0x5ea`(y) |
+| 120 | TextOutSize | 3 | **名字误导：它不是宽高。** handler **0x43C960**：arg1 int **0..0x1F**（twIdx）；arg2 int **0..0xC** → `0x424850` → `mov %al,0x595(%ecx)`；arg3 int **0..0x8** → `0x424880` → `mov %al,0x596(%ecx)`。两个分量**各自独立**判定，越界只跳过那一个。0x595/0x596 与 TextSize 的 0x592/0x593/0x594、TextShadowDist 的 0x597 同属 **tw+0x590 起 0x28 字节的 text-style 块**，绘制时被 `0x43396F: memcpy(stack, tw+0x590, 0x28)` 整块拷进绘制结构，所以不是死存储。**实测两作都传 (64,32) / (64,16) / (64,1)，全落在这两个区间之外 → 按原版逻辑整对跳过，这条命令在《五彩斑斓的世界 HD》与《星空的记忆 HD》里实际是空操作**（本站照此实现：逐分量钳制，越界保留旧值；外壳汇总打 `text out layer N: a=.. b=..`，`FVP_DEBUG_TEXT=1` 打印原始参数） |
+| 122 | TextPos | 3 | (twIdx, x, y)：u16 写 `tw+0x5e8`(x)/`tw+0x5ea`(y)。实测两作 **0 次调用**（`use=0`），所以版面位置不是脚本设的 |
 | 124 | TextRepaint | 0 | 强制重绘文本：`0x441790(engine)` |
 | 126 | TextSize | 3 | (twIdx, w 12..64, h 8..32)：字节写 `tw+0x592`(w)/`tw+0x594`(h)。**已实现**：存进 `FvpTextAttr`，按范围钳制 |
 | 127 | TextSkip | 2 | (twIdx 0..31, mode 0..3)：字节写 `tw+0x5d7`。**已实现**：`fvp_textattr_set_skip()` 存进 `FvpTextAttr.skip_mode`（超范围整条命令忽略）。静态分析出处 **0x43CDD0**：`cmp $2,(%eax)` 校验 arg0 是 int、`test %ecx; jl` / `cmp $0x1f; jg` 校验 twIdx、`test %edx; jl` / `cmp $3,%edx; jg` 校验 mode、`mov %al,0x5d7(%ecx)` 落盘 |

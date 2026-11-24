@@ -2444,6 +2444,19 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.exit_mode_calls);
         APPEND("text buff      %llu call(s)\n",
                (unsigned long long)vm.text_buff_calls);
+        {
+            int li;
+
+            for (li = 0; li < GFX_TEXT_MAX; ++li) {
+                int oa = 0;
+                int ob = 0;
+
+                if (gfx_text_get_out_size(gfx, li, &oa, &ob)) {
+                    APPEND("text out       layer %d: a=%d b=%d (TextOutSize)\n",
+                           li, oa, ob);
+                }
+            }
+        }
         APPEND("graph rgb      %llu call(s), folder=%s (folder calls %llu)\n",
                (unsigned long long)vm.graph_rgb_calls,
                vm.proj_folder != NULL ? vm.proj_folder : "-",

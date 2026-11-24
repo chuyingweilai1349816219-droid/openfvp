@@ -323,7 +323,14 @@ void gfx_text_clear(Gfx *g, int layer);
 void gfx_text_set_color(Gfx *g, int layer, int r, int gr, int b);
 void gfx_text_set_size(Gfx *g, int layer, int w, int h);
 void gfx_text_set_pos(Gfx *g, int layer, int x, int y);
-void gfx_text_set_out_size(Gfx *g, int layer, int w, int h);
+/* TextOutSize(120)：**不是宽高**。静态分析 0x43C960：arg2 int 0..12 → tw+0x595、
+ * arg3 int 0..8 → tw+0x596，两个分量各自独立校验（越界只跳过那一个）。
+ * 它们属于 tw+0x590 起 0x28 字节的 text-style 块，绘制时被整块拷进绘制结构。
+ * 参数名保留 a/b 以免误导；逐分量钳制后存 out_size[0]/[1]。 */
+void gfx_text_set_out_size(Gfx *g, int layer, int a, int b);
+/* 读回 TextOutSize 的两个分量（诊断/汇总用）；返回 1 = 这条命令作用过该层。
+ * NULL 安全。 */
+int gfx_text_get_out_size(const Gfx *g, int layer, int *a, int *b);
 
 /* Override the built-in layout table for one layer (defaults are the ones
  * proven in the Python renderer; see gfx.c gfx_text_layout_default). */
