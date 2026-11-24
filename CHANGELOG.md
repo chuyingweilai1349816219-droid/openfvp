@@ -53,6 +53,19 @@
 
 ### 新增
 
+- **外壳验收恢复 + 45 s 长跑复测（环境自愈，未改任何代码）**
+  - `bin\fvp.exe --game <iroseka> --run-seconds 6 --no-audio --screenshot` 退出码 0，
+    写出 1920×1080 帧（8,294,400 B），`bin\fvp-win32.log` 79 行完整
+  - `tests/verify_soak.ps1 -Seconds 45` **PASS**：退出码 0、工作集 140.1 → 196.1 MiB
+    （增长 56.0 MiB ≤ 96）、8 个 5 s 窗口 fps 全 ≥ 55、0 underrun、0 错误行
+  - 汇总实测：**45.01 s / 2,694 帧 / 59.86 fps**、frame avg 16.70 ms（max 87.90）、
+    gdi present avg 1.98 ms（p95 3.00 / max 6.25 / slow 0）、VM **240,201 步**
+    （与历史基线同一数值）、43 行台词、audio submitted 3,378 / completed 3,375 /
+    underruns 0、prim hit 55 次 0 命中、`unimpl cmds none`
+  - **`unimpl cmds none` 从此是外壳实测值**：之前 GUI 起不来时只能按控制台侧推断，
+    现在 148 条命令里"实测命中过的"全部有处理分支（与静态审计 143/148 互相印证）
+  - 已知问题里「shell 在 WinMain 之前卡死」条目改为**已解决**，并记下排查教训
+
 - **`PartsMotion`(66) / `PartsMotionPause`(67) / `PartsMotionStop`(68) / `PartsRGB`(70) /
   `PrimGroupMove`(74) 落地（缺口 9 → 4）**
   - `PartsMotion(partsId 0..0x3F, kind 0..0xFF, timeMs 1..300000)`：handler **0x43B3E0**，
@@ -383,15 +396,18 @@
 
 ### 已知问题
 
-- **（本轮环境问题，不是代码问题）外壳 exe 起不来了**：2026-11-24 15:00 之后，
-  `bin\fvp.exe` 在**进入 `WinMain` 之前**就卡住 —— 表现是进程存在但既不写日志、
-  也不建窗口；用 `--startup-trace` 也拿不到第一行（说明卡在 CRT/加载器阶段）。
-  交叉排查：`notepad` 能起（551 ms）、`fvm.exe` 等控制台程序全正常、链接同一组
-  `-mwindows -lgdi32 -luser32 -lwinmm -lshell32 -lole32` 的一个 20 行探针 exe
-  同样卡在启动。最可能是第三方注入（NVIDIA Overlay / Nahimic / League Akari 之类）
-  在装载阶段死锁，属于机器环境问题；重启后需复测。受影响的只是**外壳侧的验收**
-  （45 s soak、抓帧），控制台侧的门禁（`make check` / `compare.py` / `run_all` /
-  `verify_gfx` / `multigame`）全部照常通过。
+- **（已解决）外壳 exe 曾有一段时间起不来**：2026-11-24 15:00 之后的一段窗口里，
+  `bin\fvp.exe` 在**进入 `WinMain` 之前**就卡住 —— 进程存在但既不写日志、也不建窗口，
+  `--startup-trace` 也拿不到第一行（卡在 CRT/加载器阶段）。当时的交叉排查记录：
+  `notepad` 能起（551 ms）、`fvm.exe` 等控制台程序全正常、链接同一组
+  `-mwindows -lgdi32 -luser32 -lwinmm -lshell32 -lole32` 的 20 行探针 exe 同样卡住，
+  判断是第三方注入（NVIDIA Overlay / Nahimic / League Akari 之类）在装载阶段死锁。
+  **2026-11-24 19:03 复测已恢复正常**（机器环境变化后自愈，未改任何代码）：
+  `--game <iroseka> --run-seconds 6 --no-audio --screenshot` 退出码 0，写出
+  1920×1080 帧（8,294,400 B），日志 `bin\fvp-win32.log` 完整，
+  `unimpl cmds  none`。教训写在这里：**这类"进程起来但不写日志"的现象要先怀疑注入，
+  而不是先改代码**；同时 `--startup-trace` 的价值被证实（它能区分"卡在 CRT"和
+  "卡在 WinMain 之后"）。
 
 - **《樱花，萌放。》启动流程卡在脚本死循环**（pc 0x8ef82..0x8ef9b）。计数器
   `global 1711` 由 0x8eef3 初始化、0x8f5d0 递增、被这个循环自身清零；我们的运行到

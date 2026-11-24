@@ -63,9 +63,9 @@
 | 142 | V3DMotion | **20 次**，`time=1 ms mode=1` | 参数记录。本作没有 3D 场景，按空操作处理 |
 
 > 证据是控制台侧的（`fvm --steps 900000` 汇总里出现
-> `gaiji 24 call(s), size=64 name=ハ / graph/gaiji_heart68` 与 `v3d 20 call(s), ...`），
-> 因为它们以前是 `unknown cmds` 里的一项。外壳侧的 `unimpl cmds` 复测需要能启动 GUI
-> （见 CHANGELOG 已知问题里的环境问题）。
+> `gaiji 24 call(s), size=64 name=ハ / graph/gaiji_heart68` 与 `v3d 20 call(s), ...`）。
+> 外壳侧已在 2026-11-24 19:04 恢复（45 s soak 实测 `gaiji 24 call(s)`、
+> `unimpl cmds none`，见 CHANGELOG「外壳验收恢复」）。
 
 ### 外字渲染：已落地（2026-11-24）
 

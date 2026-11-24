@@ -29,7 +29,11 @@
 | 既有验收（回归） | `compare.py --run`、`verify_assets.py --quick`、`bin/test_snd.exe` | 原样调用 | 真实脚本与资源 | 与现状一致（PASS） |
 | **动画（静态门）** | `verify_gfx.ps1 -SkipDump` | `bin/test_gfx.exe` 回放 528k 步场景 | 真实资产 | 动画默认关闭时参考帧指标必须**一分不变**：24/24 图元位置误差 **0 px**、像素差 **293 (0.0141%)**、PSNR **49.94 dB**、SSIM **0.99971**（2026-11 实测仍 PASS） |
 | **长跑（soak）** | `verify_soak.ps1` | 真跑 `bin\fvp.exe --run-seconds N`，期间 2 s 一次采样工作集 | 默认 180 s | 退出码 0、工作集增长 ≤ 96 MiB、
-每个 5 s 窗口 fps ≥ 55 且 slow ≤ 2、`underruns=0`、脚本有产出、日志无 error/fatal |
+每个 5 s 窗口 fps ≥ 55 且 slow ≤ 2、`underruns=0`、脚本有产出、日志无 error/fatal。
+实测（2026-11-24，`-Seconds 45`，iroseka，音频开）：退出码 0、工作集 140.1→196.1 MiB
+（增长 56.0 MiB）、8 个窗口 fps 全 ≥ 55、0 underrun、0 错误行；汇总 45.01 s /
+**2,694 帧 / 59.86 fps**、frame avg 16.70 ms、gdi present avg 1.98 ms（p95 3.00）、
+VM **240,201 步**、43 行台词、`unimpl cmds none` |
 | **外字帧定位** | `render_vm --watch-gaiji` | 控制台渲染器，每帧检查文本窗口 | 真实脚本 | 命中已注册外字码点就停在那一帧，输出 `gaiji-hit-on.png` / `gaiji-hit-off.png` 做逐像素 A/B；命中前不渲染，便于深跑 |
 | **动画（动态门）** | `verify_motion.ps1` | `render_vm --motion`（固定步数 + 固定 dt） | 真实脚本 | ① 关动画两次同参数帧一致（harness 确定）② 1,000 步 开=关（t≈0 不漂移）③ 60,000 步 开≠关（动画可见） |
 | **协程（开关中立）** | `verify_threads.py` | `bin/fvm.exe` 跑 900k / 2M 两档，各跑「默认（协程开）」与 `--no-threads` | 真实脚本 | ① 默认模式 `start == exit`（每个协程都退出，没有空转）② 开/关文本**逐字节相同** ③ 两档都与 `ref/ref-900k.txt` / `ref/ref-2m.txt` 逐字节相同 |
