@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **标题菜单真的会贴原版贴图了（新增 `gfx_draw_image_at`）+ 更正 iroseka 的素材判断**
+  - 新增 `gfx_draw_image_at(gfx, slot, x, y)`：把图形槽里的图按 `slot_compose()`
+    + `blit_sprite()` 直接贴到画布（与精灵渲染同一条路径），在 `gfx_render()` 之后调用
+  - 外壳 `--title-menu`：按 profile 把素材名装进图形槽 `0xF00+i`，装上就贴图、
+    贴不上就退回文字模式；星空的记忆实测 `5/5 menu textures loaded`，截图出来就是
+    原版那套"白描边 + 青色发光"字样、居中、行距 90
+  - **更正**：iroseka 的 `title_start` / `title_start1..5` 是 **「New Game」的状态变体**
+    （正常 / 选中带「はじめから」注音 / 淡出…），不是 5 个菜单项；其余项是引擎用
+    字体画的。所以 iroseka profile 的 asset 全部留空 → 走文字模式，右对齐 1769 不变
+  - `tests/test_titlemenu` 调整：iroseka 不要求有贴图，hoshimemo 每项必须有
+    独立贴图 + 发光层素材
+
 - **标题菜单改成"每作品 profile"：量了第二部作品，证明两作布局不一样**
   - 用同一套方法量了《星空的记忆 HD》的原版标题画面（`work/measure_hoshi.py`）：
     **居中于 x=960**（iroseka 是右对齐 1769）、**行距 90**（iroseka 100）、

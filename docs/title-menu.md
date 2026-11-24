@@ -157,6 +157,41 @@ best match: 2243/2434 = 92.2%   文字落在 (1460, 511)
 
 ---
 
+### 3.1 更正：iroseka 的 `title_start*` 是「New Game」的状态变体，不是 5 个菜单项
+
+上一版把 `title_start` / `title_start1..5` 当成 5 个菜单项的贴图，这是错的。
+2026-11-24 把 6 张图都看了一遍：
+
+| 素材 | 内容 |
+|---|---|
+| `title_start`(340×80) | `New Game` 正常态（白边 + 深蓝字） |
+| `title_start1`(340×91) | `New Game` **选中态**（青色发光 + 下面带「はじめから」注音） |
+| `title_start2..5`(340×80) | `New Game` 的其它变体（不同发光/淡出） |
+
+也就是说 iroseka 只有"New Game"这一项有贴图，`Continue/Album/Option/Exit` 是引擎
+**用字体画的**（这也解释了为什么 `font/` 里的字体、以及标题上那套衬线体只出现在
+文本项上）。星空的记忆则相反：`title_start`(275×40) 就是文字本身，
+`title_start_ray` 是发光层，两项分开贴。
+
+因此 profile 里 **iroseka 的 asset 全部留空 → 走文字模式**，
+hoshimemo 的 asset 指向各自贴图 → 走贴图模式。
+
+### 3.2 外壳现在真的会贴图（`gfx_draw_image_at`）
+
+新增 `gfx_draw_image_at(gfx, slot, x, y)`：把图形槽里的图按
+`slot_compose() + blit_sprite()` 直接贴到画布（和精灵渲染同一条路径），
+在 `gfx_render()` **之后**调用（和文字覆盖层同一时机）。
+
+`--title-menu` 的流程变成：
+
+1. 按 profile 找当前作品 → 把 `asset` 名装进图形槽 `0xF00+i`；
+2. 装上了 → 覆盖层逐项 `gfx_draw_image_at()`（星空的记忆：真贴图）；
+3. 一张都没装上（五彩斑斓的世界：没有菜单贴图）→ 退回文字模式（内建字体）。
+
+实测：星空的记忆 `title: 5/5 menu textures loaded (slots 0xF00..0xF04)`，
+截图出来就是原版那套"白色描边 + 青色发光"的字样、居中、行距 90；
+五彩斑斓的世界 `title: no usable texture, falling back to text`，右对齐 1769 不变。
+
 ## 4. 每作品 profile：**两部作品的标题菜单布局不一样**
 
 2026-11-24 用同样的方法量了《星空的记忆 HD》的原版标题画面

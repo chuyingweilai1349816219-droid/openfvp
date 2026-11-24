@@ -56,11 +56,14 @@ void fvp_title_init(FvpTitleMenu *m)
 const FvpTitleProfile fvp_title_profile_iroseka = {
     "iroseka", FVP_TITLE_ALIGN_RIGHT, 1920, 1080, 100, 511, 1769, 960,
     {
-        { "New Game", "title_start", "", 340, 80, 1461, 1769, 511, 552 },
-        { "Continue", "title_start1", "", 340, 80, 1514, 1769, 611, 652 },
-        { "Album", "title_start2", "", 340, 80, 1580, 1768, 712, 753 },
-        { "Option", "title_start3", "", 340, 80, 1575, 1768, 811, 852 },
-        { "Exit", "title_start4", "", 340, 80, 1662, 1768, 912, 951 }
+        /* iroseka 的 title_start/title_start1..5 是 "New Game" 的**状态变体**
+         * （正常 / 选中带「はじめから」/ 淡出…），不是 5 个菜单项；其它项
+         * 在原版里是引擎用字体画的。所以这里 asset 留空 → 走文字模式。 */
+        { "New Game", "", "", 0, 0, 1461, 1769, 511, 552 },
+        { "Continue", "", "", 0, 0, 1514, 1769, 611, 652 },
+        { "Album", "", "", 0, 0, 1580, 1768, 712, 753 },
+        { "Option", "", "", 0, 0, 1575, 1768, 811, 852 },
+        { "Exit", "", "", 0, 0, 1662, 1768, 912, 951 }
     }
 };
 

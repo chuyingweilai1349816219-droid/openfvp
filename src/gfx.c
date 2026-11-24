@@ -1815,6 +1815,7 @@ static void render_sprite(Gfx *g, GfxPrim *p, const GfxXf *xf)
     int angle_eff;
 
     if (p->graph < 0 || p->graph >= GFX_GRAPH_MAX) {
+        fprintf(stderr, "[dbg] prim %d bad graph %d\n", p->id, p->graph);
         return;
     }
     s = &g->slot[p->graph];
@@ -3603,6 +3604,33 @@ int gfx_text_width(Gfx *g, const char *utf8, int px)
         w += (int)((double)adv * sc + 0.5);
     }
     return w;
+}
+
+/* 把某个图形槽里已经装好的图直接贴到画布上（引擎侧 UI 用，例如标题菜单
+ * 的预渲染按钮贴图）。x/y 是左上角；返回 1 = 画了、0 = 槽里没图。
+ * 走的是和精灵渲染同一条合成/贴图路径（slot_compose + blit_sprite），
+ * 所以缩放/多帧/叠加层行为与图元一致。 */
+int gfx_draw_image_at(Gfx *g, int slot, int x, int y)
+{
+    const uint8_t *compo = NULL;
+    int cw = 0;
+    int ch = 0;
+    GfxPrim tmp;
+
+    if (g == NULL) {
+        return 0;
+    }
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0) {
+        return 0;
+    }
+    if (compo == NULL || cw <= 0 || ch <= 0) {
+        return 0;
+    }
+    memset(&tmp, 0, sizeof tmp);
+    tmp.alpha = 255;
+    blit_sprite(g, x, y, cw, ch, compo, 0, &tmp);
+    g->stats.sprites += 1;
+    return 1;
 }
 
 /* 在 (x, y) 画一行文本：x = 左边界，y = 墨迹上沿。返回画出来的宽度。

@@ -333,6 +333,8 @@ void gfx_text_append(Gfx *g, int layer, const char *utf8);
  * 左边界/墨迹上沿画一行并返回宽度。标题菜单用这两个把 5 项右对齐到实测的
  * x = 1769（见 src/titlemenu.h 与 docs/title-menu.md）。 */
 int gfx_text_width(Gfx *g, const char *utf8, int px);
+/* 把图形槽里的图直接贴到画布（引擎侧 UI 用；返回 0 = 槽里没图）。 */
+int gfx_draw_image_at(Gfx *g, int slot, int x, int y);
 int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
                        int gr, int b, int alpha);
 void gfx_text_clear(Gfx *g, int layer);

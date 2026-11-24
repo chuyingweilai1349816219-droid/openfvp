@@ -1548,6 +1548,12 @@ static double perf_percentile(const PerfStats *p, double pct)
 /* ------------------------------------------------------------------ */
 
 /* 量宽回调：走 gfx 的字体，保证"量"和"画"用同一套字形。 */
+/* 贴图模式开关：贴图已经绑进图元后，覆盖层就不要再画一遍文字。 */
+static int title_textures_on;
+
+/* 贴图占用的图形槽（脚本还没开始跑，用 0xF00 之后的高位，避免和脚本槽冲突） */
+#define TITLE_SLOT_BASE 0x0F00
+
 static int title_measure(void *ctx, const char *utf8, int px, int *width)
 {
 #ifdef FVP_STUB_GFX
@@ -1589,6 +1595,23 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
     int i;
 
     if (gfx == NULL || m == NULL) {
+        return;
+    }
+    if (title_textures_on) {
+        /* 贴图模式：把装进图形槽的贴图直接贴到画布（render 之后画，
+         * 和文字覆盖层同一时机）。 */
+        for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+            int ix = 0;
+            int iy = 0;
+
+            if (prof == NULL || !prof->items[i].asset[0]) {
+                continue;
+            }
+            if (!fvp_title_profile_image_pos(prof, i, &ix, &iy)) {
+                continue;
+            }
+            (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + i, ix, iy);
+        }
         return;
     }
     for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
@@ -1638,6 +1661,58 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
             (void)gfx_draw_text_line(gfx, label, dx, y0, px, r, gr, b, 255);
         }
     }
+#endif
+}
+
+static int title_textures_on;
+
+/* ------------------------------------------------------------------ */
+/* 引擎侧标题菜单：把 profile 里的贴图装进图形槽，并绑成图元              */
+/* ------------------------------------------------------------------ */
+
+
+/* 返回成功装上的贴图数量。每装上一张就把图元 i+1 绑成 type 4 sprite：
+ * graph = 槽、x/y = profile 给的贴图位置、draw = 1。 */
+static int title_load_textures(Gfx *gfx, const FvpTitleProfile *prof)
+{
+#ifdef FVP_STUB_GFX
+    (void)gfx;
+    (void)prof;
+    return 0;
+#else
+    int i;
+    int loaded = 0;
+
+    if (gfx == NULL || prof == NULL) {
+        return 0;
+    }
+    for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+        const FvpTitleItemDef *d = &prof->items[i];
+        int slot = TITLE_SLOT_BASE + i;
+        int x = 0;
+        int y = 0;
+        int prim = i + 1;
+
+        if (d->asset[0] == '\0') {
+            continue;
+        }
+        if (gfx_graph_load(gfx, slot, d->asset) != 0) {
+            fvp_logf("title: texture '%s' failed to load (slot 0x%X)",
+                     d->asset, slot);
+            continue;
+        }
+        if (!fvp_title_profile_image_pos(prof, i, &x, &y)) {
+            continue;
+        }
+        (void)gfx_set_prim(gfx, prim, GFX_F_TYPE, 4);
+        (void)gfx_set_prim(gfx, prim, GFX_F_GRAPH, slot);
+        (void)gfx_set_prim(gfx, prim, GFX_F_X, x);
+        (void)gfx_set_prim(gfx, prim, GFX_F_Y, y);
+        (void)gfx_set_prim(gfx, prim, GFX_F_DRAW, 1);
+        (void)gfx_set_prim(gfx, prim, GFX_F_ALPHA, 255);
+        loaded += 1;
+    }
+    return loaded;
 #endif
 }
 
@@ -1702,6 +1777,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int title_picked = -1;
     int title_hover = -1;
     const FvpTitleProfile *title_profile = NULL;
+    int title_textures = 0;
     double title_shown_at = 0.0;
     double last_report = 0.0;
     PerfStats perf;
@@ -1991,6 +2067,17 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     gfx_set_text_prims(gfx, opts.text_prims);
     fvp_logf("gfx: text prims %s", opts.text_prims ? "on" : "off");
         fvp_logf("gfx: typewriter %s", opts.typewriter ? "on" : "off");
+        if (title_active) {
+            title_textures = title_load_textures(gfx, title_profile);
+            title_textures_on = title_textures > 0;
+            if (title_textures > 0) {
+                fvp_logf("title: %d/%d menu textures loaded (slots 0x%X..0x%X)",
+                         title_textures, FVP_TITLE_ITEMS, TITLE_SLOT_BASE,
+                         TITLE_SLOT_BASE + FVP_TITLE_ITEMS - 1);
+            } else if (title_profile != NULL) {
+                fvp_logf("title: no usable texture, falling back to text");
+            }
+        }
         nfonts_loaded = load_fonts(gfx, &opts, exe_dir, fonts);
         fvp_logf("gfx: %d font atlas(es) registered", nfonts_loaded);
         /* 把实际加载的字集名字注册进 VM 的字体表（TextFontCount/Name/Set/Get
