@@ -480,6 +480,22 @@ clean-vmmisc:
 .PHONY: test_vmmisc clean-vmmisc
 
 # ---------------------------------------------------------------------------
+# 标题菜单布局/命中（引擎侧 UI，几何来自原版实测）
+#   make test_titlemenu
+# ---------------------------------------------------------------------------
+TITLEMENU_TEST = bin/test_titlemenu$(EXE)
+
+test_titlemenu: $(TITLEMENU_TEST)
+
+$(TITLEMENU_TEST): tests/test_titlemenu.c src/titlemenu.c src/titlemenu.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_titlemenu.c src/titlemenu.c $(LDFLAGS) -lm
+
+clean-titlemenu:
+	-rm -f $(TITLEMENU_TEST)
+
+.PHONY: test_titlemenu clean-titlemenu
+
+# ---------------------------------------------------------------------------
 # null / type-0 值模型（pushfalse → FVP_NULL）
 #   make test_nullvalue
 # ---------------------------------------------------------------------------
@@ -509,7 +525,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
-             $(VMMISC_TEST) $(NULLVALUE_TEST)
+             $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

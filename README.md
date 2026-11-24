@@ -75,7 +75,7 @@
 | 全局 flag（**已实现**） | `FlagGet`/`FlagSet`（命令 18/19）读写 2048 bit / 256 B 位图，索引 0..0x7FF，越界安全；与 `save.bin` 里那段位图是同一张图（28 + 37 项断言） | [`src/flags.c`](src/flags.c) · [`docs/vm-commands.md`](docs/vm-commands.md) · [`tests/test_flags.c`](tests/test_flags.c) |
 | **跨作品验证** | 第二部作品《星空のメモリア HD》同样跑通：命令表 **148 条逐条完全相同**、opcode 同套、VM **零修改**输出 164 行正确台词 | [`docs/06-cross-validation.md`](docs/06-cross-validation.md) · [`tools/fvpprobe.py`](tools/fvpprobe.py) |
 | **原版真值对照**（进行中） | 能启动官方 `*_HD.exe` 并用 `PrintWindow(PW_RENDERFULLCONTENT)` 抓真值画面（启动失败的真因、抓帧与点击方法已成文）；标题菜单几何已量出：右对齐 x=1769、右边距 151 px、行距 100±1 px、墨迹高 40–42 px。正文对话框对照**暂停中** | [`docs/original-verification.md`](docs/original-verification.md) · [`scripts/capture-original.ps1`](scripts/capture-original.ps1) |
-| 健壮性测试 | **27,300 次** HCB 变异（0 崩溃 / 0 越界）、**339 个**资产畸形用例、**43 个** VM 边界用例；`tests/run_all.py` 一键 **35 PASS / 0 FAIL / 1 SKIP**（约 79–90 s；SKIP 是缺 numpy 的 `verify_assets`），共 36 步，含存档层 50 + 49 + 19 + 13、flag 28 + 37、历史 164 项、null 值模型 66 项检查 | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
+| 健壮性测试 | **27,300 次** HCB 变异（0 崩溃 / 0 越界）、**339 个**资产畸形用例、**43 个** VM 边界用例；`tests/run_all.py` 一键 **36 PASS / 0 FAIL / 1 SKIP**（约 79–90 s；SKIP 是缺 numpy 的 `verify_assets`），共 37 步，含存档层 50 + 49 + 19 + 13、flag 28 + 37、历史 164 项、null 值模型 66 项检查 | [`docs/testing.md`](docs/testing.md) · [`tests/run_all.py`](tests/run_all.py) |
 | 中文脚本重建（方法已验证） | 被汉化补丁打坏的 GBK 脚本重建为 3,712,944 字节、948,219 条指令、命令表与冻结表一致的结构合法 `.hcb`（产物不入库） | [`docs/cn-script-rebuild.md`](docs/cn-script-rebuild.md) |
 | Android 外壳（设计，进行中） | APK 流水线 / JNI / EGL 原生窗口 / 触摸 / 资产目录的设计（非当前主线）；外壳不在本仓库 | [`docs/android-shell.md`](docs/android-shell.md) · [`docs/roadmap.md`](docs/roadmap.md) |
 
@@ -145,7 +145,7 @@ make            # 构建 bin/fvm.exe（脚本 VM）
 make lib        # 构建 bin/libfvp.a（引擎核心 + 资源层 + 音频层，给外壳链接）
 make test       # 构建 bin/test_snd.exe（音频解码自检）
 make win32      # 构建 bin/fvp.exe（Win32 桌面运行器）
-make check      # 构建并运行 21 个不需要游戏数据的单元测试（CI 也跑这个）
+make check      # 构建并运行 22 个不需要游戏数据的单元测试（CI 也跑这个）
 make clean
 ```
 

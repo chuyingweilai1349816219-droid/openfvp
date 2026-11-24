@@ -380,6 +380,18 @@ def build_steps(args):
                                'LipAnim/LipSync/ControlMask/CursorShow null '
                                'branches reachable, end-to-end 0x09 decode'))
 
+    # 4i9. 标题菜单布局/命中（几何来自原版实测）
+    test_titlemenu = tools.get('test_titlemenu')
+    if not test_titlemenu or not os.path.isfile(test_titlemenu):
+        steps.append(Step('test_titlemenu', None, 0,
+                          skip_reason='bin/test_titlemenu.exe missing '
+                                      '(run: make test_titlemenu)'))
+    else:
+        steps.append(Step('test_titlemenu', [test_titlemenu], 120,
+                          note='engine-side title menu: 5 items right-aligned '
+                               'to x=1769, pitch 100, ink 42px, hover/click '
+                               'hit bands'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):
