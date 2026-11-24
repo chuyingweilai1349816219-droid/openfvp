@@ -2372,6 +2372,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.control_calls[1],
                (unsigned long long)vm.control_calls[2],
                (unsigned long long)vm.control_calls[3]);
+        APPEND("pause          text %llu call(s), motion %llu call(s)\n",
+               (unsigned long long)vm.text_pause_calls,
+               (unsigned long long)vm.motion_pause_calls);
         APPEND("fonts          %d name(s), current=%d\n",
                fvp_vm_font_count(&vm), fvp_vm_font_get(&vm));
         APPEND("save/load      request slot=%d (load %llu call(s), save "

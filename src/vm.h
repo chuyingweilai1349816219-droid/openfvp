@@ -211,6 +211,9 @@ typedef struct FvpSndBridge {
 /* GraphRGB 的槽号上限（静态分析 0..0xFFF）。 */
 #define FVP_GRAPH_SLOTS 4096
 
+/* prim 数量（engine 里是 0x61DD64 + id*0x34，id 0..0xFFF）。 */
+#define FVP_PRIM_COUNT 4096
+
 /* 字体表上限（外壳实际只会注册几套位图字集）。 */
 #define FVP_MAX_FONT_NAMES 16
 
@@ -271,6 +274,16 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* MotionPause(60) / TextPause(121)：两条都是"暂停字节"。静态分析：
+     *   MotionPause(primId 0..0xFFF, on 0..1) → handler 0x43AB60 写 `prim+9`
+     *   TextPause(twIdx 0..31, on 0..1)       → handler 0x43C9C0 写 `tw+0x5DA`
+     * 参数必须 int 且 0..1，否则走"等价于 0"的分支（本站按 0 处理）。
+     * TextPause 的值会转给 gfx：打字机推进（gfx_text_advance）会跳过暂停的窗口。 */
+    unsigned char tw_pause[FVP_TEXT_WINDOWS];
+    unsigned char prim_pause[FVP_PRIM_COUNT];
+    uint64_t motion_pause_calls;
+    uint64_t text_pause_calls;
+
     /* 字体表（TextFontCount 114 / TextFontGet 115 / TextFontName 116 /
      * TextFontSet 117）。静态分析结论：原版 engine+0x94 是一个 vector<font>，
      *   TextFontCount → (end-begin)/4（条数）
@@ -420,6 +433,11 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* MotionPause(60)：primId 0..0xFFF + on 0..1；返回 1 = 生效。 */
+int fvp_vm_motion_pause(FvpVM *vm, const FvpValue *prim, const FvpValue *on);
+/* TextPause(121)：twIdx 0..31 + on 0..1；返回 1 = 生效。 */
+int fvp_vm_text_pause(FvpVM *vm, const FvpValue *idx, const FvpValue *on);
+
 /* 字体表：注册一个名字（外壳调用），返回新表长；超过上限返回 -1。 */
 int fvp_vm_font_register(FvpVM *vm, const char *name);
 int fvp_vm_font_count(const FvpVM *vm);

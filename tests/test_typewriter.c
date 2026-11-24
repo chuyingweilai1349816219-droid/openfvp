@@ -121,6 +121,24 @@ int main(void)
     gfx_text_clear(g, 0);
     gfx_text_clear(g, 8);
 
+    /* --- 7b. TextPause(121)：暂停的窗口不推进逐字显示 --- */
+    {
+        gfx_text_set_speed(g, 0, 10); /* 每字 10 ms */
+        gfx_text_append(g, 0, "あいうえお");
+        CHECK(gfx_text_set_pause(g, 0, 1) == 1, "pause accepted");
+        gfx_text_advance(g, 1000);
+        CHECK(gfx_text_shown_chars(g, 0) == 0, "paused: no advance (got %d)",
+              gfx_text_shown_chars(g, 0));
+        CHECK(gfx_text_set_pause(g, 0, 0) == 1, "unpause accepted");
+        gfx_text_advance(g, 100);
+        CHECK(gfx_text_shown_chars(g, 0) == 5, "resumed: fully shown (got %d)",
+              gfx_text_shown_chars(g, 0));
+        CHECK(gfx_text_set_pause(g, -1, 1) == 0, "pause layer -1 rejected");
+        CHECK(gfx_text_set_pause(g, 32, 1) == 0, "pause layer 32 rejected");
+        CHECK(gfx_text_set_pause(NULL, 0, 1) == 0, "pause NULL rejected");
+        gfx_text_clear(g, 0);
+    }
+
     /* --- 8. 边界 / NULL 安全 --- */
     CHECK(gfx_text_shown_chars(NULL, 0) == 0, "shown(NULL)");
     CHECK(gfx_text_total_chars(NULL, 0) == 0, "total(NULL)");

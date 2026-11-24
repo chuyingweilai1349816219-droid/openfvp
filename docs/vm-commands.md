@@ -438,6 +438,18 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### MotionPause(60) / TextPause(121)（**已实现：暂停字节，TextPause 会真的停住打字机**）
+
+| id | 命令 | argc | 语义 / 证据 |
+| ---: | --- | ---: | --- |
+| 60 | MotionPause | 2 | `(primId 0..0xFFF, on 0..1)`。handler **0x43AB60**：arg1 必须 int 且在 0..0xFFF，arg2 必须 int 且在 0..1，然后写 `prim+9 = on`（一个"暂停"字节）；参数非 int 时走"等价于 0"的分支 |
+| 121 | TextPause | 2 | `(twIdx 0..31, on 0..1)`。handler **0x43C9C0**：同样的校验，写 `tw+0x5DA = on` |
+
+本站：`FvpVM` 里 `prim_pause[4096]` / `tw_pause[32]` + 两个计数；
+**TextPause 会转给渲染层**（`gfx_text_set_pause()`），`gfx_text_advance()` 跳过暂停窗口，
+所以 `--typewriter` 下能看到"暂停期间不再逐字推进、取消暂停后继续"的真实效果。
+MotionPause 目前只记录（我们的补间按 `prim_id` 组织，暂停位还没接进 tween 推进）。
+
 ### TextFontCount(114) / TextFontGet(115) / TextFontName(116) / TextFontSet(117)（**已实现：字体表模型**）
 
 原版 `engine+0x94` 是一个 `vector<font>`：

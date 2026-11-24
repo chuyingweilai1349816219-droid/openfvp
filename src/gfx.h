@@ -195,6 +195,10 @@ void gfx_text_set_format(Gfx *g, int layer, int a, int b, int c, int d,
 /* TextFunction(119)：三个开关（静态分析 0x43CCF0），只记录。 */
 void gfx_text_set_function(Gfx *g, int layer, int a, int b, int c);
 
+/* TextPause(121)：暂停某个文本窗口的逐字推进（原版写 tw+0x5DA）。
+ * 只在 `--typewriter` 打开时看得见效果：暂停期间 gfx_text_advance 不动这个窗口。 */
+int gfx_text_set_pause(Gfx *g, int layer, int on);
+
 /* 纹理缓存上限（字节）。默认 512 MiB，见 gfx.c 的 GFX_TEX_CACHE_DEFAULT_BYTES。
  * 超上限时按 LRU 淘汰 refs == 1 的条目（被图元/组/部件引用的永远不会被淘汰，
  * 需要时会重新解码），因此像素输出不变。cap 传 0 = 不限制。

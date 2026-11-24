@@ -85,6 +85,46 @@ int main(void)
     CHECK(a.text_repaint_calls == 2, "repaint counter (%llu)",
           (unsigned long long)a.text_repaint_calls);
 
+    /* --- 4a. MotionPause(60) / TextPause(121) --- */
+    {
+        FvpValue p2 = fvp_make_int(2);
+        FvpValue p100 = fvp_make_int(100);
+        FvpValue p4095 = fvp_make_int(4095);
+        FvpValue p4096 = fvp_make_int(4096);
+        FvpValue tw31 = fvp_make_int(31);
+        FvpValue tw32 = fvp_make_int(32);
+        FvpValue on1 = fvp_make_int(1);
+        FvpValue off0 = fvp_make_int(0);
+        FvpValue on2 = fvp_make_int(2);
+
+        CHECK(a.motion_pause_calls == 0 && a.text_pause_calls == 0,
+              "fresh pause counters");
+        CHECK(fvp_vm_motion_pause(&a, &p2, &on1) == 1, "motion pause on");
+        CHECK(a.prim_pause[2] == 1u, "prim 2 paused");
+        CHECK(fvp_vm_motion_pause(&a, &p2, &off0) == 1, "motion pause off");
+        CHECK(a.prim_pause[2] == 0u, "prim 2 resumed");
+        CHECK(fvp_vm_motion_pause(&a, &p4095, &on1) == 1, "prim 4095 ok");
+        CHECK(fvp_vm_motion_pause(&a, &p4096, &on1) == 0, "prim 4096 rejected");
+        CHECK(fvp_vm_motion_pause(&a, &slot_neg, &on1) == 0, "prim -1 rejected");
+        CHECK(fvp_vm_motion_pause(&a, &fl, &on1) == 0, "float prim rejected");
+        CHECK(fvp_vm_motion_pause(&a, NULL, &on1) == 0, "NULL prim rejected");
+        CHECK(a.motion_pause_calls == 3, "motion pause counter (%llu)",
+              (unsigned long long)a.motion_pause_calls);
+        /* 非法 on：按 0 处理，但仍算一次有效调用 */
+        CHECK(fvp_vm_motion_pause(&a, &p100, &on2) == 1, "bad on still applies");
+        CHECK(a.prim_pause[100] == 0u, "bad on -> 0");
+
+        CHECK(fvp_vm_text_pause(&a, &tw31, &on1) == 1, "text pause on");
+        CHECK(a.tw_pause[31] == 1u, "tw 31 paused");
+        CHECK(fvp_vm_text_pause(&a, &tw31, &off0) == 1, "text pause off");
+        CHECK(a.tw_pause[31] == 0u, "tw 31 resumed");
+        CHECK(fvp_vm_text_pause(&a, &tw32, &on1) == 0, "tw 32 rejected");
+        CHECK(fvp_vm_text_pause(&a, &slot_neg, &on1) == 0, "tw -1 rejected");
+        CHECK(fvp_vm_text_pause(NULL, &tw31, &on1) == 0, "NULL vm rejected");
+        CHECK(a.text_pause_calls == 2, "text pause counter (%llu)",
+              (unsigned long long)a.text_pause_calls);
+    }
+
     /* --- 4b. 字体表（TextFont* 114..117） --- */
     {
         FvpValue f0 = fvp_make_int(0);

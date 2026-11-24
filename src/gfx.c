@@ -486,6 +486,7 @@ typedef struct GfxTextWin {
     int shown_chars; /* 当前可见的字符数（按 UTF-8 码点算） */
     int total_chars; /* 最近一次 TextPrint 的字符数 */
     int accum_ms;    /* 累计的、还没凑够一个字的毫秒数 */
+    int paused;      /* TextPause(121)：暂停逐字推进（原版 tw+0x5DA） */
     /* TextShadowDist(125)：阴影距离 0..12（原版写 tw+0x597）。
      * TextSpace(128)：字间距/行间距，两个分量各 -32..32（原版写 tw+0x5A8/+0x5AA）。
      * 两者都**只记录、不渲染** —— 原版的阴影形状/颜色与间距的实际用法都没有证据，
@@ -3950,6 +3951,15 @@ int gfx_text_busy(const Gfx *g, int layer)
     return g->tw[layer].shown_chars < g->tw[layer].total_chars;
 }
 
+int gfx_text_set_pause(Gfx *g, int layer, int on)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return 0;
+    }
+    g->tw[layer].paused = on ? 1 : 0;
+    return 1;
+}
+
 void gfx_text_advance(Gfx *g, int dt_ms)
 {
     int i;
@@ -3961,7 +3971,7 @@ void gfx_text_advance(Gfx *g, int dt_ms)
         GfxTextWin *tw = &g->tw[i];
         int per;
 
-        if (tw->shown_chars >= tw->total_chars) {
+        if (tw->shown_chars >= tw->total_chars || tw->paused) {
             continue;
         }
         per = tw->speed_ms;

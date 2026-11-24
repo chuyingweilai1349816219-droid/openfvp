@@ -53,6 +53,23 @@
 
 ### 新增
 
+- **`MotionPause`(60) / `TextPause`(121) 落地（缺口 20 → 18）**
+  - `MotionPause(primId 0..0xFFF, on 0..1)`：handler **0x43AB60**，写 `prim+9`（暂停字节）
+  - `TextPause(twIdx 0..31, on 0..1)`：handler **0x43C9C0**，写 `tw+0x5DA`
+  - 两条的 `on` 都只收 0..1；参数非 int / 越界时走"等价于 0"的分支（照静态分析写）
+  - 实现：`FvpVM` 新增 `prim_pause[4096]` / `tw_pause[32]` + 两个计数；
+    **TextPause 会真的生效**：`gfx_text_set_pause()` → `gfx_text_advance()` 跳过暂停窗口，
+    所以 `--typewriter` 下"暂停期间不逐字推进、取消后继续"是可见行为；
+    MotionPause 只记录（补间按 prim_id 组织，暂停位还没接进 tween 推进，文档已注明）
+  - 单测：`tests/test_vmmisc.c` 2114 → **2135 项**；`tests/test_typewriter.c`
+    31 → **38 项**（暂停/恢复/越界/NULL）
+  - `scripts/check-commands.py` 棘轮 20 → **18**；门禁：`make check` 19 个单测 PASS、
+    `compare.py` 字节一致、`run_all.py --fast` 34 PASS、
+    `verify_gfx` 293 px / PSNR 49.94 / SSIM 0.99971 全不变
+  - 附：存档快照这轮想用"调色板签名"当锚点定位真实槽里的分段偏移，**6 个槽全部落空**
+    （调色板会被 ColorSet 覆盖），已把这次失败记录进 `docs/save-format.md`，下轮改用
+    prim 数组/协程上下文当锚点
+
 - **存档快照 `0x43DE90` 的分段结构摸清（本轮，唯一阻断级项目开工）**
   - 确认 `0x43DE90` 不是"只写时间戳"，而是**整个 `sNNN.bin` 的序列化器**：
     `0x43DE90..0x43E67B` 共 **685 条指令 / 62 次 call**，`this` 就是引擎对象，

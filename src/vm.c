@@ -1094,6 +1094,54 @@ static char *arena_cstr(FvpVM *vm, const FvpValue *v)
     return (char *)s->data;
 }
 
+static int on_off_of(const FvpValue *v, int *out)
+{
+    if (v == NULL || v->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    if (v->i < 0 || v->i > 1) {
+        return 0;
+    }
+    *out = (int)v->i;
+    return 1;
+}
+
+int fvp_vm_motion_pause(FvpVM *vm, const FvpValue *prim, const FvpValue *on)
+{
+    int id;
+    int val = 0;
+
+    if (vm == NULL || prim == NULL || prim->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    id = (int)prim->i;
+    if (id < 0 || id >= FVP_PRIM_COUNT) {
+        return 0;
+    }
+    (void)on_off_of(on, &val); /* 非法/缺省 → 0（原版程序里也是"等价于 0"） */
+    vm->motion_pause_calls += 1u;
+    vm->prim_pause[id] = (unsigned char)val;
+    return 1;
+}
+
+int fvp_vm_text_pause(FvpVM *vm, const FvpValue *idx, const FvpValue *on)
+{
+    int wi;
+    int val = 0;
+
+    if (vm == NULL || idx == NULL || idx->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    wi = (int)idx->i;
+    if (wi < 0 || wi >= FVP_TEXT_WINDOWS) {
+        return 0;
+    }
+    (void)on_off_of(on, &val);
+    vm->text_pause_calls += 1u;
+    vm->tw_pause[wi] = (unsigned char)val;
+    return 1;
+}
+
 int fvp_vm_font_register(FvpVM *vm, const char *name)
 {
     size_t n;

@@ -51,6 +51,7 @@
 #pragma weak gfx_text_set_font
 #pragma weak gfx_text_set_format
 #pragma weak gfx_text_set_function
+#pragma weak gfx_text_set_pause
 #pragma weak gfx_text_busy
 /* 动画补间（src/motion.c + gfx 侧）：只有链接了 gfx.c 的程序才有这些符号。 */
 #pragma weak gfx_get_prim
@@ -1701,6 +1702,25 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * 真正的文件读写由外壳/界面那一侧做。 */
     /* 114 TextFontCount() / 115 TextFontGet() / 116 TextFontName(idx) /
      * 117 TextFontSet(idx)：原版操作 engine+0x94 的字体表（见 src/vm.h）。 */
+    /* 60 MotionPause(primId 0..0xFFF, on 0..1)：handler 0x43AB60 → prim+9。
+     * 121 TextPause(twIdx 0..31, on 0..1)：handler 0x43C9C0 → tw+0x5DA，
+     *     同时转给 gfx（打字机推进时跳过暂停的窗口）。 */
+    case 60:
+        if (argc >= 2) {
+            (void)fvp_vm_motion_pause(vm, &args[0], &args[1]);
+            return;
+        }
+        break;
+    case 121:
+        if (argc >= 2) {
+            if (fvp_vm_text_pause(vm, &args[0], &args[1]) &&
+                vm->gfx_bridge != NULL && gfx_text_set_pause != NULL) {
+                (void)gfx_text_set_pause(vm->gfx_bridge->gfx,
+                                         (int)args[0].i, (int)args[1].i);
+            }
+            return;
+        }
+        break;
     case 114:
         t->temp = fvp_make_int(fvp_vm_font_count(vm));
         return;
