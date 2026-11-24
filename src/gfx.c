@@ -516,6 +516,7 @@ struct Gfx {
     int nfonts;
     GfxGaiji gaiji[GFX_MAX_GAIJI];
     int ngaiji;
+    int gaiji_on; /* 默认 1；只给 A/B 验证用，见 gfx_gaiji_set_enabled */
     GfxStats stats;
     GfxDrawItem *draw;
     int ndraw;
@@ -635,6 +636,8 @@ Gfx *gfx_create(int w, int h, const GfxHost *host)
     g->w = w;
     g->h = h;
     g->tex_cap = GFX_TEX_CACHE_DEFAULT_BYTES;
+    g->gaiji_on = 1;
+    g->gaiji_on = 1;
     g->bg = 0xFF000000u; /* opaque black, R,G,B,A bytes = 0,0,0,255 */
     g->canvas = (uint8_t *)calloc((size_t)w * (size_t)h, 4);
     g->prim = (GfxPrim *)calloc(GFX_PRIM_MAX, sizeof(GfxPrim));
@@ -1637,6 +1640,45 @@ int gfx_gaiji_count(const Gfx *g)
     return g == NULL ? 0 : g->ngaiji;
 }
 
+void gfx_gaiji_set_enabled(Gfx *g, int on)
+{
+    if (g != NULL) {
+        g->gaiji_on = on ? 1 : 0;
+    }
+}
+
+int gfx_gaiji_enabled(const Gfx *g)
+{
+    return g == NULL ? 0 : g->gaiji_on;
+}
+
+int gfx_gaiji_entry(const Gfx *g, int i, uint32_t *codepoint, int *size,
+                    int *slot, int *image_ok)
+{
+    const GfxTex *t;
+
+    if (g == NULL || i < 0 || i >= g->ngaiji) {
+        return 0;
+    }
+    if (codepoint != NULL) {
+        *codepoint = g->gaiji[i].cp;
+    }
+    if (size != NULL) {
+        *size = g->gaiji[i].size;
+    }
+    if (slot != NULL) {
+        *slot = g->gaiji[i].slot;
+    }
+    if (image_ok != NULL) {
+        t = g->slot[g->gaiji[i].slot].tex;
+        *image_ok = (t != NULL && t->img.rgba != NULL && t->img.w > 0 &&
+                     t->img.h > 0)
+                        ? 1
+                        : 0;
+    }
+    return 1;
+}
+
 static void blit_sprite(Gfx *g, int x, int y, int rw, int rh,
                         const uint8_t *src, int additive, const GfxPrim *p)
 {
@@ -2352,7 +2394,7 @@ static void draw_text_run(Gfx *g, GfxFont *f, int x, int y, const char *s,
     while ((cp = utf8_next(&p)) >= 0) {
         /* 外字优先：这个码点登记过 GaijiLoad 就直接画图（按当前字号缩放），
          * 并且按缩放后的宽度推进笔位，排版仍然对。 */
-        if (g->ngaiji > 0) {
+        if (g->ngaiji > 0 && g->gaiji_on) {
             const GfxGaiji *gj = gfx_gaiji_find(g, (uint32_t)cp);
 
             if (gj != NULL) {

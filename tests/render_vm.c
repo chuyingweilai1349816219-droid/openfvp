@@ -23,6 +23,8 @@
  *                       (default 30000, 0 = disabled); this is a snapshot
  *                       convention applied at render time only, it never
  *                       changes VM state
+ *     --no-gaiji        turn the gaiji (GaijiLoad 21) rendering off; used to
+ *                       A/B "did the external glyph image actually get drawn"
  *     --no-png          skip the PNG exports
  *     --quiet           only print the final summary
  */
@@ -580,7 +582,7 @@ static void usage(const char *prog)
             "       [--enc cp932|gbk] [--frame-steps N] [--out DIR]\n"
             "       [--hold-text N] [--motion] [--motion-dt MS] [--typewriter]\n"
             "       [--typewriter-dt MS] [--cursor X,Y] "
-            "[--dump-prims FILE] [--no-png] [--quiet]\n",
+            "[--dump-prims FILE] [--no-png] [--no-gaiji] [--quiet]\n",
             prog);
 }
 
@@ -601,6 +603,7 @@ int main(int argc, char **argv)
     int typewriter = 0;   /* --typewriter: 逐字显示（确定性验证用） */
     int tw_dt = 16;       /* --typewriter-dt: 每帧推进的毫秒数 */
     int no_png = 0;
+    int no_gaiji = 0; /* --no-gaiji：关掉外字渲染（A/B 验证用） */
     int quiet = 0;
     int i;
     FvpEncoding enc;
@@ -658,6 +661,8 @@ int main(int argc, char **argv)
             outdir = argv[++i];
         } else if (strcmp(a, "--hold-text") == 0 && i + 1 < argc) {
             hold_window = (int)strtol(argv[++i], NULL, 10);
+        } else if (strcmp(a, "--no-gaiji") == 0) {
+            no_gaiji = 1;
         } else if (strcmp(a, "--no-png") == 0) {
             no_png = 1;
         } else if (strcmp(a, "--dump-prims") == 0 && i + 1 < argc) {
@@ -763,6 +768,7 @@ int main(int argc, char **argv)
         fvp_hcb_free(&hcb);
         return 1;
     }
+    gfx_gaiji_set_enabled(g, no_gaiji ? 0 : 1);
     font_count = load_fonts(g, outdir, quiet);
     t_setup1 = now_ms();
     if (!quiet) {
@@ -982,6 +988,26 @@ int main(int argc, char **argv)
                cold_ms, hot_avg, max_render_ms);
         printf("draw list       %d sprites, %d text windows\n",
                gfx_draw_count(g), st.texts);
+        printf("gaiji           %d entr(y/ies) registered by GaijiLoad(21), "
+               "rendering %s\n",
+               gfx_gaiji_count(g), gfx_gaiji_enabled(g) ? "ON" : "OFF");
+        {
+            int gi;
+            int n = gfx_gaiji_count(g);
+
+            for (gi = 0; gi < n; gi++) {
+                uint32_t cp = 0;
+                int gsz = 0;
+                int gslot = -1;
+                int img = 0;
+
+                if (gfx_gaiji_entry(g, gi, &cp, &gsz, &gslot, &img)) {
+                    printf("  gaiji[%d]       U+%04X size=%d slot=0x%x "
+                           "image=%s\n", gi, (unsigned)cp, gsz, (unsigned)gslot,
+                           img ? "loaded" : "MISSING");
+                }
+            }
+        }
         /* PrimHit(76)：脚本用 vm.cx/cy 做命中测试的次数与命中率。
          * --cursor 固定光标，用来验证这条路径在真实脚本上确实会命中。 */
         printf("prim hit        %llu call(s), %llu hit(s) (cursor %lld,%lld)\n",
