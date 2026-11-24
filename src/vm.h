@@ -268,6 +268,16 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* Rand(92)：handler 0x437a20 —— 把 retval 标成 int，然后 `call 0x4483da`
+     * （MSVC CRT 的 `rand()`），返回值直接当 retval。也就是"返回一个 0..RAND_MAX
+     * 的整数"，MSVC 的 RAND_MAX = 0x7FFF。本站用固定种子的 xorshift32 实现，
+     * 保证同一次运行可复现（基准对比依赖确定性），每次取值 & 0x7FFF 对齐范围。 */
+    uint32_t rand_state;
+
+    /* TextRepaint(124)：handler 0x437a50 —— `call 0x441790(engine)` 让文本重画。
+     * 本站每帧整张画布重画，所以这条是**真·空操作**，只记次数。 */
+    uint64_t text_repaint_calls;
+
     /* GaijiLoad(21)：外字（造字）加载。handler 0x43f4f0：
      *   GaijiLoad(str1, size 12..0x40, str2) —— 两个参数都必须是字符串（原版
      *   type 4/5），中间那个必须是 int 且 12..64，然后
@@ -380,6 +390,8 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* Rand(92)：返回 0..0x7FFF 的伪随机数（固定种子，可复现）。 */
+int fvp_vm_rand(FvpVM *vm);
 /* GaijiLoad(21)：记录外字加载参数，返回 1 = 生效（两个字符串 + size 12..64）。 */
 int fvp_vm_gaiji_load(FvpVM *vm, const FvpValue *s1, const FvpValue *size,
                       const FvpValue *s2);

@@ -235,6 +235,9 @@ static void fvp_print_summary(const FvpVM *vm)
            (unsigned long long)vm->control_calls[1],
            (unsigned long long)vm->control_calls[2],
            (unsigned long long)vm->control_calls[3]);
+    printf("rand       state=%u ; text repaint %llu call(s)\n",
+           (unsigned)vm->rand_state,
+           (unsigned long long)vm->text_repaint_calls);
     /* GaijiLoad 21 / V3DMotion 142 */
     printf("gaiji      %llu call(s), size=%d name=%s / %s\n",
            (unsigned long long)vm->gaiji_calls, vm->gaiji_size,

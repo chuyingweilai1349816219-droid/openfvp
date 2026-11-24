@@ -438,6 +438,15 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### Rand(92) / TextRepaint(124)（**已实现**）
+
+| id | 命令 | argc | 语义 / 证据 |
+| ---: | --- | ---: | --- |
+| 92 | Rand | 0 | **返回 int**：handler **0x437a20** 把 retval 标成 type 2，`call 0x4483da`（MSVC CRT 的 `rand()`），返回值直接当 retval → **0..RAND_MAX(0x7FFF)**。本站用固定种子 xorshift32（每次 &0x7FFF），保证同一进程内可复现 |
+| 124 | TextRepaint | 0 | 无返回值：handler **0x437a50** 是 `call 0x441790(engine)`，让文本重新排版/重画。本站每帧整张画布重画，所以它是**真空操作**（只记次数） |
+
+实测：iroseka 90 万步里两条都没有被调用（所以之前一直在"缺口"名单里但运行时看不见）。
+
 ### GaijiLoad(21) / V3DMotion(142)（**已实现：只记录参数**）
 
 | id | 命令 | argc | 语义 / 证据 |

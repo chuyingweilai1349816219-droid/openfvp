@@ -119,7 +119,7 @@ graph 包里 `gaiji_heart68` 那张图。这解释了之前几个对不上的现
 - **1.0**（2026-11-24）：**引擎与工程完整**——协程槽、定时器、逐字显示、纹理缓存上限、
   23 步测试、文档 29 篇、发布流程；**已知限制在 README 与 CHANGELOG 里逐条列明**。
   ✅ 已发布（v1.0.0）。注意：**1.0.0 不是"能完整通关"**，见下。
-- **1.0 之后（未发版）**：`tests/run_all.py` 现有 **34 个步骤**——在 1.0.0 的 23 步之上加了
+- **1.0 之后（未发版）**：`tests/run_all.py` 现有 **35 个步骤**——在 1.0.0 的 23 步之上加了
   **多作品兼容门禁** `tests/verify_multigame.py`（现在是**三部**作品各跑两遍 90 万步，
    `Sakura.hcb` 目前是 KNOWN BLOCKER，见文末"第三部作品的交叉验证"；要求同一次运行
   逐字节相同、行数基线不漂移、0 个替换字符）与 **台词历史** `test_history`（164 项）。
@@ -198,20 +198,24 @@ graph 包里 `gaiji_heart68` 那张图。这解释了之前几个对不上的现
 
 ```
 commands             148
-handler in a switch  119
+handler in a switch  121
 generic *Test rule   1
 documented no-op     0
-MISSING              28
+MISSING              26
 ```
 
-28 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
+26 条没有处理分支的命令（**都不在实测路径里**，所以运行时直方图看不到它们）：
 
 `CursorShow(12) ExitDialog(16) InputFlash(27) InputGetRepeat(33) InputSetClick(37)
 LipAnim(38) LipSync(39) Load(40) MotionPause(60) MovieStop(63) PartsMotion(66)
 PartsMotionPause(67) PartsMotionStop(68) PartsRGB(70) PrimGroupMove(74)
-PrimSetSnow(84) Rand(92) SaveWrite(96) Snow(97) SnowStart(98) SnowStop(99)
+PrimSetSnow(84) SaveWrite(96) Snow(97) SnowStart(98) SnowStop(99)
 TextFontCount(114) TextFontGet(115) TextFontName(116) TextFontSet(117)
-TextPause(121) TextRepaint(124) ThreadRaise(134)`
+TextPause(121) ThreadRaise(134)`
+
+其中 `Rand(92)` / `TextRepaint(124)` 已在 2026-11-24 补齐（见 CHANGELOG），
+`TextFont*`(114..117) 需要一个"字体表"模型（原版是 engine+0x94 的 vector<font>，
+名字来自 exe 注册表）才能忠实实现，暂列缺口。
 
 脚本里有 `MISSING_BASELINE = 28` 当**棘轮**：缺口数一旦变大（有人删了 case 或换了
 生成表）脚本会报 REGRESSION；实现掉一条就把这个数改小。`run_all.py` 已经有这一步。

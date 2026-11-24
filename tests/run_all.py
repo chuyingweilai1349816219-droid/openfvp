@@ -356,6 +356,17 @@ def build_steps(args):
                                'scaled draw at the text position, re-register '
                                'replaces, empty slot draws nothing'))
 
+    # 4i7. Rand(92) / TextRepaint(124)
+    test_vmmisc = tools.get('test_vmmisc')
+    if not test_vmmisc or not os.path.isfile(test_vmmisc):
+        steps.append(Step('test_vmmisc', None, 0,
+                          skip_reason='bin/test_vmmisc.exe missing '
+                                      '(run: make test_vmmisc)'))
+    else:
+        steps.append(Step('test_vmmisc', [test_vmmisc], 120,
+                          note='Rand 92: 0..0x7FFF + deterministic per run; '
+                               'TextRepaint 124: counter only'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):

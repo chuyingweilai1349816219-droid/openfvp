@@ -736,6 +736,7 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     vm->cursor_shape = -1; /* -1 = 还没被 CursorChange 设过 */
     vm->window_mode_last = -1;
     vm->exit_mode_last = -1;
+    vm->rand_state = 1u;
     vm->save_thumb_w = 96; /* 引擎初值 96x72（docs/save-format.md §2.3） */
     vm->save_thumb_h = 72;
     /* 协程槽默认开启：实测（docs/05-threads.md §10）对本作脚本行为中立 ——
@@ -1089,6 +1090,24 @@ static char *arena_cstr(FvpVM *vm, const FvpValue *v)
     }
     s = fvp_arena_str(&vm->arena, v->str->data, v->str->len);
     return (char *)s->data;
+}
+
+int fvp_vm_rand(FvpVM *vm)
+{
+    uint32_t x;
+
+    if (vm == NULL) {
+        return 0;
+    }
+    x = vm->rand_state;
+    if (x == 0u) {
+        x = 1u; /* xorshift 的 0 是吸收态 */
+    }
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    vm->rand_state = x;
+    return (int)(x & 0x7FFFu); /* MSVC RAND_MAX == 0x7FFF */
 }
 
 int fvp_vm_gaiji_load(FvpVM *vm, const FvpValue *s1, const FvpValue *size,

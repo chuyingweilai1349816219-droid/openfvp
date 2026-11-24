@@ -1694,6 +1694,14 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * call 0x43e9c0(engine+0x6a49cc, str1, size, str2)。只记录。
      * 142 V3DMotion(..., timeMs 1..300000, mode 1..5, flag)：handler 0x43cfe0。
      * 本站没有 3D 场景，只记录。 */
+    /* 92 Rand()：handler 0x437a20 → 返回 CRT rand()（0..0x7FFF）。
+     * 124 TextRepaint()：handler 0x437a50 → 让文本重画；本站每帧全画，空操作。 */
+    case 92:
+        t->temp = fvp_make_int(fvp_vm_rand(vm));
+        return;
+    case 124:
+        vm->text_repaint_calls += 1u;
+        return;
     case 21:
         if (argc >= 3) {
             if (fvp_vm_gaiji_load(vm, &args[0], &args[1], &args[2]) &&

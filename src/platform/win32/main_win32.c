@@ -2358,6 +2358,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.control_calls[1],
                (unsigned long long)vm.control_calls[2],
                (unsigned long long)vm.control_calls[3]);
+        APPEND("rand           state=%u ; text repaint %llu call(s)\n",
+               (unsigned)vm.rand_state,
+               (unsigned long long)vm.text_repaint_calls);
         APPEND("gaiji          %llu call(s), size=%d name=%s / %s\n",
                (unsigned long long)vm.gaiji_calls, vm.gaiji_size,
                vm.gaiji_name1 != NULL ? vm.gaiji_name1 : "-",

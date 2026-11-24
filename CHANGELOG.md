@@ -53,6 +53,16 @@
 
 ### 新增
 
+- **`Rand`(92) / `TextRepaint`(124) 落地（本轮，缺口 28 → 26）**
+  - `Rand()`：handler **0x437a20** —— 把 retval 标成 int 后 `call 0x4483da`（MSVC CRT
+    的 `rand()`），返回值即 **0..RAND_MAX(0x7FFF)**。本站用固定种子的 xorshift32
+    （每次 `& 0x7FFF`），**同一进程内可复现**——基准对比依赖确定性，这点不能丢
+  - `TextRepaint()`：handler **0x437a50** 是 `call 0x441790(engine)`（让文本重画）。
+    本站每帧整张画布重画，所以它是**真空操作**，只记调用次数
+  - 单测 `tests/test_vmmisc.c` **2069 项**（范围、非恒定、可复现、NULL 安全、计数器）
+  - `scripts/check-commands.py` 的棘轮从 28 收到 **26**；`make check` 现在 **19 个单测**、
+    `run_all.py` **35 步**；两个外壳汇总各多一行 `rand state=... ; text repaint N call(s)`
+
 - **外字渲染落地：`GaijiLoad`(21) 不只是记录了 —— 字符会被真的替换成图（本轮）**
   - 数据侧：`gfx_gaiji_add(cp, size, slot)` / `gfx_gaiji_count()`，表上限 64 条，
     同码点重复登记=覆盖；syscall `case 21` 把图装进高号图形槽 `0x0F00+`（避开脚本自己的

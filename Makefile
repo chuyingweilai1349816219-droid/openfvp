@@ -448,6 +448,22 @@ clean-gaiji-render:
 .PHONY: test_gaiji_render clean-gaiji-render
 
 # ---------------------------------------------------------------------------
+# Rand(92) / TextRepaint(124)
+#   make test_vmmisc
+# ---------------------------------------------------------------------------
+VMMISC_TEST = bin/test_vmmisc$(EXE)
+
+test_vmmisc: $(VMMISC_TEST)
+
+$(VMMISC_TEST): tests/test_vmmisc.c src/vm.c src/vm.h $(OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_vmmisc.c $(filter-out src/main.o,$(OBJ)) $(LDFLAGS) -lm
+
+clean-vmmisc:
+	-rm -f $(VMMISC_TEST)
+
+.PHONY: test_vmmisc clean-vmmisc
+
+# ---------------------------------------------------------------------------
 # make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
 # CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
 #   make check
@@ -460,7 +476,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
-             $(GAIJI_TEST) $(GAIJI_RENDER_TEST)
+             $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(VMMISC_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \
