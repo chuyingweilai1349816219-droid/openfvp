@@ -24,6 +24,60 @@ import sys
 
 HEADER = 7
 
+# 槽尾里的"字符串池"（见 docs/save-format.md §2.5.1 与 src/savetail.c）
+POOL_OFFSET = 0x19408
+POOL_TAG = 0x20
+POOL_MAX = 8
+
+
+def parse_pool(tail):
+    """按 src/savetail.c 的规则解析字符串池，返回 [(kind, text)] 或 []。
+
+    规则：+0x19408 处 u32 标签 0x20、u32 个数（<=8），随后逐条 u16 长度 +
+    NUL 结尾的 cp932 字符串，条目之间允许 0 填充（跳过去）。
+    """
+    if len(tail) < POOL_OFFSET + 8:
+        return []
+    if read_u32(tail, POOL_OFFSET) != POOL_TAG:
+        return []
+    count = read_u32(tail, POOL_OFFSET + 4)
+    if count == 0 or count > POOL_MAX:
+        return []
+    off = POOL_OFFSET + 8
+    out = []
+    for _ in range(count):
+        if off + 2 > len(tail):
+            break
+        n = read_u16(tail, off)
+        off += 2
+        if n < 2 or n > 160 or off + n > len(tail):
+            break
+        if tail[off + n - 1] != 0:
+            break
+        raw = tail[off:off + n - 1]
+        try:
+            text = raw.decode('cp932')
+        except UnicodeDecodeError:
+            text = repr(raw)
+        out.append(text)
+        off += n
+        pad = 0
+        while off < len(tail) and tail[off] == 0 and pad < 8:
+            off += 1
+            pad += 1
+    return out
+
+
+def looks_like_graph(s):
+    """和 src/savetail.c 的判定一致：大写字母开头 + 含下划线。"""
+    if not s or not ('A' <= s[0] <= 'Z'):
+        return False
+    if '_' not in s:
+        return False
+    letters = sum(1 for ch in s if 'A' <= ch <= 'Z')
+    return letters >= 2
+
+
 
 def read_u16(b, off):
     return b[off] | (b[off + 1] << 8)
@@ -120,6 +174,19 @@ def main(argv=None):
     print('\n== 尾段头 32 字节 ==')
     for name, ts, strs, tail in slots:
         print('%-9s %s' % (name, tail[:32].hex(' ')))
+
+    print('\n== 槽尾字符串池 @+0x%X（src/savetail.c 的同一规则）==' % POOL_OFFSET)
+    for name, ts, strs, tail in slots:
+        pool = parse_pool(tail)
+        if not pool:
+            print('%-9s (none)' % name)
+            continue
+        graph = [x for x in pool if looks_like_graph(x)]
+        print('%-9s %d string(s)%s' % (name, len(pool),
+                                       ('  graph=%s' % graph[0]) if graph else ''))
+        for k, text in enumerate(pool):
+            tag = 'GRAPH' if looks_like_graph(text) else 'text '
+            print('           [%d] %s %r' % (k, tag, text))
 
     print('\n== 尾段末 16 字节 ==')
     for name, ts, strs, tail in slots:

@@ -53,6 +53,17 @@
 
 ### 新增
 
+- **把槽尾字符串池接进研究工具链并回填文档（`tailstat.py` + `save-snapshot.md`）**
+  - `tools/tailstat.py` 新增 `parse_pool()` / `looks_like_graph()`（与
+    `src/savetail.c` 同一规则），输出新增 `== 槽尾字符串池 @+0x19408 ==` 一节：
+    s481/s485 = 1 条对话行、**s905 = 2 条含 `BG063_000b` 图名**、
+    s800/s901/s906 = 没有
+  - `docs/save-snapshot.md` 新增 §1.4（字符串池实测表 + 落地位置 + 复现命令），
+    §4 第 1 条从"变长 DENSE 里是什么"改成"字符串池已解，其余子结构未解"，
+    工具表补上 `tailstat.py --pool` 与 `scripts/analyze-save-tail.py`
+  - 这样"槽尾研究"的两个文档（`save-format.md` §2.5.1 / `save-snapshot.md`
+    §1.4）与两个工具口径一致、可互相复现
+
 - **槽尾字符串池解析落地（`src/savetail.c`），存档列表显示当时的背景图名**
   - `fvp_savetail_parse()`：校验 `+0x19408` 的标签 `0x20`、读个数（≤8）、
     逐条 u16 长度 + NUL 结尾字符串、跳过条目间的 0 填充，cp932→UTF-8，
