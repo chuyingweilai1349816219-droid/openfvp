@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **多游戏门禁新增"标题菜单"阶段：两部作品的 profile 与菜单几何都成了硬断言**
+  - `tests/verify_multigame.py` 新增 `stage_title_menu()`：两部目标作品各跑一次
+    `--title-menu --screenshot`，断言外壳退出码、汇总行里的 profile/align、
+    走贴图还是文字模式，然后用**纯 Python 读我们自己写的 32bpp BMP**
+    （不依赖 Pillow）量菜单墨迹：
+  - 五彩斑斓的世界：5 项墨迹右边界 1767/1767/1767/1766/1762（目标 1769 ±8）、
+    行距 100/101/102/94（目标 100 ±6）、日志出现 "falls back to text"
+  - 星空的记忆：5 项中心 961/960/959/961/959（目标 960 ±10）、
+    行距 90/90/90/90（目标 90 ±6）、日志出现 "5/5 menu textures loaded"
+  - 这一步让"标题菜单只对一款游戏调过"变成会失败的断言（对齐/行距/贴图模式都对不上
+    就直接 FAIL）
+
 - **标题菜单真的会贴原版贴图了（新增 `gfx_draw_image_at`）+ 更正 iroseka 的素材判断**
   - 新增 `gfx_draw_image_at(gfx, slot, x, y)`：把图形槽里的图按 `slot_compose()`
     + `blit_sprite()` 直接贴到画布（与精灵渲染同一条路径），在 `gfx_render()` 之后调用

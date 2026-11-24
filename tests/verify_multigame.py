@@ -39,6 +39,7 @@
 import argparse
 import hashlib
 import os
+import struct
 import subprocess
 import sys
 
@@ -57,12 +58,20 @@ GAMES = [
     dict(name='iroseka',  # 《五彩斑斓的世界 HD》
          dir=os.path.join(DOWNLOADS, '五彩斑斓的世界HD'),
          script=os.path.join(DOWNLOADS, '五彩斑斓的世界HD', 'iroseka.hcb'),
-         expect_lines=195),
+         expect_lines=195,
+         # 标题菜单 profile（原版实测：右对齐 1769、行距 100、没有菜单贴图）
+         title=dict(profile='iroseka', align='right', pitch=100,
+                    right_edge=1769, textures=0,
+                    centres=[531, 631, 732, 831, 931])),
     dict(name='hoshimemo',  # 《星空的记忆 HD》
          dir=os.path.join(DOWNLOADS, 'hoshimemo_installed'),
          script=os.path.join(DOWNLOADS, 'hoshimemo_installed',
                              'Hoshimemo_HD.hcb'),
-         expect_lines=None, min_lines=50),
+         expect_lines=None, min_lines=50,
+         # 原版实测：居中 960、行距 90、5 张菜单贴图
+         title=dict(profile='hoshimemo', align='centre', pitch=90,
+                    centre_x=960, textures=5,
+                    centres=[597, 687, 777, 867, 957])),
     dict(name='sakura',  # 《樱花，萌放。（さくら、もゆ。）》
          dir=os.path.join(DOWNLOADS, '樱花，萌放（さくら、もゆ。）'),
          script=os.path.join(DOWNLOADS, '樱花，萌放（さくら、もゆ。）',
@@ -229,6 +238,119 @@ def text_stats(text):
             jp += 1
     ratio = (jp / total) if total else 0.0
     return len(lines), junk, ratio
+
+
+def read_bmp32(path):
+    """读我们自己写的 32bpp BMP（bottom-up、BGRA、无 padding）。"""
+    with open(path, 'rb') as f:
+        data = f.read()
+    if len(data) < 54 or data[:2] != b'BM':
+        return None
+    off = struct.unpack_from('<I', data, 10)[0]
+    w, h = struct.unpack_from('<ii', data, 18)
+    if w <= 0 or h <= 0:
+        return None
+    stride = w * 4
+    rows = []
+    for y in range(h):
+        start = off + (h - 1 - y) * stride
+        rows.append(data[start:start + stride])
+    return w, h, rows
+
+
+def ink_span(rows, y0, y1, x0=0, x1=1920, thresh=420):
+    """在 y0..y1 的条带里找亮色墨迹。
+    返回 (minx, maxx, miny, maxy, count)。"""
+    minx = None
+    maxx = None
+    miny = None
+    maxy = None
+    count = 0
+    h = len(rows)
+    for y in range(max(0, y0), min(h, y1)):
+        row = rows[y]
+        for x in range(max(0, x0), min(len(row) // 4, x1)):
+            b, g, r = row[x * 4], row[x * 4 + 1], row[x * 4 + 2]
+            if r + g + b > thresh:
+                count += 1
+                if minx is None or x < minx:
+                    minx = x
+                if maxx is None or x > maxx:
+                    maxx = x
+                if miny is None:
+                    miny = y
+                maxy = y
+    return minx, maxx, miny, maxy, count
+
+
+def stage_title_menu(shell, games, check):
+    """标题菜单：两部作品各跑一次 --title-menu，断言 profile、帖图/文字模式、
+    以及画出来的菜单墨迹几何（右边界 / 中心 / 行距）与原版实测一致。"""
+    for g in games:
+        t = g.get('title')
+        if not t or not g.get('dir'):
+            continue
+        name = g['name']
+        print('== %s title menu (--title-menu) ==' % name)
+        shot = os.path.join(OUT_DIR, 'mg-%s-title.bmp' % name)
+        log_path = os.path.join(OUT_DIR, 'mg-%s-title.log' % name)
+        for p in (shot, log_path):
+            if os.path.isfile(p):
+                os.remove(p)
+        rc, log = run_shell_frame(shell, g['dir'],
+                                  os.path.basename(g['script']), 2, shot,
+                                  log_path, extra=['--title-menu'])
+        check(rc == 0, 'title menu shell exit 0 (got %s)' % rc)
+        m = log_match(r'^title menu\s+enabled \(profile=([a-z]+), '
+                      r'align=(\w+),', log)
+        check(m is not None, 'title menu summary line (%s)'
+              % (m.group(0) if m else 'missing'))
+        if m is not None:
+            check(m.group(1) == t['profile'],
+                  'profile is %s (got %s)' % (t['profile'], m.group(1)))
+            check(m.group(2) == t['align'],
+                  'align is %s (got %s)' % (t['align'], m.group(2)))
+        if t['textures'] > 0:
+            m = log_match(r'title: (\d+)/5 menu textures loaded', log)
+            check(m is not None and int(m.group(1)) == t['textures'],
+                  '%d menu texture(s) loaded (%s)'
+                  % (t['textures'], m.group(0) if m else 'missing'))
+        else:
+            check('falling back to text' in log,
+                  'falls back to text when the title has no menu textures')
+        img = read_bmp32(shot) if os.path.isfile(shot) else None
+        check(img is not None, 'title frame BMP readable')
+        if img is None:
+            print('')
+            continue
+        w, h, rows = img
+        check(w == 1920 and h == 1080, 'frame is 1920x1080 (got %dx%d)'
+              % (w, h))
+        got_centres = []
+        for i, cy in enumerate(t['centres']):
+            minx, maxx, miny, maxy, cnt = ink_span(rows, cy - 34, cy + 40)
+            check(cnt > 40, 'row %d has ink (%d px)' % (i, cnt))
+            if minx is None:
+                got_centres.append(None)
+                continue
+            # 行距用**竖直中心**算（横向中心是对齐基准，不能当行距）
+            got_centres.append((miny + maxy) // 2)
+            if t['align'] == 'right':
+                check(abs(maxx - t['right_edge']) <= 8,
+                      'row %d ink right %d ~ %d' % (i, maxx,
+                                                   t['right_edge']))
+            else:
+                c = (minx + maxx) // 2
+                check(abs(c - t['centre_x']) <= 10,
+                      'row %d centred at %d ~ %d' % (i, c, t['centre_x']))
+        for i in range(1, len(got_centres)):
+            a, b = got_centres[i - 1], got_centres[i]
+            if a is None or b is None:
+                continue
+            check(abs((b - a) - t['pitch']) <= 6,
+                  'row pitch %d -> %d = %d ~ %d'
+                  % (i - 1, i, b - a, t['pitch']))
+        print('')
 
 
 def main():
@@ -415,6 +537,12 @@ def main():
                       'text prims drawn (%s)'
                       % ((m.group(0) if m else 'missing')))
                 print('')
+
+    # 7. 标题菜单：两部作品的 profile与菜单几何都要对
+    if not args.no_shell:
+        shell2 = shell_path()
+        if shell2 is not None:
+            stage_title_menu(shell2, have, check)
 
     if fails:
         print('verify_multigame: %d check(s) FAILED' % len(fails))

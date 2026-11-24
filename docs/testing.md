@@ -1,3 +1,8 @@
+
+> **2026-11-24 新增**：`verify_multigame.py` 多了一个"标题菜单"阶段——
+> 两部目标作品各跑一次 `--title-menu`，断言 profile/对齐/贴图模式，并用纯 Python
+> 读 32bpp BMP 量菜单墨迹（右边界 1769 / 中心 960、行距 100 / 90）。
+> 详见 `docs/title-menu.md` §4。
 # FVP 健壮性（畸形输入）测试
 
 > 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
