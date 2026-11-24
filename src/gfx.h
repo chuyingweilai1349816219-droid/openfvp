@@ -344,6 +344,12 @@ int gfx_image_size(const Gfx *g, int slot, int *w, int *h);
  * 直接进坐标计算，所以这个值比"从截图反推的墨迹框"更准确。
  * 返回 1 = 取到了，0 = 槽里没图。 */
 int gfx_image_offset(const Gfx *g, int slot, int *x, int *y);
+
+/* 从图形槽里图的 (sx,sy) 取 w×h 一块贴到画布 (dx,dy)。标题背景这种
+ * "素材比屏幕大、原版只显示中间一块"的情况用它（iroseka 的 title_bg1_A
+ * 是 2400x1350，屏幕 1920x1080）。越界部分自动裁掉，返回 1 = 画了。 */
+int gfx_draw_image_cropped(Gfx *g, int slot, int dx, int dy, int sx, int sy,
+                           int w, int h);
 int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
                        int gr, int b, int alpha);
 void gfx_text_clear(Gfx *g, int layer);

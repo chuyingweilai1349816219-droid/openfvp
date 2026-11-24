@@ -3610,6 +3610,59 @@ int gfx_text_width(Gfx *g, const char *utf8, int px)
  * 的预渲染按钮贴图）。x/y 是左上角；返回 1 = 画了、0 = 槽里没图。
  * 走的是和精灵渲染同一条合成/贴图路径（slot_compose + blit_sprite），
  * 所以缩放/多帧/叠加层行为与图元一致。 */
+int gfx_draw_image_cropped(Gfx *g, int slot, int dx, int dy, int sx, int sy,
+                           int w, int h)
+{
+    const uint8_t *compo = NULL;
+    int cw = 0;
+    int ch = 0;
+    uint8_t *sub;
+    GfxPrim tmp;
+    int y;
+
+    if (g == NULL || w <= 0 || h <= 0) {
+        return 0;
+    }
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0 || compo == NULL) {
+        return 0;
+    }
+    /* 源矩形裁到图内 */
+    if (sx < 0) {
+        dx -= sx;
+        w += sx;
+        sx = 0;
+    }
+    if (sy < 0) {
+        dy -= sy;
+        h += sy;
+        sy = 0;
+    }
+    if (sx + w > cw) {
+        w = cw - sx;
+    }
+    if (sy + h > ch) {
+        h = ch - sy;
+    }
+    if (w <= 0 || h <= 0) {
+        return 0;
+    }
+    sub = (uint8_t *)malloc((size_t)w * (size_t)h * 4u);
+    if (sub == NULL) {
+        return 0;
+    }
+    for (y = 0; y < h; ++y) {
+        memcpy(sub + (size_t)y * (size_t)w * 4u,
+               compo + ((size_t)(sy + y) * (size_t)cw + (size_t)sx) * 4u,
+               (size_t)w * 4u);
+    }
+    memset(&tmp, 0, sizeof tmp);
+    tmp.alpha = 255;
+    blit_sprite(g, dx, dy, w, h, sub, 0, &tmp);
+    free(sub);
+    g->stats.sprites += 1;
+    return 1;
+}
+
 int gfx_image_offset(const Gfx *g, int slot, int *x, int *y)
 {
     const GfxSlot *s;

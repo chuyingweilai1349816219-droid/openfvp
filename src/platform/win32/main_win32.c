@@ -1637,7 +1637,18 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
     /* 背景 / logo / 版权行与"菜单用贴图还是文字"无关：先铺背景和 logo，
      * 菜单项画完后再压版权行。位置都取自素材头里的 x/y。 */
     if (title_bg_on) {
-        (void)gfx_draw_image_at(gfx, TITLE_BG_SLOT, 0, 0);
+        int bsw = 0;
+        int bsh = 0;
+
+        if (prof != NULL &&
+            gfx_image_size(gfx, TITLE_BG_SLOT, &bsw, &bsh) &&
+            (bsw != prof->client_w || bsh != prof->client_h)) {
+            (void)gfx_draw_image_cropped(gfx, TITLE_BG_SLOT, 0, 0,
+                                         prof->bg_src_x, prof->bg_src_y,
+                                         prof->client_w, prof->client_h);
+        } else {
+            (void)gfx_draw_image_at(gfx, TITLE_BG_SLOT, 0, 0);
+        }
     }
     if (title_logo_on) {
         int lx = 0;

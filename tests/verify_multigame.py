@@ -62,7 +62,8 @@ GAMES = [
          # 标题菜单 profile（原版实测：右对齐 1769、行距 100、没有菜单贴图）
          title=dict(profile='iroseka', align='right', pitch=100,
                     right_edge=1769, textures=0,
-                    continue_enabled=True, save_list=6, bg='',
+                    continue_enabled=True, save_list=6,
+                    bg='title_bg1_A',
                     logo='title_logo1', copyright='',
                     centres=[531, 631, 732, 831, 931])),
     dict(name='hoshimemo',  # 《星空的记忆 HD》

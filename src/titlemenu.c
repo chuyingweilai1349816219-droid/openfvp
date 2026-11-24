@@ -65,7 +65,8 @@ const FvpTitleProfile fvp_title_profile_iroseka = {
         { "Option", "", "", 0, 0, 1575, 1768, 811, 852 },
         { "Exit", "", "", 0, 0, 1662, 1768, 912, 951 }
     },
-    "", /* iroseka 的白天标题背景还没指认出来（见 docs/title-menu.md §4.1） */
+    "title_bg1_A", /* 白天背景 2400x1350：只显示中间 1920x1080 一块 */
+    240, 135,      /* 中心裁剪（(2400-1920)/2, (1350-1080)/2) */
     "title_logo1", /* 标题 logo（位置在图片头里） */
     ""             /* 版权行素材还没指认 */
 };
@@ -87,6 +88,7 @@ const FvpTitleProfile fvp_title_profile_hoshimemo = {
         { "EXIT", "title_end", "title_end_ray", 110, 40, 914, 1005, 941, 973 }
     },
     "title_bg1",       /* 整屏白天背景（1920x1080，已与原版截图核对内容） */
+    0, 0,
     "title_logo1",     /* 标题 logo：1082x418 @ (419,72) */
     "title_copyright"  /* 版权行：445x24 @ (737,1043) */
 };
