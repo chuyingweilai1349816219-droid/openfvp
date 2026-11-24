@@ -80,6 +80,7 @@ typedef struct Options {
     int motion; /* --motion: 启用补间（默认关） */
     int timeline; /* --timeline: 虚拟时钟由帧间推进（默认关） */
     int tone_hz;
+    int threads; /* --no-threads: 关协程槽（默认开） */
     int audio_buffers;
     int audio_frames;
 
@@ -349,6 +350,7 @@ static const wchar_t *usage_text(void)
             L"  --timeline           虚拟时钟随帧推进（ThreadSleep/Wait 按毫秒唤醒）\n"
            L"  --font FILE         加载 GFXF 字体图集（可重复；默认自动找 exe 目录 gfx-font-*.bin）\n"
            L"  --no-feed-text      关闭壳的临时文本桥（等 syscall 层接好 gfx 后用）\n"
+            L"  --no-threads        关闭协程槽 0..31（A/B 用；默认开启，本作脚本行为中立）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --console           同时输出到启动它的控制台窗口\n"
            L"  --verbose           更详细的日志\n"
@@ -419,6 +421,7 @@ static void defaults(Options *o)
     o->save_preview_every = 0.0;
     o->motion = 0;
     o->timeline = 0;
+    o->threads = 1;
     o->feed_text = 1;
 }
 
@@ -568,6 +571,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->motion = 1;
         } else if (wcscmp(a, L"--timeline") == 0) {
             o->timeline = 1;
+        } else if (wcscmp(a, L"--no-threads") == 0) {
+            o->threads = 0;
         } else if (wcscmp(a, L"--save-encoding") == 0) {
             NEED_VALUE();
             wcsncpy(o->save_encoding, v, 15);
@@ -1655,6 +1660,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     memset(&vm, 0, sizeof(vm));
     fvp_vm_init(&vm, &hcb, 1);
     vm.timeline_on = opts.timeline;
+    vm.threads_on = opts.threads;
+    fvp_logf("threads: coroutine slots %s", opts.threads ? "on" : "off (--no-threads)");
     if (opts.timeline) {
         fvp_logf("time: virtual clock enabled (advanced by frame dt)");
     }

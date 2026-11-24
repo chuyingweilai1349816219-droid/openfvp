@@ -21,8 +21,9 @@ platforms, with **Android as the primary target**.
 > have full acceptance numbers. Audio is now wired into the VM (BGM really plays), the save
 > file layer, the globals bridge and the flag bitmap have landed, and the Win32 desktop
 > shell runs at 60 fps, shows real game frames and reads `save/save.bin` on startup.
-> In-game save/load, command semantics (animation / settings), the thread/time model and
-> the Android backend are **still** missing.
+> In-game save/load, command semantics (animation / settings), the time model and
+> the Android backend are **still** missing. Coroutine slots are implemented and proven
+> behaviour-neutral for this title (see [`docs/05-threads.md`](docs/05-threads.md) §10).
 > Everything claimed below maps to code or documentation in this repository.
 
 This repository contains **no game data** — no `.bin`, `.hcb`, audio, images or
@@ -66,7 +67,7 @@ What it is **not**:
 | Capability | State | Code / docs |
 |---|---|---|
 | `.hcb` loading and decoding | **948,219 instructions** and **55,461 strings** of the reference script are decoded; every jump target is valid | [`src/hcb.c`](src/hcb.c) · [`docs/c-vm.md`](docs/c-vm.md) |
-| VM instruction set | all **40 opcodes** implemented (stack, frames, globals/locals, `temp`); thread scheduling is simplified — there is no time model yet | [`src/vm.c`](src/vm.c) · [`docs/05-threads.md`](docs/05-threads.md) |
+| VM instruction set | all **40 opcodes** implemented (stack, frames, globals/locals, `temp`); **all 32 coroutine slots** implemented (`ThreadStart` / `ThreadExit` / `ThreadNext`, on by default) with byte-identical text at 900k/2M steps whether on or off; the virtual clock is a minimal opt-in model (`--timeline`) | [`src/vm.c`](src/vm.c) · [`docs/05-threads.md`](docs/05-threads.md) §10 |
 | Command table | **148 commands** with id / name / argc / returns-value, read from the script's embedded metadata; **131** of them are used by this title | [`src/gen_cmd_table.h`](src/gen_cmd_table.h) · [`src/syscall.c`](src/syscall.c) · [`docs/vm-commands.md`](docs/vm-commands.md) |
 | **Byte-identical to the Python reference** | 900k steps: 6,496 bytes / 195 lines (`SHA256 7F9837FF…`); 2M steps: 15,378 bytes / 450 lines (`SHA256 32D7D4E2…`); 20M steps and 123457 / 777777 / 1500000 steps also matched on the development machine | [`tests/compare.py`](tests/compare.py) · [`ref/REFERENCE.md`](ref/REFERENCE.md) |
 | Asset layer: BIN / inflate / HZC1 | **21,725** package entries; **1,112/1,112** zlib streams (**2,539,861,820** bytes) match `zlib.decompress` byte for byte; **1,112 images / 3,654 frames / 727,573,943 pixels with 0 differences** (formats 0–4) | [`src/bin.c`](src/bin.c) · [`src/inflate.c`](src/inflate.c) · [`src/hzc1.c`](src/hzc1.c) · [`docs/c-assets.md`](docs/c-assets.md) |
@@ -97,10 +98,15 @@ to pass — see [`scripts/ci-compare.py`](scripts/ci-compare.py).
 2. **Command semantics are mostly stubs.** 30 rendering-related commands are wired to `gfx`,
    but animation / video / save / settings commands still fall back to the reference's
    default policy. No movement, no fades, no transitions, no saving.
-3. **No coroutine/time model.** `ThreadNext` / `ThreadWait` only yield, `Timer*` /
-   `ThreadSleep` have no virtual clock, and the 32 thread slots are not scheduled. As a
-   consequence roughly 50 dialogue lines per 900k steps are lost. Facts and failed attempts
-   are in [`docs/05-threads.md`](docs/05-threads.md).
+3. **Coroutines are implemented, but this title's coroutine bodies are compiled out.**
+   The 32 slots (`ThreadStart` / `ThreadExit` / `ThreadNext`) follow the analysed statically
+   semantics (on by default, `--no-threads` to disable). At 900k and 2M steps the on/off
+   text is **byte-identical**, and identical to the frozen baseline - because every
+   coroutine entry in this script is `initstack; pushint8 0; jmpcond <ret>`: the guard is
+   a **compile-time constant 0**, so each thread starts and retires immediately. The old
+   "~50 lost dialogue lines" conclusion is therefore **wrong** and has been corrected.
+   `Timer*` and the virtual clock remain a minimal opt-in model (`--timeline`, behaviour
+   neutral on text). Tables and repro in [`docs/05-threads.md`](docs/05-threads.md) §10.
 4. **Audio is not wired to the VM yet.** Decoding, resampling and mixing work, and the Win32
    shell has a waveOut output backend, but **no syscall triggers playback** yet; there is no
    A/V sync or volume model, and no Android audio backend.
@@ -235,8 +241,9 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first. In short:
 
 Good first tasks: implement a stub command in [`src/syscall.c`](src/syscall.c), wire
 `src/snd.c` to syscalls, help accept the C renderer (model in
-[`docs/render-model.md`](docs/render-model.md)), implement the thread/time model (notes in
-[`docs/05-threads.md`](docs/05-threads.md)), or test a second FVP title.
+[`docs/render-model.md`](docs/render-model.md)), implement the `Timer*` commands and a real
+frame-level scheduler (coroutine slots are done — [`docs/05-threads.md`](docs/05-threads.md) §10),
+or test a second FVP title.
 
 ## License
 

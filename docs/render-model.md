@@ -227,7 +227,7 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
 | 118/119/120 | TextFormat / TextFunction / TextOutSize | 7/4/3 | 排版参数（渲染层只记 out_size） |
 | 121–131 | TextPause/TextPos/TextPrint/TextRepaint/TextShadowDist/TextSize/TextSkip/TextSpace/TextSpeed/TextSuspendChr | — | 见 §1.3 |
 | 123 | TextPrint | 2 | `(tw, text)`：`[读音|正文]` 会先被解析掉只留正文 |
-| 132/133/134/135/136/137 | Thread* | — | 见 §9（协程默认不启用） |
+| 132/133/134/135/136/137 | Thread* | — | 见 §9；协程槽默认启用、对本作行为中立，见 [`docs/05-threads.md`](05-threads.md) §10 |
 
 ---
 
@@ -292,7 +292,8 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
 2. **`*Test` 类命令必须返回 1。** 脚本的等待循环是
    `pushint16 252; syscall 44 (MotionAlphaTest); pushtemp; pushfalse; eq; jmpcond ...`
    —— 返回 1 时跳出等待、返回 0 时死循环（实测返回 0 会一直卡在 `0x5843b` 的 poll 循环，
-   90 万步都进不了正片）。`ThreadExit` 也必须空实现，否则主线程在标题流程里被自己退出。
+   90 万步都进不了正片）。`ThreadExit` 也不能无条件结束主线程：C 版里主线程不在 32 个协程槽里，
+   `ThreadExit` 只收槽里的子线程（[`docs/05-threads.md`](05-threads.md) §10）。
 
 ---
 
@@ -300,10 +301,11 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
 
 1. **Motion* 立即生效**：动画不做补间，直接取终点值（alpha 取 to、坐标直接写）。
    因此淡入淡出过程看不到，某些"人物正在淡出"的帧会直接显示成 alpha 0。
-2. **协程默认关闭**（`--threads` 可开，但开启后调度不收敛，实测卡在 UI 循环）。
-   代价是：台词有一部分是在协程里拼字符串再打印的（脚本把文本存 `g226` 等全局，由文本线程写入），
-   这些 `TextPrint` 拿到的还是 0 → 渲染层把它们记成 `text-handle-unresolved` 并跳过，
-   于是**部分对话台词缺失**（一次 90 万步里约 50 次）。
+2. **协程默认开启，但对本作行为中立**（`--no-threads` 可关）。2026-11-24 实测：900k / 2M 两档
+   开关两种模式下文本**逐字节相同**，因为这份脚本的每个协程入口都是
+   `initstack; pushint8 0; jmpcond <ret>`（条件是编译期常量 0），协程建起来就退出。
+   所以「协程里拼字符串导致约 50 句台词缺失」这个旧结论**不成立**，已按实测改正；
+   证据与 A/B 表见 [`docs/05-threads.md`](05-threads.md) §10。
    `--hold-text` 只是快照技巧：某层为空时重画它上一句真实文本，不代表引擎行为。
 3. **对话框是画出来的**：引擎的文本框/窗口贴图没有结构分析（text window 对象 `tw` 只确认了坐标/字号/颜色字段），
    渲染层用「浅色圆角框 + 人名小框 + 字号 34」近似；层 9 居中、层 0 左对齐首行缩进、

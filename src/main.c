@@ -36,7 +36,7 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --pctrace FILE   log executed pc values (debug aid)\n"
             "  --savebin FILE   seed globals from a save/save.bin\n"
             "  --timeline       use the virtual clock (ThreadSleep/ThreadWait wake by ms)\n"
-            "  --threads        enable coroutine slots 0..31 (ThreadStart/ThreadExit)\n"
+            "  --no-threads     disable coroutine slots 0..31 (A/B against the old stub)\n"
             "  --unknown-all    print every unknown command id (not just the top 15)\n"
             "  --dump-globals FILE  write \"index value\" lines for set globals\n",
             prog);
@@ -340,7 +340,7 @@ int main(int argc, char **argv)
     int64_t cy = 540;
     int quiet = 0;
     int timeline = 0;
-    int threads = 0;
+    int threads = 1; /* 1/0 = 开/关协程槽；-1 表示命令行显式 --no-threads */
     int crlf = 1;
     int i;
     FvpEncoding enc;
@@ -401,6 +401,8 @@ int main(int argc, char **argv)
             timeline = 1;
         } else if (strcmp(a, "--threads") == 0) {
             threads = 1;
+        } else if (strcmp(a, "--no-threads") == 0) {
+            threads = -1;
         } else if (strcmp(a, "--unknown-all") == 0) {
             g_unknown_all = 1;
         } else if (strcmp(a, "--savebin") == 0) {
@@ -463,7 +465,7 @@ int main(int argc, char **argv)
 
     fvp_vm_init(&vm, &hcb, quiet);
     vm.timeline_on = timeline;
-    vm.threads_on = threads;
+    vm.threads_on = (threads < 0) ? 0 : threads;
     if (savebin_path != NULL && !fvp_seed_globals(savebin_path, &vm)) {
         fvp_vm_free(&vm);
         fvp_hcb_free(&hcb);

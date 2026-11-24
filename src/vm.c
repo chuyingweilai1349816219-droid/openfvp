@@ -476,7 +476,10 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
             top->pending = 0;
         } else {
             FvpFrame f;
-            f.ret = ins->pc;
+            /* 栈底帧（没有 call 建它）：这是线程/函数的入口。返回地址必须指到
+             * 脚本末尾，这样末尾的 ret 会结束线程；早先写成 ins->pc（指向
+             * initstack 自己），ret 就会跳回入口，协程无限自循环。 */
+            f.ret = vm->hcb->script_len;
             f.nlocals = (int32_t)ins->a;
             f.locals = ins->a != 0
                            ? (FvpValue *)fvp_xcalloc((size_t)ins->a, sizeof(FvpValue))
@@ -723,6 +726,9 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     vm->save_slot = -1;
     vm->save_thumb_w = 96; /* 引擎初值 96x72（docs/save-format.md §2.3） */
     vm->save_thumb_h = 72;
+    /* 协程槽默认开启：实测（docs/05-threads.md §10）对本作脚本行为中立 ——
+     * 900k/2M 两档文本与关闭时逐字节相同。--no-threads 只用于 A/B 与回归。 */
+    vm->threads_on = 1;
     vm->unknown_count = (uint32_t *)fvp_xcalloc(65536u, sizeof(uint32_t));
 }
 
@@ -1140,9 +1146,11 @@ uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps)
         vm->nthreads -= 1u;
         if (!t->alive) {
             /* 槽里还指着它的话一并清掉，避免悬空指针。 */
-            if (t->slot >= 0 && t->slot < FVP_THREAD_SLOTS &&
-                vm->thread_slots[t->slot] == t) {
-                vm->thread_slots[t->slot] = NULL;
+            if (t->slot >= 0 && t->slot < FVP_THREAD_SLOTS) {
+                if (vm->thread_slots[t->slot] == t) {
+                    vm->thread_slots[t->slot] = NULL;
+                }
+                vm->thread_exits += 1u; /* 线程自己 ret 到脚本末尾也算一次退出 */
             }
             fvp_thread_free(t);
             continue;

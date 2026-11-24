@@ -174,11 +174,14 @@ def build_cases():
     add(case('pop-no-frame', hcb(program(emit(0x10, 255), emit(0x16, 255),
                                          emit(0x13), emit(0x04))), 100,
              expect_steps=4))
+    # initstack 建的是「栈底帧」：它的返回地址是 script_len（脚本末尾），所以末尾的
+    # ret 直接结束线程。2026-11-24 之前这里写的是 initstack 自身 pc，ret 会跳回入口
+    # 无限自循环，把 200 步预算跑满；修正后是 50 步就干净退出。
     add(case('initstack-255',
              hcb(program(emit(0x01, 255, 0),
                          *[emit(0x10, i) for i in range(0, 256, 8)],
                          *[emit(0x16, i) for i in range(0, 256, 17)],
-                         emit(0x04))), 200, expect_steps=200))
+                         emit(0x04))), 200, expect_steps=50))
 
     # ---- stack overflow (1,000,000 pushes) ------------------------------
     flood_code = emit(0x0c, 1) * 500000 + emit(0x06, 4)

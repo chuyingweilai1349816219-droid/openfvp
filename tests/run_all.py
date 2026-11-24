@@ -110,6 +110,22 @@ def build_steps(args):
                           [PY, compare, '--run', '--quiet'], 900,
                           note='byte-identical vs Python reference'))
 
+    # 2b. coroutine slots must stay behaviour-neutral
+    vthreads = os.path.join(HERE, 'verify_threads.py')
+    if not (os.path.isfile(fvm) and os.path.isfile(vthreads) and
+            os.path.isfile(ref) and script):
+        steps.append(Step('verify_threads.py', None, 0,
+                          skip_reason='missing fvm.exe, ref-900k.txt or '
+                                      'iroseka.hcb'))
+    else:
+        vt_argv = [PY, vthreads]
+        if args.fast:
+            vt_argv.append('--fast')
+        steps.append(Step('verify_threads.py',
+                          vt_argv,
+                          900,
+                          note='ThreadStart/ThreadExit on/off both byte-exact'))
+
     # 3. asset acceptance
     verify = os.path.join(HERE, 'verify_assets.py')
     extract = os.path.join(FVP, 'extract', 'graph')

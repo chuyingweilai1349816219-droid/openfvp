@@ -31,6 +31,7 @@
 | **长跑（soak）** | `verify_soak.ps1` | 真跑 `bin\fvp.exe --run-seconds N`，期间 2 s 一次采样工作集 | 默认 180 s | 退出码 0、工作集增长 ≤ 96 MiB、
 每个 5 s 窗口 fps ≥ 55 且 slow ≤ 2、`underruns=0`、脚本有产出、日志无 error/fatal |
 | **动画（动态门）** | `verify_motion.ps1` | `render_vm --motion`（固定步数 + 固定 dt） | 真实脚本 | ① 关动画两次同参数帧一致（harness 确定）② 1,000 步 开=关（t≈0 不漂移）③ 60,000 步 开≠关（动画可见） |
+| **协程（开关中立）** | `verify_threads.py` | `bin/fvm.exe` 跑 900k / 2M 两档，各跑「默认（协程开）」与 `--no-threads` | 真实脚本 | ① 默认模式 `start == exit`（每个协程都退出，没有空转）② 开/关文本**逐字节相同** ③ 两档都与 `ref/ref-900k.txt` / `ref/ref-2m.txt` 逐字节相同 |
 | 检测器自检 | `fuzz_selftest.c` | 两个分配器构建 | 故意在 32 字节块后写 1 字节 | 页保护构建必须以访问违例退出，金丝雀构建必须以 72 退出——否则「0 故障」没有意义 |
 
 一次完整运行（默认参数）：

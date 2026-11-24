@@ -17,7 +17,8 @@
 > 资源层（BIN / inflate / HZC1）、渲染层（gfx）都已有全量验收数字；
 > 音频层已接进 VM（BGM 真实出声），存档文件层 + 全局变量桥 + flag 位图已落地，
 > Win32 桌面外壳能跑出 60 fps、显示真实画面并在启动时读 `save/save.bin`；
-> 游戏内存/读档、命令语义（动画/设置）、线程与时间模型、Android 后端**仍未完成**。
+> 游戏内存/读档、命令语义（动画/设置）、时间模型、Android 后端**仍未完成**；
+> 协程槽已实现并证明对本作行为中立（见 [`docs/05-threads.md`](docs/05-threads.md) §10）。
 > 下面的「能做什么 / 不能做什么」是逐条可核对的清单，不含宣传词。
 
 本仓库**不含任何游戏数据**：没有 `.bin`、`.hcb`、音频、图像、台词。要跑起来必须自备正版游戏，
@@ -61,7 +62,7 @@
 | 能力 | 现在到什么程度 | 代码 / 文档 |
 |---|---|---|
 | `.hcb` 脚本加载与解码 | `iroseka.hcb` **948,219 条指令**、**55,461 条字符串**全部解析，跳转目标零错位 | [`src/hcb.c`](src/hcb.c) · [`docs/c-vm.md`](docs/c-vm.md) §5.1 |
-| 虚拟机指令集 | **40 个 opcode 全部实现**（栈、帧、全局/局部变量、temp）；线程调度是简化版，还没有时间模型 | [`src/vm.c`](src/vm.c) · [`docs/c-vm.md`](docs/c-vm.md) §6.1 · [`docs/05-threads.md`](docs/05-threads.md) |
+| 虚拟机指令集 | **40 个 opcode 全部实现**（栈、帧、全局/局部变量、temp）；**32 个协程槽已实现**（`ThreadStart`/`ThreadExit`/`ThreadNext`，默认开启），900k/2M 开关两档文本逐字节相同；虚拟时钟为可选最小实现（`--timeline`） | [`src/vm.c`](src/vm.c) · [`docs/c-vm.md`](docs/c-vm.md) §6.1 · [`docs/05-threads.md`](docs/05-threads.md) §10 |
 | 命令表 | **148 条**命令的 id / 名字 / argc / 是否返回值，来自 `.hcb` 内嵌附加数据；本作实际用到 **131 条**（17 条未使用） | [`src/gen_cmd_table.h`](src/gen_cmd_table.h) · [`src/syscall.c`](src/syscall.c) · [`docs/00-engine.md`](docs/00-engine.md) · [`docs/vm-commands.md`](docs/vm-commands.md) |
 | **C 版与 Python 版逐字节一致** | 900k 步：6,496 字节 / 195 行（`SHA256 7F9837FF…`）；2M 步：15,378 字节 / 450 行（`SHA256 32D7D4E2…`），完整哈希见 [`ref/REFERENCE.md`](ref/REFERENCE.md)；开发机上另跑过 20M 步与 123457 / 777777 / 1500000 步对照，均一致 | [`tests/compare.py`](tests/compare.py) · [`ref/ref-900k.txt`](ref/ref-900k.txt) · [`ref/REFERENCE.md`](ref/REFERENCE.md) |
 | 资源层：BIN 包 / inflate / HZC1 | 12 个 `.bin` 包共 **21,725 条**索引/名字/偏移逐条一致；`graph.bin` **1,112/1,112** 个 zlib 流（**2,539,861,820 字节**）与 `zlib.decompress` 逐字节相同；**1,112 张图 / 3,654 帧 / 727,573,943 像素 0 差异**（fmt 0–4 全覆盖） | [`src/bin.c`](src/bin.c) · [`src/inflate.c`](src/inflate.c) · [`src/hzc1.c`](src/hzc1.c) · [`docs/c-assets.md`](docs/c-assets.md) · [`tests/verify_assets.ps1`](tests/verify_assets.ps1) |
@@ -92,10 +93,13 @@
 2. **命令语义基本是桩。** [`src/syscall.c`](src/syscall.c) 里渲染相关的 30 条已接 gfx，
    但动画/视频/存档/设置类命令仍是兜底策略（`*Test` 返回 1、声明返回值的返回 0）。
    **没有移动、没有淡入淡出、没有转场、没有存档。**
-3. **协程 / 时间模型没实现。** `ThreadNext` / `ThreadWait` 只是「让出」桩，
-   `Timer*` / `ThreadSleep` 没有虚拟时钟，也没有 32 线程槽的调度。
-   直接后果是一部分台词（协程里拼好、由文本线程打印）拿不到，90 万步里约 50 句缺失。
-   已确认的事实、失败尝试与下一步在 [`docs/05-threads.md`](docs/05-threads.md)。
+3. **协程已实现，但本作的协程体被脚本自己关掉了。** 32 个协程槽
+   （`ThreadStart`/`ThreadExit`/`ThreadNext`）已按静态分析语义接上（默认开启，`--no-threads` 可关），
+   900k / 2M 两档的开/关文本**逐字节相同**，也与冻结基准相同 —— 因为这份脚本里每个协程入口
+   都是 `initstack; pushint8 0; jmpcond <ret>`，条件是**编译期常量 0**，协程建起来就退出。
+   所以「约 50 句台词缺失」这个旧结论**不成立**（已据此改正文档）。
+   `Timer*` 与虚拟时钟仍是可选的最小实现（`--timeline`，默认关闭，对文本行为中立）。
+   细节与实测表在 [`docs/05-threads.md`](docs/05-threads.md) §10。
 4. **音频播放已经通了，但音画同步与音量体系还没做。** 脚本里的 `AudioPlay` 现在会真的解码并混音
    （900k 步触发 4 次 BGM），但语音路径依赖存档层给的 voice id（原型里没有），
    音量主控/分组的配置层未接，也没有 A/V 同步与淡入淡出。
@@ -252,7 +256,7 @@ python scripts/ci-compare.py        # -> RESULT: SKIPPED（仍会校验冻结基
 1. 给 [`src/syscall.c`](src/syscall.c) 里某条桩命令补语义（先对照 [`docs/vm-commands.md`](docs/vm-commands.md)）；
 2. 把 `src/snd.c` 接进 syscall（脚本命令目前无法触发播放），并保证「没有音频设备也能跑」；
 3. 参与 C 渲染层移植 / 验收：把 `src/gfx.c` 的输出和 Python 原型逐像素对比（模型见 [`docs/render-model.md`](docs/render-model.md)）；
-4. 实现线程调度与虚拟时钟（已确认事实与失败尝试见 [`docs/05-threads.md`](docs/05-threads.md)）；
+4. 补 `Timer*` 与真正的帧级调度（协程槽已实现，见 [`docs/05-threads.md`](docs/05-threads.md) §10；缺的是计时器与 `ThreadWait` 的时间语义）；
 5. 拿第二部 FVP 作品做兼容对照（[`CONTRIBUTING.md`](CONTRIBUTING.md) §1.2 的四项检查）。
 
 ## 许可证
