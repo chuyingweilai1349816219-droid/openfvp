@@ -385,6 +385,43 @@ def stage_title_menu(shell, games, check):
               % (t['save_list'], m.group(0) if m else 'missing'))
         print('')
 
+        # 第三次跑：--title-hover 1。hover 态必须真的画出东西（贴图模式 = 发光层，
+        # 文字模式 = 高亮色）；和第一次的截图逐像素比，差异要落在被 hover 的那一行。
+        shot3 = os.path.join(OUT_DIR, 'mg-%s-hover.bmp' % name)
+        log3_path = os.path.join(OUT_DIR, 'mg-%s-hover.log' % name)
+        for p3 in (shot3, log3_path):
+            if os.path.isfile(p3):
+                os.remove(p3)
+        rc3, log3 = run_shell_frame(shell, g['dir'],
+                                    os.path.basename(g['script']), 2, shot3,
+                                    log3_path,
+                                    extra=['--title-menu', '--title-hover', '1'])
+        check(rc3 == 0, 'hover run exit 0 (got %s)' % rc3)
+        img_a = read_bmp32(shot) if os.path.isfile(shot) else None
+        img_b = read_bmp32(shot3) if os.path.isfile(shot3) else None
+        if img_a is not None and img_b is not None:
+            diff = 0
+            band = 0
+            band_y0 = t['centres'][1] - 40
+            band_y1 = t['centres'][1] + 50
+            for yy in range(img_a[1]):
+                ra = img_a[2][yy]
+                rb = img_b[2][yy]
+                for xx in range(img_a[0]):
+                    if ra[xx * 4:xx * 4 + 3] != rb[xx * 4:xx * 4 + 3]:
+                        diff += 1
+                        if band_y0 <= yy <= band_y1:
+                            band += 1
+            check(diff > 200, 'hover state changes pixels (%d)' % diff)
+            if t['textures'] > 0:
+                # 贴图模式：hover = 整行发光层，差异必须全落在被 hover 的那一行
+                check(band == diff,
+                      'all hover pixels are in the hovered row band (%d of %d)'
+                      % (band, diff))
+            else:
+                # 文字模式：hover 只是高亮色，只断言“真的变了”
+                check(band > 0,
+                      'hovered row itself changed (%d of %d)' % (band, diff))
         print('')
 
 
@@ -596,9 +633,7 @@ def main():
                 check(before == after,
                       'save request wrote nothing into the game save dir '
                       '(%d -> %d entries)' % (len(before), len(after)))
-                print('')
-
-    # 7. 标题菜单：两部作品的 profile与菜单几何都要对
+            # 7. 标题菜单：两部作品的 profile与菜单几何都要对
     if not args.no_shell:
         shell2 = shell_path()
         if shell2 is not None:

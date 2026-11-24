@@ -112,6 +112,7 @@ typedef struct Options {
     int title_save_list; /* --title-save-list: 直接打开 Continue 的存档列表 */
     /* 调试钩子：脚本自己调 SaveWrite/Load 之前先手动造一个请求，用来端到端
      * 验证"请求 -> 外壳执行"这条链路（-1 = 不发）。 */
+    int title_hover_seed; /* --title-hover N：启动就把第 N 项设为 hover（截图/门禁用，-1 = 不动） */
     int debug_save_request;
     int debug_load_request;
 } Options;
@@ -501,6 +502,7 @@ static void defaults(Options *o)
     o->run_seconds = 0.0;
     o->save_preview_every = 0.0;
     o->debug_save_request = -1;
+    o->title_hover_seed = -1;
     o->debug_load_request = -1;
     o->motion = 0;
     o->timeline = 0;
@@ -656,6 +658,9 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--save-preview-every") == 0) {
             NEED_VALUE();
             o->save_preview_every = wcstod(v, NULL);
+        } else if (wcscmp(a, L"--title-hover") == 0 &&
+                   i + 1 < argc) {
+            o->title_hover_seed = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--debug-save-request") == 0 &&
                    i + 1 < argc) {
             o->debug_save_request = _wtoi(argv[++i]);
@@ -1627,6 +1632,24 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
             if (!fvp_title_profile_image_pos(prof, i, &ix, &iy)) {
                 continue;
             }
+            if (i == hover) {
+                int gw = 0;
+                int gh = 0;
+
+                /* 发光层：整行光带，横向铺满、竖向对准这一项的墨迹中心 */
+                if (gfx_image_size(gfx, TITLE_SLOT_BASE + 8 + i, &gw,
+                                   &gh) &&
+                    gh > 0) {
+                    int gy = prof->items[i].ink_y0 -
+                                 (gh - (prof->items[i].ink_y1 -
+                                        prof->items[i].ink_y0)) /
+                                     2;
+
+                    (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + 8 + i,
+                                            (prof->client_w - gw) / 2,
+                                            gy);
+                }
+            }
             (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + i, ix, iy);
         }
         return;
@@ -1815,6 +1838,7 @@ static int title_load_textures(Gfx *gfx, const FvpTitleProfile *prof)
 #else
     int i;
     int loaded = 0;
+    int glow_loaded = 0;
 
     if (gfx == NULL || prof == NULL) {
         return 0;
@@ -1844,6 +1868,24 @@ static int title_load_textures(Gfx *gfx, const FvpTitleProfile *prof)
         (void)gfx_set_prim(gfx, prim, GFX_F_DRAW, 1);
         (void)gfx_set_prim(gfx, prim, GFX_F_ALPHA, 255);
         loaded += 1;
+    }
+    /* 发光层（星空的记忆是 title_*_ray 那种整行光带）：装进 0xF08+i，
+     * hover 时垫在文字下面。 */
+    for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+        const FvpTitleItemDef *d = &prof->items[i];
+
+        if (d->asset_glow[0] == '\0') {
+            continue;
+        }
+        if (gfx_graph_load(gfx, TITLE_SLOT_BASE + 8 + i, d->asset_glow) ==
+            0) {
+            glow_loaded += 1;
+        }
+    }
+    if (glow_loaded > 0) {
+        fvp_logf("title: %d glow texture(s) loaded (slots 0x%X..0x%X)",
+                 glow_loaded, TITLE_SLOT_BASE + 8,
+                 TITLE_SLOT_BASE + 7 + FVP_TITLE_ITEMS);
     }
     return loaded;
 #endif
@@ -2007,6 +2049,11 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             fvp_title_apply_profile(&title, title_profile);
             title.enabled[FVP_TITLE_CONTINUE] =
                 title_count_save_slots(opts.game_dir) > 0 ? 1 : 0;
+            if (opts.title_hover_seed >= 0 &&
+                opts.title_hover_seed < FVP_TITLE_ITEMS) {
+                title_hover = opts.title_hover_seed;
+                title.hover = title_hover;
+            }
             fvp_logf("title: profile '%s' (align=%s, pitch=%d, top=%d)",
                      title_profile->game,
                      title_profile->align == FVP_TITLE_ALIGN_CENTER
@@ -2520,9 +2567,17 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 in->nav = 0;
             }
             if (title_profile != NULL) {
-                /* 有该作品的 profile：直接用它实测的墨迹矩形命中 */
-                title_hover = fvp_title_profile_hit(title_profile, vm.cx,
-                                                    vm.cy);
+                /* 有该作品的 profile：直接用它实测的墨迹矩形命中。
+                 * --title-hover 预置的 hover 要保留到鼠标真的动过
+                 * 为止（截图/门禁需要稳定的 hover 态）。 */
+                if (opts.title_hover_seed < 0) {
+                    title_hover = fvp_title_profile_hit(title_profile,
+                                                        vm.cx, vm.cy);
+                }
+                if (title.hover != title_hover) {
+                    fvp_logf("title: hover -> %d (mouse %d,%d)",
+                             title_hover, vm.cx, vm.cy);
+                }
                 title.hover = title_hover;
             } else {
                 (void)fvp_title_move(&title, vm.cx, vm.cy, title_measure,

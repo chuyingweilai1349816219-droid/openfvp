@@ -335,6 +335,9 @@ void gfx_text_append(Gfx *g, int layer, const char *utf8);
 int gfx_text_width(Gfx *g, const char *utf8, int px);
 /* 把图形槽里的图直接贴到画布（引擎侧 UI 用；返回 0 = 槽里没图）。 */
 int gfx_draw_image_at(Gfx *g, int slot, int x, int y);
+
+/* 取图形槽里那张图的像素尺寸（0 = 槽里没图）。UI 排发光层/按钮时要用。 */
+int gfx_image_size(const Gfx *g, int slot, int *w, int *h);
 int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
                        int gr, int b, int alpha);
 void gfx_text_clear(Gfx *g, int layer);
