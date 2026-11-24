@@ -62,7 +62,7 @@ powershell -ExecutionPolicy Bypass -File scripts\capture-original.ps1 `
     -GameDir 'D:\games\五彩斑斓的世界HD' -Clicks 1 -CaptureSec 60
 ```
 
-脚本做四件事：
+脚本做五件事：
 
 1. 启动 `<Exe>`（工作目录设为游戏目录），按 pid 枚举顶层窗口，等
    `HS_MAIN_WINDOW_CLASS00` 主窗口出现；期间一旦出现 `#32770` 就把子控件文本全打出来
@@ -72,7 +72,8 @@ powershell -ExecutionPolicy Bypass -File scripts\capture-original.ps1 `
 3. 需要点进正文时，把**游戏空间坐标**（1920×1080）换算成屏幕像素后再 `SetCursorPos` +
    `mouse_event` 点击。窗口会被 DPI 变成 1707×1067 或 1926×1109（两种都出现过），
    硬编码屏幕坐标必然点空，必须用 `GetClientRect` + `ClientToScreen` 现场算；
-4. 原版没有"跑 N 秒退出"的开关，抓够时间后由脚本 `Kill`。
+4. 原版没有"跑 N 秒退出"的开关，抓够时间后由脚本 `Kill`；
+5. **把窗口挪走**，免得 1920×1080 的原版窗口挡住桌面（见 §3.1）。
 
 要点：
 
@@ -80,6 +81,30 @@ powershell -ExecutionPolicy Bypass -File scripts\capture-original.ps1 `
   `PW_RENDERFULLCONTENT` 才能拿到 back buffer。
 - 原版渲染恒定 1920×1080，窗口不是 16:9 时**上下加黑边**（letterbox），不是裁切。
 - 抓到的 PNG 落在 `out/orig*/`，测试与文档都不引用它们。
+
+### 3.1 窗口缩不小，只能挪走
+
+原版窗口**没法缩小**，实测证据（`out/probe-resize.ps1`，2026-11-24）：
+
+- 窗口样式 `0x14CA0008`：有 `WS_CAPTION`/`WS_SYSMENU`/`WS_MINIMIZEBOX`，
+  **没有 `WS_THICKFRAME`**（不可拖拽缩放）；客户区被钉死在 **1920×1080**；
+- 对它 `SetWindowPos(..., 964, 570, ...)`：位置变了、尺寸**一分没变**；
+- 加 `SWP_FRAMECHANGED`、甚至先换 `WS_OVERLAPPEDWINDOW` 样式再设尺寸：
+  外框仍 1926×1109（换样式只让客户区变小 10 px，因为边框被算进去了）——
+  引擎在 `WM_WINDOWPOSCHANGING`/`WM_SIZE` 里把自己的尺寸写回去了；
+- 注册表 `HKCU\Software` 与 `Documents\FAVORITE\` 下都**没有**分辨率/窗口配置文件，
+  所以也改不了"启动分辨率"。
+
+能成功的只有两个动作（`out/probe-park.ps1` 实测）：
+
+| 动作 | 效果 | `PrintWindow` 还能抓到画面吗 |
+|---|---|---|
+| 移到桌面外（`x = 桌面宽 + 40`） | 桌面上完全看不见 | **能**，非黑像素 99.2%，与在屏上完全一致 |
+| 最小化（`SW_MINIMIZE`） | 桌面看不见 | **不能**：窗口被缩成 237×39，抓到的是图标尺寸的空位图 |
+
+所以脚本默认 `-Park offscreen`：一发现主窗口就把它搬到桌面右侧外面，每帧再纠正一次
+（引擎启动过程中会自己重定位）；需要点 `New Game` 时才临时挪回屏幕 (0,0)，点完再挪出去。
+`-Park minimize` 只适合"只想挂着游戏不抓图"的场景，`-Park none` 保留原行为。
 
 ---
 

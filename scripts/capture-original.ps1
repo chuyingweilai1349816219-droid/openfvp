@@ -30,6 +30,9 @@
 #   -TitleWaitSec seconds to wait for the title screen before clicking (default 13)
 #   -Clicks      how many left clicks at the New Game hit point (0 = none)
 #   -CaptureSec  seconds of frames to capture after the click (default 20)
+#   -Park        what to do with the game window so it does not take over the
+#                desktop: offscreen (default; PrintWindow keeps working) |
+#                minimize (saves the window but capture is useless) | none
 #   -OutDir      output directory (default <repo>\out\orig-capture)
 #   -IntervalMs  frame interval (default 900 ms)
 
@@ -39,6 +42,7 @@ param(
     [int]$TitleWaitSec = 13,
     [int]$Clicks = 1,
     [int]$CaptureSec = 20,
+    [string]$Park = 'offscreen',
     [string]$OutDir = '',
     [int]$IntervalMs = 900
 )
@@ -104,10 +108,45 @@ public class FvpCap {
     System.Threading.Thread.Sleep(90);
     mouse_event(0x0004, 0, 0, 0, IntPtr.Zero);
   }
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+  [DllImport("user32.dll")] public static extern int GetSystemMetrics(int idx);
+  // The engine pins its client area to 1920x1080: its window has no WS_THICKFRAME
+  // and it re-forces the size on WM_WINDOWPOSCHANGING, so SetWindowPos cannot
+  // shrink it.  But it CAN be moved -- and PrintWindow still returns live content
+  // for a window parked outside the desktop (verified: 99.2% non-black, same as
+  // on-screen), while a minimized window reports a 237x39 icon-sized bitmap.
+  // So "get it out of the user's way" == move it off the desktop, not resize it.
+  public static void ParkOffscreen(IntPtr h) {
+    int w = GetSystemMetrics(0);              // virtualized desktop width
+    SetWindowPos(h, IntPtr.Zero, w + 40, 40, 0, 0,
+                 0x0001 /*NOSIZE*/ | 0x0004 /*NOZORDER*/ | 0x0010 /*NOACTIVATE*/);
+  }
+  public static void BringOnscreen(IntPtr h) {
+    SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0,
+                 0x0001 /*NOSIZE*/ | 0x0004 /*NOZORDER*/);
+  }
+  public static void Minimize(IntPtr h) { ShowWindow(h, 6 /* SW_MINIMIZE */); }
 }
 "@
 Add-Type -TypeDefinition $src -Language CSharp
 Add-Type -AssemblyName System.Drawing
+
+# Keep the original out of the way.  Resizing is not possible (the engine pins a
+# 1920x1080 client and re-forces it), so we move the window off the desktop --
+# PrintWindow still captures live frames from there.
+$parkMode = $Park.ToLowerInvariant()
+if ($parkMode -notin @('offscreen', 'minimize', 'none')) {
+    Write-Host "bad -Park '$Park' (want offscreen|minimize|none)"; exit 2
+}
+
+function Park-Window([IntPtr]$h) {
+    switch ($parkMode) {
+        'offscreen' { [FvpCap]::ParkOffscreen($h) }
+        'minimize'  { [FvpCap]::Minimize($h) }
+        default     { }
+    }
+}
 
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 if ($OutDir -eq '') { $OutDir = Join-Path $root 'out\orig-capture' }
@@ -178,17 +217,22 @@ while ($sw.Elapsed.TotalSeconds -lt $TitleWaitSec) {
     if ($p.HasExited) { Write-Host ("EXIT code={0}" -f $p.ExitCode); exit 1 }
     DumpDialogs ([uint32]$p.Id) $seenDlg
     $m = Find-Main([uint32]$p.Id)
-    if ($m -ne [IntPtr]::Zero) { $main = $m }
+    if ($m -ne [IntPtr]::Zero) { $main = $m; Park-Window $m }
 }
 if ($main -eq [IntPtr]::Zero) { Write-Host 'no main window'; try { $p.Kill() } catch {}; exit 1 }
 
+Start-Sleep -Milliseconds 400
+Park-Window $main
 $pre = Capture $main (Join-Path $OutDir 'title.png')
 Write-Host "title frame $pre"
 
-# phase 2: click "New Game" (game-space centre measured on the original captures)
+# phase 2: click "New Game" (game-space centre measured on the original captures).
+# The click needs the window on a real screen position, so bring it back for the
+# duration of the click only, then park it again.
 if ($Clicks -gt 0) {
+    if ($parkMode -ne 'none') { [FvpCap]::BringOnscreen($main); Start-Sleep -Milliseconds 600 }
     [void][FvpCap]::SetForegroundWindow($main)
-    Start-Sleep -Milliseconds 700
+    Start-Sleep -Milliseconds 500
     $pt = [FvpCap]::GameToScreen($main, 1645, 552)
     for ($i = 0; $i -lt $Clicks; $i++) {
         Write-Host ("click {0}/{1} at screen {2},{3}" -f ($i + 1), $Clicks, $pt.X, $pt.Y)
@@ -207,6 +251,8 @@ while ($sw2.Elapsed.TotalSeconds -lt $CaptureSec) {
     DumpDialogs ([uint32]$p.Id) $seenDlg
     $m = Find-Main([uint32]$p.Id)
     if ($m -eq [IntPtr]::Zero) { continue }
+    # re-apply every tick: the engine re-positions itself during startup
+    Park-Window $m
     $n++
     $name = Join-Path $OutDir ("frame-{0:D3}.png" -f $n)
     $fp = Capture $m $name
