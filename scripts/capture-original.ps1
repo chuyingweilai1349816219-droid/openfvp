@@ -11,7 +11,7 @@
 # system save to
 #     %USERPROFILE%\Documents\FAVORITE\<title>\save\s901.bin
 # on startup, and if that path is missing or not writable it shows
-#     '<path>' の作成に失敗しました   (cp932; shows up as mojibake via GetWindowText)
+#     '<path>' no sakusei ni shippai shimashita   (cp932; shows up as mojibake via GetWindowText)
 # and then quits with exit code 0.  The directory must exist AND the process that
 # launches the game must be allowed to write there, otherwise the child inherits
 # the restriction and the game still fails.
@@ -30,6 +30,8 @@
 #   -TitleWaitSec seconds to wait for the title screen before clicking (default 13)
 #   -Clicks      how many left clicks at the New Game hit point (0 = none)
 #   -CaptureSec  seconds of frames to capture after the click (default 20)
+#   -ClickEvery  while capturing, click the centre of the client area every N
+#                seconds to advance dialogue (default 0 = never)
 #   -Park        what to do with the game window so it does not take over the
 #                desktop: offscreen (default; PrintWindow keeps working) |
 #                minimize (saves the window but capture is useless) | none
@@ -42,6 +44,7 @@ param(
     [int]$TitleWaitSec = 13,
     [int]$Clicks = 1,
     [int]$CaptureSec = 20,
+    [int]$ClickEvery = 0,
     [string]$Park = 'offscreen',
     [string]$OutDir = '',
     [int]$IntervalMs = 900
@@ -243,6 +246,7 @@ if ($Clicks -gt 0) {
 
 # phase 3: capture
 $n = 0; $last = ''
+$nextClick = if ($ClickEvery -gt 0) { [double]$ClickEvery } else { [double]::MaxValue }
 $sw2 = [System.Diagnostics.Stopwatch]::StartNew()
 while ($sw2.Elapsed.TotalSeconds -lt $CaptureSec) {
     Start-Sleep -Milliseconds $IntervalMs
@@ -251,8 +255,16 @@ while ($sw2.Elapsed.TotalSeconds -lt $CaptureSec) {
     DumpDialogs ([uint32]$p.Id) $seenDlg
     $m = Find-Main([uint32]$p.Id)
     if ($m -eq [IntPtr]::Zero) { continue }
-    # re-apply every tick: the engine re-positions itself during startup
-    Park-Window $m
+    # advance the dialogue: bring the window back on screen, click, park again
+    if ($sw2.Elapsed.TotalSeconds -ge $nextClick) {
+        $nextClick += $ClickEvery
+        if ($parkMode -ne 'none') { [FvpCap]::BringOnscreen($m); Start-Sleep -Milliseconds 250 }
+        $pt = [FvpCap]::GameToScreen($m, 960, 540)
+        [FvpCap]::Click($pt.X, $pt.Y)
+        Write-Host ("click advance at t={0:N1}s" -f $sw2.Elapsed.TotalSeconds)
+        if ($parkMode -ne 'none') { Start-Sleep -Milliseconds 150; Park-Window $m }
+    }
+    Park-Window $m   # keep the window off the desktop between clicks
     $n++
     $name = Join-Path $OutDir ("frame-{0:D3}.png" -f $n)
     $fp = Capture $m $name
