@@ -53,6 +53,25 @@
 
 ### 新增
 
+- **值模型补上 null（原版 Variant type 0）：`pushfalse` 不再压成 int 0**
+  - 新增 `FVP_NULL` + `fvp_make_null()` + `fvp_value_is_null()`；opcode 0x09
+    `pushfalse` 压 `FVP_NULL`（依据：原版 0x444940 写的是 `Variant.type = 0`）。
+    `pushtrue`(0x08) 仍是 int 1 —— 没有证据表明原版对 type 1 的算术/比较有特殊规则，
+    不硬造第二个类型
+  - **null 分支第一次真的能走到**：`LipAnim(38)` 的「arg2 为 null → 只停」
+    （新增 `lip_anim_stop_calls`，外壳汇总打印 `stop N`）、`LipSync(39)` 的
+    `on = 0`、`ControlMask(8)` 的"1 分支"、`CursorShow(12)` 的 null → 0。
+    `GraphLoad` 本来就是"非字符串不加载"，null 落在既有规则里无需改
+  - **冻结基准不动**：`FVP_NULL` 在数值/字符串上下文里与 int 0 等价
+    （`truth`/`eq`/`cmp`/`to_str` 都按 0 处理），脚本里高频的
+    `syscall; pushtemp; pushfalse; eq` 结果不变。实测 `compare.py` 仍逐字节一致、
+    `verify_gfx.ps1 -SkipDump` 仍 293 px / PSNR 49.94 / SSIM 0.99971
+  - 新增 `tests/test_nullvalue.c`（**66 项**）：null 的类型/真值/比较/字符串化、
+    LipSync 的 null 与显式 0 之别、LipAnim 只停分支不写 mode/arg、ControlMask、
+    CursorShow，以及**端到端**跑一个只含 `pushfalse` 的最小 `.hcb`
+    （9 字节：`u32 script_len=5 | 0x09 | u32 main_start=4`）证明栈顶类型是 `FVP_NULL`；
+    `make check` 现为 **21 个单测**
+
 - **原版真值抓帧工具 + 原版启动序列查清**（`scripts/capture-original.ps1`、
   `docs/original-verification.md`）
   - 查清"原版启动几秒就退出、截图全黑"的真因：引擎启动时要往

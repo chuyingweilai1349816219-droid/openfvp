@@ -145,7 +145,7 @@ make            # 构建 bin/fvm.exe（脚本 VM）
 make lib        # 构建 bin/libfvp.a（引擎核心 + 资源层 + 音频层，给外壳链接）
 make test       # 构建 bin/test_snd.exe（音频解码自检）
 make win32      # 构建 bin/fvp.exe（Win32 桌面运行器）
-make check      # 构建并运行 20 个不需要游戏数据的单元测试（CI 也跑这个）
+make check      # 构建并运行 21 个不需要游戏数据的单元测试（CI 也跑这个）
 make clean
 ```
 

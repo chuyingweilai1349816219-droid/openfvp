@@ -27,7 +27,13 @@ typedef struct FvpStr {
 typedef enum FvpType {
     FVP_INT = 0,
     FVP_FLOAT = 1,
-    FVP_STR = 2
+    FVP_STR = 2,
+    /* 原版 Variant 的 type 0：false / null /「可选参数省略」。
+     * pushfalse(0x09) 压出来的是它（原版 0x444940 `movb $0x0,...`）。
+     * 在数值/字符串上下文里与 int 0 等价（见 fvp.c 的说明），
+     * 但 handler 可以用 fvp_value_is_null() 区分"省略"与"显式 0"——
+     * LipAnim(38)/LipSync(39)/ControlMask(8)/CursorShow 都靠这个区别。 */
+    FVP_NULL = 3
 } FvpType;
 
 typedef struct FvpValue {
@@ -42,6 +48,16 @@ static inline FvpValue fvp_make_int(int64_t i)
     FvpValue v;
     v.type = (uint8_t)FVP_INT;
     v.i = i;
+    v.f = 0.0;
+    v.str = NULL;
+    return v;
+}
+
+static inline FvpValue fvp_make_null(void)
+{
+    FvpValue v;
+    v.type = (uint8_t)FVP_NULL;
+    v.i = 0;
     v.f = 0.0;
     v.str = NULL;
     return v;
@@ -67,8 +83,13 @@ static inline FvpValue fvp_make_str(FvpStr *s)
     return v;
 }
 
-/* Python truthiness: 0 / 0.0 / "" are false, everything else true. */
+/* Python truthiness: 0 / 0.0 / "" are false, everything else true.
+ * FVP_NULL (原版 type 0) is false. */
 int fvp_value_truth(const FvpValue *v);
+
+/* 1 = 原版 Variant 的 type 0（false / null / 省略），即 pushfalse 压出来的值。
+ * 参数指针本身为 NULL 时返回 0（"没有这个参数" 由各 handler 自己判 argc）。 */
+int fvp_value_is_null(const FvpValue *v);
 
 /* Python `a == b` (never raises; cross-type number comparison). */
 int fvp_value_eq(const FvpValue *a, const FvpValue *b);

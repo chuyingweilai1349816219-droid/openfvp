@@ -236,7 +236,7 @@ typedef struct FvpVM {
      * 文本、定时器…），连续几百万步一条命令都没有只可能是脚本在自旋。 */
     /* 控制 / 光标组的状态（ControlMask 8 / ControlPulse 9 / CursorChange 10 /
      * CursorMove 11），见 fvp_vm_control_mask 的注释。 */
-    unsigned char control_mask; /* engine+0x458：0/1（null 分支不可达，见 vm.c） */
+    unsigned char control_mask; /* engine+0x458：1 = 参数是 null（type 0） */
     unsigned char control_mask_type; /* 最近一次 ControlMask 参数的 type（诊断） */
     unsigned char pulse;        /* engine+0xfd8：置 1 后不会再被这几条命令清零 */
     int cursor_shape;           /* engine+0x88：0..3，-1 = 还没设过 */
@@ -355,15 +355,17 @@ typedef struct FvpVM {
      *      `arg2.type == 0`（null）→ 0，否则 → 1，再 0x428870(表, id, on)：
      *      在 4 个槽里按 id 找到条目，on → 状态字节 = 2，off → 0x4283A0 停 +
      *      状态字节 = 1。
-     * 本站没有口型渲染，两条都只记录参数 + 计数。值模型没有 null，所以
-     * LipAnim 的"只停"分支与 LipSync 的 on=0 分支不可达（文档已注明）。 */
+     * 本站没有口型渲染，两条都只记录参数 + 计数。`pushfalse` 现在压的是
+     * FVP_NULL（原版 Variant type 0），所以 LipAnim 的"只停"分支
+     * （arg2 为 null → 0x42D700(id)）与 LipSync 的 on=0 分支都**能走到**了。 */
     uint64_t lip_anim_calls;
+    uint64_t lip_anim_stop_calls; /* LipAnim(arg1, null)：只停，不启动 */
     uint64_t lip_sync_calls;
     int lip_anim_id;      /* arg1 */
-    int lip_anim_mode;    /* arg2 */
+    int lip_anim_mode;    /* arg2（"只停"分支不写） */
     int lip_anim_arg[8];  /* arg1..arg8 原值；可选参数缺省记 0 */
     int lip_sync_id;      /* arg1 */
-    int lip_sync_on;      /* 1 = 非 null 参数（本站恒 1） */
+    int lip_sync_on;      /* 1 = 第二参数不是 null（播），0 = null（停） */
 
     /* InputFlash(27) / InputGetRepeat(33) / InputSetClick(37)：输入微调。静态分析：
      *   27 InputFlash()        → handler 0x4376A0，`call 0x442400(engine+0x120)`，无返回值

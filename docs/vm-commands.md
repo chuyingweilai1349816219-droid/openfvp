@@ -267,6 +267,21 @@ handler 里读 `0x4(argv)`、`0xc(argv)`、`0x14(argv)`… 分别对应 arg1、a
 | 5 | 字符串句柄：value = engine->[0x6a49ec + idx*4]（0x4445e0 分配） | TextPrint/GraphLoad `cmp $0x5` 分支 |
 | 6 | 字符串变量/数组元素（带引用计数，另一张表 ctx+0x928） | 0x445cb0 / 0x445d30 |
 
+**本站 `FvpType` 与上表的对应**（编号是我们自己的，不要求和原版一致）：
+
+| 原版 type | 含义 | 本站 |
+|---|---|---|
+| 0 | false / null / 可选参数省略 | `FVP_NULL`（`fvp_make_null()`，`pushfalse` 0x09 压它） |
+| 1 | true | 还是 `FVP_INT` = 1（`pushtrue` 0x08；没有证据表明原版对 type 1 的算术有特殊规则，不硬造） |
+| 2 | int | `FVP_INT` |
+| 3 | float | `FVP_FLOAT` |
+| 4/5/6 | 字符串三态 | `FVP_STR`（指向 UTF-8 字符串） |
+
+`FVP_NULL` 的规则（`src/fvp.c`）：`truth(null) = 0`；`eq`/`cmp`/算术按 **int 0**
+参与（这样 900k 步冻结基准不变）；`str(null) = "0"`；但 handler 用
+`fvp_value_is_null()` 能把它和**显式 int 0** 区分开——`ControlMask` / `CursorShow` /
+`LipAnim` / `LipSync` 的 null 分支就是靠这个区别，见后文。
+
 **参数顺序实测**（脚本 → handler）：以 `TextColor(112)` 为例，脚本压 4 个值后 syscall，
 handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/4 个参数。
 脚本侧 `syscall 109 (SysProjFolder)` 之前只压了 1 个 `pushstring ""`，handler 也取 `0x4`，吻合。
@@ -467,13 +482,15 @@ parts 表与 prim 表在引擎结构里是连着的：`0x61D064 + id*0x34`（64 
 
 | id | 命令 | argc | 语义 / 证据 | 本站实现 |
 | ---: | --- | ---: | --- | --- |
-| 38 | LipAnim | 8 | handler **0x43A6E0**：arg1 int **1..0xFFF**；arg2 为 **null → 只停**（`0x42D700(id)`：按 id 找到槽、状态清 0、槽号进空闲栈、活跃计数 `engine+0x8C` 减一）；否则 arg2 int **0..3**（模式）、arg3 int **1..0xFFF**、arg4 int **1..300000**、arg5 int **1..0xFFF**（必填）、arg6 int **1..300000**（必填）、arg7 int **1..0xFFF** / arg8 int **1..300000**（**可选**，`0x43A7FE` 分支直接 push 0,0），全过才 `0x42EFA0(表, id, mode, …)`：先 `0x42D700` 停旧的，再从空闲栈取一个槽、状态置 1、把 8 个参数按 u16 写进槽 | `lip_anim_arg[8]` 记 arg1..arg8（可选缺省记 0）+ 计数；值模型没有 null，所以"只停"分支不可达（已在 CHANGELOG 注明） |
-| 39 | LipSync | 2 | handler **0x43A830**：arg1 int **1..0xFFF**；`cmpb $0x0,0x8` 只看第二参数**是不是 null**（null → 0、其它 → 1），再 `0x428870(表, id, on)`：在 4 个槽里按 id 匹配，**on → 状态字节 = 2**，**off → `0x4283A0` 停 + 状态字节 = 1** | 记 `lip_sync_id` / `lip_sync_on` + 计数；本站没有 null → on 恒 1 |
+| 38 | LipAnim | 8 | handler **0x43A6E0**：arg1 int **1..0xFFF**；arg2 为 **null → 只停**（`0x42D700(id)`：按 id 找到槽、状态清 0、槽号进空闲栈、活跃计数 `engine+0x8C` 减一）；否则 arg2 int **0..3**（模式）、arg3 int **1..0xFFF**、arg4 int **1..300000**、arg5 int **1..0xFFF**（必填）、arg6 int **1..300000**（必填）、arg7 int **1..0xFFF** / arg8 int **1..300000**（**可选**，`0x43A7FE` 分支直接 push 0,0），全过才 `0x42EFA0(表, id, mode, …)`：先 `0x42D700` 停旧的，再从空闲栈取一个槽、状态置 1、把 8 个参数按 u16 写进槽 | `lip_anim_arg[8]` 记 arg1..arg8（可选缺省记 0）+ 计数；**arg2 是 null 时走"只停"分支**（`lip_anim_stop_calls`，不写 mode/arg） |
+| 39 | LipSync | 2 | handler **0x43A830**：arg1 int **1..0xFFF**；`cmpb $0x0,0x8` 只看第二参数**是不是 null**（null → 0、其它 → 1），再 `0x428870(表, id, on)`：在 4 个槽里按 id 匹配，**on → 状态字节 = 2**，**off → `0x4283A0` 停 + 状态字节 = 1** | 记 `lip_sync_id` / `lip_sync_on` + 计数；**第二参数是 null → on=0（停），显式 int 0 也算 on=1** |
 
-两条的 **null 分支**都依赖"值类型 0 = null"，而本站值模型是
-`FVP_INT = 0 / FVP_FLOAT = 1 / FVP_STR = 2`（没有 null，`pushfalse` 也压 int 0），
-所以 `LipAnim` 只能走"启动"、`LipSync` 只能走 `on = 1` —— 与 `ControlMask` /
-`CursorShow` / `GraphLoad` 的 null 限制是同一类，不是新问题。
+两条的 **null 分支**依赖"值类型 0 = null"。本站值模型现在有 `FVP_NULL`（≡ 原版
+type 0，`pushfalse` 0x09 压出来的就是它），所以 `LipAnim` 的"只停"和 `LipSync` 的
+`on = 0` 都**能走到**；数值/字符串上下文里 `FVP_NULL` 与 int 0 等价（这是保住
+`ref/ref-900k.txt` 逐字节基准的前提，见 `tests/test_nullvalue.c` 的说明）。
+`ControlMask` / `CursorShow` 的 null 分支也一起打通了；`GraphLoad` 本来就是
+"非字符串 → 不加载"，null 落在这条既有规则里，无需改动。
 
 实测 90 万步：两条都 **0 次调用**（`use = 0`），所以验证只能靠单测 + 合成脚本。
 
@@ -527,7 +544,7 @@ arg1..arg14 **全部必填**：任何一个不是 int 或越界，整条命令�
 
 | id | 命令 | argc | 语义 / 证据 | 本站实现 |
 | ---: | --- | ---: | --- | --- |
-| 12 | CursorShow | 1 | handler **0x4374F0**：**只看参数类型**（`cmpb $0x0,(%eax)`，null → 0、其它 → 1），然后 tail-call `0x441860(engine, 值)` | 存 `cursor_show`；我们的值模型没有 null → 恒 1（与 ControlMask 同一处限制，文档已注明） |
+| 12 | CursorShow | 1 | handler **0x4374F0**：**只看参数类型**（`cmpb $0x0,(%eax)`，null → 0、其它 → 1），然后 tail-call `0x441860(engine, 值)` | 存 `cursor_show`；参数是 `FVP_NULL`（`pushfalse`）→ 0，其它（含显式 int 0）→ 1 |
 | 16 | ExitDialog | 0 | handler **0x437560**：`if (0x442860(engine))` 时置线程 ctx 的 `+0x68E7D0 = 1`；无返回值 | 只计数（条件依赖的引擎状态未建模） |
 | 63 | MovieStop | 0 | handler **0x43B300**：`call 0x4220F0(engine+0x8C->0x2D4)` 停 WMV | 空操作 + 计数（本站没有视频在放，语义上正好成立） |
 
@@ -665,10 +682,10 @@ setter **0x430ea0**：`a`/`b` 任一 **> 0x400** 就整条放弃；否则写 u16
 （`control_mask` / `pulse` / `cursor_shape` / `cursor_x, y`）+ 调用计数，外壳汇总
 打印 `control mask=.. pulse=.. cursor=.. pos=..`。但：
 
-* 原版用 **type==0 表示 null**，本站的值模型没有 null（`FVP_INT == 0`，未赋值的
-  global 读出来是 int 0），所以 ControlMask 的"1 分支"**当前不可达**，CursorMove
-  的第三参数判定也退化成"只记录类型"（`control_mask_type` / `cursor_force_type`）。
-  这是**已知不可达**，不是猜出来的语义。
+* 值模型现在有了 null（`FVP_NULL` ≡ 原版 type 0，`pushfalse` 压的就是它），
+  所以 **ControlMask 的"1 分支"可以走到了**：参数是 null → `control_mask = 1`，
+  其它（包括显式压 `pushint8 0`）→ 0。CursorShow 同理（null → 0，其它 → 1）。
+  CursorMove 的第三参数仍然只记录类型（`cursor_force_type`），因为下游没证据。
 * 光标/屏蔽位的下游消费（换系统光标、影响动画时间轴、参与输入屏蔽）没有实现：
   没有证据说明"3 张光标位图对应什么形状"，也没有证据说明 0x458 具体屏蔽什么。
 

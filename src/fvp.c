@@ -130,8 +130,33 @@ int fvp_value_truth(const FvpValue *v)
         return v->f != 0.0;
     case FVP_STR:
         return v->str != NULL && v->str->len != 0;
+    case FVP_NULL:
+        return 0; /* 原版 type 0：false / null */
     default:
         return 0;
+    }
+}
+
+int fvp_value_is_null(const FvpValue *v)
+{
+    return v != NULL && v->type == (uint8_t)FVP_NULL;
+}
+
+/* 原版 Variant 的 type 0（null/false）在数值运算里按 int 0 处理。
+ *
+ * 为什么：本项目的逐字节基准（ref/ref-900k.txt，900k 步输出的每一行台词）是拿
+ * Python 参考实现生成的，那份参考实现里 pushfalse 就是 0；若这里让 null 在
+ * 比较/算术里"不可比"，脚本里高频的 `syscall X; pushtemp; pushfalse; eq` 模式
+ * 会整片改变结果，冻结基准就守不住了。所以数值/字符串上下文保持与 int 0 等价，
+ * 只在 handler 需要区分"省略"与"显式 0"时用 fvp_value_is_null()。 */
+static void fvp_as_number(const FvpValue *v, FvpValue *out)
+{
+    *out = *v;
+    if (out->type == (uint8_t)FVP_NULL) {
+        out->type = (uint8_t)FVP_INT;
+        out->i = 0;
+        out->f = 0.0;
+        out->str = NULL;
     }
 }
 
@@ -162,32 +187,46 @@ static int fvp_num_eq(const FvpValue *a, const FvpValue *b)
 
 int fvp_value_eq(const FvpValue *a, const FvpValue *b)
 {
-    int an = a->type != (uint8_t)FVP_STR;
-    int bn = b->type != (uint8_t)FVP_STR;
+    FvpValue na;
+    FvpValue nb;
+    int an;
+    int bn;
+
+    fvp_as_number(a, &na);
+    fvp_as_number(b, &nb);
+    an = na.type != (uint8_t)FVP_STR;
+    bn = nb.type != (uint8_t)FVP_STR;
     if (an && bn) {
-        return fvp_num_eq(a, b);
+        return fvp_num_eq(&na, &nb);
     }
     if (!an && !bn) {
-        return fvp_str_eq(a->str, b->str);
+        return fvp_str_eq(na.str, nb.str);
     }
     return 0;
 }
 
 int fvp_value_cmp(const FvpValue *a, const FvpValue *b, int *ok)
 {
-    int an = a->type != (uint8_t)FVP_STR;
-    int bn = b->type != (uint8_t)FVP_STR;
+    FvpValue na;
+    FvpValue nb;
+    int an;
+    int bn;
+
+    fvp_as_number(a, &na);
+    fvp_as_number(b, &nb);
+    an = na.type != (uint8_t)FVP_STR;
+    bn = nb.type != (uint8_t)FVP_STR;
     *ok = 1;
     if (an && bn) {
-        if (a->type == (uint8_t)FVP_INT && b->type == (uint8_t)FVP_INT) {
-            if (a->i < b->i) {
+        if (na.type == (uint8_t)FVP_INT && nb.type == (uint8_t)FVP_INT) {
+            if (na.i < nb.i) {
                 return -1;
             }
-            return a->i > b->i;
+            return na.i > nb.i;
         }
         {
-            double x = a->type == (uint8_t)FVP_INT ? (double)a->i : a->f;
-            double y = b->type == (uint8_t)FVP_INT ? (double)b->i : b->f;
+            double x = na.type == (uint8_t)FVP_INT ? (double)na.i : na.f;
+            double y = nb.type == (uint8_t)FVP_INT ? (double)nb.i : nb.f;
             if (x < y) {
                 return -1;
             }
@@ -195,8 +234,8 @@ int fvp_value_cmp(const FvpValue *a, const FvpValue *b, int *ok)
         }
     }
     if (!an && !bn) {
-        const FvpStr *s = a->str;
-        const FvpStr *t = b->str;
+        const FvpStr *s = na.str;
+        const FvpStr *t = nb.str;
         uint32_t n = s->len < t->len ? s->len : t->len;
         int c = n ? memcmp(s->data, t->data, n) : 0;
         if (c != 0) {
@@ -352,6 +391,9 @@ FvpStr *fvp_value_to_str(FvpArena *a, const FvpValue *v)
         return fvp_float_repr(a, v->f);
     case FVP_STR:
         return v->str;
+    case FVP_NULL:
+        /* 与 int 0 的字符串形式保持一致（见 fvp_as_number 的说明）。 */
+        return fvp_arena_str(a, "0", 1);
     default:
         return fvp_arena_str(a, "", 0);
     }

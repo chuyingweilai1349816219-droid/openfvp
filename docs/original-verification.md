@@ -161,6 +161,22 @@ powershell -ExecutionPolicy Bypass -File scripts\capture-original.ps1 `
 说明菜单字体来自系统或引擎内建资源，不是 `font/` 里的 sarasa——实现 TitleMenu 时不要
 拿 sarasa 去凑。这一点尚未定论，记为待查。
 
+### 5.2 ⚠ 本机原版画面里的日文/中文是乱码，**不能当文字真值**
+
+抓到的正文帧里，日文/中文是一串片假名垃圾（例如 `クュユュヶ`、`レケ・ミッヤ`），
+**这不是我们引擎的问题，也不是原版本身的问题，是本机没按补丁要求配置**：
+
+- 游戏自带的 `启动游戏必看说明` 写了三步：① 给 exe 设高 DPI 兼容性；② **以管理员身份安装
+  `font/` 目录里的 Sarasa Gothic 字体**；③ 运行 `_StartGameZH.bat` 后在游戏设置里**选中
+  Sarasa Gothic**；
+- 本机 `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts` 里**没有** Sarasa
+  （`font/` 里那两个 ttf 没装）→ 引擎建不出中文字体，回落到日文字体去画汉化后的文本，
+  于是变成片假名乱码。
+
+所以这批帧可以用来看 **布局/几何/颜色**（背景、菜单、对话框位置），**不能用来比对字形与
+文字内容**。要拿文字真值得先装字体并进 Option 选字体（需管理员权限 + 菜单交互），
+属于恢复该任务时的前置步骤。
+
 ---
 
 ## 6. 剩余步骤（恢复这个任务时按顺序做）

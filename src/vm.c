@@ -550,8 +550,8 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         fvp_thread_push(t, fvp_make_int(1));
         t->pc += 1u;
         break;
-    case 0x09:
-        fvp_thread_push(t, fvp_make_int(0));
+    case 0x09: /* pushfalse：原版 0x444940 写的是 Variant type 0，不是 int 0 */
+        fvp_thread_push(t, fvp_make_null());
         t->pc += 1u;
         break;
     case 0x0a:
@@ -1299,8 +1299,10 @@ int fvp_vm_cursor_show(FvpVM *vm, const FvpValue *v)
     if (vm == NULL || v == NULL) {
         return 0;
     }
-    /* 原版：type == 0（null）→ 0，其它 → 1。本站产生不出 null，照实写 1。 */
-    vm->cursor_show = 1u;
+    /* 原版 0x437560 附近：只比较参数的**类型字节**（cmpb $0x0,(%eax)），
+     * null（type 0）→ engine+0x45c = 0，其它 → 1；参数字面值不参与。
+     * pushfalse 现在压的就是 FVP_NULL，所以这一支真的能走到了。 */
+    vm->cursor_show = fvp_value_is_null(v) ? 0u : 1u;
     return 1;
 }
 
@@ -1327,10 +1329,25 @@ int fvp_vm_lip_anim(FvpVM *vm, const FvpValue *args, int argc)
 {
     int i;
 
-    if (vm == NULL || args == NULL || argc < 6) {
+    if (vm == NULL || args == NULL) {
         return 0;
     }
-    for (i = 0; i < 6; ++i) {
+    /* arg1 必填：int 1..0xFFF。 */
+    if (!snow_int_in(&args[0], lip_arg_min[0], lip_arg_max[0])) {
+        return 0;
+    }
+    /* arg2 为 null → 只停（handler 0x42D700(id)：找到槽、状态清 0、槽号进空闲
+     * 栈）；这条分支以前不可达，因为 pushfalse 被压成了 int 0。 */
+    if (argc >= 2 && fvp_value_is_null(&args[1])) {
+        vm->lip_anim_calls += 1u;
+        vm->lip_anim_stop_calls += 1u;
+        vm->lip_anim_id = (int)args[0].i;
+        return 1;
+    }
+    if (argc < 6) {
+        return 0;
+    }
+    for (i = 1; i < 6; ++i) {
         if (!snow_int_in(&args[i], lip_arg_min[i], lip_arg_max[i])) {
             return 0;
         }
@@ -1362,9 +1379,10 @@ int fvp_vm_lip_sync(FvpVM *vm, const FvpValue *id, const FvpValue *on)
     }
     vm->lip_sync_calls += 1u;
     vm->lip_sync_id = (int)id->i;
-    /* 原版只看第二参数是不是 null（null → 0、其它 → 1）。本站值模型没有
-     * null，所以能走到这里的都算"非 null"；第二参数缺失时按 0 记。 */
-    vm->lip_sync_on = (on != NULL) ? 1 : 0;
+    /* 原版 0x43A830 只看第二参数**是不是 null**（cmpb $0x0,0x8）：
+     * null → 0（停），其它 → 1（播）。pushfalse 现在真的压出 null 了；
+     * 参数指针本身为空（缺参数）按旧的 0 记。 */
+    vm->lip_sync_on = (on == NULL || fvp_value_is_null(on)) ? 0 : 1;
     return 1;
 }
 
@@ -1718,11 +1736,10 @@ void fvp_vm_control_mask(FvpVM *vm, const FvpValue *arg)
     }
     vm->control_calls[0] += 1u;
     /* 静态分析 0x437440：只比较参数的**类型字节**（cmpb $0x0,(%eax)）然后 sete——
-     * 参数是 null 时 engine+0x458 置 1，否则置 0，参数字面值不参与。
-     * 本站的值模型没有 null：未赋值的 global 读出来是 int 0（FVP_INT == 0），
-     * 脚本也压不出"空值"，所以 1 这一支**当前不可达**。照实写 0 并把最近一次
-     * 参数的类型记下来（control_mask_type），等以后引入 null 类型再补。 */
-    vm->control_mask = 0u;
+     * 参数是 null（原版 Variant type 0）时 engine+0x458 置 1，否则置 0，
+     * 参数字面值不参与。`pushfalse` 现在压的是 FVP_NULL，所以 1 这一支真的
+     * 能走到了；同时把参数类型记下来（control_mask_type，诊断用）。 */
+    vm->control_mask = fvp_value_is_null(arg) ? 1u : 0u;
     vm->control_mask_type = (arg != NULL) ? arg->type : 0xFFu;
 }
 

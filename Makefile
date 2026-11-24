@@ -480,6 +480,22 @@ clean-vmmisc:
 .PHONY: test_vmmisc clean-vmmisc
 
 # ---------------------------------------------------------------------------
+# null / type-0 值模型（pushfalse → FVP_NULL）
+#   make test_nullvalue
+# ---------------------------------------------------------------------------
+NULLVALUE_TEST = bin/test_nullvalue$(EXE)
+
+test_nullvalue: $(NULLVALUE_TEST)
+
+$(NULLVALUE_TEST): tests/test_nullvalue.c src/vm.c src/vm.h src/hcb.c src/fvp.c $(OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_nullvalue.c $(filter-out src/main.o,$(OBJ)) $(LDFLAGS) -lm
+
+clean-nullvalue:
+	-rm -f $(NULLVALUE_TEST)
+
+.PHONY: test_nullvalue clean-nullvalue
+
+# ---------------------------------------------------------------------------
 # make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
 # CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
 #   make check
@@ -493,7 +509,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
-             $(VMMISC_TEST)
+             $(VMMISC_TEST) $(NULLVALUE_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \
