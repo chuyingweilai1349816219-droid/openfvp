@@ -395,6 +395,62 @@ static FvpValue fvp_make_bool(FvpVM *vm, int b)
     return (vm != NULL && vm->bool_type) ? fvp_make_null() : fvp_make_int(0);
 }
 
+/* 忠实比较（bool_type 模式）：照原版 7×7 类型对表（0x481450 / 0x481388 /
+ * 0x481518，索引 a.type*7 + b.type）的语义。
+ *
+ * 表里只有下面这些类型对有专用比较器（表项 16/17/23/24/32/33/39/40）：
+ *   (int,int) (int,float) (float,int) (float,float) (str,str) 及其反向，
+ * 其余组合一律落到默认项 **0x444f50**：
+ *   444f50: call 0x444600 (释放 a) ; call 0x444600 (释放 b) ;
+ *           xor %eax,%eax ; ret $8      ← 返回 0
+ * 也就是"比较结果 = 假"。所以 null / true / 异类型对的 `eq/gt/le/lt/ge`
+ * 全部为假（`neq` 取反后为真），而不是我们默认模型里的"按 int 0 比较"。
+ * 专用比较器本身返回**布尔**（例如 (int,int) 的 `0x444fa0: cmp; sete %al`），
+ * 不是三态，所以这里也只返回 0/1。 */
+static int fvp_pair_cmp_faithful(const FvpValue *a, const FvpValue *b, int *ok)
+{
+    int anum = a->type == (uint8_t)FVP_INT || a->type == (uint8_t)FVP_FLOAT;
+    int bnum = b->type == (uint8_t)FVP_INT || b->type == (uint8_t)FVP_FLOAT;
+
+    *ok = 0;
+    if (anum && bnum) {
+        if (a->type == (uint8_t)FVP_INT && b->type == (uint8_t)FVP_INT) {
+            *ok = 1;
+            if (a->i < b->i) {
+                return -1;
+            }
+            return a->i > b->i;
+        }
+        {
+            double x = a->type == (uint8_t)FVP_INT ? (double)a->i : a->f;
+            double y = b->type == (uint8_t)FVP_INT ? (double)b->i : b->f;
+            *ok = 1;
+            if (x < y) {
+                return -1;
+            }
+            return x > y;
+        }
+    }
+    if (a->type == (uint8_t)FVP_STR && b->type == (uint8_t)FVP_STR) {
+        const FvpStr *s = a->str;
+        const FvpStr *t = b->str;
+        uint32_t n = s->len < t->len ? s->len : t->len;
+
+        *ok = 1;
+        if (n != 0) {
+            int c = memcmp(s->data, t->data, n);
+            if (c != 0) {
+                return c < 0 ? -1 : 1;
+            }
+        }
+        if (s->len == t->len) {
+            return 0;
+        }
+        return s->len < t->len ? -1 : 1;
+    }
+    return 0;
+}
+
 static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
 {
     FvpValue b = fvp_thread_pop(t);
@@ -432,17 +488,32 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
         r = fvp_make_bool(vm, fvp_value_truth(&a) || fvp_value_truth(&b));
         break;
     case 0x22:
-        r = fvp_make_bool(vm, fvp_value_eq(&a, &b));
+        if (vm->bool_type) {
+            int ok = 0;
+            int c = fvp_pair_cmp_faithful(&a, &b, &ok);
+
+            r = fvp_make_bool(vm, ok ? (c == 0) : 0);
+        } else {
+            r = fvp_make_bool(vm, fvp_value_eq(&a, &b));
+        }
         break;
     case 0x23:
-        r = fvp_make_bool(vm, !fvp_value_eq(&a, &b));
+        if (vm->bool_type) {
+            int ok = 0;
+            int c = fvp_pair_cmp_faithful(&a, &b, &ok);
+
+            r = fvp_make_bool(vm, ok ? (c != 0) : 1);
+        } else {
+            r = fvp_make_bool(vm, !fvp_value_eq(&a, &b));
+        }
         break;
     case 0x24:
     case 0x25:
     case 0x26:
     case 0x27: {
         int ok = 0;
-        int c = fvp_value_cmp(&a, &b, &ok);
+        int c = vm->bool_type ? fvp_pair_cmp_faithful(&a, &b, &ok)
+                              : fvp_value_cmp(&a, &b, &ok);
         int v = 0;
         if (ok) {
             if (op == 0x24) {
@@ -595,7 +666,13 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         break;
     case 0x0f:
         if (ins->w < FVP_GLOBAL_COUNT) {
-            fvp_thread_push(t, vm->globals[ins->w]);
+            /* 忠实模式（bool_type）：未赋值过的 global 在原版里读出来是 null
+             * （Variant type 0），不是 int 0 —— 见 docs/roadmap.md 第二步。 */
+            if (vm->bool_type && !vm->globals_set[ins->w]) {
+                fvp_thread_push(t, fvp_make_null());
+            } else {
+                fvp_thread_push(t, vm->globals[ins->w]);
+            }
         } else {
             fvp_thread_push(t, fvp_make_int(0));
         }
@@ -664,6 +741,7 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         FvpValue v = fvp_thread_pop(t);
         if (ins->w < FVP_GLOBAL_COUNT) {
             vm->globals[ins->w] = v;
+            vm->globals_set[ins->w] = 1u;
         }
         t->pc += 3u;
         break;

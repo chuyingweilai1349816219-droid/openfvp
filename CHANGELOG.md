@@ -53,7 +53,25 @@
 
 ### 新增
 
-- **`fvm --bool-type` 实验开关 + 第二步 A/B 实测（结论：不能只改布尔表示）**
+- **7×7 比较表读全了（更正一条旧结论）+ `--bool-type` 第二次 A/B**
+  - 把初始化器 `0x446580` 完整读了一遍：三张表（`0x481388`/`0x481450`/`0x481518`，
+    各 49 项）先全填 `0x444f50`（**返回 0**），再把
+    (int,int)/(int,float)/(float,int)/(float,float)/(str,str) 这些对换成专用比较器；
+    表 C 还把 `(null,null)` 和"和 type 1 配对"的 11 项换成 `0x444f70`（**返回 1**）
+  - **比较器返回的是布尔 0/1，不是三态** → 旧文档"异类型默认相等、ge 因此在异类型上
+    为真"**是错的**，已改正：默认项返回 0 = **比较结果为假**；`eq(int,null)` 为假、
+    `eq(null,null)` 为真。这也解释清了脚本里最高频的
+    `…Test; pushtemp; pushfalse; eq` 原来是在问**"返回值是不是 null"**
+  - 开关内再补两件忠实语义：异类型/null/true 参与的比较一律为假；未赋值的 global
+    读成 `FVP_NULL`（新增 `FvpVM.globals_set[]` 位图）
+  - **第二次 A/B：iroseka 900k 步仍然 0 行**（默认仍是 195 行逐字节一致）。
+    两次实验都指向"布尔 + 比较表 + 未赋值 global"这三件改不动那 195 行的成因，
+    流程在 `pc 0x05aaf5` 一进函数体就走偏；下一步先钉死 opcode→表/`setcc` 映射
+    （0x22/0x23 的 handler 还没读），详见 `docs/roadmap.md`
+  - `tests/test_nullvalue` 74 → **77 项**：新增 `pushint8 0; pushfalse; eq` 的
+    最小 `.hcb`，钉死"默认模型得真（int 1）/ 忠实模型得假（FVP_NULL）"
+
+- **`fvm --bool-type` 实验开关 + 第二次 A/B 的前半（结论：不能只改布尔表示）**
   - 开关打开后逐字照 handler 0x445a30：比较/逻辑/位测试类 opcode 为假压
     `FVP_NULL`、为真压 int 1，`jmpcond` 只在 `type == FVP_NULL` 时跳；
     **默认关闭**，冻结基准仍在"数值真假"模型下逐字节一致

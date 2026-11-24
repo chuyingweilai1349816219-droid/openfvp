@@ -221,6 +221,9 @@ typedef struct FvpSndBridge {
 typedef struct FvpVM {
     FvpHcb *hcb;
     FvpValue globals[FVP_GLOBAL_COUNT];
+    /* 哪些 global 被脚本写过。忠实模式（bool_type）下"没写过"要读成 FVP_NULL
+     * （原版 Variant 默认 type 0），默认模式不看这张表。 */
+    unsigned char globals_set[FVP_GLOBAL_COUNT];
     FvpMap garr;
     FvpMap larr;
     FvpThread **threads;

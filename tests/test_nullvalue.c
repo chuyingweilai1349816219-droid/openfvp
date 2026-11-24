@@ -70,7 +70,26 @@ static const unsigned char kJmpIntZeroHcb[18] = {
     0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
 };
 
-/* 最小 .hcb #3：pushfalse ; jmpcond 12 ; pushint8 1 ; ret
+/* 最小 .hcb #4：pushint8 0 ; pushfalse ; eq ; ret
+ *   offset 4 : 0c 00   pushint8 0   → 6
+ *   offset 6 : 09      pushfalse    → 7
+ *   offset 7 : 22      eq           → 8
+ *   offset 8 : 04      ret
+ * script_len = 9，main_start = 4。
+ *
+ * 这是脚本里最高频的 `syscall; pushtemp; pushfalse; eq` 的骨架（把返回值换成常量）。
+ * 默认模型把 null 当 int 0 比 → eq(0, 0) = 真（int 1）；
+ * 忠实模型按 7×7 表：(int, null) = 索引 14 → 默认项 0x444f50 返回 0 → 假（FVP_NULL）。
+ */
+static const unsigned char kEqIntNullHcb[13] = {
+    0x09, 0x00, 0x00, 0x00,             /* script_len = 9 */
+    0x0c, 0x00,                         /* pushint8 0 */
+    0x09,                               /* pushfalse */
+    0x22,                               /* eq */
+    0x04,                               /* ret */
+    0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
+};
+ /* 最小 .hcb #3：pushfalse ; jmpcond 12 ; pushint8 1 ; ret
  *   offset 4 : 09               pushfalse        (size 1) → 5
  *   offset 5 : 07 <u32=12>      jmpcond 12        (size 5) → 10
  *   offset 10: 0c 01            pushint8 1        (size 2) → 12
@@ -355,6 +374,45 @@ static void test_bool_type_jmpcond(void)
         }
         fvp_hcb_free(&hcb);
         remove(path);
+    }
+
+    /* eq(int 0, null)：默认模型 = 真（int 1），忠实模型 = 假（FVP_NULL） */
+    {
+        const char *p2 = "bin/_nullvalue_eqintnull.hcb";
+        FvpValue top_off = fvp_make_int(-1);
+        FvpValue top_on = fvp_make_int(-1);
+
+        CHECK(write_file(p2, kEqIntNullHcb, sizeof(kEqIntNullHcb)) == 1,
+              "write eq hcb");
+        if (!fvp_hcb_load(&hcb, p2, FVP_ENC_CP932, err, sizeof(err))) {
+            CHECK(0, "load eq hcb: %s", err);
+            remove(p2);
+            return;
+        }
+        fvp_vm_init(&vm, &hcb, 1);
+        fvp_vm_start(&vm);
+        (void)fvp_vm_run(&vm, 3);
+        if (vm.cur != NULL && vm.cur->sp == 1) {
+            top_off = vm.cur->stack[0];
+        }
+        CHECK(fvp_value_truth(&top_off) == 1,
+              "numeric eq(0, null) is true (type=%u)",
+              (unsigned)top_off.type);
+        fvp_vm_free(&vm);
+
+        fvp_vm_init(&vm, &hcb, 1);
+        vm.bool_type = 1;
+        fvp_vm_start(&vm);
+        (void)fvp_vm_run(&vm, 3);
+        if (vm.cur != NULL && vm.cur->sp == 1) {
+            top_on = vm.cur->stack[0];
+        }
+        CHECK(top_on.type == (uint8_t)FVP_NULL,
+              "faithful eq(int, null) is false/FVP_NULL (type=%u)",
+              (unsigned)top_on.type);
+        fvp_vm_free(&vm);
+        fvp_hcb_free(&hcb);
+        remove(p2);
     }
 }
 
