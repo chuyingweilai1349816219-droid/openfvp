@@ -235,6 +235,11 @@ static void fvp_print_summary(const FvpVM *vm)
            (unsigned long long)vm->control_calls[1],
            (unsigned long long)vm->control_calls[2],
            (unsigned long long)vm->control_calls[3]);
+    /* WindowMode 147 / ExitMode 17 */
+    printf("window     mode=%d state=%d (%llu call(s)); exit mode=%d "
+           "(%llu call(s))\n", vm->window_mode_last, vm->window_state,
+           (unsigned long long)vm->window_mode_calls, vm->exit_mode_last,
+           (unsigned long long)vm->exit_mode_calls);
     /* TextBuff 110 */
     printf("text buff  %llu call(s)\n",
            (unsigned long long)vm->text_buff_calls);

@@ -53,6 +53,26 @@
 
 ### 新增
 
+- **`WindowMode`(147) / `ExitMode`(17) 落地（本轮，只记录模式值）**
+  - `WindowMode(mode -1..6)`：handler **0x43d0d0**。模式 0/1 把窗口状态置 0/1 并作为
+    返回值，模式 2 返回当前值（当前值 ==2 时返回 -1），-1 走"切回"分支
+  - `ExitMode(mode 0..4)`：handler **0x43a1a0**。0 分支清 `engine+0x82` 并置当前
+    线程 ctx 的 `+0x68e7d4 = 1`，1..4 各有分支
+  - 两者真正改的是窗口/线程层字段，本站没有对应结构 → 只记录
+    （`window_mode_last / window_state / exit_mode_last` + 计数），外壳与 `fvm`
+    汇总打印 `window mode=.. state=.. ; exit mode=..`
+  - 实测（iroseka 90 万步）：`WindowMode(0)` 1 次、`ExitMode(2)` 1 次，
+    文本仍是 **195 行**、`stall none`
+
+- **外壳新增 `--startup-trace FILE` 启动追踪（诊断用）**
+  - 日志是在**解析完参数之后**才打开的，所以"进程起来但还没开日志就卡住"这种情况下
+    日志里什么都没有。这个开关把启动分成 9 个阶段写文件并立刻 flush，卡在哪一步一眼可见
+  - 启动点：entry / before timing+dpi / dpi / com / 命令行切分 / 日志+选项+脚本+VM /
+    音频 / gfx（含字体）/ 窗口 / ready
+
+- **单测 `tests/test_textbuff.c` 扩到 44 项**（`TextBuff` 21 项 + `WindowMode` /
+  `ExitMode` 23 项），`make check` 仍是 **16 个单测**、`run_all.py` 31 步
+
 - **`TextBuff`(110) 落地（本轮，只记录尺寸）**
   - handler **0x43c830**：`TextBuff(twIdx, a, b)`，twIdx 必须 int 且在 0..31；
     a/b 各自"是 int 且 >= 0"才采用，否则默认 **8**；随后 `call 0x430ea0(tw, a, b)`
@@ -137,6 +157,16 @@
   - 单测：`tests/test_motion.c` +16 项（共 **47** 项）；`run_all.py` 27 PASS / 0 FAIL
 
 ### 已知问题
+
+- **（本轮环境问题，不是代码问题）外壳 exe 起不来了**：2026-11-24 15:00 之后，
+  `bin\fvp.exe` 在**进入 `WinMain` 之前**就卡住 —— 表现是进程存在但既不写日志、
+  也不建窗口；用 `--startup-trace` 也拿不到第一行（说明卡在 CRT/加载器阶段）。
+  交叉排查：`notepad` 能起（551 ms）、`fvm.exe` 等控制台程序全正常、链接同一组
+  `-mwindows -lgdi32 -luser32 -lwinmm -lshell32 -lole32` 的一个 20 行探针 exe
+  同样卡在启动。最可能是第三方注入（NVIDIA Overlay / Nahimic / League Akari 之类）
+  在装载阶段死锁，属于机器环境问题；重启后需复测。受影响的只是**外壳侧的验收**
+  （45 s soak、抓帧），控制台侧的门禁（`make check` / `compare.py` / `run_all` /
+  `verify_gfx` / `multigame`）全部照常通过。
 
 - **《樱花，萌放。》启动流程卡在脚本死循环**（pc 0x8ef82..0x8ef9b）。计数器
   `global 1711` 由 0x8eef3 初始化、0x8f5d0 递增、被这个循环自身清零；我们的运行到

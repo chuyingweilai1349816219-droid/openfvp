@@ -1638,6 +1638,20 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * 109 SysProjFolder(str)：handler 0x43c7f0，只接受字符串参数。 */
     /* 110 TextBuff(twIdx 0..31, a, b)：handler 0x43c830 → call 0x430ea0(tw,a,b)，
      * a/b 缺省 8、上限 0x400，写 tw+0x5dc/0x5de。只记录。 */
+    /* 147 WindowMode(mode -1..6) / 17 ExitMode(mode 0..4)：handler
+     * 0x43d0d0 / 0x43a1a0，真正改的是窗口层字段，本站只记录（见 vm.h）。 */
+    case 147:
+        if (argc >= 1) {
+            (void)fvp_vm_window_mode(vm, &args[0]);
+            return;
+        }
+        break;
+    case 17:
+        if (argc >= 1) {
+            (void)fvp_vm_exit_mode(vm, &args[0]);
+            return;
+        }
+        break;
     case 110:
         if (argc >= 1) {
             (void)fvp_vm_text_buff(vm, &args[0], argc >= 2 ? &args[1] : NULL,

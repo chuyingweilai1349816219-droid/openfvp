@@ -77,6 +77,7 @@ fvp.exe --game <游戏目录> [选项]
 | `--no-feed-text` | 关闭壳的临时文本桥（等 syscall 层接好 gfx 后应关闭） |
 | `--log FILE` | 日志路径，默认 `<exe目录>\fvp-win32.log`（不可写时退到 %TEMP%） |
 | `--console` | 同时输出到启动它的控制台（GUI 子系统程序默认没有 stdout） |
+| `--startup-trace FILE` | 把启动各阶段（entry / dpi / com / 命令行 / 日志+脚本+VM / 音频 / gfx / 窗口 / ready）写进 FILE 并立即 flush。**日志是在解析参数之后才打开的**，所以程序若在"进程起来但还没开日志"之间卡住（驱动钩子、注入 DLL 等），只有这个开关能看到卡在哪一步 |
 | `--verbose` | 更详细日志（参数、每 5 秒鼠标/等待状态等） |
 
 ### 按键

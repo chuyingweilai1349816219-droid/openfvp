@@ -1,4 +1,4 @@
-/* TextBuff(110) 的状态测试。
+/* TextBuff(110) / WindowMode(147) / ExitMode(17) 的状态测试。
  *
  *   bin/test_textbuff.exe
  *
@@ -9,6 +9,10 @@
  *     * 任一分量 > 0x400 时 setter 直接放弃 → 整条命令无效（连记录都不留）；
  *     * 生效时写 u16 tw+0x5dc / tw+0x5de。
  * 本站只记录尺寸，不重建缓冲（我们的文本是按行存的动态串）。
+ *
+ * WindowMode(147)：handler 0x43d0d0，参数必须是 int 且 -1..6；模式 0/1 把窗口
+ *   状态置 0/1（原版写 engine->[0x8c]->[0x1fc]），其它模式只记录。
+ * ExitMode(17)：handler 0x43a1a0，参数必须是 int 且 0..4，其余数值直接忽略。
  */
 #include <stdio.h>
 #include <string.h>
@@ -45,6 +49,13 @@ int main(void)
     FvpValue n400 = fvp_make_int(0x400);
     FvpValue n401 = fvp_make_int(0x401);
     FvpValue nneg = fvp_make_int(-3);
+    FvpValue m_neg1 = fvp_make_int(-1);
+    FvpValue m_neg2 = fvp_make_int(-2);
+    FvpValue m2 = fvp_make_int(2);
+    FvpValue m6 = fvp_make_int(6);
+    FvpValue m7 = fvp_make_int(7);
+    FvpValue e4 = fvp_make_int(4);
+    FvpValue e5 = fvp_make_int(5);
 
     fvp_vm_init(&vm, NULL, 1);
 
@@ -96,6 +107,42 @@ int main(void)
     CHECK(fvp_vm_text_buff(&vm, &wi_neg, &n40, &n30) == 0, "idx -1 rejected");
     CHECK(fvp_vm_text_buff(&vm, &fl, &n40, &n30) == 0, "float idx rejected");
     CHECK(fvp_vm_text_buff(&vm, NULL, &n40, &n30) == 0, "NULL idx rejected");
+    /* --- 6. WindowMode(147) --- */
+    CHECK(vm.window_mode_last == -1 && vm.window_mode_calls == 0,
+          "fresh window mode");
+    CHECK(fvp_vm_window_mode(&vm, &n0) == 1, "mode 0 accepted");
+    CHECK(vm.window_mode_last == 0 && vm.window_state == 0,
+          "mode 0 -> state 0 (got %d/%d)", vm.window_mode_last,
+          vm.window_state);
+    CHECK(fvp_vm_window_mode(&vm, &m2) == 1, "mode 2 accepted (recorded)");
+    CHECK(vm.window_mode_last == 2 && vm.window_state == 0,
+          "mode 2 only recorded, state unchanged (got %d)",
+          vm.window_state);
+    CHECK(fvp_vm_window_mode(&vm, &m_neg1) == 1, "mode -1 accepted");
+    CHECK(vm.window_mode_last == -1, "mode -1 recorded");
+    CHECK(fvp_vm_window_mode(&vm, &m6) == 1, "mode 6 accepted");
+    CHECK(fvp_vm_window_mode(&vm, &m7) == 0, "mode 7 rejected");
+    CHECK(fvp_vm_window_mode(&vm, &m_neg2) == 0, "mode -2 rejected");
+    CHECK(fvp_vm_window_mode(&vm, &fl) == 0, "float mode rejected");
+    CHECK(fvp_vm_window_mode(&vm, NULL) == 0, "NULL mode rejected");
+    CHECK(vm.window_mode_calls == 4, "window mode counter (%llu)",
+          (unsigned long long)vm.window_mode_calls);
+
+    /* --- 7. ExitMode(17) --- */
+    CHECK(vm.exit_mode_last == -1 && vm.exit_mode_calls == 0,
+          "fresh exit mode");
+    CHECK(fvp_vm_exit_mode(&vm, &n0) == 1, "exit mode 0 accepted");
+    CHECK(vm.exit_mode_last == 0, "exit mode 0 recorded (got %d)",
+          vm.exit_mode_last);
+    CHECK(fvp_vm_exit_mode(&vm, &e4) == 1, "exit mode 4 accepted");
+    CHECK(fvp_vm_exit_mode(&vm, &e5) == 0, "exit mode 5 rejected");
+    CHECK(fvp_vm_exit_mode(&vm, &wi_neg) == 0, "exit mode -1 rejected");
+    CHECK(fvp_vm_exit_mode(&vm, &fl) == 0, "float exit mode rejected");
+    CHECK(fvp_vm_exit_mode(NULL, &n0) == 0, "NULL vm exit mode");
+    CHECK(vm.exit_mode_calls == 2, "exit mode counter (%llu)",
+          (unsigned long long)vm.exit_mode_calls);
+    CHECK(fvp_vm_window_mode(NULL, &n0) == 0, "NULL vm window mode");
+
     CHECK(fvp_vm_text_buff(NULL, &wi0, &n40, &n30) == 0, "NULL vm rejected");
 
     fvp_vm_free(&vm);

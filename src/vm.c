@@ -734,6 +734,8 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     fvp_history_init(&vm->history);
     vm->save_slot = -1;
     vm->cursor_shape = -1; /* -1 = 还没被 CursorChange 设过 */
+    vm->window_mode_last = -1;
+    vm->exit_mode_last = -1;
     vm->save_thumb_w = 96; /* 引擎初值 96x72（docs/save-format.md §2.3） */
     vm->save_thumb_h = 72;
     /* 协程槽默认开启：实测（docs/05-threads.md §10）对本作脚本行为中立 ——
@@ -1075,6 +1077,41 @@ int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
     vm->graph_rgb[id][1] = rgb_component(g);
     vm->graph_rgb[id][2] = rgb_component(b);
     vm->graph_rgb_set[id] = 1u;
+    return 1;
+}
+
+int fvp_vm_window_mode(FvpVM *vm, const FvpValue *mode)
+{
+    long m;
+
+    if (vm == NULL || mode == NULL || mode->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    m = (long)mode->i;
+    if (m < -1 || m > 6) {
+        return 0;
+    }
+    vm->window_mode_calls += 1u;
+    vm->window_mode_last = (int)m;
+    if (m == 0 || m == 1) {
+        vm->window_state = (int)m;
+    }
+    return 1;
+}
+
+int fvp_vm_exit_mode(FvpVM *vm, const FvpValue *mode)
+{
+    long m;
+
+    if (vm == NULL || mode == NULL || mode->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    m = (long)mode->i;
+    if (m < 0 || m > 4) {
+        return 0;
+    }
+    vm->exit_mode_calls += 1u;
+    vm->exit_mode_last = (int)m;
     return 1;
 }
 

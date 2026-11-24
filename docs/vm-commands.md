@@ -438,6 +438,19 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
 存档快照有用。
 
+### WindowMode(147) / ExitMode(17)（**已实现：只记录模式值**）
+
+| id | 命令 | argc | 语义 / 证据 |
+| ---: | --- | ---: | --- |
+| 147 | WindowMode | 1 | handler **0x43d0d0**：参数必须 int 且 **-1..6**；模式 0/1 把窗口状态置 0/1（`engine->[0x8c]->[0x1fc]`）并把这个值作为返回值，模式 2 返回当前值（且当前值 ==2 时返回 **-1**），-1 走"切回"分支（还读 `[0x201]`，没读完） |
+| 17 | ExitMode | 1 | handler **0x43a1a0**：参数必须 int 且 **0..4**；0 分支清 `engine+0x82` 并置当前线程 ctx 的 `+0x68e7d4 = 1`（"请求退出"一类），1..4 有各自分支 |
+
+两个命令真正改的都是**窗口/线程层**字段，本站没有对应结构，所以只把最后一次的模式值
+记进 `FvpVM`（`window_mode_last / window_state / exit_mode_last` + 调用计数），
+外壳与 `fvm` 汇总打印 `window mode=.. state=.. ; exit mode=..`。
+
+实测（iroseka 90 万步）：`WindowMode(0)` 1 次、`ExitMode(2)` 1 次。
+
 ### TextBuff(110)（**已实现：只记录尺寸**）
 
 handler **0x43c830**（argc 3）：

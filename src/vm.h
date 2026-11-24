@@ -268,6 +268,19 @@ typedef struct FvpVM {
     unsigned char flags[FVP_FLAG_BYTES];
     /* 32 个文本窗口的颜色 / 字号 / 速度（TextColor/TextSize/TextSpeed）。 */
     FvpTextAttr textattr[FVP_TEXT_WINDOWS];
+    /* WindowMode(147) / ExitMode(17)：只记录最后一次设置的值。
+     *   WindowMode handler 0x43d0d0：参数必须是 int 且 -1..6；模式 0/1 会把
+     *     engine->[0x8c]->[0x1fc] 置成 0/1 并返回该值，模式 2 返回当前值，
+     *     -1 是"退出全屏/切回"这类特殊模式（还有别的分支没读完）。
+     *   ExitMode handler 0x43a1a0：参数必须是 int 且 0..4；0 分支会清
+     *     engine+0x82 并置当前线程 ctx 的 +0x68e7d4 = 1（"请求退出"一类）。
+     * 两者真正改的都是窗口/线程层字段，本站没有对应结构，因此只记录。 */
+    int window_mode_last;  /* -1 = 还没设置过；否则是最后一次模式 -1..6 */
+    int window_state;      /* 模式 0/1 设置的状态值 */
+    uint64_t window_mode_calls;
+    int exit_mode_last;    /* -1 = 还没设置过；否则是最后一次 0..4 */
+    uint64_t exit_mode_calls;
+
     /* TextBuff(110)：文本窗口的缓冲尺寸。静态分析结论：
      *   handler 0x43c830 入口校验 twIdx 必须是 int 且在 0..31；
      *   第 2/3 个参数各自"是 int 且 >= 0"才采用，否则用默认 **8**；
@@ -349,6 +362,10 @@ void fvp_vm_set_stall_limit(FvpVM *vm, uint64_t n);
 /* GraphRGB(23)：记录图形槽的颜色调制，返回 1 = 生效（槽号合法）。 */
 int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
+/* WindowMode(147) / ExitMode(17)：记录最后一次模式值，返回 1 = 生效
+ * （参数必须是 int，且分别落在 -1..6 / 0..4）。 */
+int fvp_vm_window_mode(FvpVM *vm, const FvpValue *mode);
+int fvp_vm_exit_mode(FvpVM *vm, const FvpValue *mode);
 /* TextBuff(110)：记录文本窗口缓冲尺寸，返回 1 = 生效。
  * a / b 为 NULL 时用默认 8；任一分量 > 0x400 时整条命令放弃（返回 0）。 */
 int fvp_vm_text_buff(FvpVM *vm, const FvpValue *idx, const FvpValue *a,

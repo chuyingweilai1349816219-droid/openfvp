@@ -319,6 +319,63 @@ static void set_dpi_awareness(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* --startup-trace：在日志打开之前就能落盘的启动追踪                    */
+/*                                                                     */
+/* 为什么需要它：日志是在解析完参数之后才打开的，如果程序在"进程起来但还  */
+/* 没打开日志"之间卡住（COM/DPI/驱动钩子/窗口创建等），日志里什么都看不  */
+/* 到。这个开关把启动分成若干步，每步写一行 "耗时秒 步骤名" 并 fflush，   */
+/* 卡在哪一步一眼就能看出来。路径按 ASCII 处理（只用于诊断）。           */
+/* ------------------------------------------------------------------ */
+static FILE *g_trace;
+static double g_trace_t0;
+
+static void trace_mark(const char *what)
+{
+    if (g_trace == NULL) {
+        return;
+    }
+    fprintf(g_trace, "%9.3f  %s\n", now_sec() - g_trace_t0, what);
+    fflush(g_trace);
+}
+
+static void trace_init(void)
+{
+    const wchar_t *cl = GetCommandLineW();
+    const wchar_t *key = L"--startup-trace";
+    const wchar_t *p;
+    char path[PATH_CAP];
+    int i = 0;
+
+    if (cl == NULL) {
+        return;
+    }
+    p = wcsstr(cl, key);
+    if (p == NULL) {
+        return;
+    }
+    p += wcslen(key);
+    while (*p == L' ' || *p == L'\t') {
+        p++;
+    }
+    if (*p == L'"') {
+        p++;
+    }
+    while (*p != L'\0' && *p != L'"' && i < (int)sizeof(path) - 1) {
+        path[i++] = (char)(unsigned char)*p++;
+    }
+    path[i] = '\0';
+    if (i == 0) {
+        return;
+    }
+    g_trace = fopen(path, "w");
+    if (g_trace == NULL) {
+        return;
+    }
+    g_trace_t0 = now_sec();
+    trace_mark("entry (WinMain start)");
+}
+
+/* ------------------------------------------------------------------ */
 /* Usage / errors                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -361,6 +418,8 @@ static const wchar_t *usage_text(void)
             L"  --typewriter        逐字显示文本（按 TextSpeed，默认关；关时像素基准不变）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
+           L"  --startup-trace FILE 把启动各阶段写进 FILE（日志打开之前也能落盘，\n"
+           L"                      卡启动时用它定位）\n"
            L"  --console           同时输出到启动它的控制台窗口\n"
            L"  --verbose           更详细的日志\n"
            L"  --help / --version\n"
@@ -1540,14 +1599,19 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     (void)cmdline;
     (void)show;
 
+    trace_init();
+    trace_mark("before timing/dpi");
     QueryPerformanceFrequency(&g_qpc_freq);
     g_start_time = now_sec();
     set_dpi_awareness();
+    trace_mark("dpi awareness set");
     /* Needed for SHBrowseForFolder (double-click folder picker). */
     (void)CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    trace_mark("com initialized (STA)");
 
     defaults(&opts);
     argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    trace_mark("command line split");
     if (argv == NULL) {
         MessageBoxW(NULL, L"CommandLineToArgvW failed", L"fvp.exe",
                     MB_OK | MB_ICONERROR);
@@ -1743,6 +1807,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     if (snd == NULL) {
         fvp_logf("audio: snd_create failed, running silent");
     }
+    trace_mark("log opened + options parsed + script loaded + vm started");
     if (!opts.no_audio) {
         audio = fvp_audio_start(snd, 48000, 2, opts.audio_buffers,
                                 opts.audio_frames, opts.tone_hz);
@@ -1801,6 +1866,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
      * 把渲染层挂到虚拟机上：此后 GraphLoad / PrimSet* / Text* 这些命令
      * 由 syscall 直接驱动 gfx，不再需要壳层手动喂文本。
      */
+    trace_mark("audio started");
     fvp_vm_attach_gfx(&vm, gfx);
     opts.feed_text = 0; /* 旧的临时文本桥关闭，否则文本会被追加两次 */
     fvp_logf("gfx: attached to vm (syscall -> gfx bridge active)");
@@ -1827,6 +1893,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     }
 
     /* ---------------- window ---------------- */
+    trace_mark("gfx created + fonts loaded");
     choose_window_size(&opts, &win_w, &win_h);
     if (!path_basename_w(game_dir, title_game, PATH_CAP) ||
         title_game[0] == L'\0') {
@@ -1853,9 +1920,11 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
     }
 
+    trace_mark("window created");
     t_ready = now_sec();
     fvp_logf("startup: script+vm+gfx+window ready in %.1f ms",
              (t_ready - g_start_time) * 1000.0);
+    trace_mark("ready (entering frame loop)");
 
     /* ---------------- frame loop ---------------- */
     memset(&perf, 0, sizeof(perf));
@@ -2289,6 +2358,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                (unsigned long long)vm.control_calls[1],
                (unsigned long long)vm.control_calls[2],
                (unsigned long long)vm.control_calls[3]);
+        APPEND("window         mode=%d state=%d (%llu call(s)); exit mode=%d "
+               "(%llu call(s))\n", vm.window_mode_last, vm.window_state,
+               (unsigned long long)vm.window_mode_calls, vm.exit_mode_last,
+               (unsigned long long)vm.exit_mode_calls);
         APPEND("text buff      %llu call(s)\n",
                (unsigned long long)vm.text_buff_calls);
         APPEND("graph rgb      %llu call(s), folder=%s (folder calls %llu)\n",
