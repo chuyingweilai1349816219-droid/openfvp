@@ -339,6 +339,12 @@ int gfx_draw_image_at(Gfx *g, int slot, int x, int y);
 /* 取图形槽里那张图的像素尺寸（0 = 槽里没图）。UI 排发光层/按钮时要用。 */
 int gfx_image_size(const Gfx *g, int slot, int *w, int *h);
 
+/* 同 gfx_draw_image_at，但整张图乘一个 0..255 的 alpha（开场 logo 淡入用）。 */
+int gfx_draw_image_alpha(Gfx *g, int slot, int x, int y, int alpha);
+
+/* 用 (r,gr,b,alpha) 铺满整张画布（开场白场用）。 */
+void gfx_fill_canvas(Gfx *g, int r, int gr, int b, int alpha);
+
 /* 取图片头里自带的贴图坐标（HZC1 的 x/y）。引擎侧 UI 素材（标题 logo、
  * 版权行、标题按钮）就把**摆放位置**存在这里 —— 原版渲染时 img.x/img.y
  * 直接进坐标计算，所以这个值比"从截图反推的墨迹框"更准确。

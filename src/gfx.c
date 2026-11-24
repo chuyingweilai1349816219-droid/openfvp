@@ -3689,6 +3689,60 @@ int gfx_image_offset(const Gfx *g, int slot, int *x, int *y)
     return 1;
 }
 
+int gfx_draw_image_alpha(Gfx *g, int slot, int x, int y, int alpha)
+{
+    const uint8_t *compo = NULL;
+    int cw = 0;
+    int ch = 0;
+    GfxPrim tmp;
+
+    if (g == NULL || alpha <= 0) {
+        return 0;
+    }
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0) {
+        return 0;
+    }
+    if (compo == NULL || cw <= 0 || ch <= 0) {
+        return 0;
+    }
+    memset(&tmp, 0, sizeof tmp);
+    tmp.alpha = (unsigned char)clampi(alpha, 0, 255);
+    blit_sprite(g, x, y, cw, ch, compo, 0, &tmp);
+    g->stats.sprites += 1;
+    return 1;
+}
+
+void gfx_fill_canvas(Gfx *g, int r, int gr, int b, int alpha)
+{
+    int n;
+    int i;
+    unsigned char a;
+    unsigned char cr;
+    unsigned char cg;
+    unsigned char cb;
+
+    if (g == NULL || g->canvas == NULL || alpha <= 0) {
+        return;
+    }
+    a = (unsigned char)clampi(alpha, 0, 255);
+    cr = (unsigned char)clampi(r, 0, 255);
+    cg = (unsigned char)clampi(gr, 0, 255);
+    cb = (unsigned char)clampi(b, 0, 255);
+    n = g->w * g->h;
+    for (i = 0; i < n; ++i) {
+        uint8_t *q = g->canvas + (size_t)i * 4u;
+        unsigned int inv = 255u - (unsigned int)a;
+
+        q[0] = (uint8_t)(((unsigned int)cr * a + (unsigned int)q[0] * inv) /
+                         255u);
+        q[1] = (uint8_t)(((unsigned int)cg * a + (unsigned int)q[1] * inv) /
+                         255u);
+        q[2] = (uint8_t)(((unsigned int)cb * a + (unsigned int)q[2] * inv) /
+                         255u);
+        q[3] = 255;
+    }
+}
+
 int gfx_image_size(const Gfx *g, int slot, int *w, int *h)
 {
     const GfxSlot *s;

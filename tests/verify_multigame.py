@@ -485,6 +485,60 @@ def stage_title_menu(shell, games, check):
         print('')
 
 
+def stage_opening(shell, games, check):
+    """开场序列：白底 → logo 淡入 → 白场 → 标题。用 --shot-at 抓三个时刻。"""
+    g = None
+    for cand in games:
+        if cand.get('dir') and not cand.get('known_blocker'):
+            g = cand
+            break
+    if g is None:
+        return
+    name = g['name']
+    print('== %s opening sequence (--opening) ==' % name)
+    moments = [(200, 'white hold'), (1500, 'logo shown'), (6200, 'title')]
+    shots = {}
+    for ms, tag in moments:
+        shot = os.path.join(OUT_DIR, 'mg-%s-open-%d.bmp' % (name, ms))
+        log_path = os.path.join(OUT_DIR, 'mg-%s-open-%d.log' % (name, ms))
+        for p2 in (shot, log_path):
+            if os.path.isfile(p2):
+                os.remove(p2)
+        rc, log = run_shell_frame(shell, g['dir'],
+                                 os.path.basename(g['script']), 7, shot,
+                                 log_path,
+                                 extra=['--opening', '--title-menu',
+                                        '--shot-at', str(ms)])
+        check(rc == 0, 'opening run @%d ms exit 0 (got %s)' % (ms, rc))
+        check('opening: logo_bg + logo_favo loaded' in log,
+              'opening assets loaded @%d ms' % ms)
+        check("shot-at" in log, 'mid-run screenshot taken @%d ms' % ms)
+        img = read_bmp32(shot) if os.path.isfile(shot) else None
+        check(img is not None, 'opening frame @%d ms readable' % ms)
+        if img is None:
+            continue
+        rows = img[2]
+        total = 0
+        logo = 0
+        for yy in range(0, 1080, 8):
+            row = rows[yy]
+            for xx in range(0, 1920, 8):
+                v = row[xx * 4] + row[xx * 4 + 1] + row[xx * 4 + 2]
+                total += 1
+                if 400 <= xx <= 1400 and 380 <= yy <= 560:
+                    logo += 1 if v < 720 else 0
+        shots[ms] = (total, logo)
+    if 200 in shots:
+        check(shots[200][1] == 0,
+              'white hold @200 ms has no logo pixels (%d)' % shots[200][1])
+    if 1500 in shots:
+        check(shots[1500][1] > 100,
+              'logo visible @1500 ms (%d dark samples in the logo box)'
+              % shots[1500][1])
+    check('opening: finished' in log, 'opening reports completion')
+    print('')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--steps', type=int, default=900000)
@@ -698,6 +752,7 @@ def main():
         shell2 = shell_path()
         if shell2 is not None:
             stage_title_menu(shell2, have, check)
+            stage_opening(shell2, have, check)
 
     if fails:
         print('verify_multigame: %d check(s) FAILED' % len(fails))

@@ -415,6 +415,17 @@ def build_steps(args):
                           note='continue save list: slot file -> timestamp/'
                                'chapter/line decoded, row text, hit bands, cap'))
 
+    # 4i12. 开场序列时间轴（logo 淡入 -> 停留 -> 淡出 -> 白场）
+    test_openseq = tools.get('test_openseq')
+    if not test_openseq or not os.path.isfile(test_openseq):
+        steps.append(Step('test_openseq', None, 0,
+                          skip_reason='bin/test_openseq.exe missing '
+                                      '(run: make test_openseq)'))
+    else:
+        steps.append(Step('test_openseq', [test_openseq], 60,
+                          note='opening sequence timeline: phase boundaries, '
+                               'alpha monotonic/bounded, clamping'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):

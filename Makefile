@@ -88,7 +88,7 @@ WIN32_DIR   = src/platform/win32
 WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
                $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
-              src/titlemenu.c src/savelist.c src/savetail.c \
+              src/titlemenu.c src/savelist.c src/savetail.c src/openseq.c \
                src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c \
                src/timer.c src/history.c
 WIN32_RES   = src/bin.c src/hzc1.c src/inflate.c
@@ -168,6 +168,22 @@ $(SAVE_TEST): tests/test_save.c src/save.c src/save.h | bin
 SAVELIST_TEST = bin/test_savelist$(EXE)
 
 test_savelist: $(SAVELIST_TEST)
+
+# ---------------------------------------------------------------------------
+# 开场序列时间轴（logo 淡入 -> 停留 -> 淡出 -> 白场 -> 标题）
+#   make test_openseq
+# ---------------------------------------------------------------------------
+OPENSEQ_TEST = bin/test_openseq$(EXE)
+
+test_openseq: $(OPENSEQ_TEST)
+
+$(OPENSEQ_TEST): tests/test_openseq.c src/openseq.c src/openseq.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_openseq.c src/openseq.c $(LDFLAGS)
+
+clean-openseq:
+	-rm -f $(OPENSEQ_TEST)
+
+.PHONY: test_openseq clean-openseq
 
 $(SAVELIST_TEST): tests/test_savelist.c src/savelist.c src/savelist.h src/savetail.c src/savetail.h src/save.c src/encoding.c src/fvp.c $(SAVE_OBJ)
 	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_savelist.c src/savelist.c src/savetail.c src/save.c src/encoding.c src/fvp.c $(LDFLAGS) -lm
@@ -559,7 +575,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
              $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST) $(TITLEMENU_DRAW_TEST) \
-             $(SAVELIST_TEST)
+             $(SAVELIST_TEST) $(OPENSEQ_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

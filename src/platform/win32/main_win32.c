@@ -41,6 +41,7 @@
 #include "win32_log.h"
 #include "win32_window.h"
 #include "../../titlemenu.h"
+#include "../../openseq.h"
 #include "../../savelist.h"
 
 #define FVP_WIN32_VERSION "0.1"
@@ -112,6 +113,8 @@ typedef struct Options {
     int title_save_list; /* --title-save-list: 直接打开 Continue 的存档列表 */
     /* 调试钩子：脚本自己调 SaveWrite/Load 之前先手动造一个请求，用来端到端
      * 验证"请求 -> 外壳执行"这条链路（-1 = 不发）。 */
+    int opening;    /* --opening：启动先跑开场序列（logo 淡入→白场→标题） */
+    double shot_at_ms; /* --shot-at N：跑到 N 毫秒时存一张截图（0 = 不存） */
     int title_no_bg; /* --title-no-bg：标题菜单不铺背景（几何测量用） */
     int title_hover_seed; /* --title-hover N：启动就把第 N 项设为 hover（截图/门禁用，-1 = 不动） */
     int debug_save_request;
@@ -504,6 +507,8 @@ static void defaults(Options *o)
     o->save_preview_every = 0.0;
     o->debug_save_request = -1;
     o->title_no_bg = 0;
+    o->opening = 0;
+    o->shot_at_ms = 0.0;
     o->title_hover_seed = -1;
     o->debug_load_request = -1;
     o->motion = 0;
@@ -660,6 +665,10 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--save-preview-every") == 0) {
             NEED_VALUE();
             o->save_preview_every = wcstod(v, NULL);
+        } else if (wcscmp(a, L"--opening") == 0) {
+            o->opening = 1;
+        } else if (wcscmp(a, L"--shot-at") == 0 && i + 1 < argc) {
+            o->shot_at_ms = wcstod(argv[++i], NULL);
         } else if (wcscmp(a, L"--title-no-bg") == 0) {
             o->title_no_bg = 1;
         } else if (wcscmp(a, L"--title-hover") == 0 &&
@@ -1590,6 +1599,9 @@ static int title_bg_disabled;
 
 /* 贴图占用的图形槽（脚本还没开始跑，用 0xF00 之后的高位，避免和脚本槽冲突） */
 #define TITLE_SLOT_BASE 0x0F00
+/* 开场序列占用两个槽：黑底/背景图 + FAVORITE logo */
+#define OPEN_BG_SLOT 0x0FE0
+#define OPEN_LOGO_SLOT 0x0FE1
 
 static int title_measure(void *ctx, const char *utf8, int px, int *width)
 {
@@ -2001,6 +2013,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     char err[512];
     int exit_code = 0;
     double t_load;
+    double t_start = 0.0; /* 帧循环起点（--shot-at 用） */
     double t_ready;
     double t_first_frame = 0.0;
     int have_first_frame = 0;
@@ -2035,6 +2048,11 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     wchar_t save_dir[PATH_CAP];
     int save_writes = 0;
     int load_requests = 0;
+    FvpOpenSeq opening;
+    int opening_active = 0;
+    int opening_logo_loaded = 0;
+    int shot_taken = 0;
+    double opening_ms = 0.0;
     double title_shown_at = 0.0;
     double last_report = 0.0;
     PerfStats perf;
@@ -2139,6 +2157,13 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
     }
 
+    /* 开场序列（--opening）：logo 淡入 → 停留 → 淡出 → 白场 → 标题。
+     * 这里只置标志，标题资源的加载仍在上面按 title_active 做；
+     * 开场期间不画标题菜单（见帧循环里的 !opening_active 判断）。 */
+    if (opts.opening) {
+        fvp_openseq_init(&opening);
+        opening_active = 1;
+    }
     /* 存档字符串编码：显式 --save-encoding 优先，否则跟随脚本编码。 */
     save_enc = (opts.enc_mode == ENC_GBK) ? FVP_ENC_GBK : FVP_ENC_CP932;
     if (wcscmp(opts.save_encoding, L"gbk") == 0) {
@@ -2369,6 +2394,17 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         if (title_active) {
             title_bg_disabled = opts.title_no_bg;
             title_textures = title_load_textures(gfx, title_profile);
+            if (opts.opening) {
+                if (gfx_graph_load(gfx, OPEN_BG_SLOT, "logo_bg") == 0 &&
+                    gfx_graph_load(gfx, OPEN_LOGO_SLOT, "logo_favo") == 0) {
+                    opening_logo_loaded = 1;
+                    fvp_logf("opening: logo_bg + logo_favo loaded");
+                } else {
+                    fvp_logf("opening: logo assets missing, skipping");
+                    opening_active = 0;
+                    title_active = opts.title_menu ? 1 : 0;
+                }
+            }
             title_textures_on = title_textures > 0;
             if (title_textures > 0) {
                 fvp_logf("title: %d/%d menu textures loaded (slots 0x%X..0x%X)",
@@ -2486,6 +2522,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     last_report = last_frame_time;
     steps_at_report = vm.steps;
 
+    t_start = now_sec();
     while (!win.quit) {
         FvpWin32Input *in = &win.input;
         double now;
@@ -2833,7 +2870,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                      * 这里只记录菜单开始显示的时刻。 */
                     title_shown_at = now;
                 }
-                if (save_list_active) {
+                if (opening_active) {
+                    /* 开场序列自己画（见下面的 opening 块），这里不画菜单 */
+                } else if (save_list_active) {
                     int li;
 
                     for (li = 0; li < save_list.count; ++li) {
@@ -2859,6 +2898,55 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             }
             canvas = gfx_canvas(gfx, &cw, &ch);
             render_ms = (now_sec() - r0) * 1000.0;
+        }
+        /* ---- 开场序列（--opening）----
+         * logo 淡入 → 停留 → 淡出 → 白场 → 进标题菜单。alpha 全部来自
+         * openseq 的时间轴（可单测），这里只负责按 alpha 画。 */
+        if (opening_active) {
+            double dt_ms = frame_dt * 1000.0;
+
+            if (dt_ms > 0.0 && dt_ms < 250.0) {
+                fvp_openseq_advance(&opening, (int)dt_ms);
+            }
+            opening_ms = (double)fvp_openseq_elapsed(&opening);
+            if (gfx != NULL && canvas != NULL) {
+                FvpOpenPhase ph = fvp_openseq_phase(&opening);
+
+                if (ph == FVP_OPEN_TITLE_FADE) {
+                    /* 标题先画出来，再压一层 255→0 的白色遮罩 = 从白色里淡入 */
+                    int va = fvp_openseq_veil_alpha(&opening);
+
+                    if (title_active && !save_list_active) {
+                        title_draw_overlay(gfx, &title, title_profile,
+                                           title_hover);
+                    }
+                    if (va > 0) {
+                        gfx_fill_canvas(gfx, 255, 255, 255, va);
+                    }
+                } else {
+                    int la = fvp_openseq_logo_alpha(&opening);
+
+                    if (opening_logo_loaded) {
+                        int bx = 0;
+                        int by = 0;
+
+                        /* logo_bg 实测是纯白 1920x1080：白底 + logo 淡入 */
+                        (void)gfx_draw_image_alpha(gfx, OPEN_BG_SLOT, 0, 0, 255);
+                        (void)gfx_image_offset(gfx, OPEN_LOGO_SLOT, &bx, &by);
+                        (void)gfx_draw_image_alpha(gfx, OPEN_LOGO_SLOT, bx, by,
+                                                   la);
+                    } else {
+                        gfx_fill_canvas(gfx, 255, 255, 255, 255);
+                    }
+                }
+            }
+            if (fvp_openseq_done(&opening)) {
+                opening_active = 0;
+                title_active = opts.title_menu ? 1 : 0;
+                title_shown_at = now;
+                fvp_logf("opening: finished in %.0f ms -> title menu %s",
+                         opening_ms, title_active ? "on" : "off (script)");
+            }
         }
         /* ---- 存档/读档请求（Load 40 / SaveWrite 96）----
          * VM 只记录"请求 + 槽号"，真正读写文件在这一侧做：
@@ -2945,6 +3033,19 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
         {
             double p0 = now_sec();
+        /* --shot-at N：跑到 N 毫秒时存一张（开场序列/淡入的中间态截图用） */
+        if (!shot_taken && opts.shot_at_ms > 0.0 && canvas != NULL &&
+            opts.screenshot[0] != L'\0' &&
+            (now - t_start) * 1000.0 >= opts.shot_at_ms) {
+            char u8s[PATH_CAP * 3];
+
+            shot_taken = 1;
+            if (write_bmp32(opts.screenshot, canvas, cw, ch)) {
+                fvp_logf("screenshot: %s 1920x1080 at %.0f ms (shot-at)",
+                         w2u(opts.screenshot, u8s, sizeof(u8s)),
+                         opts.shot_at_ms);
+            }
+        }
             fvp_win32_present(&win, canvas, cw, ch);
             present_ms = (now_sec() - p0) * 1000.0;
         }
@@ -3061,7 +3162,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             }
         }
         canvas = gfx_canvas(gfx, &cw, &ch);
-        if (canvas != NULL && opts.screenshot[0] != L'\0') {
+        /* --shot-at 已经存过中间态时，结尾不要再覆盖同一路径 */
+        if (canvas != NULL && opts.screenshot[0] != L'\0' && !shot_taken) {
             write_bmp32(opts.screenshot, canvas, cw, ch);
         }
         /* 存档缩略图：把当前画面按 200x113 缩出来写 BMP（通道顺序对 box filter

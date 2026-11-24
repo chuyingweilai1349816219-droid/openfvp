@@ -78,6 +78,8 @@ fvp.exe --game <游戏目录> [选项]
 | `--save-template <槽文件>` | 写档模板：SaveWrite 请求用它当底，替换时间戳/字符串/缩略图后写 `<game_dir>\save\sNNN.bin` |
 | `--debug-save-request N` | 调试钩子：发一个 `SaveWrite(N)` 请求，验证"请求 → 外壳写档"链路 |
 | `--debug-load-request N` | 调试钩子：发一个 `Load(N)` 请求（目前只记日志，快照恢复未实现） |
+| `--opening` | 启动先跑开场序列（白底 → FAVORITE logo 淡入淡出 → 标题从白色淡入，5.4 s） |
+| `--shot-at N` | 跑到 N 毫秒时存一张截图（开场/淡入的中间态；结尾不再覆盖它） |
 | `--title-menu` | 启动后先显示**引擎侧标题菜单**（`New Game/Continue/Album/Option/Exit`），点 `New Game`（或回车）才开始跑脚本，`Exit` 关窗口。默认关 —— 关时行为与之前完全一致。菜单几何按原版实测（右对齐 x=1769、行距 100、字号 56），见 [`docs/title-menu.md`](title-menu.md)。汇总多一行 `title menu enabled (profile=..., align=..., continue=..., picked ...)`；`continue=` 由 `<game_dir>\save\sNNN.bin` 的个数决定 |
 | `--no-feed-text` | 关闭壳的临时文本桥（等 syscall 层接好 gfx 后应关闭） |
 | `--log FILE` | 日志路径，默认 `<exe目录>\fvp-win32.log`（不可写时退到 %TEMP%） |
