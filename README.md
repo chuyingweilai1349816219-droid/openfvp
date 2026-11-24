@@ -136,7 +136,8 @@ libvorbis / SDL 等外部依赖；唯一第三方源码是 `stb_vorbis`（见 [`
 make            # 构建 bin/fvm.exe（脚本 VM）
 make lib        # 构建 bin/libfvp.a（引擎核心 + 资源层 + 音频层，给外壳链接）
 make test       # 构建 bin/test_snd.exe（音频解码自检）
-make win32      # 构建 bin/fvp.exe（Win32 桌面运行器，未验收）
+make win32      # 构建 bin/fvp.exe（Win32 桌面运行器）
+make check      # 构建并运行 9 个不需要游戏数据的单元测试（CI 也跑这个）
 make clean
 ```
 

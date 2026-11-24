@@ -134,7 +134,8 @@ dependency. The only third-party source is `stb_vorbis` (see [`THIRD-PARTY.md`](
 make            # build bin/fvm.exe (script VM)
 make lib        # build bin/libfvp.a (engine core + asset layer + audio layer)
 make test       # build bin/test_snd.exe (audio decode self-test)
-make win32      # build bin/fvp.exe (Win32 desktop runner; builds, but not accepted)
+make win32      # build bin/fvp.exe (Win32 desktop runner)
+make check      # build and run the 9 unit tests that need no game data (CI runs this)
 make clean
 ```
 

@@ -51,6 +51,11 @@ jobs:
           make lib
           make test
 
+      - name: Unit tests (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: make check
+
       # -------------------------------------------------------------- Windows
       - name: Set up MSYS2 toolchain (Windows)
         if: runner.os == 'Windows'
@@ -71,6 +76,7 @@ jobs:
           make lib CC=gcc
           make test CC=gcc
           make win32 CC=gcc
+          make check CC=gcc
 
       # ------------------------------------------------------- shared checks
       - name: Build info

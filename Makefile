@@ -299,3 +299,22 @@ clean-tex-cache:
 	-rm -f $(TEX_CACHE_TEST)
 
 .PHONY: test_tex_cache clean-tex-cache
+
+# ---------------------------------------------------------------------------
+# make check —— 一键构建并运行**不需要游戏数据**的全部单元测试。
+# CI（.github/workflows/ci.yml）直接跑这个，本地也一样：
+#   make check
+# 需要游戏数据的验收（compare.py / verify_*.ps1 / run_all.py）不在这里。
+# ---------------------------------------------------------------------------
+# 不在这里的两个：test_gfx 要 gfx-scene.json（由 verify_gfx.ps1 提供），
+# test_snd 要一个 ogg/wav（游戏数据或 work/ 里的样本，都不入库）。
+UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
+             $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
+             $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST)
+
+check: $(UNIT_TESTS)
+	@set -e; for t in $(UNIT_TESTS); do \
+	    echo "== $$t =="; $$t; \
+	done; echo "make check: PASS"
+
+.PHONY: check

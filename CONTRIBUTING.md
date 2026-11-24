@@ -2,7 +2,9 @@
 
 > 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
 
-谢谢愿意帮忙。这个项目还在很早期的阶段（[`VERSION`](VERSION) = 0.1.0），
+谢谢愿意帮忙。当前版本 [`VERSION`](VERSION) = 1.0.0：引擎本体与工程已完整，
+**但"能完整通关"还没做到**（游戏内存读档、动画缓动、菜单/设置仍是缺口，
+逐条见 [`README.md`](README.md) 的「现在还不能做什么」与 [`CHANGELOG.md`](CHANGELOG.md)）。
 **最有价值的贡献依次是**：报出「不兼容 / 输出不一致」的可复现问题 > 补命令语义与渲染 >
 补文档与工具 > 清理代码。
 
@@ -180,22 +182,25 @@ make
 make lib
 make test
 
-# 2. 生成的码表必须与入库版本一致（改了 ref 或生成器才需要重跑）
+# 2. 单元测试：9 个不需要游戏数据的 self-test 一次跑完（CI 也跑这个）
+make check
+
+# 3. 生成的码表必须与入库版本一致（改了 ref 或生成器才需要重跑）
 python tests/gen_tables.py
 git diff --ignore-cr-at-eol --exit-code src/gen_cp932.h src/gen_gbk.h src/gen_cmd_table.h
 
-# 3. 文档里的路径必须都在
+# 4. 文档里的路径必须都在
 python scripts/check-docs.py
 
-# 4. 语法检查（tests/ 与 scripts/ 下的全部 Python）
+# 5. 语法检查（tests/ 与 scripts/ 下的全部 Python）
 python -m compileall -q tests scripts
 
-# 5. 有游戏数据时：逐字节等价 + 基准文件完整性
+# 6. 有游戏数据时：逐字节等价 + 基准文件完整性
 python scripts/ci-compare.py --script /path/to/iroseka.hcb
 ```
 
-CI（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）在 Ubuntu 与 Windows 上跑 1–4
-（Windows 上额外跑 `make win32` 确认桌面外壳能构建），第 5 步在无数据时显式输出 `SKIPPED`。
+CI（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）在 Ubuntu 与 Windows 上跑 1–5
+（Windows 上额外跑 `make win32` 确认桌面外壳能构建），第 6 步在无数据时显式输出 `SKIPPED`。
 
 > **桌面运行器（Win32）**：`make win32` → `bin/fvp.exe`，只在 Windows 上有意义。
 > 它能构建（0 warning），但**还没有验收**（画面 / 输入 / 音频都没验证），
