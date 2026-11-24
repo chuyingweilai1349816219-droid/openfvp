@@ -496,6 +496,22 @@ clean-titlemenu:
 .PHONY: test_titlemenu clean-titlemenu
 
 # ---------------------------------------------------------------------------
+# 标题菜单的像素级渲染验证（布局 + gfx_draw_text_line 串起来量墨迹）
+#   make test_titlemenu_draw
+# ---------------------------------------------------------------------------
+TITLEMENU_DRAW_TEST = bin/test_titlemenu_draw$(EXE)
+
+test_titlemenu_draw: $(TITLEMENU_DRAW_TEST)
+
+$(TITLEMENU_DRAW_TEST): tests/test_titlemenu_draw.c src/titlemenu.c src/titlemenu.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_titlemenu_draw.c src/titlemenu.c $(GFX_OBJ) $(LDFLAGS) -lm
+
+clean-titlemenu-draw:
+	-rm -f $(TITLEMENU_DRAW_TEST)
+
+.PHONY: test_titlemenu_draw clean-titlemenu-draw
+
+# ---------------------------------------------------------------------------
 # null / type-0 值模型（pushfalse → FVP_NULL）
 #   make test_nullvalue
 # ---------------------------------------------------------------------------
@@ -525,7 +541,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
-             $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST)
+             $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST) $(TITLEMENU_DRAW_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

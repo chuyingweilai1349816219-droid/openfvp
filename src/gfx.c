@@ -3568,6 +3568,88 @@ static char *ruby_strip(const char *s)
     return out;
 }
 
+/* ------------------------------------------------------------------ */
+/* 任意位置的单行文本（引擎侧 UI 用，例如标题菜单）                      */
+/* ------------------------------------------------------------------ */
+
+/* 用与文本窗口同一套字形/推进量量一行宽（像素）。没有字体时返回 0。
+ *
+ * 字号不匹配时按 px / 字体自带字号 等比缩放推进量：内建 8x16 位图只有 16 px
+ * 一档，但引擎侧 UI 要按实测的 56 px 画，所以这里必须缩放（否则一行只有 8 px
+ * 一个字、和原版对不上）。 */
+int gfx_text_width(Gfx *g, const char *utf8, int px)
+{
+    GfxFont *f;
+    int w = 0;
+    const char *p = utf8;
+    int cp;
+    double sc;
+
+    if (g == NULL || utf8 == NULL || px <= 0) {
+        return 0;
+    }
+    f = pick_font(g, px);
+    if (f == NULL || f->size <= 0) {
+        return 0;
+    }
+    if (f->size == px) {
+        return text_width(g, f, utf8);
+    }
+    sc = (double)px / (double)f->size;
+    while ((cp = utf8_next(&p)) >= 0) {
+        int gi = font_find(f, (uint32_t)cp);
+        int adv = gi >= 0 ? f->adv[gi] : 8;
+
+        w += (int)((double)adv * sc + 0.5);
+    }
+    return w;
+}
+
+/* 在 (x, y) 画一行文本：x = 左边界，y = 墨迹上沿。返回画出来的宽度。
+ * 不带文本窗口的排版/换行/对话框，也没有层概念——按字号挑字体后逐字画，
+ * 字号不同就用 draw_glyph_scaled() 等比放大（内建 8x16 → 56 px 时一个字 28 px
+ * 宽、56 px 高，墨迹高约 42，正好对上原版实测的 40..42）。
+ * 描边固定 1 px 白色，与正文层一致；供标题菜单之类的引擎侧 UI 使用。 */
+int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
+                       int gr, int b, int alpha)
+{
+    GfxFont *base;
+    GfxFont scaled;
+    const char *p = utf8;
+    int cp;
+    int pen = x;
+    double sc = 1.0;
+
+    if (g == NULL || utf8 == NULL || px <= 0) {
+        return 0;
+    }
+    base = pick_font(g, px);
+    if (base == NULL || base->size <= 0) {
+        return 0;
+    }
+    if (base->size == px) {
+        draw_text_run(g, base, x, y, utf8, r, gr, b, alpha, 1, 255, 255, 255,
+                      160);
+        return text_width(g, base, utf8);
+    }
+    /* 目标字号和字体自带字号不同：拷一份只改 size，位图/推进表沿用同一份。 */
+    scaled = *base;
+    scaled.size = px;
+    sc = (double)px / (double)base->size;
+    while ((cp = utf8_next(&p)) >= 0) {
+        int gi = font_find(base, (uint32_t)cp);
+
+        if (gi >= 0) {
+            draw_glyph_scaled(g, &scaled, base, gi, pen, y, r, gr, b, alpha, 1,
+                              255, 255, 255, 160);
+            pen += (int)((double)base->adv[gi] * sc + 0.5);
+        } else {
+            pen += (int)(8.0 * sc + 0.5); /* 缺字：按 8 px 推进留白 */
+        }
+    }
+    return pen - x;
+}
+
 void gfx_text_append(Gfx *g, int layer, const char *utf8)
 {
     GfxTextWin *tw;

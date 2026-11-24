@@ -392,6 +392,18 @@ def build_steps(args):
                                'to x=1769, pitch 100, ink 42px, hover/click '
                                'hit bands'))
 
+    # 4i10. 标题菜单的像素级渲染验证（布局 + gfx_draw_text_line 量墨迹）
+    test_titlemenu_draw = tools.get('test_titlemenu_draw')
+    if not test_titlemenu_draw or not os.path.isfile(test_titlemenu_draw):
+        steps.append(Step('test_titlemenu_draw', None, 0,
+                          skip_reason='bin/test_titlemenu_draw.exe missing '
+                                      '(run: make test_titlemenu_draw)'))
+    else:
+        steps.append(Step('test_titlemenu_draw', [test_titlemenu_draw], 120,
+                          note='title menu drawn on a 1920x1080 canvas: ink '
+                               'right edge ~1769, pitch 100, ink height 40..56, '
+                               'hit test matches layout'))
+
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):

@@ -327,6 +327,14 @@ void gfx_parts_release(Gfx *g, int parts_id);
  * UTF-8; layer 0 = body, 8 = name, 9 = title. */
 void gfx_draw_text(Gfx *g, int layer, const char *utf8); /* alias: append */
 void gfx_text_append(Gfx *g, int layer, const char *utf8);
+
+/* 引擎侧 UI 用的单行文本：任意位置、任意字号、不经过文本窗口排版。
+ * gfx_text_width() 量宽（没有字体返回 0）；gfx_draw_text_line() 以 (x,y) 为
+ * 左边界/墨迹上沿画一行并返回宽度。标题菜单用这两个把 5 项右对齐到实测的
+ * x = 1769（见 src/titlemenu.h 与 docs/title-menu.md）。 */
+int gfx_text_width(Gfx *g, const char *utf8, int px);
+int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
+                       int gr, int b, int alpha);
 void gfx_text_clear(Gfx *g, int layer);
 void gfx_text_set_color(Gfx *g, int layer, int r, int gr, int b);
 void gfx_text_set_size(Gfx *g, int layer, int w, int h);

@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **标题菜单的像素级渲染验证**（`gfx_text_width`/`gfx_draw_text_line` +
+  `tests/test_titlemenu_draw.c`）
+  - gfx 新增两个引擎侧 UI 用的 API：任意位置/任意字号画一行、量一行宽；
+    **字号与字体自带字号不同时按比例缩放**（内建 8x16 放大到 56 px → 每字 28 px 宽、
+    墨迹高约 42，正好对上原版实测 40..42）；`gfx_render()` 会重建画布，
+    所以叠加文字必须在 render 之后画（测试与外壳同序）
+  - `tests/test_titlemenu_draw.c`（**68 项**）：1920×1080 画布上按布局画 5 项，
+    扫墨迹包围盒断言右边界 1766..1769、行距 100±2、墨迹高 30..60、墨迹上沿
+    （内建字形约 7 px bearing，属字体度量差异）、命中与布局一致
+  - `make check` 现为 **23 个单测**，`run_all` 现为 **38 步**
+  - `docs/title-menu.md` 新增 §2.1 记录这两个 API 与验证结果
+
 - **原版抓帧补上"周期点击推进" + 序章时序数据**（`scripts/capture-original.ps1 -ClickEvery`）
   - 用户授权后可自动跑原版：`-ClickEvery N` 每 N 秒点一次客户区中心推进剧情
     （点之前临时把窗口挪回屏幕、点完再挪出桌面）
