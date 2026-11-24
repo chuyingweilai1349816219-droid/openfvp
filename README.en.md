@@ -113,7 +113,10 @@ to pass — see [`scripts/ci-compare.py`](scripts/ci-compare.py).
 5. **WMV video is skipped** (`Movie` / `MovieState` report "already finished").
 6. **The Chinese version is not playable end to end** (no renderer/audio, no per-scene checks).
 7. **Only two titles were tested** (`いろとりどりのセカイ HD` and *Hoshizora no Memoria HD*).
-   FVP titles from 2004–2008 are untested.
+   Both are now covered by an automated gate, [`tests/verify_multigame.py`](tests/verify_multigame.py):
+   each title runs twice for 900k steps and must be byte-identical across runs, keep its
+   text-line baseline (iroseka 195 lines / 6,496 B, Hoshizora no Memoria 164 lines / 6,644 B)
+   and emit zero U+FFFD. FVP titles from 2004–2008 are untested.
 8. **Four opcode semantics are unconfirmed** (`0x11` / `0x12` / `0x17` / `0x18`, 0.18% of
    instructions in this title).
 9. **Save support stops at the file layer.** `save/sNNN.bin` and `save/save.bin` parse and re-serialise

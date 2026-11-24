@@ -110,6 +110,19 @@ def build_steps(args):
                           [PY, compare, '--run', '--quiet'], 900,
                           note='byte-identical vs Python reference'))
 
+    # 2c. 多游戏兼容性门禁（第二部作品也要能跑、可重复、编码正确）
+    vmulti = os.path.join(HERE, 'verify_multigame.py')
+    if not (os.path.isfile(fvm) and os.path.isfile(vmulti) and script):
+        steps.append(Step('verify_multigame.py', None, 0,
+                          skip_reason='missing fvm.exe or iroseka.hcb'))
+    else:
+        vt_multi = [PY, vmulti]
+        if args.fast:
+            vt_multi += ['--steps', '300000']
+        steps.append(Step('verify_multigame.py', vt_multi, 900,
+                          note='two FVP titles: decode, run twice, deterministic, '
+                               'JP text ratio'))
+
     # 2b. coroutine slots must stay behaviour-neutral
     vthreads = os.path.join(HERE, 'verify_threads.py')
     if not (os.path.isfile(fvm) and os.path.isfile(vthreads) and
