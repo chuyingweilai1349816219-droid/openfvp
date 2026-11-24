@@ -34,6 +34,13 @@ void fvp_textattr_reset(FvpTextAttr *attrs, int count)
         attrs[i].skip_mode = 0;
         attrs[i].font_id = 0;
         attrs[i].font_id2 = 0;
+        attrs[i].fmt_pad_a = 0;
+        attrs[i].fmt_pad_b = 0;
+        attrs[i].fmt_off_a = 0;
+        attrs[i].fmt_off_b = 0;
+        attrs[i].func_a = 0;
+        attrs[i].func_b = 0;
+        attrs[i].func_c = 0;
         attrs[i].set_mask = 0u;
     }
 }
@@ -156,6 +163,73 @@ int fvp_textattr_set_font(FvpTextAttr *attrs, int count, int idx, int id,
     }
     if (wrote) {
         attrs[idx].set_mask |= FVP_TEXTATTR_FONT;
+    }
+    return wrote;
+}
+
+/* 单字段赋值：值在 [lo,hi] 内才写，返回 1 表示写了。 */
+static int set_in_range(int *dst, int v, int lo, int hi)
+{
+    if (v < lo || v > hi) {
+        return 0;
+    }
+    *dst = v;
+    return 1;
+}
+
+/* TextFormat(twIdx, a, b, c, d, e, f)：静态分析 **0x43CC10**，六个字段各自独立判定
+ * （每个字段都是 `jl` / `jg` 两个跳过分支，互不影响）：
+ *   a → tw+0x5A8（-32..32，与 TextSpace 同一字段）→ space_x
+ *   b → tw+0x5AA（-32..32）                        → space_y
+ *   c → tw+0x5AE（0..64）                          → fmt_pad_a
+ *   d → tw+0x5AC（0..64，且把 tw+0x5E8 抬到 >= d）  → fmt_pad_b
+ *   e → tw+0x5B4（-16..16）                        → fmt_off_a
+ *   f → tw+0x5B0（-16..16）                        → fmt_off_b
+ * 六个全都超范围时返回 0。 */
+int fvp_textattr_set_format(FvpTextAttr *attrs, int count, int idx, int a,
+                            int b, int c, int d, int e, int f)
+{
+    int wrote = 0;
+    FvpTextAttr *ta;
+
+    if (attrs == NULL || idx < 0 || idx >= count || idx >= FVP_TEXT_WINDOWS) {
+        return 0;
+    }
+    ta = &attrs[idx];
+    wrote |= set_in_range(&ta->space_x, a, FVP_TEXT_SPACE_MIN,
+                          FVP_TEXT_SPACE_MAX);
+    wrote |= set_in_range(&ta->space_y, b, FVP_TEXT_SPACE_MIN,
+                          FVP_TEXT_SPACE_MAX);
+    wrote |= set_in_range(&ta->fmt_pad_a, c, 0, FVP_TEXT_FMT_PAD_MAX);
+    wrote |= set_in_range(&ta->fmt_pad_b, d, 0, FVP_TEXT_FMT_PAD_MAX);
+    wrote |= set_in_range(&ta->fmt_off_a, e, FVP_TEXT_FMT_OFF_MIN,
+                          FVP_TEXT_FMT_OFF_MAX);
+    wrote |= set_in_range(&ta->fmt_off_b, f, FVP_TEXT_FMT_OFF_MIN,
+                          FVP_TEXT_FMT_OFF_MAX);
+    if (wrote) {
+        ta->set_mask |= FVP_TEXTATTR_FORMAT;
+    }
+    return wrote;
+}
+
+/* TextFunction(twIdx, a, b, c)：静态分析 **0x43CCF0**，三个开关各自独立判定：
+ *   a → tw+0x5A5（0..1）、b → tw+0x5A4（0..2）、c → tw+0x5A6（0..2）。
+ * 注意写盘顺序是 +0x5A5 / +0x5A4 / +0x5A6 —— 字段编号与参数顺序不一致。 */
+int fvp_textattr_set_function(FvpTextAttr *attrs, int count, int idx, int a,
+                              int b, int c)
+{
+    int wrote = 0;
+    FvpTextAttr *ta;
+
+    if (attrs == NULL || idx < 0 || idx >= count || idx >= FVP_TEXT_WINDOWS) {
+        return 0;
+    }
+    ta = &attrs[idx];
+    wrote |= set_in_range(&ta->func_a, a, 0, FVP_TEXT_FUNC1_MAX);
+    wrote |= set_in_range(&ta->func_b, b, 0, FVP_TEXT_FUNC2_MAX);
+    wrote |= set_in_range(&ta->func_c, c, 0, FVP_TEXT_FUNC3_MAX);
+    if (wrote) {
+        ta->set_mask |= FVP_TEXTATTR_FUNCTION;
     }
     return wrote;
 }

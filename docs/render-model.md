@@ -451,6 +451,38 @@ glyphs         0 tofu, 1 from fallback atlas
 - `verify_gfx` 仍是 **293 px / PSNR 49.94 / SSIM 0.99971**：528k 那一帧的 `tw9` 没有文字，
   所以像素不变（这个 bug 同样只有跑到标题出现时才显形）
 
+### 7.4 `TextFormat`(118) / `TextFunction`(119)：只记录
+
+两条命令都是"把一串小整数写进文本窗口的固定偏移"，handler 逐字段判范围：
+
+| 命令 | handler | 参数 → 字段（范围） |
+|---|---|---|
+| `TextFormat`(118) | **0x43CC10** | a→`tw+0x5A8`(-32..32)、b→`tw+0x5AA`(-32..32)、c→`tw+0x5AE`(0..64)、d→`tw+0x5AC`(0..64，且把 `tw+0x5E8` 抬到 ≥d)、e→`tw+0x5B4`(-16..16)、f→`tw+0x5B0`(-16..16) |
+| `TextFunction`(119) | **0x43CCF0** | a→`tw+0x5A5`(0..1)、b→`tw+0x5A4`(0..2)、c→`tw+0x5A6`(0..2) |
+
+**实测（900k 步，`fvm --dump-textattr`）**：
+
+```
+tw  0: ... space=32,32 ... fmt=64,64,16,16,32,32 func=1,2,2
+tw  8: ... space=32,1  ... fmt=1,1,1,1,32,1     func=0,0,0
+tw  9: ... space=32,1  ... fmt=0,0,0,0,32,1     func=0,0,0
+tw 10: ... space=0,0   ... fmt=0,0,0,0,0,0      func=0,0,0
+```
+
+**一个有用的交叉验证**：`TextFormat` 的 a/b 两个参数写的正是 `TextSpace` 的两个字段
+（`tw+0x5A8` / `tw+0x5AA`）。tw8 的 `space=32,1` 既可能来自 `TextFormat(8,32,1,...)`
+也可能来自 `TextSpace`，而 tw9 只收到过 `TextSpace(9,32,1)`（所以 `fmt` 全 0 但
+`space=32,1`）—— 与实际 dump 完全吻合，说明这两条命令的字段对应没读错。
+
+**为什么只记录不实现**：这九个值（排版边距/间距/开关）在原版排版端怎么消费没有证据；
+`work/render.py` 里这些字段也只有声明、没有参与绘制。渲染层的排版仍是 §1.3 那套近似。
+
+**改动**：`FvpTextAttr` 新增 `fmt_pad_a/fmt_pad_b/fmt_off_a/fmt_off_b` 与
+`func_a/func_b/func_c`（掩码 `FVP_TEXTATTR_FORMAT` / `FVP_TEXTATTR_FUNCTION`），
+`fvp_textattr_set_format()` 六字段逐字段判范围、`fvp_textattr_set_function()` 三开关；
+gfx 侧 `gfx_text_set_format()` / `gfx_text_set_function()` 只存不画。
+`test_textattr` **65 → 82 项**。
+
 ---
 
 ## 8. 命中测试（`PrimHit` 76）：已落地（矩形层）

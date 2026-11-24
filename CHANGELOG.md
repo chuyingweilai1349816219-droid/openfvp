@@ -94,6 +94,27 @@
 
 ### 新增
 
+- **`TextFormat`(118) / `TextFunction`(119) 落地：只记录、不参与排版**
+  - `TextFormat` handler **0x43CC10**（argc 7）逐字段判范围写六个偏移：
+    a/b → `tw+0x5A8`/`tw+0x5AA`（-32..32，**与 TextSpace 是同一对字段**）、
+    c → `tw+0x5AE`（0..64）、d → `tw+0x5AC`（0..64，且把 `tw+0x5E8` 抬到 ≥d）、
+    e → `tw+0x5B4`（-16..16）、f → `tw+0x5B0`（-16..16）
+  - `TextFunction` handler **0x43CCF0**（argc 4）三个开关：a → `tw+0x5A5`（0..1）、
+    b → `tw+0x5A4`（0..2）、c → `tw+0x5A6`（0..2），各自独立判定
+  - **实测（900k 步）**：`tw0 fmt=64,64,16,16,32,32 func=1,2,2`、
+    `tw8 fmt=1,1,1,1,32,1`、`tw9 fmt=0,0,0,0,32,1`（tw9 只收到过 TextSpace，
+    所以 fmt 全 0 而 space=32,1）—— 这正好交叉验证了「TextFormat 的前两个参数就是
+    TextSpace 那两个字段」
+  - 只记录不参与排版：这九个值（边距/间距/开关）在原版排版端怎么消费没有证据，
+    参考实现也只声明不使用
+  - `FvpTextAttr.fmt_pad_a/fmt_pad_b/fmt_off_a/fmt_off_b` + `func_a/func_b/func_c`
+    （掩码 `FVP_TEXTATTR_FORMAT` / `FVP_TEXTATTR_FUNCTION`）+
+    `fvp_textattr_set_format()` / `fvp_textattr_set_function()`；
+    gfx 侧 `gfx_text_set_format()` / `gfx_text_set_function()` 只存不画；
+    `fvm --dump-textattr` 多打一行 `fmt=... func=...`
+  - 测试 `test_textattr` **65 → 82 项**（逐字段跳过、全越界拒绝、开关范围）
+  - 外壳 45 s 实测 `unimpl cmds` 从 17 种降到 **15 种**
+
 - **`TextFont`(113) 落地：只记录、不换字模**
   - handler **0x43DA70**：arg0 必须是 int 0..0x1F；arg1（int，**-5 <= v <= 引擎字体数-1**）
     → `0x4247F0` 写 `tw+0x590`（**u16**）；arg2（同一区间）→ `0x424860` 写

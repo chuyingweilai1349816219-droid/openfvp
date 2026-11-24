@@ -489,6 +489,10 @@ typedef struct GfxTextWin {
      * 渲染仍按字号挑图集 —— 引擎字体号 -1/-2 对应哪套字模没有证据。 */
     int font_id;
     int font_id2;
+    /* TextFormat(118) / TextFunction(119)：排版参数与三个开关。只记录，
+     * 不参与排版 —— 原版怎么用这些值没有证据。 */
+    int fmt[6]; /* tw+0x5A8 / 0x5AA / 0x5AE / 0x5AC / 0x5B4 / 0x5B0 */
+    int func[3]; /* tw+0x5A5 / 0x5A4 / 0x5A6 */
 } GfxTextWin;
 
 struct Gfx {
@@ -3825,6 +3829,32 @@ void gfx_text_set_font(Gfx *g, int layer, int id, int id2)
     }
     g->tw[layer].font_id = id;
     g->tw[layer].font_id2 = id2;
+}
+
+/* TextFormat(118)：六个排版参数（静态分析 0x43CC10），只记录、不参与排版。 */
+void gfx_text_set_format(Gfx *g, int layer, int a, int b, int c, int d, int e,
+                         int f)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return;
+    }
+    g->tw[layer].fmt[0] = a;
+    g->tw[layer].fmt[1] = b;
+    g->tw[layer].fmt[2] = c;
+    g->tw[layer].fmt[3] = d;
+    g->tw[layer].fmt[4] = e;
+    g->tw[layer].fmt[5] = f;
+}
+
+/* TextFunction(119)：三个开关（静态分析 0x43CCF0），只记录。 */
+void gfx_text_set_function(Gfx *g, int layer, int a, int b, int c)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return;
+    }
+    g->tw[layer].func[0] = a;
+    g->tw[layer].func[1] = b;
+    g->tw[layer].func[2] = c;
 }
 
 /* TextSpace(128)：字间距/行间距，两个分量各 -32..32（静态分析 0x43CE10 写

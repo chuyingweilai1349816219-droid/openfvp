@@ -198,10 +198,14 @@ static void fvp_print_summary(const FvpVM *vm)
                 continue;
             }
             printf("  tw %2d: mask=0x%x color=%d,%d,%d size=%dx%d speed=%d ms "
-                   "shadow=%d space=%d,%d skip=%d font=%d,%d\n",
+                   "shadow=%d space=%d,%d skip=%d font=%d,%d\n"
+                   "           fmt=%d,%d,%d,%d,%d,%d func=%d,%d,%d\n",
                    wi, ta->set_mask, ta->r, ta->g, ta->b, ta->w, ta->h,
                    ta->speed_ms, ta->shadow_dist, ta->space_x, ta->space_y,
-                   ta->skip_mode, ta->font_id, ta->font_id2);
+                   ta->skip_mode, ta->font_id, ta->font_id2,
+                   ta->fmt_pad_a, ta->fmt_pad_b, ta->fmt_off_a,
+                   ta->fmt_off_b, ta->space_x, ta->space_y,
+                   ta->func_a, ta->func_b, ta->func_c);
         }
     }
     printf("save state slot=%d str=%d/%d/%d thumb=%dx%d\n", vm->save_slot,

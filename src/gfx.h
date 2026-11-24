@@ -189,6 +189,11 @@ void gfx_text_set_space(Gfx *g, int layer, int x, int y);
  * 只记录、不参与选字体：引擎字体号 -1（正文）/ -2（章节标题）对应哪套字模
  * 没有证据，渲染仍按字号挑图集。 */
 void gfx_text_set_font(Gfx *g, int layer, int id, int id2);
+/* TextFormat(118)：六个排版参数（静态分析 0x43CC10），只记录。 */
+void gfx_text_set_format(Gfx *g, int layer, int a, int b, int c, int d,
+                         int e, int f);
+/* TextFunction(119)：三个开关（静态分析 0x43CCF0），只记录。 */
+void gfx_text_set_function(Gfx *g, int layer, int a, int b, int c);
 
 /* 纹理缓存上限（字节）。默认 512 MiB，见 gfx.c 的 GFX_TEX_CACHE_DEFAULT_BYTES。
  * 超上限时按 LRU 淘汰 refs == 1 的条目（被图元/组/部件引用的永远不会被淘汰，

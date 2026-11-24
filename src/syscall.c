@@ -48,6 +48,8 @@
 #pragma weak gfx_text_set_shadow
 #pragma weak gfx_text_set_space
 #pragma weak gfx_text_set_font
+#pragma weak gfx_text_set_format
+#pragma weak gfx_text_set_function
 #pragma weak gfx_text_busy
 /* 动画补间（src/motion.c + gfx 侧）：只有链接了 gfx.c 的程序才有这些符号。 */
 #pragma weak gfx_get_prim
@@ -1360,6 +1362,66 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      *   >12 当 12，然后转 0x4248B0(tw, dist) → `mov %al,0x597(%ecx)`（只存一字节）。
      * 只记录、不渲染：原版阴影的**形状/颜色/透明度**都还没有证据（只知道距离），
      * 参考实现 work/render.py 也只存不画。见 docs/render-model.md §7.1。 */
+    /* 118 TextFormat(twIdx, a, b, c, d, e, f)：静态分析 handler **0x43CC10**，
+     * 六个排版参数各自独立判定范围（逐字段 jl/jg，超范围的字段单独跳过）：
+     *   a/b → tw+0x5A8 / tw+0x5AA（-32..32，**与 TextSpace 是同一对字段**）
+     *   c   → tw+0x5AE（0..64）
+     *   d   → tw+0x5AC（0..64；且会把 tw+0x5E8 抬到不小于 d）
+     *   e   → tw+0x5B4（-16..16）、f → tw+0x5B0（-16..16）
+     * 只记录、不参与排版（原版怎么用这些值没有证据）。实测 tw0 = (32,32,64,64,16,16)、
+     * tw8 = (32,1,1,1,1,1)、tw9 = 同 tw0 之外的一档。 */
+    case 118:
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
+            int id = (int)args[0].i;
+            int v[6];
+            int k;
+
+            for (k = 0; k < 6; ++k) {
+                int ai = k + 1;
+
+                v[k] = (ai < (int)argc && args[ai].type == (uint8_t)FVP_INT)
+                           ? (int)args[ai].i
+                           : 0;
+            }
+            if (fvp_textattr_set_format(vm->textattr, FVP_TEXT_WINDOWS, id, v[0],
+                                        v[1], v[2], v[3], v[4], v[5]) &&
+                vm->gfx_bridge != NULL && gfx_text_set_format != NULL &&
+                id >= 0 && id < FVP_TEXT_WINDOWS) {
+                const FvpTextAttr *ta = &vm->textattr[id];
+
+                gfx_text_set_format(vm->gfx_bridge->gfx, id, ta->space_x,
+                                    ta->space_y, ta->fmt_pad_a, ta->fmt_pad_b,
+                                    ta->fmt_off_a, ta->fmt_off_b);
+            }
+        }
+        return;
+    /* 119 TextFunction(twIdx, a, b, c)：静态分析 handler **0x43CCF0**，三个开关
+     * 各自独立判定：a → tw+0x5A5（0..1）、b → tw+0x5A4（0..2）、c → tw+0x5A6（0..2）。
+     * 只记录（三个开关的语义未知）。实测 tw0 = (1,2,2)。 */
+    case 119:
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
+            int id = (int)args[0].i;
+            int a1 = (argc >= 2 && args[1].type == (uint8_t)FVP_INT)
+                         ? (int)args[1].i
+                         : 0;
+            int a2 = (argc >= 3 && args[2].type == (uint8_t)FVP_INT)
+                         ? (int)args[2].i
+                         : 0;
+            int a3 = (argc >= 4 && args[3].type == (uint8_t)FVP_INT)
+                         ? (int)args[3].i
+                         : 0;
+
+            if (fvp_textattr_set_function(vm->textattr, FVP_TEXT_WINDOWS, id,
+                                          a1, a2, a3) &&
+                vm->gfx_bridge != NULL && gfx_text_set_function != NULL &&
+                id >= 0 && id < FVP_TEXT_WINDOWS) {
+                gfx_text_set_function(vm->gfx_bridge->gfx, id,
+                                      vm->textattr[id].func_a,
+                                      vm->textattr[id].func_b,
+                                      vm->textattr[id].func_c);
+            }
+        }
+        return;
     /* 113 TextFont(twIdx, fontId, fontId2)：**字体选择**，静态分析 handler **0x43DA70**：
      *   arg0 必须是 int 0..0x1F（twIdx）；
      *   arg1 = int 且 **-5 <= v <= (引擎字体数-1)** → 0x4247F0 写 `tw+0x590`（u16）；

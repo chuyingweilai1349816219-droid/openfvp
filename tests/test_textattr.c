@@ -140,6 +140,47 @@ int main(void)
           "font unchanged after the rejection (%d,%d)", a[6].font_id,
           a[6].font_id2);
 
+    /* 4f. 排版参数（TextFormat 118，handler 0x43CC10）：六个字段各自独立判定。
+     *     前两个参数写的就是 space_x / space_y（tw+0x5A8 / tw+0x5AA），
+     *     与 TextSpace(128) 是同一对字段 —— 实测 tw8 的 (32,1) 就从这两条命令来。 */
+    CHECK(fvp_textattr_set_format(a, FVP_TEXT_WINDOWS, 7, 32, 32, 64, 64, 16,
+                                  16) == 1,
+          "set_format full");
+    CHECK(a[7].space_x == 32 && a[7].space_y == 32, "fmt space %d,%d",
+          a[7].space_x, a[7].space_y);
+    CHECK(a[7].fmt_pad_a == 64 && a[7].fmt_pad_b == 64, "fmt pad %d,%d",
+          a[7].fmt_pad_a, a[7].fmt_pad_b);
+    CHECK(a[7].fmt_off_a == 16 && a[7].fmt_off_b == 16, "fmt off %d,%d",
+          a[7].fmt_off_a, a[7].fmt_off_b);
+    CHECK((a[7].set_mask & FVP_TEXTATTR_FORMAT) != 0u, "format mask set");
+    /* 逐字段超范围：只跳过越界的那些 */
+    CHECK(fvp_textattr_set_format(a, FVP_TEXT_WINDOWS, 7, 99, 7, 65, -1, -17,
+                                  -3) == 1,
+          "out-of-range fields are skipped one by one");
+    CHECK(a[7].space_x == 32, "space_x kept (%d)", a[7].space_x);
+    CHECK(a[7].space_y == 7, "space_y updated (%d)", a[7].space_y);
+    CHECK(a[7].fmt_pad_a == 64 && a[7].fmt_pad_b == 64,
+          "pad kept (%d,%d)", a[7].fmt_pad_a, a[7].fmt_pad_b);
+    CHECK(a[7].fmt_off_a == 16 && a[7].fmt_off_b == -3,
+          "off_a kept, off_b updated (%d,%d)", a[7].fmt_off_a, a[7].fmt_off_b);
+    CHECK(fvp_textattr_set_format(a, FVP_TEXT_WINDOWS, 7, 99, 99, 99, 99, 99,
+                                  99) == 0,
+          "all six out of range = rejected");
+
+    /* 4g. 三个开关（TextFunction 119，handler 0x43CCF0）：0..1 / 0..2 / 0..2。 */
+    CHECK(fvp_textattr_set_function(a, FVP_TEXT_WINDOWS, 7, 1, 2, 2) == 1,
+          "set_function(1,2,2)");
+    CHECK(a[7].func_a == 1 && a[7].func_b == 2 && a[7].func_c == 2,
+          "func %d,%d,%d", a[7].func_a, a[7].func_b, a[7].func_c);
+    CHECK((a[7].set_mask & FVP_TEXTATTR_FUNCTION) != 0u, "function mask set");
+    CHECK(fvp_textattr_set_function(a, FVP_TEXT_WINDOWS, 7, 2, 9, 0) == 1,
+          "a out of range (2 > 1) but c still applies");
+    CHECK(a[7].func_a == 1 && a[7].func_b == 2 && a[7].func_c == 0,
+          "a/b kept, c updated (%d,%d,%d)", a[7].func_a, a[7].func_b,
+          a[7].func_c);
+    CHECK(fvp_textattr_set_function(a, FVP_TEXT_WINDOWS, 7, 5, 5, 5) == 0,
+          "all three out of range = rejected");
+
     /* 5. 窗口号越界：拒绝，且不改任何窗口。 */
     CHECK(fvp_textattr_set_color(a, FVP_TEXT_WINDOWS, 32, 1, 2, 3) == 0,
           "idx 32 rejected");
@@ -150,8 +191,8 @@ int main(void)
     CHECK(fvp_textattr_set_color(NULL, FVP_TEXT_WINDOWS, 0, 1, 2, 3) == 0,
           "NULL rejected");
 
-    /* 6. configured_count 只数设过的窗口（本例 1,2,3,4,5,6）。 */
-    CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 6,
+    /* 6. configured_count 只数设过的窗口（本例 1,2,3,4,5,6,7）。 */
+    CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 7,
           "configured=%d", fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS));
     CHECK(fvp_textattr_configured_count(NULL, FVP_TEXT_WINDOWS) == 0,
           "configured(NULL)=0");
