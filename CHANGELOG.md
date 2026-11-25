@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **缺字回退改成逐码点（混排字距连续），并有单测**
+  - 之前是"整串一次栅格化"，混排（图集字 + 回退字）时字距对不齐；现在
+    `draw_text_run()` 只把缺字的**单个码点**交给平台回退，推进宽度取
+    `GfxGlyphFallback.advance_of()`（GDI GetTextExtentPoint32W），可选项
+  - 新增 `win32_gdi_text_advance()`；外壳把 mask_of + advance_of 一起装上
+  - 单测：`tests/test_glyph_fallback.c` 用**假的平台回退**（4×4 掩码 + 固定
+    推进 12）验证"缺字不再算 tofu、glyph_fb_runs 计 1、卸载后恢复豆腐块"，
+    不依赖 GDI，18 项断言全过
+  - 实测：部分恢复视图里回退触发 48 次、`谁这样说道。` 正常、字距比之前均匀
+  - 已知限制（已写进 docs/c-gfx.md）：全角空格走回退时首字与空格的字距仍略有
+    偏差；彻底一致需要把回退字形并入图集并复用图集推进表
+
 - **缺字回退：图集里没有的码点（汉化文本的汉字）用 GDI 现场栅格化**
   - `src/gfx.h` 新增 `GfxGlyphFallback` 钩子（平台层只交 8 位覆盖率掩码，
     配色/混合留在 gfx.c，像素格式不外泄）；`gfx.c` 在 `draw_line_font()` 里

@@ -2392,6 +2392,95 @@ static void draw_glyph_scaled(Gfx *g, GfxFont *f, const GfxFont *src, int gi,
 
 /* one run of text at (x, y); y is the ascender top, like PIL's default
  * "la" anchor */
+/* 把一份覆盖率掩码按颜色混进画布（缺字回退用）。 */
+static void blit_mask(Gfx *g, const unsigned char *mask, int mw, int mh, int x,
+                      int y, int r, int gr, int b, int alpha)
+{
+    int yy;
+
+    for (yy = 0; yy < mh; ++yy) {
+        int cy = y + yy;
+        int xx;
+
+        if (cy < 0 || cy >= g->h) {
+            continue;
+        }
+        for (xx = 0; xx < mw; ++xx) {
+            int cx = x + xx;
+            int cov;
+            uint32_t *dst;
+            int a;
+
+            if (cx < 0 || cx >= g->w) {
+                continue;
+            }
+            cov = mask[yy * mw + xx];
+            if (cov == 0) {
+                continue;
+            }
+            a = (cov * alpha) / 255;
+            if (a <= 0) {
+                continue;
+            }
+            dst = (uint32_t *)g->canvas + (size_t)cy * (size_t)g->w + (size_t)cx;
+            *dst = ((uint32_t)0xFFu << 24) | ((uint32_t)((r * a) / 255) << 16) |
+                   ((uint32_t)((gr * a) / 255) << 8) |
+                   (uint32_t)((b * a) / 255);
+        }
+    }
+}
+
+/* 单码点回退：返回推进宽度（0 = 回退不可用/失败）。 */
+static int fallback_one_codepoint(Gfx *g, uint32_t cp, int x, int y, int px,
+                                  int r, int gr, int b, int alpha)
+{
+    char buf[5];
+    unsigned char *mask = NULL;
+    int mw = 0;
+    int mh = 0;
+    int n = 0;
+    int adv;
+
+    if (g == NULL || g->glyph_fb == NULL || g->glyph_fb->mask_of == NULL) {
+        return 0;
+    }
+    /* UTF-8 编码一个码点 */
+    if (cp < 0x80u) {
+        buf[n++] = (char)cp;
+    } else if (cp < 0x800u) {
+        buf[n++] = (char)(0xC0u | (cp >> 6));
+        buf[n++] = (char)(0x80u | (cp & 0x3Fu));
+    } else if (cp < 0x10000u) {
+        buf[n++] = (char)(0xE0u | (cp >> 12));
+        buf[n++] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
+        buf[n++] = (char)(0x80u | (cp & 0x3Fu));
+    } else {
+        buf[n++] = (char)(0xF0u | (cp >> 18));
+        buf[n++] = (char)(0x80u | ((cp >> 12) & 0x3Fu));
+        buf[n++] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
+        buf[n++] = (char)(0x80u | (cp & 0x3Fu));
+    }
+    buf[n] = '\0';
+    if (!g->glyph_fb->mask_of(buf, px, &mask, &mw, &mh) || mask == NULL) {
+        free(mask);
+        return 0;
+    }
+    if (mw > 0 && mh > 0) {
+        blit_mask(g, mask, mw, mh, x, y, r, gr, b, alpha);
+    }
+    free(mask);
+    g->stats.glyph_fb_runs += 1;
+    adv = mw;
+    if (g->glyph_fb->advance_of != NULL) {
+        int a2 = g->glyph_fb->advance_of(buf, px);
+
+        if (a2 > 0) {
+            adv = a2;
+        }
+    }
+    return adv > 0 ? adv : 8;
+}
+
 static void draw_text_run(Gfx *g, GfxFont *f, int x, int y, const char *s,
                           int r, int gr, int b, int ca, int stroke_w, int sr,
                           int sg, int sb, int sca)
@@ -2486,6 +2575,16 @@ static void draw_text_run(Gfx *g, GfxFont *f, int x, int y, const char *s,
                         "nfonts=%d\n",
                         (unsigned)cp, (void *)f, f->builtin, f->size, f->count,
                         g->nfonts);
+            }
+            /* 先试平台回退（汉化文本的汉字等），成功就不算豆腐块 */
+            if (g->glyph_fb != NULL) {
+                int adv = fallback_one_codepoint(g, (uint32_t)cp, pen, y,
+                                                 f->size, r, gr, b, ca);
+
+                if (adv > 0) {
+                    pen += adv;
+                    continue;
+                }
             }
             g->stats.tofu_glyphs += 1;
             /* 记下前 8 个不同的缺字码点（诊断用：兼容性排查要能指名道姓）。 */
@@ -3834,76 +3933,6 @@ void gfx_set_glyph_fallback(Gfx *g, const GfxGlyphFallback *fb)
     }
 }
 
-/* 有没有码点在图集里找不到（缺字才走平台回退）。 */
-static int font_missing_glyphs(const GfxFont *f, const char *utf8)
-{
-    const char *p = utf8;
-    int cp;
-
-    while ((cp = utf8_next(&p)) >= 0) {
-        if (font_find(f, (uint32_t)cp) < 0) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/* 用平台掩码把一整串画上去；返回推进宽度。 */
-static int draw_with_fallback(Gfx *g, const char *utf8, int x, int y, int px,
-                              int r, int gr, int b, int alpha)
-{
-    unsigned char *mask = NULL;
-    int mw = 0;
-    int mh = 0;
-    int yy;
-
-    if (g == NULL || g->glyph_fb == NULL || g->glyph_fb->mask_of == NULL) {
-        return 0;
-    }
-    if (!g->glyph_fb->mask_of(utf8, px, &mask, &mw, &mh) || mask == NULL ||
-        mw <= 0 || mh <= 0) {
-        free(mask);
-        return 0;
-    }
-    g->stats.glyph_fb_runs += 1;
-    for (yy = 0; yy < mh; ++yy) {
-        int cy = y + yy;
-        int xx;
-
-        if (cy < 0 || cy >= g->h) {
-            continue;
-        }
-        for (xx = 0; xx < mw; ++xx) {
-            int cx = x + xx;
-            int cov;
-            uint32_t *dst;
-
-            if (cx < 0 || cx >= g->w) {
-                continue;
-            }
-            cov = mask[yy * mw + xx];
-            if (cov == 0) {
-                continue;
-            }
-            dst = (uint32_t *)g->canvas + (size_t)cy * (size_t)g->w + (size_t)cx;
-            {
-                int a = (cov * alpha) / 255;
-
-                if (a <= 0) {
-                    continue;
-                }
-                /* canvas 是 0xAARRGGBB（BMP 写出时再转 BGR） */
-                *dst = ((uint32_t)0xFFu << 24) |
-                       ((uint32_t)((r * a + 0) / 255) << 16) |
-                       ((uint32_t)((gr * a) / 255) << 8) |
-                       (uint32_t)((b * a) / 255);
-            }
-        }
-    }
-    free(mask);
-    return mw;
-}
-
 /* 实际绘制：force != NULL 时用指定字体，否则按 px 挑图集。 */
 static int draw_line_font(Gfx *g, const GfxFont *force, const char *utf8,
                           int x, int y, int px, int r, int gr, int b,
@@ -3920,14 +3949,8 @@ static int draw_line_font(Gfx *g, const GfxFont *force, const char *utf8,
         return 0;
     }
     base = (force != NULL) ? (GfxFont *)force : pick_font(g, px);
-    /* 图集里缺字（汉化文本等）→ 交给平台层现场栅格化，保持可读 */
-    if (g->glyph_fb != NULL && (base == NULL || font_missing_glyphs(base, utf8))) {
-        int w = draw_with_fallback(g, utf8, x, y, px, r, gr, b, alpha);
-
-        if (w > 0) {
-            return w;
-        }
-    }
+    /* 缺字由 draw_text_run() 里的逐码点回退处理（字距能按 GDI 的推进走），
+     * 这里不再整串替换。base == NULL 时退回下面的 8px 推进逻辑。 */
     if (base == NULL || base->size <= 0) {
         return 0;
     }

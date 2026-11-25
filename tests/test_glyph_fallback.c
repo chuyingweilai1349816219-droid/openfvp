@@ -110,6 +110,37 @@ static void make_tmp_paths(void)
     snprintf(g_tmp16, sizeof g_tmp16, "%s/fvp_atlas16.bin", t);
 }
 
+
+/* 假的平台回退：4x4 覆盖掩码 + 固定推进 12 px（用来验证 gfx.c 的逐码点回退，
+ * 不依赖 Windows GDI）。 */
+static int fake_mask_of(const char *utf8, int px, unsigned char **mask, int *w,
+                        int *h)
+{
+    unsigned char *m;
+
+    (void)utf8;
+    (void)px;
+    m = (unsigned char *)calloc(16, 1);
+    if (m == NULL) {
+        return 0;
+    }
+    m[5] = 0x80;
+    m[6] = 0x80;
+    m[9] = 0x80;
+    m[10] = 0x80;
+    *mask = m;
+    *w = 4;
+    *h = 4;
+    return 1;
+}
+
+static int fake_advance_of(const char *utf8, int px)
+{
+    (void)utf8;
+    (void)px;
+    return 12;
+}
+
 int main(void)
 {
     const char *p34;
@@ -177,6 +208,24 @@ int main(void)
           st->tofu_glyphs);
     CHECK(st->fallback_glyphs == 0, "no fallback for a missing glyph (%d)",
           st->fallback_glyphs);
+
+    /* --- 3b. 装了平台回退后：同一个缺字不再画豆腐块，且推进 12px --- */
+    {
+        static const GfxGlyphFallback fake_fb = { fake_mask_of,
+                                                  fake_advance_of };
+
+        gfx_set_glyph_fallback(g, &fake_fb);
+        gfx_text_clear(g, 8);
+        gfx_text_append(g, 8, "\xE3\x81\x82"); /* あ */
+        gfx_render(g);
+        st = gfx_stats(g);
+        CHECK(st->tofu_glyphs == 0,
+              "with a fallback the glyph is not tofu (tofu=%d)",
+              st->tofu_glyphs);
+        CHECK(st->glyph_fb_runs == 1,
+              "fallback used once (runs=%lu)", st->glyph_fb_runs);
+        gfx_set_glyph_fallback(g, NULL);
+    }
 
     /* --- 4. 计数每次 render 归零 --- */
     gfx_text_clear(g, 8);

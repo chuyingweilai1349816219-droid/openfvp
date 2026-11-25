@@ -400,6 +400,9 @@ typedef struct GfxFont GfxFont;
 typedef struct GfxGlyphFallback {
     int (*mask_of)(const char *utf8, int px, unsigned char **mask, int *w,
                    int *h);
+    /* 可选：这个字的推进宽度（通常来自 GDI 的 GetTextExtentPoint32）。
+     * 为 NULL 时用掩码宽度当推进，混排字距可能略挤。 */
+    int (*advance_of)(const char *utf8, int px);
 } GfxGlyphFallback;
 
 void gfx_set_glyph_fallback(Gfx *g, const GfxGlyphFallback *fb);

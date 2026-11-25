@@ -154,3 +154,52 @@ int win32_gdi_text_mask(const char *utf8, int px, unsigned char **mask, int *w,
     *h = mh;
     return 1;
 }
+
+int win32_gdi_text_advance(const char *utf8, int px)
+{
+    HDC screen;
+    HDC mem;
+    HFONT font;
+    HGDIOBJ old_font;
+    SIZE size;
+    wchar_t *wide;
+    int n;
+    int adv = 0;
+
+    if (utf8 == NULL || px <= 0) {
+        return 0;
+    }
+    wide = (wchar_t *)malloc((strlen(utf8) + 1) * sizeof(wchar_t));
+    if (wide == NULL) {
+        return 0;
+    }
+    n = to_wide(utf8, wide, (int)strlen(utf8) + 1);
+    if (n < 0) {
+        free(wide);
+        return 0;
+    }
+    screen = CreateCompatibleDC(NULL);
+    mem = (screen != NULL) ? CreateCompatibleDC(screen) : NULL;
+    font = CreateFontW(-px, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                       DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS,
+                       ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
+                       L"Microsoft YaHei");
+    if (mem != NULL && font != NULL) {
+        old_font = SelectObject(mem, font);
+        if (GetTextExtentPoint32W(mem, wide, n, &size)) {
+            adv = (int)size.cx;
+        }
+        SelectObject(mem, old_font);
+    }
+    if (font != NULL) {
+        DeleteObject(font);
+    }
+    if (mem != NULL) {
+        DeleteDC(mem);
+    }
+    if (screen != NULL) {
+        DeleteDC(screen);
+    }
+    free(wide);
+    return adv;
+}

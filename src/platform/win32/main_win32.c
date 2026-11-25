@@ -2582,7 +2582,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         {
             /* 缺字回退：图集里没有的码点（汉化文本等）用 GDI 现场栅格化 */
             static const GfxGlyphFallback gdi_fallback = {
-                win32_gdi_text_mask
+                win32_gdi_text_mask, win32_gdi_text_advance
             };
 
             gfx_set_glyph_fallback(gfx, &gdi_fallback);
