@@ -535,6 +535,35 @@ def build_steps(args):
     return steps
 
 
+def save_failed_attempt(step_name, out):
+    """把"第一次失败"的完整输出落盘，返回路径（供 FLAKY 事后诊断）。
+
+    之前只保留了重试成功那次的输出，FLAKY 就只剩一句"failed once"，无法定位是哪条
+    断言、什么数值。现在第一次失败的原样输出会写到 out/run_all-<step>-attempt1.txt。
+    """
+    safe = ''.join(c if (c.isalnum() or c in '-_.') else '_'
+                   for c in step_name)[:80]
+    path = os.path.join(OUT, 'run_all-%s-attempt1.txt' % safe)
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(out or '')
+    except OSError:
+        return None
+    return path
+
+
+def failed_lines(out, limit=6):
+    """从输出里挑出 FAIL/RESULT: FAIL 行，拼成一句话。"""
+    picked = []
+    for line in (out or '').splitlines():
+        t = line.strip()
+        if t.startswith('FAIL') or 'RESULT: FAIL' in t:
+            picked.append(t[:160])
+            if len(picked) >= limit:
+                break
+    return ' | '.join(picked)
+
+
 def run_step(step, retry=True):
     """Run one step.  A failing step is retried once (many steps are timing
     sensitive); the result records how many attempts it took and whether the
@@ -546,11 +575,18 @@ def run_step(step, retry=True):
     if retry and first['status'] == 'FAIL':
         again = _run_step_once(step)
         again['attempts'] = 2
+        again.pop('out', None)
         again['first_attempt_failed'] = True
         if again['status'] == 'PASS':
+            path = save_failed_attempt(step.name, first.get('out', ''))
+            why = failed_lines(first.get('out', ''))
             again['note'] = ('FLAKY: failed once, passed on retry. ' +
+                             (('first attempt failed at: ' + why + '. ')
+                              if why else '') +
+                             ('first-attempt log: %s. ' % path if path else '') +
                              (again.get('note') or ''))
         return again
+    first.pop('out', None)
     first['attempts'] = 1
     first['first_attempt_failed'] = first['status'] == 'FAIL'
     return first
@@ -573,7 +609,7 @@ def _run_step_once(step):
             step.note
         return {'name': step.name, 'status': status, 'elapsed': elapsed,
                 'note': note, 'tail': '' if status == 'PASS' else tail(out),
-                'exit': rc}
+                'exit': rc, 'out': out}
     except subprocess.TimeoutExpired:
         return {'name': step.name, 'status': 'TIMEOUT', 'elapsed': step.timeout,
                 'note': 'exceeded %d s' % step.timeout, 'tail': '', 'exit': None}

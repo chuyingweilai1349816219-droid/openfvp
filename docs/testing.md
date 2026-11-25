@@ -478,3 +478,11 @@ out\fuzz\fvm_guard.exe out\fuzz\repro\case_12345.hcb --steps 2048
 > 现在 hover 步骤**自己先拍一张无 hover 的基线帧**（同一组参数、同一步骤内），
 > 再拍 hover 帧对比：iroseka 差异 2973 px、hoshimemo 33343 px，两次 `run_all`
 > 都不再有 FLAKY。
+
+> **2026-11-25 FLAKY 可诊断化**：`run_all.py` 以前只保留"重试成功那次"的输出，
+> FLAKY 就只剩一句 `failed once, passed on retry`，没法知道是哪条断言、什么数值。
+> 现在**第一次失败的完整输出会落盘**到 `out/fuzz/run_all-<step>-attempt1.txt`，
+> 并把其中的 `FAIL ...` / `RESULT: FAIL` 行摘到该步骤的 note 里（示例：
+> `FLAKY: failed once, passed on retry. first attempt failed at: FAIL hover ... ; 
+> first-attempt log: ...`）。这样下次 FLAKY 出现时能直接定位，而不是继续靠重试掩盖。
+> 助手函数 `save_failed_attempt()` / `failed_lines()` 有直接调用测试。

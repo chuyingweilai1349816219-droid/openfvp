@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **让 FLAKY 可诊断：第一次失败的完整输出落盘 + 摘出失败行**
+  - 背景：`run_all.py` 只保留重试成功的输出，FLAKY 只剩一句"failed once"，
+    这几轮反复出现却定位不到是哪条断言
+  - 现在首次失败的原样输出写到 `out/fuzz/run_all-<step>-attempt1.txt`，并把
+    `FAIL ...` / `RESULT: FAIL` 行摘进 note：
+    `FLAKY: failed once, passed on retry. first attempt failed at: FAIL ... ;
+    first-attempt log: ...`
+  - 新增 `save_failed_attempt()` / `failed_lines()`，并做了直接调用测试
+    （写文件、内容正确、失败行抽取都对）
+  - docs/testing.md 记录用法；下次 FLAKY 出现即可定位到具体断言与数值
+### 新增（研究）
+
 - **差异分类工具 + 更正 §4.5 的结论 + 记录"前进一行"实验的失败过程**
   - `scripts/diff-save-body.py --classify` 把差异分成 periodic（等距记录数组）/
     small-counter（小幅跳动的计数器）/ other（结构性候选），不做自动判定
