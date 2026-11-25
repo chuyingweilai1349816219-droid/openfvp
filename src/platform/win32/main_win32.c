@@ -40,6 +40,7 @@
 #include "win32_audio.h"
 #include "win32_log.h"
 #include "win32_window.h"
+#include "win32_gdi_text.h"
 #include "../../titlemenu.h"
 #include "../../openseq.h"
 #include "../../savelist.h"
@@ -2578,6 +2579,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 fvp_logf("title: no usable texture, falling back to text");
             }
         }
+        {
+            /* 缺字回退：图集里没有的码点（汉化文本等）用 GDI 现场栅格化 */
+            static const GfxGlyphFallback gdi_fallback = {
+                win32_gdi_text_mask
+            };
+
+            gfx_set_glyph_fallback(gfx, &gdi_fallback);
+        }
         nfonts_loaded = load_fonts(gfx, &opts, exe_dir, fonts);
         fvp_logf("gfx: %d font atlas(es) registered", nfonts_loaded);
         if (opts.title_font[0] != L'\0') {
@@ -3428,6 +3437,15 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             exit_script = 1;
             fvp_logf("vm: all threads exited (script finished at steps=%llu)",
                      (unsigned long long)vm.steps);
+        }
+    }
+
+    if (gfx != NULL) {
+        const GfxStats *gs = gfx_stats(gfx);
+
+        if (gs != NULL && gs->glyph_fb_runs > 0) {
+            fvp_logf("gfx: glyph fallback used %lu time(s) (atlas missing "
+                     "codepoints)", gs->glyph_fb_runs);
         }
     }
 

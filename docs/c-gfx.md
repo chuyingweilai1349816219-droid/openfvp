@@ -570,3 +570,28 @@ python fvp\tests\vm_compare.py --frame fvp\out\c\vm-frame.png
 8. **单线程语义**：与 `render.py` 默认（`enable_threads=False`）一致；脚本协程文本那部分差异沿用 `render-model.md §7` 的记录，本测试不涉及。
 9. 只对 **528000** 这一个已发布 checkpoint 做了端到端像素比对；其它步数没有参考 PNG 可比（534000 只有历史产物，未纳入一键验证）。
 10. 字体仍用 `gfx_dump.py` 生成的 msgothic 覆盖图集（`out/c/gfx-font-*.bin`）；真实引擎字体替换不在本任务范围。
+
+## 缺字回退：图集没有的码点用 GDI 现场栅格化（2026-11-25）
+
+桌面外壳用预生成的位图图集（`bin/gfx-font-<size>.bin`）画字，图集按目标作品的
+**日文**脚本生成。汉化补丁的文本（例如存档里的 `　谁这样说道。`）会出现图集没有的
+汉字，之前统一渲染成豆腐块。
+
+现在加了一条**缺字回退**通路，思路和原版一致（原版本来就调用 GDI 的
+`CreateFontA` / `GetGlyphOutlineA`）：
+
+1. `src/gfx.c`：`draw_line_font()` 画之前先检查"这一串里有没有图集缺字"，
+   有且平台装了回退 → 走回退；
+2. `src/gfx.h` 定义 `GfxGlyphFallback`，平台层只需返回一份**8 位覆盖率掩码**
+   （配色/混合由 gfx.c 做，像素格式不外泄）；
+3. 新增 `src/platform/win32/win32_gdi_text.c`：`CreateFontW(-px, ...,
+   L"Microsoft YaHei")` → 32bpp DIB → `TextOutW` → 取覆盖率；
+4. 外壳启动时安装回退；退出前日志报 `gfx: glyph fallback used N time(s)`。
+
+**基线安全**：冻结基线里的文本没有缺字，回退不会触发 —— `verify_gfx` 仍是
+293 px（0.0141%）、PSNR 49.94、SSIM 0.99971；`compare.py` 逐字节一致。
+
+实测（存档 905 的部分恢复视图）：回退触发 **13 次**，`　谁这样说道。` 正常显示。
+
+**已知限制**：回退是"整串一次栅格化"，字距按 GDI 结果，不并入图集的推进表；
+混排（部分字在图集、部分走回退）时字距可能与图集略有差异——够用，但不是最终形态。

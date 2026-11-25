@@ -879,6 +879,8 @@ def main():
                 check(rc5 == 0, 'partial restore run exit 0 (got %s)' % rc5)
                 check('load: partial restore slot=%d' % t['preview_slot'] in log5,
                       'partial restore logged (not a silent fake load)')
+                check('glyph fallback used' in log5,
+                      'missing codepoints go through the GDI glyph fallback')
                 img5 = read_bmp32(shot_lv) if os.path.isfile(shot_lv) else None
                 check(img5 is not None, 'partial restore frame readable')
                 if img5 is not None:

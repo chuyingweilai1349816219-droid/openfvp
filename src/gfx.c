@@ -522,6 +522,7 @@ struct Gfx {
     int ngaiji;
     int gaiji_on; /* 默认 1；只给 A/B 验证用，见 gfx_gaiji_set_enabled */
     GfxStats stats;
+    const GfxGlyphFallback *glyph_fb; /* 缺字回退（可选） */
     GfxDrawItem *draw;
     int ndraw;
     int cap_draw;
@@ -3826,6 +3827,83 @@ int gfx_draw_image_at(Gfx *g, int slot, int x, int y)
  * 字号不同就用 draw_glyph_scaled() 等比放大（内建 8x16 → 56 px 时一个字 28 px
  * 宽、56 px 高，墨迹高约 42，正好对上原版实测的 40..42）。
  * 描边固定 1 px 白色，与正文层一致；供标题菜单之类的引擎侧 UI 使用。 */
+void gfx_set_glyph_fallback(Gfx *g, const GfxGlyphFallback *fb)
+{
+    if (g != NULL) {
+        g->glyph_fb = fb;
+    }
+}
+
+/* 有没有码点在图集里找不到（缺字才走平台回退）。 */
+static int font_missing_glyphs(const GfxFont *f, const char *utf8)
+{
+    const char *p = utf8;
+    int cp;
+
+    while ((cp = utf8_next(&p)) >= 0) {
+        if (font_find(f, (uint32_t)cp) < 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* 用平台掩码把一整串画上去；返回推进宽度。 */
+static int draw_with_fallback(Gfx *g, const char *utf8, int x, int y, int px,
+                              int r, int gr, int b, int alpha)
+{
+    unsigned char *mask = NULL;
+    int mw = 0;
+    int mh = 0;
+    int yy;
+
+    if (g == NULL || g->glyph_fb == NULL || g->glyph_fb->mask_of == NULL) {
+        return 0;
+    }
+    if (!g->glyph_fb->mask_of(utf8, px, &mask, &mw, &mh) || mask == NULL ||
+        mw <= 0 || mh <= 0) {
+        free(mask);
+        return 0;
+    }
+    g->stats.glyph_fb_runs += 1;
+    for (yy = 0; yy < mh; ++yy) {
+        int cy = y + yy;
+        int xx;
+
+        if (cy < 0 || cy >= g->h) {
+            continue;
+        }
+        for (xx = 0; xx < mw; ++xx) {
+            int cx = x + xx;
+            int cov;
+            uint32_t *dst;
+
+            if (cx < 0 || cx >= g->w) {
+                continue;
+            }
+            cov = mask[yy * mw + xx];
+            if (cov == 0) {
+                continue;
+            }
+            dst = (uint32_t *)g->canvas + (size_t)cy * (size_t)g->w + (size_t)cx;
+            {
+                int a = (cov * alpha) / 255;
+
+                if (a <= 0) {
+                    continue;
+                }
+                /* canvas 是 0xAARRGGBB（BMP 写出时再转 BGR） */
+                *dst = ((uint32_t)0xFFu << 24) |
+                       ((uint32_t)((r * a + 0) / 255) << 16) |
+                       ((uint32_t)((gr * a) / 255) << 8) |
+                       (uint32_t)((b * a) / 255);
+            }
+        }
+    }
+    free(mask);
+    return mw;
+}
+
 /* 实际绘制：force != NULL 时用指定字体，否则按 px 挑图集。 */
 static int draw_line_font(Gfx *g, const GfxFont *force, const char *utf8,
                           int x, int y, int px, int r, int gr, int b,
@@ -3842,6 +3920,14 @@ static int draw_line_font(Gfx *g, const GfxFont *force, const char *utf8,
         return 0;
     }
     base = (force != NULL) ? (GfxFont *)force : pick_font(g, px);
+    /* 图集里缺字（汉化文本等）→ 交给平台层现场栅格化，保持可读 */
+    if (g->glyph_fb != NULL && (base == NULL || font_missing_glyphs(base, utf8))) {
+        int w = draw_with_fallback(g, utf8, x, y, px, r, gr, b, alpha);
+
+        if (w > 0) {
+            return w;
+        }
+    }
     if (base == NULL || base->size <= 0) {
         return 0;
     }

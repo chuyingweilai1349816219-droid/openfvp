@@ -86,7 +86,8 @@ clean:
 # ---------------------------------------------------------------------------
 WIN32_DIR   = src/platform/win32
 WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
-               $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c
+               $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c \
+               $(WIN32_DIR)/win32_gdi_text.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
               src/titlemenu.c src/savelist.c src/savetail.c src/openseq.c \
                src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c \

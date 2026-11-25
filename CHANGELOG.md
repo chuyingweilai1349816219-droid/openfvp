@@ -53,6 +53,20 @@
 
 ### 新增
 
+- **缺字回退：图集里没有的码点（汉化文本的汉字）用 GDI 现场栅格化**
+  - `src/gfx.h` 新增 `GfxGlyphFallback` 钩子（平台层只交 8 位覆盖率掩码，
+    配色/混合留在 gfx.c，像素格式不外泄）；`gfx.c` 在 `draw_line_font()` 里
+    检测"整串是否存在图集缺字"，存在才走回退
+  - 新增 `src/platform/win32/win32_gdi_text.c`：CreateFontW(-px, "Microsoft YaHei")
+    → 32bpp DIB → TextOutW → 取覆盖率；外壳启动时安装，退出前日志报次数
+  - 实测：存档 905 的部分恢复视图里 `　谁这样说道。` 正常显示，回退触发 13 次
+    （此前是豆腐块/白条）
+  - **基线安全**：冻结基线文本无缺字 → 回退不触发；verify_gfx 仍 293 px
+    （0.0141%）、PSNR 49.94、SSIM 0.99971，compare.py 逐字节一致
+  - 门禁新增：部分恢复视图的日志里必须出现 `glyph fallback used`
+  - 已知限制：整串一次栅格化，字距按 GDI，不并入图集推进表；混排时字距可能
+    略有差异（够用，非最终形态）
+
 - **`verify_multigame` FLAKY 复核：连跑 3 次全绿，未复现**
   - `run_all` 曾把该步标成 "failed once, passed on retry"；随后单独连跑 3 次
     （`--steps 300000`，每次约 80 s）全部 0 FAIL

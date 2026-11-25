@@ -138,6 +138,7 @@ typedef struct GfxStats {
     int ntofu_cp;
     int text_prims;   /* 本帧按"文本图元位置"画了几个文本窗口（--text-prims） */
     long long pixels; /* destination pixels touched by the last render   */
+    unsigned long glyph_fb_runs; /* 缺字回退被使用的次数 */
 } GfxStats;
 
 /* ---- create / destroy / canvas --------------------------------------- */
@@ -390,6 +391,19 @@ const GfxTextLayout *gfx_text_get_layout(Gfx *g, int layer);
 /* GFXF atlas written by fvp/tests/gfx_dump.py (see docs/c-gfx.md).  A
  * built-in 8x16 ASCII font is always available as a fallback. */
 typedef struct GfxFont GfxFont;
+
+/* 缺字回退：图集里没有的码点（例如汉化文本里的汉字）交给平台层现场栅格化。
+ * 平台层只需给出一份**覆盖率掩码**（8 位灰度，0=透明 255=全墨），配色与混合
+ * 由 gfx.c 负责，这样像素格式不会泄漏到平台层。
+ *   mask_of(utf8, px, &mask, &w, &h) -> 1 成功（mask 由调用方 free），0 失败
+ * 平台层不装回退（没调用 setter）时保持原有"缺字按 8px 推进"的行为。 */
+typedef struct GfxGlyphFallback {
+    int (*mask_of)(const char *utf8, int px, unsigned char **mask, int *w,
+                   int *h);
+} GfxGlyphFallback;
+
+void gfx_set_glyph_fallback(Gfx *g, const GfxGlyphFallback *fb);
+
 
 /* 同 gfx_draw_text_line，但**指定字体**（标题菜单用专用字库时用这个）。
  * 字体自带字号与 px 不同会等比缩放；配套宽度用 gfx_text_width_font。 */
