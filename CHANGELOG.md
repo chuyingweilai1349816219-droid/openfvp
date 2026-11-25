@@ -51,6 +51,38 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 修正（截图门禁不再依赖宿主鼠标位置：--title-no-hover）
+
+- `verify_opening_render.py` 偶发失败（hoshimemo 结束帧 vs 静态帧 mean_abs 0.42 /
+  1.0% 像素）：查到"静态"那次运行时鼠标恰好停在菜单上（日志
+  `title: hover -> 2 (mouse 1033,738)`），静态参考帧其实是 hover 变体。
+- 新增 `--title-no-hover`（完全不按鼠标位置算 hover），三个渲染门禁
+  （opening / title anim / bg anim）都带上它；复跑两作都回到**逐字节 0 差**。
+- 文档 `docs/win32-shell.md`、status/CHANGELOG。
+
+### 结构分析（存档/读档引擎侧流程：Load(40)/SaveWrite(96)）
+
+### 结构分析（存档/读档的引擎侧流程：Load(40)/SaveWrite(96)）
+
+- 新增 `scripts/extract-exe-load-flow.py` + 基线 `ref/exe-load-flow.json` +
+  门禁 `tests/verify_exe_load_flow.py`（run_all 70→**71 步**）：
+  - 存档路径格式 `0x45DA64 = "%s/save/s%03d.bin"`（root=engine+0x6A7E64、
+    slot=engine+0xFCC），与外壳现在 `<game_dir>\save\sNNN.bin` 一致；
+  - `SaveWrite(96)` handler `0x43C1E0`：int 0..999 → `engine+0xFCA=1`、
+    `0xFCC=slot`；`engine+0xFC9 != 0` 时立即调 `0x438540`（缩略图/索引缓存）；
+  - `Load(40)` handler `0x43A870`：int 0..999 → `engine+0xFCB=1`、`0xFCC=slot`、
+    线程对象 `+0x814=1`；
+  - 每帧消费：存档 `0x43F7E6`（sprintf → `0x433FB0` → **`0x438300` 写文件**）；
+    读档 `0x43F876` → **`0x43EE90`**（sprintf → **`0x4344C0` 应用存档** → 重置
+    256 个线程对象 → 场景/计时复位）→ `engine+0x6A7E6C=0`、线程 `+0xFD9=1`；
+    重启：`0x43F614/0x43F641/0x43F68D` 看到 `+0xFD9` 就**本帧跳过线程执行**
+    并把线程下标 `engine+0x6A66D0` 归零 → 下一帧线程从入口重跑；
+  - 脚本侧两作都是 Load 9 / SaveWrite 3 / HistorySet 7 个调用点（槽号 800/900/
+    901/902/906 等）。
+  - **还没逆清**（写进基线 `unknown`）：`0x4344C0` 的字段映射、线程重跑后脚本靠
+    哪个全局量选场景。所以本站仍只做"部分恢复视图"，真正读档续玩等这两条。
+- 文档 `docs/save-format.md` 新增"引擎侧 Load(40)/SaveWrite(96) 的流程"一节。
+
 ### 实现（五彩斑斓四层标题背景动画：path A/B + 半分辨率合成，~52 fps）
 
 - 把 §22 冻结的参数 + §RS 段的两条变换路径接到画面：

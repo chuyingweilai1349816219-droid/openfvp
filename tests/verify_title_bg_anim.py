@@ -56,6 +56,7 @@ def check(cond, msg):
 def run_shell(game, shot, log, extra, seconds):
     args = [EXE, '--no-input', '--game', game[0], '--script', game[1],
             '--no-audio', '--scale', '1', '--title-menu', '--title-font', FONT,
+            '--title-no-hover',
             '--run-seconds', '%g' % seconds, '--screenshot', shot, '--log', log]
     args += extra
     try:

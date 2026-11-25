@@ -90,6 +90,7 @@ fvp.exe --game <游戏目录> [选项]
 | `--glyph-original` | 缺字回退改用**原版同协议**：`CreateFontA(SHIFTJIS_CHARSET)` + `GetGlyphOutlineA(GGO_BITMAP)` → 1bpp 二值掩码（默认走抗锯齿路径）。参数依据 `ref/exe-gdi-params.json`，见 [`docs/original-verification.md`](original-verification.md) §8；日志多一行 `gfx: glyph fallback = original GDI protocol (...)`。单测 `tests/test_gdi_ggo.c`（28 项） |
 | `--glyph-face <族名>` | 原版协议路径用的字体族名（UTF-8），默认 `ＭＳ ゴシック`（原版 exe 内置注册表第 0 项） |
 | `--opening` | 启动先跑开场序列：**脚本时间轴 3800 ms**（白底 + FAVORITE logo 六层，1200 ms 淡入 → 2500/3500 ms 淡出 → 100 ms 收尾），白底淡出露出已经建好的标题背景；参数来自 `ref/opening-scene.json`，见 [`docs/opening.md`](opening.md) |
+| `--title-no-hover` | 标题菜单完全不按鼠标位置算 hover（截图门禁用："静态标题帧"不再随宿主鼠标停在菜单上而变成 hover 变体） |
 | `--title-bg-anim` | 标题背景按脚本动画：**星空** 2000→1000/40000 ms（左上锚，55 fps）；**五彩斑斓** 四层 path A/B 缩放+旋转/25000 ms（1/4 分辨率合成，45-52 fps）。默认关；`--title-anim` 不会自动打开 |
 | `--title-bg-anim` | 标题背景按脚本做缩放动画：目前只实现**星空**（`MotionMoveS2 2000→1000` per-mille / **40000 ms**、左上锚、无旋转），54 fps 级（带缩放缓存）；**五彩斑斓未实现**（日志明确写 static）。默认关，`--title-anim` 不会自动打开 |
 | `--shot-every MS` / `--shot-div N` / `--shot-prefix P` | 一次运行里每 MS 毫秒抓一张降采样 N 倍的 BMP（`P-0000.bmp`……），用来拼动画 demo/视频；不是像素基线的一部分 |

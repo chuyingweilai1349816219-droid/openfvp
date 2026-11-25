@@ -147,6 +147,7 @@ typedef struct Options {
     wchar_t shot_prefix[PATH_CAP];
     int title_no_bg; /* --title-no-bg：标题菜单不铺背景（几何测量用） */
     int title_hover_seed; /* --title-hover N：启动就把第 N 项设为 hover（截图/门禁用，-1 = 不动） */
+    int title_no_hover; /* --title-no-hover：完全不按鼠标位置算 hover（截图门禁用） */
     int debug_save_request;
     int debug_load_request;
 } Options;
@@ -557,6 +558,7 @@ static void defaults(Options *o)
     o->shot_div = 1;
     o->shot_prefix[0] = L'\0';
     o->title_hover_seed = -1;
+    o->title_no_hover = 0;
     o->debug_load_request = -1;
     o->motion = 0;
     o->timeline = 0;
@@ -763,6 +765,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             wcsncpy(o->shot_prefix, argv[++i], PATH_CAP - 1);
         } else if (wcscmp(a, L"--title-no-bg") == 0) {
             o->title_no_bg = 1;
+        } else if (wcscmp(a, L"--title-no-hover") == 0) {
+            o->title_no_hover = 1;
         } else if (wcscmp(a, L"--title-hover") == 0 &&
                    i + 1 < argc) {
             o->title_hover_seed = _wtoi(argv[++i]);
@@ -3423,7 +3427,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 /* 有该作品的 profile：直接用它实测的墨迹矩形命中。
                  * --title-hover 预置的 hover 要保留到鼠标真的动过
                  * 为止（截图/门禁需要稳定的 hover 态）。 */
-                if (opts.title_hover_seed < 0) {
+                if (opts.title_no_hover) {
+                    title_hover = -1;
+                } else if (opts.title_hover_seed < 0) {
                     title_hover = fvp_title_profile_hit(title_profile,
                                                         vm.cx, vm.cy);
                 }

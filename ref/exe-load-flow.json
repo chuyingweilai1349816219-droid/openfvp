@@ -1,0 +1,286 @@
+{
+ "exe": {
+  "image_base": "0x00400000",
+  "sha256": "cacdbe6ba9bb90b3818e0ac748b391681d5483db406b90ea7319204e0c3ab90a",
+  "size": 817664
+ },
+ "frame_consumers": {
+  "load": {
+   "bytes": "389ecb0f000074208bce889ecb0f0000e805f6ffff8b1568134800899a6c7e6a00c686d90f000001",
+   "pc": "0x0043f876",
+   "sequence": [
+    "清 engine+0xfcb",
+    "call 0x43ee90（真正读档）",
+    "engine+0x6a7e6c = 0",
+    "thread+0xfd9 = 1（重启请求）"
+   ]
+  },
+  "load_impl": {
+   "bytes": "81ec08010000a188f4470033c4898424040100005355568bf18b86cc0f00008b0d681348008b91647e6a005750528d4424186864da450050e8ea99000083c4108d4c2410518bcee8e455ffff8b15681348008b82347e6a008d7804bd000100008b078b48046858020000c6401100e86d73ffff83c70483ed0175e5bb03000000",
+   "fn": "0x0043ee90",
+   "sequence": [
+    "sprintf(0x4488b7, fmt, root, slot)",
+    "call 0x4344c0（应用存档：字段映射未逆清）",
+    "重置 256 个线程对象（0x436270(600) 再 0）",
+    "engine+0x101058=3, +0x10105c=600, +0x101060=0",
+    "call 0x441680 / 0x42a6c0 / 0x438d20 / 0x42c4b0 / 0x441350"
+   ]
+  },
+  "save": {
+   "bytes": "389ec90f000074568b8ecc0f0000889eca0f00008b15681348008b82647e6a0051508d4c241c6864da450051e8a090000083c4108d542414528bcee88a47ffff8b86cc0f0000508d4e14e8cb8affff8bcee8b49effffff15ecd2",
+   "pc": "0x0043f7e6",
+   "sequence": [
+    "sprintf(0x4488b7, fmt, root, slot)",
+    "call 0x433fb0（准备写）",
+    "call 0x438300（写文件）",
+    "call 0x4396f0",
+    "timeGetTime + engine+0x6a7e6c 计时"
+   ]
+  },
+  "thread_restart": {
+   "behavior": "置位时本帧跳过脚本线程执行；engine+0x6a66d0（线程下标）归零 → 下一帧线程从入口重跑",
+   "checks": [
+    "0x0043f614",
+    "0x0043f641",
+    "0x0043f68d"
+   ],
+   "flag": "thread+0xfd9"
+  }
+ },
+ "load": {
+  "arg_range": [
+   0,
+   999
+  ],
+  "arg_type_gate": "cmpb $0x2,(%eax)（必须是 int）",
+  "bytes": "8b44240480380275338b500485d27c2c81fae70300007f24b2018891cb0f00008b40048981cc0f00008b81d0666a0069c0280b0000889408d0e76800",
+  "cmd": 40,
+  "handler": "0x0043a870",
+  "writes": [
+   {
+    "field": "engine+0xfcb",
+    "note": "读档请求（每帧被 0x43F876 消费）",
+    "value": 1
+   },
+   {
+    "field": "engine+0xfcc",
+    "value": "slot"
+   },
+   {
+    "field": "thread+0x814",
+    "note": "线程对象=engine+0x68dfc0+idx*0xb28（+0x810+4）",
+    "value": 1
+   }
+  ]
+ },
+ "save_path": {
+  "format": "%s/save/s%03d.bin",
+  "format_va": "0x0045da64",
+  "note": "与外壳现在的 <game_dir>\\save\\sNNN.bin 一致",
+  "root_field": "engine+0x6a7e64",
+  "slot_field": "engine+0xfcc"
+ },
+ "save_write": {
+  "arg_range": [
+   0,
+   999
+  ],
+  "bytes": "8b44240480380275358b500485d27c2e81fae70300007f2680b9c90f000000c681ca0f0000018b50048991cc0f0000740d8b4004515083c114e822c3ffffc20400cccccc",
+  "cmd": 96,
+  "handler": "0x0043c1e0",
+  "immediate_call": {
+   "args": [
+    "engine+0x14",
+    "slot"
+   ],
+   "fn": "0x00438540",
+   "note": "写缩略图/索引缓存（不是存档文件本身）",
+   "when": "engine+0xfc9 != 0"
+  },
+  "writes": [
+   {
+    "field": "engine+0xfca",
+    "note": "存档请求（每帧被 0x43F7E6 消费）",
+    "value": 1
+   },
+   {
+    "field": "engine+0xfcc",
+    "value": "slot"
+   }
+  ]
+ },
+ "script_sites": {
+  "hoshimemo": {
+   "HistorySet": [
+    {
+     "pc": "0x0004f526",
+     "slot": null
+    },
+    {
+     "pc": "0x0004f52e",
+     "slot": null
+    },
+    {
+     "pc": "0x0004f536",
+     "slot": null
+    },
+    {
+     "pc": "0x0004f6b7",
+     "slot": null
+    },
+    {
+     "pc": "0x0004f6bf",
+     "slot": null
+    },
+    {
+     "pc": "0x0004f6c7",
+     "slot": null
+    },
+    {
+     "pc": "0x0004fa2a",
+     "slot": null
+    }
+   ],
+   "Load": [
+    {
+     "pc": "0x000375ad",
+     "slot": 902
+    },
+    {
+     "pc": "0x00037607",
+     "slot": 901
+    },
+    {
+     "pc": "0x00037666",
+     "slot": 906
+    },
+    {
+     "pc": "0x00037687",
+     "slot": 906
+    },
+    {
+     "pc": "0x000377ed",
+     "slot": null
+    },
+    {
+     "pc": "0x00037875",
+     "slot": null
+    },
+    {
+     "pc": "0x000378b0",
+     "slot": 900
+    },
+    {
+     "pc": "0x000493cb",
+     "slot": 800
+    },
+    {
+     "pc": "0x00086b58",
+     "slot": null
+    }
+   ],
+   "SaveWrite": [
+    {
+     "pc": "0x00037591",
+     "slot": 902
+    },
+    {
+     "pc": "0x00037880",
+     "slot": 905
+    },
+    {
+     "pc": "0x00086b12",
+     "slot": null
+    }
+   ]
+  },
+  "iroseka": {
+   "HistorySet": [
+    {
+     "pc": "0x0003a3eb",
+     "slot": null
+    },
+    {
+     "pc": "0x0003a3f3",
+     "slot": null
+    },
+    {
+     "pc": "0x0003a3fb",
+     "slot": null
+    },
+    {
+     "pc": "0x0003a57c",
+     "slot": null
+    },
+    {
+     "pc": "0x0003a584",
+     "slot": null
+    },
+    {
+     "pc": "0x0003a58c",
+     "slot": null
+    },
+    {
+     "pc": "0x0003a8ef",
+     "slot": null
+    }
+   ],
+   "Load": [
+    {
+     "pc": "0x0002398e",
+     "slot": 902
+    },
+    {
+     "pc": "0x000239e8",
+     "slot": 901
+    },
+    {
+     "pc": "0x00023a42",
+     "slot": 906
+    },
+    {
+     "pc": "0x00023a63",
+     "slot": 906
+    },
+    {
+     "pc": "0x00023bc9",
+     "slot": null
+    },
+    {
+     "pc": "0x00023c51",
+     "slot": null
+    },
+    {
+     "pc": "0x00023c8c",
+     "slot": 900
+    },
+    {
+     "pc": "0x00033ed7",
+     "slot": 800
+    },
+    {
+     "pc": "0x0006fb90",
+     "slot": null
+    }
+   ],
+   "SaveWrite": [
+    {
+     "pc": "0x00023972",
+     "slot": 902
+    },
+    {
+     "pc": "0x00023c5c",
+     "slot": 905
+    },
+    {
+     "pc": "0x0006fb4a",
+     "slot": null
+    }
+   ]
+  }
+ },
+ "unknown": [
+  "0x4344c0 应用存档时到底写哪些字段（globals/flags/文本位图 的对应）",
+  "线程重跑后脚本用哪个全局量判断\"该回哪个场景\""
+ ]
+}

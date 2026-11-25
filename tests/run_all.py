@@ -683,6 +683,15 @@ def build_steps(args):
                            '(iroseka 2000/2400/2560 total 4000; '
                            'hoshimemo 1000/1400/1560 total 3000)'))
 
+    # 6.496863 存档/读档引擎侧流程（Load(40)/SaveWrite(96)）
+    vlf = os.path.join(HERE, 'verify_exe_load_flow.py')
+    steps.append(Step('verify_exe_load_flow.py', [PY, '-X', 'utf8', vlf], 300,
+                      skip_reason=None,
+                      note='save/load engine flow frozen: path fmt '
+                           '"%s/save/s%03d.bin", Load leaves engine+0xFCB/0xFCC, '
+                           'frame consumer 0x43F876 -> 0x43EE90 -> thread+0xFD9 '
+                           'restart; script sites 9/3/7 for both games'))
+
     # 6.496864 脚本全局开关（global3 体验版布局 / global236/232 跳过动画）
     vg = os.path.join(HERE, 'verify_script_globals.py')
     steps.append(Step('verify_script_globals.py', [PY, '-X', 'utf8', vg], 300,
