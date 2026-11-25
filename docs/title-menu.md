@@ -383,6 +383,36 @@ C→D→B）。合成结果与原版帧的整帧平均差从 **17.5 降到 13.7*
   `save list: preview graph 'BG063_000b' loaded`，且预览区域确实有非黑像素
   （实测 3600 个采样点亮）。
 
+### 4.11 标题菜单的字体：量出来了（Palatino Linotype Bold ≈61px）
+
+iroseka 的菜单是深蓝衬线字。用 `scripts/identify-title-font.py` 把本机 11 个
+候选字体按"渲染 → 质心对齐 → ±8 px 平移搜索 → 归一化相关"与原版截图的
+"New Game" 墨迹框（309×42）比对：
+
+| 字体 | 字号 | 相关系数 | 渲染墨迹框 |
+|---|---:|---:|---|
+| **Palatino Linotype Bold** | **61** | **0.745** | **309×44** |
+| Palatino Linotype | 63 | 0.700 | — |
+| Palatino Linotype Bold | 60 | 0.599 | — |
+| Georgia Bold | 58 | 0.580 | — |
+| Bookman Old Style | 59 | 0.541 | — |
+| Times New Roman | 69 | 0.613 | — |
+
+两条独立证据指向同一结论：**Palatino 家族、粗体、约 61–62 px**——
+
+1. 相关系数 0.745，明显高于其它候选；
+2. **墨迹宽度 309 px 与原版完全一致**（高度 44 vs 42，差 2 px 来自抗锯齿阈值）。
+
+（Palatino 的度量孪生字体 Book Antiqua 也值得试；原版确切字体名仍未知，只能说
+"最接近 Palatino Linotype Bold"，这是**近似**而不是定论。）
+
+复现：`python scripts/identify-title-font.py --sizes 58:72`（需要
+`out/orig-title/orig-title-005.png`，由 `scripts/capture-original.ps1` 抓的原版帧）。
+
+**下一步**：用 Palatino Bold 61 生成字库图集（`scripts/make-font-atlas.py`），
+给标题菜单文本一条"指定字体"的通路，然后把我们渲染的 "New Game" 与原版做同样的
+相关比对，作为字体还原的验收指标。
+
 ### 4.1 还差什么
 
 1. **主标题背景：两作都已接上**（见 §4.7）——
