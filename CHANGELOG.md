@@ -53,6 +53,17 @@
 
 ### 新增
 
+- **静态分析审计：③ 里的 TextSpace / TextShadowDist 在原版里也只写不读**
+  - 新增 `scripts/audit-text-fields.py`：解析原版程序里对文本窗口字段的每次访问，
+    按 AT&T 语法区分读/写
+  - 结果：`tw+0x5A8/0x5AA`（TextSpace x/y、TextFormat a/b）、`0x5AE`、`0x5B0`、
+    `0x5B4`、`0x596`、`0x597`（TextShadowDist）**读点都是 0**；只有
+    **TextFormat 的 d（`0x5AC`）被读两处**，且两处都是"复制进 `tw+0x5E8`"，
+    而 `0x5E8` 有 8 个读点、10 个写点（含 `add` 累加）
+  - 结论：本站对这些命令"只记录不渲染"**与原版一致**（忠实而非偷懒）；③ 真正
+    该做的是解 `tw+0x5E8` 的语义，而不是给 space/shadow 加渲染
+  - 文档写进 `docs/02-text-format.md`（含完整表格与可信度说明）
+
 - **标题菜单接上专用字库（Palatino Bold 61）：相关度 0.27 → 0.73**
   - `tests/gfx_dump.py` 的 TTF 选择新增 `FVP_FONT_TTF` 覆盖（默认不变，
     冻结基线不受影响），用 `make-font-atlas.py --size 61` 生成专用图集
