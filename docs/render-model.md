@@ -648,7 +648,14 @@ $PY fvp/work/render_assets.py "graph/BG063_000" "graph_bs/CHR_真紅_基_白衣�
 * **`T2 = (engine+0x60 / 2, engine+0x64 / 2)` = 画面中心**（0x42B343..0x42B37D：
   读 `[engine+0x64]`、`[engine+0x60]` 再算术右移 1 位）。
 
-⇒ **`最终 = T2 + S·(R·(图头 − OP) + prim + accum)`**。
+⇒ **`最终 = T2 + S·(R·(图头 − OP) + prim + accum)`**（**path A**，要求
+`prim+6 & 0x4` 置位，即脚本对这条图元调过 `PrimSetRS/RS2`）。
+
+只被 `MotionMoveS2` 改过 scale、没设 RS 标志的图元走 **path B**（`0x42B3A3`）：
+
+`最终 = prim + 锚点 + S·R·(图头 − 锚点)`，锚点 = OP（没设 OP 时以图头为原点）。
+五彩斑斓的 258 有 RS（path A，绕画面中心），259/260/261 没有（path B，绕
+OP=(1200,675)）；星空没有 OP/RS ⇒ path B，图头 (0,0) ⇒ 左上锚缩放。
 
 自洽特例：背景层（prim=0、R=I、OP=图心）在 s=1 时 `最终 = 画面中心 − OP =
 (1920−2400)/2, (1080−1350)/2 = (−240,−135)`，正是本工程一直用的"超尺寸图居中裁剪

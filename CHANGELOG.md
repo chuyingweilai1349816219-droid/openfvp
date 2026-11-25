@@ -51,6 +51,23 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 结构分析（RS 标志决定两条缩放/旋转路径；星空 = 左上锚被静态分析验证）
+
+- `prim+6 & 0x4`（RS 标志，由 PrimSetRS/RS2 设置）把绘制分成两条：
+  - **path A**（0x42B21E 起，有 RS）：`final = 画面中心 + S·(R·(图头−OP)+prim+accum)`；
+  - **path B**（0x42B3A3 起，只被 MotionMoveS2 改 scale）：`final = prim + 锚点 +
+    S·R·(图头 − 锚点)`，锚点 = OP（未设 OP 时以图头为原点）。
+- 脚本事实：五彩斑斓**只有 258 调过 PrimSetRS** ⇒ 258 走 path A（绕画面中心），
+  259/260/261 走 path B（绕 OP=(1200,675)）；**星空无 OP/RS ⇒ path B，图头 (0,0)
+  ⇒ 左上锚缩放**——这正好验证了我们已实现的 `gfx_draw_image_zoomed` 语义。
+- 诚实记录一次 B 类像素实验：按"动画终态"（A=0.9、B/C/D=0.8）摆 4 层与原版帧比，
+  总差 21.35，比现在静态 13.11 更差 ⇒ 那张原版帧大概率不是动画稳态（或来自窗口
+  缩放截图），**不能当摆放判据**；摆放以脚本+静态分析为准。
+- 更新 `ref/exe-rs-transform.json`（path A/B 的指令字节与公式）、
+  `tests/verify_exe_rs_transform.py`（新增 3b/3c 两组，交叉核对
+  `ref/title-bg-motion.json` 的 RS 调用点）、docs/render-model.md、
+  animation-baseline §7、title-menu §22。
+
 ### 结构分析（global3 / global236 / global232：把"语义未定"定清）
 
 - 新增 `scripts/extract-script-globals.py` + 基线 `ref/script-globals.json` +

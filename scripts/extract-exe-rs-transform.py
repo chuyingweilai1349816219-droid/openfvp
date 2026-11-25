@@ -176,6 +176,35 @@ def extract(path):
                 '= 超尺寸图居中裁剪（与冻结的 title bg 裁剪一致）',
                 's=0.8 → (0,0) 整屏铺满；s=0.9 → (−120,−67.5)',
             ],
+            'path_a': {
+                'when': 'test byte [prim+0x6], 0x4 成立（PrimSetRS/RS2 设过）',
+                'pc': '0x0042b21e',
+                'bytes': u8(data, secs, 0x42B21E, 6).hex(),
+                'formula': 'final = center + S·(R·(img − OP) + prim + accum)',
+                'anchor': '画面中心（engine+0x60/2, engine+0x64/2）',
+            },
+            'path_b': {
+                'when': '同一处 test 不成立（只被 MotionMoveS2 改过 scale、没设 RS 标志）',
+                'pc': '0x0042b3a3',
+                'bytes': u8(data, secs, 0x42B3A3, 0x18).hex(),
+                'scale_pc': '0x0042b3fa',
+                'scale_call_bytes': u8(data, secs, 0x42B3FA, 5).hex(),
+                'op_flag_test_pc': '0x0042b41f',
+                'op_flag_test_bytes': u8(data, secs, 0x42B41F, 6).hex(),
+                'translation_op_pc': '0x0042b462',
+                'translation_noop_pc': '0x0042b4c3',
+                'formula': 'final = prim + anchor + S·R·(img − anchor)，''anchor = OP（OP 标志置位时；未置位时按图头偏移 0 处理）',
+                'anchor': 'OP（不是画面中心）；没有 PrimSetOP 的图元等价于"以图头为原点"',
+                'self_check': 'hoshimemo 背景（img=(0,0)、OP 未设、prim=(0,0)）'
+                              ' ⇒ final = S·(0,0) = (0,0)，即**左上锚缩放**；'
+                              '与 src/gfx.c 的 gfx_draw_image_zoomed 一致',
+            },
+            'rs_flag_evidence': {
+                'iroseka': '脚本 PrimSetRS 只对 prim 258 调过（4 次，'
+                           '见 ref/title-bg-motion.json 的 prim_ops）'
+                           ' ⇒ 258 走 path A，259/260/261 走 path B',
+                'hoshimemo': '没有任何 PrimSetOP/PrimSetRS ⇒ path B（左上锚）',
+            },
             'not_used_yet': 'prim.xy≠0 的图元会多出"画面中心 − OP"的偏移'
                             '（开场 p1..p3 等）；渲染器目前仍用 '
                             'prim + OP + R·S·(img−OP)，等接这部分时再验证',

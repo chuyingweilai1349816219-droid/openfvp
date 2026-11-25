@@ -1170,6 +1170,7 @@ PrimSetAlpha(prim, 255)      ⇒  prim+7 := 255
 | 缩放 | 1300/1600/2500/4000 → 900/800/800/800，**25000 ms**，mode 3 | **2000 → 1000，40000 ms**，mode 3 |
 | 旋转 | **150/250/550/1250 → 0**（渲染 = **7.5°/12.5°/27.5°/62.5°→0°**；1 单位 = 0.05°，见 `ref/exe-rs-transform.json`），25000 ms，mode 3 | **无 MotionMoveR**（不旋转） |
 | OP | 四层都是 `PrimSetOP(prim, 1200, 675)` | 无 PrimSetOP（默认 (0,0)） |
+| 变换路径 | **只有 258 调过 `PrimSetRS`** ⇒ 258 走 path A（绕画面中心），259/260/261 走 path B（绕 OP）——见 `docs/animation-baseline.md` §7 | 无 RS ⇒ path B（图头 (0,0) ⇒ 左上锚） |
 | Z | 1000/900/850/800 | — |
 | RS | 脚本写了 4 次 `PrimSetRS(258, keep, 1000)`（原文一直写 258） | — |
 

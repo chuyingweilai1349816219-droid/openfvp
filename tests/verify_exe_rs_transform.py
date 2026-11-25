@@ -107,6 +107,39 @@ def main():
     check('not_used_yet' in rs and 'prim.xy' in rs['not_used_yet'],
           '写明 prim.xy≠0 的偏移"还没用上"，不假装已知')
 
+    print('== 3b. 两条路径：path A（RS 标志）/ path B（只改 scale）==')
+    pa = rs['path_a']
+    pb = rs['path_b']
+    check(pa['when'].startswith('test byte [prim+0x6], 0x4'),
+          'path A 由 prim+6 & 0x4 决定')
+    check(pa['bytes'].startswith('f6470604'),
+          'path A 的 gate 指令字节冻结（%s...）' % pa['bytes'])
+    check('画面中心' in pa['anchor'], 'path A 锚点 = 画面中心')
+    check(pb['bytes'].startswith('0fb74726'), 'path B 起始字节冻结（读 scale_x）')
+    check(pb['op_flag_test_bytes'].startswith('f6470602'),
+          'path B 里 OP 标志测试字节冻结（prim+6 & 0x2）')
+    check('OP' in pb['anchor'] and '图头' in pb['anchor'],
+          'path B 锚点 = OP（未设 OP 时以图头为原点）')
+    check('左上锚' in pb['self_check'] and 'gfx_draw_image_zoomed' in pb['self_check'],
+          'path B 自检写明 = 左上锚缩放，与 gfx_draw_image_zoomed 一致')
+
+    print('== 3c. 脚本里谁有 RS 标志 ==')
+    rse = rs['rs_flag_evidence']
+    check('258' in rse['iroseka'] and 'path A' in rse['iroseka'],
+          'iroseka：只有 258 有 RS（path A），259..261 走 path B')
+    check('path B' in rse['hoshimemo'] and '左上锚' in rse['hoshimemo'],
+          'hoshimemo：没有 OP/RS ⇒ path B（左上锚）')
+    # 和背景运动基线交叉核对：iroseka 的 PrimSetRS 调用点只有 prim 258
+    with io.open(os.path.join(FVP, 'ref', 'title-bg-motion.json'),
+                 encoding='utf-8') as fp:
+        bm = json.load(fp)
+    rs_prims = sorted({op['prim'] for op in bm['games']['iroseka']['prim_ops']
+                       if op['cmd'] == 82})
+    check(rs_prims == [258],
+          'ref/title-bg-motion.json 里 PrimSetRS 只对 prim %r' % (rs_prims,))
+    hoshi_ops = bm['games']['hoshimemo']['prim_ops']
+    check(not hoshi_ops, '星空没有任何 prim_ops（无 OP/RS/WH）')
+
     print('== 4. 源码换算一致（/20.0，不是 /10.0）==')
     gfx_c = io.open(GFX_C, encoding='utf-8').read()
     checks = [
