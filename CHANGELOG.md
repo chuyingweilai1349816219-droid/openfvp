@@ -51,6 +51,21 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 结构分析（读档链路补完：0x4344C0 = 整文件读取助手，复位序列）
+
+- 上一轮冻结了 `Load(40)/SaveWrite(96)` 的请求/消费点，这一轮把"读到之后做什么"
+  补上（`ref/exe-load-flow.json` 扩展，门禁 `verify_exe_load_flow.py` 5b 段）：
+  - `0x4344C0` = **通用整文件读取助手**：CreateFileW(`0x45D070`) →
+    GetFileSize(`0x45D090`) → 缓冲写 `engine+0x0/+0x4` → ReadFile(`0x45D08C`) →
+    CloseHandle(`0x45D058`)；失败串 `0x45D968` = CP932
+    `'%s'のオープンに失敗しました`；
+  - 读档复位序列：`0x441680`（文本/渲染复位）→ `0x42A6C0`（gfx）→
+    **`0x438D20`（场景/图元树复位）** → `0x42C4B0`（gfx）→
+    **`0x441350`（脚本引擎复位，配合线程 `+0xFD9` 从入口重跑）**；
+  - 厘清：**槽文件装引擎快照，`save.bin` 装全局变量/flag**，`Load(slot)` 主要
+    作用在快照上，脚本靠启动时灌入的全局变量选场景。
+- 文档 `docs/save-format.md` 补"槽文件读取与复位序列"。
+
 ### 修正（截图门禁不再依赖宿主鼠标位置：--title-no-hover）
 
 - `verify_opening_render.py` 偶发失败（hoshimemo 结束帧 vs 静态帧 mean_abs 0.42 /

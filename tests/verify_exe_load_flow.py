@@ -110,6 +110,23 @@ def main():
     check('跳过' in tr['behavior'] and '重跑' in tr['behavior'],
           '行为写明"本帧跳过线程、下一帧重跑"')
 
+    print('== 5b. 槽文件读取助手与复位序列 ==')
+    fio = fc['file_io_helper']
+    check(fio['fn'] == '0x0043c4c0', '文件读取助手 0x4344C0')
+    check(fio['bytes'].startswith('51538b5c24'), '助手起始字节冻结')
+    check(len(fio['iat_calls']) >= 4, '至少 4 个 IAT 调用（CreateFile/Size/Read/Close）')
+    check('0x0045d070' in fio['iat_calls'], 'IAT 0x45D070（CreateFileW）')
+    check(fio['buffer_fields'] == ['engine+0x0', 'engine+0x4（基址/长度）'],
+          '整文件缓冲写 engine+0/+4')
+    check('失敗' in fio['error_string'] or '失败' in fio['error_string'],
+          '错误串是 CP932 的"打开失败"（%r）' % fio['error_string'][:20])
+    seq = fc['load_impl']['sequence']
+    joined = ' / '.join(seq)
+    check('0x438d20' in joined and '场景/图元' in joined,
+          '复位序列里 0x438D20 = 场景/图元树复位')
+    check('0x441350' in joined and '脚本引擎复位' in joined,
+          '复位序列里 0x441350 = 脚本引擎复位（重启线程）')
+
     print('== 6. 脚本调用点（两作数字冻结）==')
     for g in ('iroseka', 'hoshimemo'):
         s = ref['script_sites'][g]

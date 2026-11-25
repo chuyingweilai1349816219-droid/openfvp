@@ -89,6 +89,12 @@ def cstr(data, secs, va, n=128):
     return blob.split(b'\0')[0].decode('latin1')
 
 
+def cstr_cp932(data, secs, va, n=128):
+    fo = foff(secs, va)
+    blob = data[fo:fo + n].split(b'\0')[0]
+    return blob.decode('cp932', 'replace')
+
+
 def script_sites():
     """两作里 Load(40)/SaveWrite(96)/HistorySet(26) 的调用点（pc + 实参）。"""
     import importlib.util
@@ -184,6 +190,22 @@ def extract(path):
                              'engine+0x6a7e6c = 0',
                              'thread+0xfd9 = 1（重启请求）'],
             },
+            'file_io_helper': {
+                'fn': '0x0043c4c0',
+                'bytes': u8(data, secs, 0x4344C0, 0x30).hex(),
+                'iat_calls': {
+                    '0x0045d070': 'CreateFileW（失败 → 0xFFFFFFFF）',
+                    '0x0045d090': 'GetFileSize',
+                    '0x0045d08c': 'ReadFile',
+                    '0x0045d058': 'CloseHandle',
+                    '0x0045d084/0x0045d080': '映射/解映射（读文件用的辅助）',
+                },
+                'buffer_fields': ['engine+0x0', 'engine+0x4（基址/长度）'],
+                'error_string_va': '0x0045d968',
+                'error_string': cstr_cp932(data, secs, 0x45D968),
+                'error_fn': '0x004258f0（把错误串格式进日志/消息框）',
+                'note': '通用"整文件读进内存"助手；槽文件与 save.bin 都用它',
+            },
             'load_impl': {
                 'fn': '0x0043ee90',
                 'bytes': u8(data, secs, 0x43EE90, 0x80).hex(),
@@ -191,8 +213,13 @@ def extract(path):
                              'call 0x4344c0（应用存档：字段映射未逆清）',
                              '重置 256 个线程对象（0x436270(600) 再 0）',
                              'engine+0x101058=3, +0x10105c=600, +0x101060=0',
-                             'call 0x441680 / 0x42a6c0 / 0x438d20 / 0x42c4b0 '
-                             '/ 0x441350'],
+                             'call 0x441680(engine+0x120)（文本/渲染复位）',
+                             'call 0x42a6c0（gfx 复位）',
+                             'call 0x438d20(engine, 0, -1)（场景/图元树复位：'
+                             '清 prim 树、重设图元）',
+                             'call 0x42c4b0（gfx 复位）',
+                             'call 0x441350(engine+0x6a7e34, engine+0x6a7e6c)'
+                             '（脚本引擎复位：重启线程用）'],
             },
             'thread_restart': {
                 'flag': 'thread+0xfd9',

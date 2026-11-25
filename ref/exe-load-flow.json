@@ -5,6 +5,25 @@
   "size": 817664
  },
  "frame_consumers": {
+  "file_io_helper": {
+   "buffer_fields": [
+    "engine+0x0",
+    "engine+0x4（基址/长度）"
+   ],
+   "bytes": "51538b5c240c56576a0068000000086a036a006a016800000080538bf1ff1570d045008bf883ffff75376880000000e8",
+   "error_fn": "0x004258f0（把错误串格式进日志/消息框）",
+   "error_string": "'%s'のオープンに失敗しました",
+   "error_string_va": "0x0045d968",
+   "fn": "0x0043c4c0",
+   "iat_calls": {
+    "0x0045d058": "CloseHandle",
+    "0x0045d070": "CreateFileW（失败 → 0xFFFFFFFF）",
+    "0x0045d084/0x0045d080": "映射/解映射（读文件用的辅助）",
+    "0x0045d08c": "ReadFile",
+    "0x0045d090": "GetFileSize"
+   },
+   "note": "通用\"整文件读进内存\"助手；槽文件与 save.bin 都用它"
+  },
   "load": {
    "bytes": "389ecb0f000074208bce889ecb0f0000e805f6ffff8b1568134800899a6c7e6a00c686d90f000001",
    "pc": "0x0043f876",
@@ -23,7 +42,11 @@
     "call 0x4344c0（应用存档：字段映射未逆清）",
     "重置 256 个线程对象（0x436270(600) 再 0）",
     "engine+0x101058=3, +0x10105c=600, +0x101060=0",
-    "call 0x441680 / 0x42a6c0 / 0x438d20 / 0x42c4b0 / 0x441350"
+    "call 0x441680(engine+0x120)（文本/渲染复位）",
+    "call 0x42a6c0（gfx 复位）",
+    "call 0x438d20(engine, 0, -1)（场景/图元树复位：清 prim 树、重设图元）",
+    "call 0x42c4b0（gfx 复位）",
+    "call 0x441350(engine+0x6a7e34, engine+0x6a7e6c)（脚本引擎复位：重启线程用）"
    ]
   },
   "save": {
