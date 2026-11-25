@@ -1,0 +1,120 @@
+{
+ "best": {
+  "base": "black",
+  "blend": "over",
+  "mean_abs": 11.562,
+  "order": "measured"
+ },
+ "candidates": [
+  {
+   "base": "black",
+   "blend": "over",
+   "mean_abs": 11.562,
+   "order": "measured"
+  },
+  {
+   "base": "white",
+   "blend": "over",
+   "mean_abs": 11.562,
+   "order": "measured"
+  },
+  {
+   "base": "black",
+   "blend": "over",
+   "mean_abs": 12.257,
+   "order": "z-descending"
+  },
+  {
+   "base": "white",
+   "blend": "over",
+   "mean_abs": 12.257,
+   "order": "z-descending"
+  },
+  {
+   "base": "black",
+   "blend": "over",
+   "mean_abs": 13.632,
+   "order": "z-ascending"
+  },
+  {
+   "base": "white",
+   "blend": "over",
+   "mean_abs": 13.632,
+   "order": "z-ascending"
+  },
+  {
+   "base": "black",
+   "blend": "premul",
+   "mean_abs": 13.632,
+   "order": "z-ascending"
+  },
+  {
+   "base": "white",
+   "blend": "premul",
+   "mean_abs": 13.632,
+   "order": "z-ascending"
+  },
+  {
+   "base": "black",
+   "blend": "add",
+   "mean_abs": 17.816,
+   "order": "z-ascending"
+  },
+  {
+   "base": "black",
+   "blend": "add",
+   "mean_abs": 17.816,
+   "order": "z-descending"
+  },
+  {
+   "base": "black",
+   "blend": "add",
+   "mean_abs": 17.816,
+   "order": "measured"
+  },
+  {
+   "base": "white",
+   "blend": "add",
+   "mean_abs": 102.244,
+   "order": "z-ascending"
+  },
+  {
+   "base": "white",
+   "blend": "add",
+   "mean_abs": 102.244,
+   "order": "z-descending"
+  },
+  {
+   "base": "white",
+   "blend": "add",
+   "mean_abs": 102.244,
+   "order": "measured"
+  },
+  {
+   "base": "black",
+   "blend": "premul",
+   "mean_abs": 507.207,
+   "order": "measured"
+  },
+  {
+   "base": "white",
+   "blend": "premul",
+   "mean_abs": 507.207,
+   "order": "measured"
+  },
+  {
+   "base": "black",
+   "blend": "premul",
+   "mean_abs": 529.616,
+   "order": "z-descending"
+  },
+  {
+   "base": "white",
+   "blend": "premul",
+   "mean_abs": 529.616,
+   "order": "z-descending"
+  }
+ ],
+ "note": "标题背景四层合成模型的候选扫描（用原版帧的纯背景区域验证）；由 scripts/analyze-title-bg-blend.py 生成",
+ "region_px": 1559720
+}

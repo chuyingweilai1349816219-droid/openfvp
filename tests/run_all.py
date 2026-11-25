@@ -575,6 +575,14 @@ def build_steps(args):
                       note='title diff broken down by region (asset-header rects); '
                            'copyright region is the worst, ranked baseline frozen'))
 
+    # 6.497 标题背景合成模型（18 个候选里 measured+over 最好；需 Pillow+numpy）
+    vbb = os.path.join(HERE, 'verify_title_bg_blend.py')
+    steps.append(Step('verify_title_bg_blend.py', [PY, '-X', 'utf8', vbb], 900,
+                      skip_reason=None,
+                      note='background composite model validated against the '
+                           'original frame: order A->C->D->B + straight-alpha '
+                           'over beats z-orderings and premul/add'))
+
     # 6.50 标题菜单状态变体（整幅不同的状态/动画帧，不是轻微高亮）
     vtv = os.path.join(HERE, 'verify_title_variants.py')
     steps.append(Step('verify_title_variants.py', [PY, '-X', 'utf8', vtv], 1800,

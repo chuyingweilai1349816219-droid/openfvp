@@ -92,6 +92,22 @@
     提取结果表、与实现的差距表、以及"⑥ 的结论修正"；
     `docs/vm-commands.md` 的"我们没有那份表"同步更正
 
+### 分析（标题背景合成模型）
+
+- **用原版帧验证 18 个背景合成候选：我们的做法（A→C→D→B + 直通 alpha over）就是最优**
+  - 新增 `scripts/analyze-title-bg-blend.py` + 基线 `ref/title-bg-blend.json`
+    + 门禁 `tests/verify_title_bg_blend.py`（`run_all` 51 → 52 步）
+  - 做法：把背景四层素材解成 BGRA，在 numpy 里按 3 种顺序 × 3 种混合 × 2 种底色
+    共 18 个候选各合成一遍，**只比原版帧的纯背景区域**（扣掉 logo/菜单/版权行，
+    1,559,720 px）
+  - 结果：measured/over **11.562** 最优 ／ z-descending/over 12.257 ／
+    z-ascending/over 13.632 ／ add 17.816 ／ premul 507.207（素材非预乘）；
+    底色黑/白相同（第一层 A 是不透明 BGR24）
+  - 结论：合成模型不再是"试出来的"，有原版帧作证；而背景区仍有 11.56 残差
+    ⇒ 差异来自**动态量**——脚本标题初始化里确有 MotionAlpha(42)/MotionMoveR(51)/
+    MotionMoveS2(54)/MotionMoveZ(57) 一大串动画命令，原版这些层/logo 是动的
+  - `docs/title-menu.md` 新增 §15（18 候选表 + 三条结论 + 下一轮计划）
+
 ### 修复（标题版权行）+ 分析（误差分布）
 
 - **版权行素材认出来了，而且发现它一直被一条过早的 `return` 跳过**
