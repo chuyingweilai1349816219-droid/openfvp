@@ -51,6 +51,25 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 实现（星空标题背景缩放：2000→1000 per-mille / 40000 ms，带缩放缓存）
+
+- 把 §上一轮冻结的背景参数里**规则最干净**的一条接到画面：星空单层 1920×1080、
+  无 PrimSetOP（左上锚）、不旋转，脚本只有 `MotionMoveS2(258,2000,1000,2000,1000,
+  40000,3)`（hcb 0x6FD73..0x6FD87）。
+- 新增 `src/titlebg.c/.h`（纯时间轴：`2000-1000·ease3(t/40000)`；五彩斑斓
+  `animated=0` 明确未实现）+ `tests/test_titlebg.c`（503 项）。
+- `src/gfx.c` 新增 `gfx_draw_image_zoomed()`：只处理屏幕可见的源区域、源矩形量化
+  到 16 px 并缓存缩放结果。**性能从 10 fps 提到 ~48 fps**（无缓存时一次 1920×1080
+  三角形滤波 ~80 ms）。
+- `main_win32.c` 新增 `--title-bg-anim`（默认关；`--title-anim` 不自动打开），
+  `title_draw_bg()` 走缩放路径；五彩斑斓会打印 `iroseka: not implemented, static`。
+- 门禁 `tests/verify_title_bg_anim.py`：中途 vs 静态 mean_abs 48.09 / 74.6% 像素差；
+  **40 s 后 == 静态帧逐字节 0 差**；fps ≥25；日志断言。`run_all` 66→**68 步**
+  （+test_titlebg +bg-anim 门禁）。`tests/test_gfx_xform.c` 加第 9 组
+  （cropped_scaled 的 1:1/缩放/越界/边界/确定性，53→64 项）。
+- 文档：`docs/title-menu.md` §23（实现表、缓存原因、门禁数字、未做项）；
+  `src/titleanim.h` 注释区分"星空已实现 / 五彩未实现"；status/CHANGELOG。
+
 ### 结构分析（标题背景的缩放/旋转：旋转在 HCB 脚本里，图像包里没有）
 
 - 回答"背景旋转能不能靠解包解出"：**图像包（HZC1）头只有 w/h/x/y/fmt，

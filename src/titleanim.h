@@ -68,7 +68,10 @@
 #define FVP_TITLEENTER_FRAME2_MS 3000
 #define FVP_TITLEENTER_SLIDE_263 47
 
-/* ---- 标题背景（尚未实现；参数冻结在 ref/title-bg-motion.json）----
+/* ---- 标题背景（参数冻结在 ref/title-bg-motion.json）----
+ * 星空那条（2000→1000 / 40000 ms、左上锚、无旋转）**已实现**：
+ * 外壳 --title-bg-anim → src/titlebg.c → gfx_draw_image_zoomed（带缓存）。
+ * 五彩斑斓那条（4 层超尺寸图 + OP 轴心 + 旋转）**尚未实现**。
  * 五彩斑斓（hcb 0x59143..0x591D3）四层 258..261：
  *   MotionMoveS2(1300/1600/2500/4000 → 900/800/800/800, 25000, 3)
  *   + MotionMoveR(150/250/550/1250 → 0, 25000, 3)   ← 15°/25°/55°/125° → 0°

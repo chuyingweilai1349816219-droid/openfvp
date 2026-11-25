@@ -47,6 +47,7 @@
 #include "../../gamemenu.h"
 #include "../../titleanim.h"
 #include "../../titleenter.h"
+#include "../../titlebg.h"
 
 #define FVP_WIN32_VERSION "0.1"
 #define FVP_CANVAS_W 1920
@@ -134,6 +135,10 @@ typedef struct Options {
     /* --title-anim：标题进场动画（logo alpha 0..255 / 缩放 10000..1000，
      * 参数来自脚本；--opening 时自动打开）。默认关 → 冻结基线不变。 */
     int title_anim;
+    /* --title-bg-anim：标题背景的脚本动画（目前只实现星空：
+     * MotionMoveS2 2000→1000 per-mille / 40000 ms，左上锚、无旋转）。
+     * 默认关 → 冻结基线不变；--title-anim 不会自动打开它。 */
+    int title_bg_anim;
     double shot_at_ms; /* --shot-at N：跑到 N 毫秒时存一张截图（0 = 不存） */
     int title_no_bg; /* --title-no-bg：标题菜单不铺背景（几何测量用） */
     int title_hover_seed; /* --title-hover N：启动就把第 N 项设为 hover（截图/门禁用，-1 = 不动） */
@@ -454,6 +459,7 @@ static const wchar_t *usage_text(void)
            L"  --title-menu        先显示引擎侧标题菜单（New Game/Continue/Album/Option/Exit），\n"
            L"                      选 New Game 才开始跑脚本（默认关；几何按原版实测）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
+           L"  --title-bg-anim     标题背景按脚本做缩放动画（星空 2000->1000/40 s；默认关）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --startup-trace FILE 把启动各阶段写进 FILE（日志打开之前也能落盘，\n"
            L"                      卡启动时用它定位）\n"
@@ -529,6 +535,7 @@ static void defaults(Options *o)
     o->title_no_bg = 0;
     o->opening = 0;
     o->title_anim = -1; /* -1 = 未指定，见 main 里的 --opening 联动 */
+    o->title_bg_anim = 0;
     o->preview_slot = -1;
     o->load_slot = -1;
     o->menu_at = -1;
@@ -733,6 +740,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->opening = 1;
         } else if (wcscmp(a, L"--title-anim") == 0) {
             o->title_anim = 1;
+        } else if (wcscmp(a, L"--title-bg-anim") == 0) {
+            o->title_bg_anim = 1;
         } else if (wcscmp(a, L"--shot-at") == 0 && i + 1 < argc) {
             o->shot_at_ms = wcstod(argv[++i], NULL);
         } else if (wcscmp(a, L"--title-no-bg") == 0) {
@@ -1678,6 +1687,12 @@ static int title_copy_alpha = 255;
 static int title_copy_dx;
 static int title_menu_alpha[FVP_TITLE_ITEMS] = {255, 255, 255, 255, 255};
 static int title_menu_dy[FVP_TITLE_ITEMS];
+/* 标题背景动画（--title-bg-anim）：参数见 src/titlebg.h；elapsed 用墙钟。 */
+static int title_bg_anim_on;
+static FvpTitleBgGame title_bg_game = FVP_TITLEBG_GAME_IROSEKA;
+static double title_bg_t0;
+static double title_bg_now;
+
 static FvpTitleEnter title_enter;
 static FvpTitleEnterGame title_enter_game = FVP_TITLEENTER_GAME_IROSEKA;
 static double title_enter_t0;
@@ -1858,7 +1873,9 @@ static void draw_game_menu(Gfx *gfx, const FvpGameMenu *m)
     }
 }
 
-/* 背景层：整屏大图按 (bg_src_x, bg_src_y) 裁剪到 1920x1080 */
+/* 背景层：整屏大图按 (bg_src_x, bg_src_y) 裁剪到 1920x1080；
+ * --title-bg-anim 且该作背景动画已实现时（目前只有星空），按脚本的
+ * MotionMoveS2 缩放：只画"屏幕上可见的源区域"，缩放到整屏。 */
 static void title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
 {
     int bsw = 0;
@@ -1866,6 +1883,19 @@ static void title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
 
     if (!title_bg_on) {
         return;
+    }
+    if (gfx != NULL && title_bg_anim_on) {
+        FvpTitleBgState st;
+        int elapsed = (int)((title_bg_now - title_bg_t0) * 1000.0 + 0.5);
+
+        fvp_titlebg_state(title_bg_game, elapsed, &st);
+        if (st.animated && prof != NULL && st.scale_x1000 > 0 &&
+            st.scale_y1000 > 0) {
+            (void)gfx_draw_image_zoomed(gfx, TITLE_BG_SLOT, st.scale_x1000,
+                                        st.scale_y1000, prof->client_w,
+                                        prof->client_h);
+            return;
+        }
     }
     if (prof != NULL && gfx_image_size(gfx, TITLE_BG_SLOT, &bsw, &bsh) &&
         (bsw != prof->client_w || bsh != prof->client_h)) {
@@ -2872,6 +2902,18 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         if (title_active) {
             title_bg_disabled = opts.title_no_bg;
             title_textures = title_load_textures(gfx, title_profile);
+            if (opts.title_bg_anim) {
+                title_bg_anim_on = 1;
+                title_bg_game = fvp_titlebg_game_from_name(
+                    title_profile != NULL ? title_profile->game : NULL);
+                title_bg_t0 = now_sec();
+                fvp_logf("title: bg zoom started (%s, %d ms; script "
+                         "MotionMoveS2)",
+                         title_bg_game == FVP_TITLEBG_GAME_HOSHIMEMO
+                             ? "hoshimemo 2000->1000/40000"
+                             : "iroseka: not implemented, static",
+                         fvp_titlebg_total_ms(title_bg_game));
+            }
             if (opts.opening) {
                 int i;
                 int loaded = 0;
@@ -3074,6 +3116,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             break;
         }
         now = now_sec();
+        title_bg_now = now;
 
         if (opts.run_seconds > 0.0 && now - run_started >= opts.run_seconds) {
             exit_auto = 1;

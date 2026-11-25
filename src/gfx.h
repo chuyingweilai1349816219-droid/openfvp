@@ -380,6 +380,18 @@ int gfx_image_offset(const Gfx *g, int slot, int *x, int *y);
 int gfx_draw_image_cropped(Gfx *g, int slot, int dx, int dy, int sx, int sy,
                            int w, int h);
 
+/* 裁 (sx,sy,sw,sh) 再缩放到 (dx,dy,dw,dh)：标题背景缩放用（星空 1920x1080
+ * 背景按脚本 MotionMoveS2 2000→1000 缩放、轴心 (0,0)，见 docs/title-menu.md §23）。
+ * 这样只处理"屏幕上可见的源区域"，避免把整图放大到 2 倍再裁。 */
+int gfx_draw_image_cropped_scaled(Gfx *g, int slot, int dx, int dy, int dw,
+                                  int dh, int sx, int sy, int sw, int sh);
+
+/* 标题背景缩放（带缓存、左上锚）：按 per-mille 缩放把整屏背景铺满 (0,0,dw,dh)。
+ * 用于星空 1920x1080 背景的 MotionMoveS2 2000->1000 / 40000 ms（脚本无 PrimSetOP，
+ * 轴心 (0,0)）。源矩形量化到 16 px 后缓存缩放结果，避免每帧 80 ms 的成像。 */
+int gfx_draw_image_zoomed(Gfx *g, int slot, int scale_x1000, int scale_y1000,
+                          int dw, int dh);
+
 /* 把图形槽里的图缩放到 (x,y,w,h) 贴上去（存档预览缩略图用）。 */
 int gfx_draw_image_scaled(Gfx *g, int slot, int x, int y, int w, int h);
 int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,

@@ -538,6 +538,17 @@ struct Gfx {
     /* 文本图元定位总开关（外壳 --text-prims，默认关）：打开后挂在图元上的文本窗口
      * 画在图元的绝对位置（原版做法），没挂图元的层仍按版面表画。 */
     int text_prims_on;
+    /* 标题背景缩放缓存（gfx_draw_image_zoomed）。1920x1080 的三角形滤波缩放
+     * 一次 ~80 ms，而脚本动画 40 s 内只变化 ~25‰/s；把源矩形量化到 16 px 后
+     * 每 ~0.6 s 才会重算一次，其余帧直接贴缓存。 */
+    uint8_t *zoom_img;
+    int zoom_ok;
+    int zoom_slot;
+    int zoom_ver;
+    int zoom_sw;
+    int zoom_sh;
+    int zoom_dw;
+    int zoom_dh;
     char err[256];
 };
 
@@ -3131,6 +3142,8 @@ void gfx_destroy(Gfx *g)
     if (g == NULL) {
         return;
     }
+    free(g->zoom_img);
+    g->zoom_img = NULL;
     for (i = 0; i < GFX_PARTS_MAX; i++) {
         tex_unref(g, g->part[i].tex);
     }
@@ -3853,6 +3866,168 @@ int gfx_draw_image_cropped(Gfx *g, int slot, int dx, int dy, int sx, int sy,
     tmp.alpha = 255;
     blit_sprite(g, dx, dy, w, h, sub, 0, &tmp);
     free(sub);
+    g->stats.sprites += 1;
+    return 1;
+}
+
+/* 从图形槽里取 (sx,sy,sw,sh) 一块，缩放到 (dx,dy,dw,dh) 贴上去。
+ *
+ * 标题背景缩放用（星空 1920x1080 背景按 MotionMoveS2 2000→1000 缩放、轴心 (0,0)）：
+ * 直接裁剪"可见的源区域"再缩放到屏幕，避免把 1920x1080 放大到 3840x2160 再裁。
+ * dw==sw && dh==sh 时走 1:1 直贴（与 gfx_draw_image_cropped 相同的快速路径）。 */
+/* 标题背景缩放（带缓存）：按 per-mille 缩放把整屏背景缩放后铺满 (0,0,dw,dh)。
+ *
+ * 轴心默认 (0,0)（左上锚）——对应星空背景（无 PrimSetOP，见
+ * ref/title-bg-motion.json）。只处理"屏幕上可见的源区域"，并把源矩形量化到
+ * 16 px 步进后缓存缩放结果：脚本 40 s 的动画每 ~0.6 s 才需要重算一次，
+ * 其余帧只是贴一张缓存图（否则每帧 1920x1080 三角形滤波约 80 ms，只有 10 fps）。
+ */
+int gfx_draw_image_zoomed(Gfx *g, int slot, int scale_x1000, int scale_y1000,
+                          int dw, int dh)
+{
+    const uint8_t *compo = NULL;
+    int cw = 0;
+    int ch = 0;
+    int sw;
+    int sh;
+    int s;
+    int step = 16;
+
+    if (g == NULL || dw <= 0 || dh <= 0) {
+        return 0;
+    }
+    if (scale_x1000 <= 0) {
+        scale_x1000 = 1000;
+    }
+    if (scale_y1000 <= 0) {
+        scale_y1000 = 1000;
+    }
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0 || compo == NULL ||
+        cw <= 0 || ch <= 0) {
+        return 0;
+    }
+    sw = (int)(((long long)dw * 1000 + scale_x1000 / 2) / scale_x1000);
+    sh = (int)(((long long)dh * 1000 + scale_y1000 / 2) / scale_y1000);
+    sw = ((sw + step / 2) / step) * step;
+    sh = ((sh + step / 2) / step) * step;
+    if (sw < step) {
+        sw = step;
+    }
+    if (sh < step) {
+        sh = step;
+    }
+    if (sw > cw) {
+        sw = cw;
+    }
+    if (sh > ch) {
+        sh = ch;
+    }
+    /* 恒等：直接贴原图（与静态画面逐字节相同） */
+    if (sw == cw && sh == ch && dw == cw && dh == ch) {
+        return gfx_draw_image_at(g, slot, 0, 0);
+    }
+    s = (int)g->slot[slot].compo_version;
+    if (g->zoom_ok && g->zoom_img != NULL && g->zoom_slot == slot &&
+        g->zoom_ver == s && g->zoom_sw == sw && g->zoom_sh == sh &&
+        g->zoom_dw == dw && g->zoom_dh == dh) {
+        blit_sprite_alpha(g, 0, 0, dw, dh, g->zoom_img, 0, 255);
+        g->stats.sprites += 1;
+        g->stats.resize_cache_hits += 1;
+        return 1;
+    }
+    {
+        uint8_t *sub = (uint8_t *)malloc((size_t)sw * (size_t)sh * 4u);
+        uint8_t *img;
+        int y;
+
+        if (sub == NULL) {
+            return 0;
+        }
+        for (y = 0; y < sh; ++y) {
+            memcpy(sub + (size_t)y * (size_t)sw * 4u,
+                   compo + (size_t)y * (size_t)cw * 4u, (size_t)sw * 4u);
+        }
+        img = resize_rgba(sub, sw, sh, dw, dh);
+        free(sub);
+        if (img == NULL) {
+            return 0;
+        }
+        free(g->zoom_img);
+        g->zoom_img = img;
+        g->zoom_ok = 1;
+        g->zoom_slot = slot;
+        g->zoom_ver = s;
+        g->zoom_sw = sw;
+        g->zoom_sh = sh;
+        g->zoom_dw = dw;
+        g->zoom_dh = dh;
+        blit_sprite_alpha(g, 0, 0, dw, dh, img, 0, 255);
+        g->stats.sprites += 1;
+        return 1;
+    }
+}
+
+int gfx_draw_image_cropped_scaled(Gfx *g, int slot, int dx, int dy, int dw,
+                                  int dh, int sx, int sy, int sw, int sh)
+{
+    const uint8_t *compo = NULL;
+    int cw = 0;
+    int ch = 0;
+    uint8_t *sub;
+    uint8_t *img;
+    GfxPrim tmp;
+    int y;
+
+    if (g == NULL || dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0) {
+        return 0;
+    }
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0 || compo == NULL) {
+        return 0;
+    }
+    /* 源矩形裁到图内 */
+    if (sx < 0) {
+        dw = (int)((long long)dw * (sw + sx) / sw);
+        sw += sx;
+        sx = 0;
+    }
+    if (sy < 0) {
+        dh = (int)((long long)dh * (sh + sy) / sh);
+        sh += sy;
+        sy = 0;
+    }
+    if (sx + sw > cw) {
+        sw = cw - sx;
+    }
+    if (sy + sh > ch) {
+        sh = ch - sy;
+    }
+    if (sw <= 0 || sh <= 0) {
+        return 0;
+    }
+    sub = (uint8_t *)malloc((size_t)sw * (size_t)sh * 4u);
+    if (sub == NULL) {
+        return 0;
+    }
+    for (y = 0; y < sh; ++y) {
+        memcpy(sub + (size_t)y * (size_t)sw * 4u,
+               compo + ((size_t)(sy + y) * (size_t)cw + (size_t)sx) * 4u,
+               (size_t)sw * 4u);
+    }
+    if (dw == sw && dh == sh) {
+        memset(&tmp, 0, sizeof tmp);
+        tmp.alpha = 255;
+        blit_sprite(g, dx, dy, dw, dh, sub, 0, &tmp);
+        free(sub);
+        g->stats.sprites += 1;
+        return 1;
+    }
+    img = resize_rgba(sub, sw, sh, dw, dh);
+    free(sub);
+    if (img == NULL) {
+        return 0;
+    }
+    blit_sprite_alpha(g, dx, dy, dw, dh, img, 0, 255);
+    free(img);
     g->stats.sprites += 1;
     return 1;
 }

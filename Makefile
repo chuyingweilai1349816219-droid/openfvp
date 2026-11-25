@@ -114,7 +114,7 @@ WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
                $(WIN32_DIR)/win32_gdi_text.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
               src/titlemenu.c src/savelist.c src/savetail.c src/openseq.c \
-              src/titleenter.c \
+              src/titleenter.c src/titlebg.c \
               src/gamemenu.c \
                src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c \
                src/timer.c src/history.c
@@ -212,6 +212,24 @@ clean-titleenter:
 	-rm -f $(TITLEENTER_TEST)
 
 .PHONY: test_titleenter clean-titleenter
+
+# ---------------------------------------------------------------------------
+# 标题背景动画（星空：MotionMoveS2 2000->1000 per-mille / 40000 ms，左上锚）
+#   make test_titlebg
+# ---------------------------------------------------------------------------
+TITLEBG_TEST = bin/test_titlebg$(EXE)
+
+test_titlebg: $(TITLEBG_TEST)
+
+$(TITLEBG_TEST): tests/test_titlebg.c src/titlebg.c src/titlebg.h \
+                 src/motion.c src/motion.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_titlebg.c src/titlebg.c \
+	    src/motion.c $(LDFLAGS)
+
+clean-titlebg:
+	-rm -f $(TITLEBG_TEST)
+
+.PHONY: test_titlebg clean-titlebg
 
 # ---------------------------------------------------------------------------
 # 开场 FAVORITE logo 序列（脚本时间轴：淡入 1200/1400 → 淡出 2500/3500 → 100 收尾）
@@ -660,7 +678,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
              $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST) $(TITLEMENU_DRAW_TEST) \
              $(SAVELIST_TEST) $(OPENSEQ_TEST) $(SND_FADE_TEST) $(PLATFORM_TEST) $(GAMEMENU_TEST) $(SND_GAIN_TEST) \
-             $(TITLEENTER_TEST)
+             $(TITLEENTER_TEST) $(TITLEBG_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

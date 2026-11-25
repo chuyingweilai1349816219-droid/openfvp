@@ -451,6 +451,16 @@ def build_steps(args):
                                'alpha monotonic/bounded, clamping'))
 
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
+    test_titlebg = tools['test_titlebg']
+    if not os.path.isfile(test_titlebg):
+        steps.append(Step('test_titlebg', None, 0,
+                          skip_reason='bin/test_titlebg.exe missing '
+                                      '(run: make test_titlebg)'))
+    else:
+        steps.append(Step('test_titlebg', [test_titlebg], 120,
+                          note='title background zoom timeline (hoshimemo '
+                               '2000->1000 per-mille over 40000 ms, ease 3)'))
+
     test_titleenter = tools['test_titleenter']
     if not os.path.isfile(test_titleenter):
         steps.append(Step('test_titleenter', None, 0,
@@ -672,6 +682,14 @@ def build_steps(args):
                       note='title entrance timeline == script constants for both games '
                            '(iroseka 2000/2400/2560 total 4000; '
                            'hoshimemo 1000/1400/1560 total 3000)'))
+
+    # 6.49687 标题背景缩放的端到端门禁（星空；含一次 42 s 运行验证终态）
+    vbgz = os.path.join(HERE, 'verify_title_bg_anim.py')
+    steps.append(Step('verify_title_bg_anim.py', [PY, '-X', 'utf8', vbgz], 900,
+                      skip_reason=None,
+                      note='star sky title background zoom end to end: mid '
+                           'frame == zoomed (mean_abs 48.1), 40 s later byte '
+                           'identical to static, ~48 fps with the zoom cache'))
 
     # 6.49688 标题背景的缩放/旋转参数（旋转在脚本里，不在图像包里）
     vbg = os.path.join(HERE, 'verify_title_bg_motion.py')

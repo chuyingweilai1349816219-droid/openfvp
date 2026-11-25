@@ -141,6 +141,7 @@ def public_tools():
         'test_gfx_xform': os.path.join(FVP, 'bin', 'test_gfx_xform.exe'),
         'test_titleenter': os.path.join(FVP, 'bin',
                                            'test_titleenter.exe'),
+        'test_titlebg': os.path.join(FVP, 'bin', 'test_titlebg.exe'),
         'test_control': os.path.join(FVP, 'bin', 'test_control.exe'),
         'test_graphcolor': os.path.join(FVP, 'bin', 'test_graphcolor.exe'),
         'test_textbuff': os.path.join(FVP, 'bin', 'test_textbuff.exe'),

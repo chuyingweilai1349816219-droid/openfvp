@@ -456,6 +456,56 @@ int main(void)
           "op-xform 同样参数两次绘制逐字节相同");
     free(base);
 
+    printf("== 9. cropped_scaled（标题背景缩放：裁源区域 + 缩放到目标）==\n");
+    /* 全图 1:1：与静态绘制逐字节相同 */
+    clear_canvas(g);
+    (void)gfx_draw_image_at(g, 1, 10, 10);
+    base = canvas_snapshot(g, &len);
+    CHECK(base != NULL, "snapshot H");
+    clear_canvas(g);
+    CHECK(gfx_draw_image_cropped_scaled(g, 1, 10, 10, IMG_W, IMG_H, 0, 0,
+                                        IMG_W, IMG_H) == 1,
+          "全图 1:1 返回 1");
+    other = canvas_snapshot(g, &len2);
+    CHECK(base != NULL && other != NULL && len == len2 &&
+              memcmp(base, other, len) == 0,
+          "全图 1:1 与 gfx_draw_image_at 逐字节相同");
+    free(other);
+
+    /* 左上 1/4 放大 2 倍铺满 40x30：包围盒 40x30、位置不变 */
+    clear_canvas(g);
+    CHECK(gfx_draw_image_cropped_scaled(g, 1, 10, 10, IMG_W, IMG_H, 0, 0,
+                                        IMG_W / 2, IMG_H / 2) == 1,
+          "1/4 放大 2x 返回 1");
+    CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1, "有墨迹");
+    CHECK(bx0 == 10 && by0 == 10 && bx1 - bx0 + 1 == IMG_W &&
+              by1 - by0 + 1 == IMG_H,
+          "放大后包围盒 40x30 @(10,10)（实际 %d,%d %dx%d）", bx0, by0,
+          bx1 - bx0 + 1, by1 - by0 + 1);
+    CHECK(count == (long)IMG_W * IMG_H, "不透明铺满 %ld 像素（实际 %ld）",
+          (long)IMG_W * IMG_H, count);
+
+    /* 源矩形越界：自动裁到图内（不崩、仍然画） */
+    clear_canvas(g);
+    CHECK(gfx_draw_image_cropped_scaled(g, 1, 0, 0, IMG_W, IMG_H,
+                                        IMG_W - 10, IMG_H - 10, 40, 30) == 1,
+          "源矩形越界仍返回 1");
+
+    /* alpha/参数边界 */
+    CHECK(gfx_draw_image_cropped_scaled(g, 1, 0, 0, 0, 10, 0, 0, 10, 10) == 0,
+          "dw=0 返回 0");
+    CHECK(gfx_draw_image_cropped_scaled(g, 1, 0, 0, 10, 10, 0, 0, 0, 0) == 0,
+          "sw=0 返回 0");
+    /* 确定性 */
+    clear_canvas(g);
+    (void)gfx_draw_image_cropped_scaled(g, 1, 12, 14, 60, 30, 0, 0, 20, 10);
+    base = canvas_snapshot(g, &len);
+    clear_canvas(g);
+    (void)gfx_draw_image_cropped_scaled(g, 1, 12, 14, 60, 30, 0, 0, 20, 10);
+    CHECK(base != NULL && memcmp(base, canvas_of(g, &w, &h), len) == 0,
+          "cropped_scaled 同样参数两次绘制逐字节相同");
+    free(base);
+
     gfx_destroy(g);
     printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
