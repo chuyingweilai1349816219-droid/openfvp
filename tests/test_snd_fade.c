@@ -134,6 +134,59 @@ int main(void)
           "reversing a fade-out keeps the channel alive");
     CHECK(snd_channel_gain(s, SND_CH_BGM) > 0.0f, "gain is climbing again");
 
+    /* --- 5. 交叉淡入淡出：两条通道同时有声，结束后只剩新通道 --- */
+    {
+        int16_t *pa;
+        int16_t *pb;
+        int both = 0;
+        int k;
+
+        pa = (int16_t *)malloc(FRAMES * 2 * sizeof(int16_t));
+        pb = (int16_t *)malloc(FRAMES * 2 * sizeof(int16_t));
+        CHECK(pa != NULL && pb != NULL, "crossfade buffers");
+        if (pa != NULL && pb != NULL) {
+            fill_const(pa, FRAMES, 6000);
+            fill_const(pb, FRAMES, 6000);
+            snd_stop_all(s);
+            CHECK(snd_play_pcm(s, SND_CH_BGM, pa, FRAMES, 1, 1.0f) == 0,
+                  "crossfade: old track on BGM");
+            CHECK(snd_play_pcm(s, SND_CH_BGM_ALT, pb, FRAMES, 1, 1.0f) == 0,
+                  "crossfade: new track on BGM_ALT");
+            snd_crossfade(s, SND_CH_BGM, SND_CH_BGM_ALT, 500);
+            /* 过渡中段：两条通道都在响（和值明显高于单条） */
+            for (k = 0; k < 2; ++k) {
+                snd_mix(s, buf, 800);
+            }
+            {
+                int peak = block_peak(buf, 800);
+                int single = 6000;
+
+                if (peak > single + 500) {
+                    both = 1;
+                }
+            }
+            CHECK(both, "crossfade: both tracks audible during the transition "
+                        "(peak %d)", block_peak(buf, 800));
+            /* 走完 500 ms（4000 帧，已混 1600） */
+            for (k = 0; k < 4; ++k) {
+                snd_mix(s, buf, 800);
+            }
+            CHECK(snd_is_playing(s, SND_CH_BGM) == 0,
+                  "crossfade: old channel stopped");
+            CHECK(snd_is_playing(s, SND_CH_BGM_ALT) == 1,
+                  "crossfade: new channel still playing");
+            snd_mix(s, buf, 800);
+            {
+                int peak = block_peak(buf, 800);
+
+                CHECK(peak >= 5900, "crossfade: new track at full volume (%d)",
+                      peak);
+            }
+            free(pa);
+            free(pb);
+        }
+    }
+
     free(pcm);
     snd_destroy(s);
     printf("test_snd_fade: %d passed, %d failed\n", g_pass, g_fail);

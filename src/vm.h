@@ -163,6 +163,7 @@ typedef struct FvpSndStats {
     uint32_t loads, plays, stops, vols, types, states, silent_on;
     uint32_t resolved, unresolved, decode_fail;
     uint32_t plays_bgm, plays_voice, plays_se;
+    unsigned bgm_crossfades; /* BGM 交叉淡入淡出次数 */
 } FvpSndStats;
 
 /* Event kinds for the optional observer hook. */
@@ -203,6 +204,8 @@ typedef struct FvpSndBridge {
     int type_vol[FVP_SND_TYPES];       /* 0..100 per mixing group      */
     int type_configured[FVP_SND_TYPES];
     int se_next;                       /* round-robin SE cursor        */
+    int bgm_chan;                      /* 当前承载 BGM 的通道（两个 BGM 通道轮换） */
+    int bgm_xfade_ms;                  /* BGM 交叉淡入淡出时长（0 = 硬切） */
     FvpSndSlot *chan_owner[SND_CH_COUNT]; /* who plays on each SND chan */
     FvpSndStats stats;
     void (*on_event)(void *ud, const FvpSndEvent *ev);
@@ -673,6 +676,8 @@ void fvp_vm_attach_gfx(FvpVM *vm, struct Gfx *gfx);
  * packages the bridge resolves resource names against; they are opened and
  * indexed lazily on the first play (a voice.bin index is ~22k names). */
 void fvp_vm_attach_snd(FvpVM *vm, struct Snd *snd);
+/* BGM 交叉淡入淡出时长（ms，0 = 硬切） */
+void fvp_vm_snd_set_bgm_xfade(FvpVM *vm, int ms);
 int fvp_vm_snd_add_archive(FvpVM *vm, const char *path);
 int fvp_vm_snd_add_audio_dir(FvpVM *vm, const char *dir);
 

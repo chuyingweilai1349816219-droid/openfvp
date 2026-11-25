@@ -64,6 +64,7 @@
  * nor the BIN package reader, so every symbol is weak here and no audio code
  * can run unless fvp_vm_attach_snd() installed a context. */
 #pragma weak snd_is_playing
+#pragma weak snd_crossfade
 #pragma weak snd_play_ogg
 #pragma weak snd_play_wav
 #pragma weak snd_set_vol
@@ -802,7 +803,12 @@ static int fvp_snd_pick_chan(FvpSndBridge *b, int cat, int fallback)
 {
     int span;
     if (cat == FVP_SND_CAT_BGM) {
-        return SND_CH_BGM;
+        /* 两个 BGM 通道轮换：如果当前通道正在响，新曲先装到另一个通道，
+         * 由调用方做交叉淡入淡出（docs/04-audio.md）。 */
+        if (b->snd != NULL && b->bgm_chan == SND_CH_BGM) {
+            return SND_CH_BGM;
+        }
+        return b->bgm_chan;
     }
     if (cat == FVP_SND_CAT_VOICE) {
         return SND_CH_VOICE;
@@ -946,6 +952,22 @@ static int fvp_snd_start(FvpVM *vm, uint16_t cid, FvpSndSlot *sl, int slot_index
         }
         fvp_snd_emit(b, &ev);
         return -1;
+    }
+
+    /* BGM 切曲：新曲在 ch 上淡入，旧 BGM 通道淡出（两条通道同时有声）。 */
+    if (cat == FVP_SND_CAT_BGM) {
+        if (b->bgm_chan != ch && b->snd != NULL && b->bgm_xfade_ms > 0 &&
+            snd_is_playing(b->snd, b->bgm_chan)) {
+            if (snd_crossfade != NULL) {
+                snd_crossfade(b->snd, b->bgm_chan, ch, b->bgm_xfade_ms);
+            }
+            b->stats.bgm_crossfades += 1;
+            if (!vm->quiet) {
+                fprintf(stderr, "snd: bgm crossfade %d -> %d (%d ms)\n",
+                        b->bgm_chan, ch, b->bgm_xfade_ms);
+            }
+        }
+        b->bgm_chan = ch;
     }
 
     /* The previous owner of this mixer channel (if any) is now silent. */

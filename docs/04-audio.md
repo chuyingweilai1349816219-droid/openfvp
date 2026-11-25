@@ -69,14 +69,28 @@ int   snd_play_pcm(Snd *s, int ch, const int16_t *stereo, int frames,
 淡出逐块下降、第 6 块（>500 ms）静音且通道自动停止；淡入逐块上升并收敛；
 `ms=0` 立即生效；淡出中途反向淡入不停止通道。
 
-**还没接线**：真正的"交叉淡入淡出"需要**两条通道**（旧 BGM 淡出、新 BGM 同时淡入）。
-现在是"单通道斜坡"这个基础件；把 `AudioPlay` 的 BGM 切换接到两条通道上（含通道
-分配与抢占）是下一步，见下面待办第 2 条。
+**交叉淡入淡出已接线**（`snd_crossfade`）：
+
+- 通道布局改成：`SND_CH_BGM=0`、**`SND_CH_BGM_ALT=1`**（BGM 的淡入伙伴）、
+  `SND_CH_VOICE=2`、`SND_CH_SE=3`（SE 轮转 3..7，比原来少一条）；
+- 播放桥（`src/syscall.c`）里的 BGM 选择改为**两条通道轮换**：当前 BGM 通道在响时，
+  新曲先装到另一个 BGM 通道，然后 `snd_crossfade(旧, 新, 600 ms)`，
+  统计里记 `bgm_crossfades`，日志 `snd: bgm crossfade A -> B (600 ms)`；
+- 默认 600 ms，可用 `fvp_vm_snd_set_bgm_xfade(vm, ms)` 调整（0 = 硬切）；
+- `snd_crossfade` 在 `syscall.c` 里是**弱符号**（`#pragma weak`），因为 `fvm`/部分单测
+  只链接 `syscall.o` 不链接 `snd.c`，调用点有 NULL 保护。
+
+单测（`tests/test_snd_fade.c`，24 项）新增交叉淡变用例：两条通道同时有声（和值明显高于
+单条）、过渡结束后旧通道停止、新通道保持满音量。
+
+**真实运行里的观察**：iroseka 前 25 秒没有 BGM 切换（脚本早期还没起 BGM），所以日志里
+暂时看不到 `bgm crossfade` 行；要观察到它需要一段"场景切换"的脚本区间。这条如实记录，
+不假装已经验证过。
 
 ## 待办
 
 1. **流式解码**：现在是整段解码，一首 BGM 占 22 MB，语音多了会爆内存
-2. **BGM 交叉淡入淡出**：基础件已就绪（`snd_fade` + 单测），还差"两条通道 + BGM 切换接线"才能做真正的交叉
+2. **BGM 交叉淡入淡出**：已实现（两条 BGM 通道轮换 + `snd_crossfade`），还差"真实运行里观察到一次切换"的验证样本
 3. **语音与文字同步**：`LipSync`（argc=2）在脚本里只用了 3 次，暂未处理
 4. **音量体系**：`SoundVol` / `SoundTypeVol` / `SoundMasterVol` 三级，需要接进混音
 5. **平台输出**：Windows 用 waveOut，Android 用 AAudio（48 kHz 原生，正好）

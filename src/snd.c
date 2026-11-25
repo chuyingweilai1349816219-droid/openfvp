@@ -303,6 +303,16 @@ void snd_fade(Snd *s, int ch, float target, int ms)
     s->ch[ch].fade_to_zero = (target <= 0.0f);
 }
 
+void snd_crossfade(Snd *s, int from, int to, int ms)
+{
+    if (!s || from < 0 || from >= SND_CH_COUNT || to < 0 ||
+        to >= SND_CH_COUNT || from == to) {
+        return;
+    }
+    snd_fade(s, from, 0.0f, ms);
+    snd_fade(s, to, s->ch[to].vol, ms);
+}
+
 float snd_channel_gain(Snd *s, int ch)
 {
     if (!s || ch < 0 || ch >= SND_CH_COUNT) return 0.0f;

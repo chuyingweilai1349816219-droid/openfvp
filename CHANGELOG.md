@@ -53,6 +53,21 @@
 
 ### 新增
 
+- **BGM 交叉淡入淡出接线（两条 BGM 通道轮换）**
+  - 通道布局：`SND_CH_BGM=0`、`SND_CH_BGM_ALT=1`（淡入伙伴）、`SND_CH_VOICE=2`、
+    `SND_CH_SE=3`（SE 轮转 3..7，比原来少一条）
+  - 播放桥里 BGM 改成两条通道轮换：当前通道在响时新曲装到另一条，然后
+    `snd_crossfade(旧, 新, 600 ms)`；统计记 `bgm_crossfades`，日志打印
+    `snd: bgm crossfade A -> B (600 ms)`；可用 `fvp_vm_snd_set_bgm_xfade()` 调整
+  - `snd_crossfade` 在 syscall.c 里声明为弱符号并做 NULL 保护（fvm/部分单测只
+    链接 syscall.o 不链接 snd.c，否则会 undefined reference）
+  - 单测新增交叉淡变用例（`test_snd_fade` 24 项）：过渡中两条通道同时有声、
+    结束后旧通道停止、新通道满音量
+  - 如实记录：iroseka 前 25 秒没有 BGM 切换，所以真实运行里还没观察到该日志行——
+    需要一个"场景切换"区间才能验证
+
+### 新增（音频基础件）
+
 - **音频通道淡入淡出基础件（`snd_fade`）+ 17 项单测**
   - `src/snd.c`：通道新增 `gain`（当前生效增益，混音按帧推进）与 `vol`（目标音量）；
     `snd_fade(ch, target, ms)` 线性过渡，`target == 0` 淡出完成后通道自动停止；

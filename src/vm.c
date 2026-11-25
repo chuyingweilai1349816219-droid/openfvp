@@ -1028,6 +1028,9 @@ void fvp_vm_attach_snd(FvpVM *vm, struct Snd *snd)
         int i;
         b->snd = snd;
         b->master_vol = 100;
+        /* BGM 交叉淡入淡出：两条 BGM 通道轮换，默认 600 ms（0 = 硬切）。 */
+        b->bgm_chan = SND_CH_BGM;
+        b->bgm_xfade_ms = 600;
         for (i = 0; i < FVP_SND_TYPES; i++) {
             b->type_vol[i] = 100;
         }
@@ -1040,6 +1043,13 @@ void fvp_vm_attach_snd(FvpVM *vm, struct Snd *snd)
         vm->snd_bridge = b;
     } else {
         vm->snd_bridge->snd = snd;
+    }
+}
+
+void fvp_vm_snd_set_bgm_xfade(FvpVM *vm, int ms)
+{
+    if (vm != NULL && vm->snd_bridge != NULL) {
+        vm->snd_bridge->bgm_xfade_ms = ms < 0 ? 0 : ms;
     }
 }
 
