@@ -38,7 +38,7 @@ static FvpTitleBgState at(FvpTitleBgGame game, int ms)
     st.animated = -1;
     st.scale_x1000 = -1;
     st.scale_y1000 = -1;
-    st.angle_x10 = -1;
+    st.angle_units = -1;
     st.done = -1;
     fvp_titlebg_state(game, ms, &st);
     return st;
@@ -69,7 +69,7 @@ int main(void)
               "t=0 scale 2000（实际 %d/%d）", st.scale_x1000,
               st.scale_y1000);
         CHECK(st.done == 0, "t=0 not done");
-        CHECK(st.angle_x10 == 0, "不旋转");
+        CHECK(st.angle_units == 0, "不旋转");
     }
     {
         FvpTitleBgState st = at(FVP_TITLEBG_GAME_HOSHIMEMO, 10000);
@@ -130,7 +130,7 @@ int main(void)
         CHECK(st.animated == 0, "iroseka 未实现动画");
         CHECK(st.scale_x1000 == 1000 && st.scale_y1000 == 1000,
               "iroseka static scale 1000");
-        CHECK(st.angle_x10 == 0 && st.done == 1, "iroseka static/done");
+        CHECK(st.angle_units == 0 && st.done == 1, "iroseka static/done");
     }
 
     /* ---- 5. 边界 / NULL ---- */

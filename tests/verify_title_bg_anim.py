@@ -16,7 +16,9 @@
      （同时证明缓存/量化不会污染终态）；
   3. **A != B**；
   4. 日志：A/B 有 `bg zoom started (hoshimemo`；D 有 `iroseka: not implemented, static`；
-  5. 性能：A 那次的外壳 fps ≥ 25（缓存生效；未缓存时实测 ~10 fps）。
+  5. 平滑度：`--shot-every 60` 抓 4 s 序列，相邻帧差 min > 0.02（没有
+     "卡住不动"）、max < 3·median+1（没有跳变）；
+  6. 性能：A 那次的外壳 fps ≥ 45（逐帧双线性重算，实测 ~50-59）。
 
 缺 `bin/fvp.exe` 或游戏目录时 SKIP 并返回 0。
 
@@ -158,11 +160,45 @@ def main():
     check('bg zoom started (hoshimemo' not in iro_log,
           '五彩斑斓没有跑星空的时间轴')
 
-    print('== 5. 性能：缓存生效（≥25 fps；未缓存时实测 ~10 fps）==')
+    print('== 5. 平滑度：抓 4 s 帧序列，相邻帧差不能有平台/尖峰 ==')
+    seq_dir = os.path.join(OUT, 'bgzseq')
+    os.makedirs(seq_dir, exist_ok=True)
+    for f in os.listdir(seq_dir):
+        if f.endswith('.bmp'):
+            os.remove(os.path.join(seq_dir, f))
+    seq_log = os.path.join(OUT, 'bgzseq-gate.log')
+    rc = run_shell(HOSHI, '', seq_log,
+                   ['--title-bg-anim', '--title-anim', '--shot-every', '60',
+                    '--shot-div', '4', '--shot-prefix',
+                    os.path.join(seq_dir, 'g')], 4.6)
+    check(rc == 0, '抓帧序列外壳退出码 0（实际 %s）' % rc)
+    names = sorted(f for f in os.listdir(seq_dir) if f.endswith('.bmp'))
+    check(len(names) >= 30, '抓到足够多的帧（%d 张，>=30）' % len(names))
+    frames = [bmp_pixels(os.path.join(seq_dir, f)) for f in names]
+    frames = [f for f in frames if f is not None]
+    check(len(frames) >= 30, '帧都读得出来（%d）' % len(frames))
+    diffs = []
+    for a, b in zip(frames, frames[1:]):
+        d, _ = mean_abs(a, b)
+        diffs.append(d)
+    if diffs:
+        ds = sorted(diffs)
+        med = ds[len(ds) // 2]
+        mn = ds[0]
+        mx = ds[-1]
+        print('  相邻帧差: min=%.4f median=%.4f max=%.4f' % (mn, med, mx))
+        check(mn > 0.02, '没有"卡住不动"的相邻帧（min %.4f > 0.02）' % mn)
+        check(med > 0.1, '相邻帧差中位数 > 0.1（%.4f，动画在连续推进）' % med)
+        check(mx < med * 3.0 + 1.0,
+              '没有突兀跳变（max %.4f < 3*median+1）' % mx)
+    else:
+        check(False, '相邻帧差算不出来')
+
+    print('== 6. 性能（≥45 fps；带缓存的逐帧重算）==')
     m = re.search(r'\(([0-9.]+) fps\)', mid_log)
     fps = int(float(m.group(1))) if m else -1
     print('  mid run fps=%s' % fps)
-    check(fps >= 25, '缩放期间外壳 fps ≥ 25（实际 %s）' % fps)
+    check(fps >= 45, '缩放期间外壳 fps ≥ 45（实际 %s）' % fps)
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))

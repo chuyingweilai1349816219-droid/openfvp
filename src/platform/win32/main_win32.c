@@ -140,6 +140,11 @@ typedef struct Options {
      * 默认关 → 冻结基线不变；--title-anim 不会自动打开它。 */
     int title_bg_anim;
     double shot_at_ms; /* --shot-at N：跑到 N 毫秒时存一张截图（0 = 不存） */
+    /* --shot-every MS --shot-prefix P：一次运行里每隔 MS 毫秒抓一张
+     * P-NNNN.bmp（做动画 demo/GIF 用；不是像素基线的一部分）。 */
+    double shot_every_ms;
+    int shot_div; /* --shot-div N：抓帧时 box 降采样 N 倍（1 = 原尺寸） */
+    wchar_t shot_prefix[PATH_CAP];
     int title_no_bg; /* --title-no-bg：标题菜单不铺背景（几何测量用） */
     int title_hover_seed; /* --title-hover N：启动就把第 N 项设为 hover（截图/门禁用，-1 = 不动） */
     int debug_save_request;
@@ -459,7 +464,8 @@ static const wchar_t *usage_text(void)
            L"  --title-menu        先显示引擎侧标题菜单（New Game/Continue/Album/Option/Exit），\n"
            L"                      选 New Game 才开始跑脚本（默认关；几何按原版实测）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
-           L"  --title-bg-anim     标题背景按脚本做缩放动画（星空 2000->1000/40 s；默认关）\n"
+           L"  --title-bg-anim     标题背景按脚本做缩放动画（星空 2000->1000/40 s；默认关）\n"           L"  --shot-every MS     运行中每 MS 毫秒抓一张（配 --shot-prefix；做动画 demo）\n"
+           L"  --shot-prefix P     --shot-every 的文件名前缀（写 P-0000.bmp ..）\n"           L"  --shot-div N       抓帧时 box 降采样 N 倍（1..8，默认 1）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --startup-trace FILE 把启动各阶段写进 FILE（日志打开之前也能落盘，\n"
            L"                      卡启动时用它定位）\n"
@@ -547,6 +553,9 @@ static void defaults(Options *o)
     o->no_input = 0;
     o->glyph_original = 0;
     o->shot_at_ms = 0.0;
+    o->shot_every_ms = 0.0;
+    o->shot_div = 1;
+    o->shot_prefix[0] = L'\0';
     o->title_hover_seed = -1;
     o->debug_load_request = -1;
     o->motion = 0;
@@ -744,6 +753,14 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->title_bg_anim = 1;
         } else if (wcscmp(a, L"--shot-at") == 0 && i + 1 < argc) {
             o->shot_at_ms = wcstod(argv[++i], NULL);
+        } else if (wcscmp(a, L"--shot-every") == 0 && i + 1 < argc) {
+            o->shot_every_ms = wcstod(argv[++i], NULL);
+        } else if (wcscmp(a, L"--shot-div") == 0 && i + 1 < argc) {
+            int dv = _wtoi(argv[++i]);
+
+            o->shot_div = dv < 1 ? 1 : (dv > 8 ? 8 : dv);
+        } else if (wcscmp(a, L"--shot-prefix") == 0 && i + 1 < argc) {
+            wcsncpy(o->shot_prefix, argv[++i], PATH_CAP - 1);
         } else if (wcscmp(a, L"--title-no-bg") == 0) {
             o->title_no_bg = 1;
         } else if (wcscmp(a, L"--title-hover") == 0 &&
@@ -1252,6 +1269,52 @@ static int write_bmp32(const wchar_t *path, const uint32_t *rgba, int w,
     fvp_logf("screenshot: %s %dx%d (%lu bytes) %s",
              w2u(path, u8, sizeof(u8)), w, h, (unsigned long)image_bytes,
              ok ? "ok" : "FAILED");
+    return ok;
+}
+
+/* 抓帧降采样：div×div 的 box 平均后写 BMP（--shot-div）。 */
+static int write_bmp32_scaled(const wchar_t *path, const uint32_t *rgba, int w,
+                              int h, int div)
+{
+    int dw, dh, x, y, dx, dy;
+    uint32_t *tmp;
+    int ok;
+
+    if (div <= 1) {
+        return write_bmp32(path, rgba, w, h);
+    }
+    dw = w / div;
+    dh = h / div;
+    if (dw <= 0 || dh <= 0) {
+        return 0;
+    }
+    tmp = (uint32_t *)malloc((size_t)dw * (size_t)dh * sizeof(uint32_t));
+    if (tmp == NULL) {
+        return 0;
+    }
+    for (y = 0; y < dh; ++y) {
+        for (x = 0; x < dw; ++x) {
+            unsigned sr = 0, sg = 0, sb = 0;
+
+            for (dy = 0; dy < div; ++dy) {
+                const uint32_t *row = rgba + (size_t)(y * div + dy) * (size_t)w;
+                for (dx = 0; dx < div; ++dx) {
+                    uint32_t d = row[x * div + dx];
+
+                    sr += (d >> 16) & 0xFFu;
+                    sg += (d >> 8) & 0xFFu;
+                    sb += d & 0xFFu;
+                }
+            }
+            sr /= (unsigned)(div * div);
+            sg /= (unsigned)(div * div);
+            sb /= (unsigned)(div * div);
+            tmp[(size_t)y * (size_t)dw + (size_t)x] =
+                0xFF000000u | (sr << 16) | (sg << 8) | sb;
+        }
+    }
+    ok = write_bmp32(path, tmp, dw, dh);
+    free(tmp);
     return ok;
 }
 
@@ -2500,6 +2563,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int opening_layers_loaded = 0;
     double opening_started_at = 0.0;
     int shot_taken = 0;
+    int shot_seq = 0;
+    double shot_next_ms = 0.0;
     int save_preview_ok = 0;
     int load_view_active = 0;      /* 部分恢复视图（仅画面+文本） */
     FvpGameMenu gmenu;             /* 游戏内菜单（引擎侧 UI） */
@@ -3117,6 +3182,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
         now = now_sec();
         title_bg_now = now;
+    if (opts.shot_every_ms > 0.0 && shot_next_ms <= 0.0) {
+        shot_next_ms = opts.shot_every_ms;
+    }
 
         if (opts.run_seconds > 0.0 && now - run_started >= opts.run_seconds) {
             exit_auto = 1;
@@ -3851,7 +3919,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     }
                     (void)gfx_draw_image_op_xform(
                         gfx, fvp_openseq_layer_slot(i), st.dx, st.dy, st.op_x,
-                        st.op_y, st.scale_x1000, st.scale_y1000, st.angle_x10,
+                        st.op_y, st.scale_x1000, st.scale_y1000, st.angle_units,
                         st.alpha);
                 }
             }
@@ -4004,6 +4072,25 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                              w2u(opts.screenshot, u8s, sizeof(u8s)),
                              opts.shot_at_ms);
                 }
+            }
+        }
+        /* --shot-every：按固定间隔抓一串（demo/GIF 用） */
+        if (opts.shot_every_ms > 0.0 && opts.shot_prefix[0] != L'\0' &&
+            canvas != NULL && (now - t_start) * 1000.0 >= shot_next_ms) {
+            wchar_t path[PATH_CAP];
+            char u8e[PATH_CAP * 3];
+
+            _snwprintf(path, PATH_CAP, L"%ls-%04d.bmp", opts.shot_prefix,
+                       shot_seq);
+            if (write_bmp32_scaled(path, canvas, cw, ch, opts.shot_div)) {
+                fvp_logf("screenshot: %s at %.0f ms (shot-every)",
+                         w2u(path, u8e, sizeof(u8e)),
+                         (now - t_start) * 1000.0);
+            }
+            shot_seq += 1;
+            shot_next_ms += opts.shot_every_ms;
+            if (shot_next_ms < (now - t_start) * 1000.0) {
+                shot_next_ms = (now - t_start) * 1000.0 + opts.shot_every_ms;
             }
         }
             fvp_win32_present(&win, canvas, cw, ch);

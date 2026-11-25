@@ -1,0 +1,122 @@
+{
+ "angle": {
+  "ambiguity": "PrimSetRS 以 3600 取模（脚本层周期），渲染角是 0.05°/单位（每圈 7200）；两者都冻结，渲染以渲染公式为准",
+  "field": "prim+0x24 (int16)",
+  "renderer": {
+   "degrees_per_unit": 0.05000000139137676,
+   "divisor": 3600.0,
+   "divisor_bytes": "dc3578d74500",
+   "divisor_va": "0x0045d778",
+   "matrix_call_bytes": "e851b50100",
+   "matrix_fn": "0x00446750 (D3DXMatrixRotationZ)",
+   "multiplier": 3.1415927410125732,
+   "multiplier_bytes": "dc0d202e4700",
+   "multiplier_va": "0x00472e20",
+   "pc_fdiv": "0x0042b1e2",
+   "pc_fild": "0x0042b1de",
+   "pc_fmul": "0x0042b1e8",
+   "radians_formula": "radians = units * 3.1415927410125732 / 3600.0",
+   "units_per_turn": 7199.999799641752
+  },
+  "setter": {
+   "cmd": 82,
+   "handler": "0x0043baf0",
+   "idiv_bytes": "f7ff",
+   "modulus": 3600,
+   "modulus_bytes": "bf100e0000",
+   "name": "PrimSetRS",
+   "note": "实参对 3600 取余，负数 +3600 后写 WORD [prim+0x24]"
+  }
+ },
+ "exe": {
+  "image_base": "0x00400000",
+  "sha256": "cacdbe6ba9bb90b3818e0ac748b391681d5483db406b90ea7319204e0c3ab90a",
+  "size": 817664
+ },
+ "rs_branch": {
+  "convention": "D3D 行向量：M 从 I 起依次右乘 R、T1、S、T2",
+  "formula": "final = T2 + S·(R·(img − OP) + prim + accum)",
+  "gate": "test byte [prim+0x6], 4（RS/缩放脏位）",
+  "gate_bytes": "f64706040f84",
+  "gate_pc": "0x0042b21e",
+  "local_quad": "(图头 xy) − OP（OP 在 prim+0x20/+0x22）",
+  "matrix_calls": [
+   {
+    "bytes": "e851b50100",
+    "fn": "0x00446750",
+    "name": "RotationZ",
+    "order": 1,
+    "pc": "0x0042b1fa"
+   },
+   {
+    "bytes": "e81eb50100",
+    "fn": "0x00446732",
+    "name": "Multiply",
+    "order": 2,
+    "pc": "0x0042b20f"
+   },
+   {
+    "bytes": "e894b40100",
+    "fn": "0x0044674a",
+    "name": "Translation(T1)",
+    "order": 3,
+    "pc": "0x0042b2b1"
+   },
+   {
+    "bytes": "e867b40100",
+    "fn": "0x00446732",
+    "name": "Multiply",
+    "order": 4,
+    "pc": "0x0042b2c6"
+   },
+   {
+    "bytes": "e816b40100",
+    "fn": "0x00446744",
+    "name": "Scaling",
+    "order": 5,
+    "pc": "0x0042b329"
+   },
+   {
+    "bytes": "e8efb30100",
+    "fn": "0x00446732",
+    "name": "Multiply",
+    "order": 6,
+    "pc": "0x0042b33e"
+   },
+   {
+    "bytes": "e8c4b30100",
+    "fn": "0x0044674a",
+    "name": "Translation(T2)",
+    "order": 7,
+    "pc": "0x0042b381"
+   },
+   {
+    "bytes": "e897b30100",
+    "fn": "0x00446732",
+    "name": "Multiply",
+    "order": 8,
+    "pc": "0x0042b396"
+   }
+  ],
+  "not_used_yet": "prim.xy≠0 的图元会多出\"画面中心 − OP\"的偏移（开场 p1..p3 等）；渲染器目前仍用 prim + OP + R·S·(img−OP)，等接这部分时再验证",
+  "self_checks": [
+   "背景 prim=0/R=I：s=1 → 画面中心 − OP = (−240,−135) = 超尺寸图居中裁剪（与冻结的 title bg 裁剪一致）",
+   "s=0.8 → (0,0) 整屏铺满；s=0.9 → (−120,−67.5)"
+  ],
+  "t1": "(prim+0x14, prim+0x16) + 累加平移",
+  "t2": "(engine+0x60 / 2, engine+0x64 / 2) = 画面中心",
+  "t2_bytes": "8b0d68134800d9ee8b4164992bc2d1f88944240c8b416083ec0c99d95c24082b"
+ },
+ "viewport": {
+  "coefficient": 1000.0,
+  "coefficient_va": "0x0045d578",
+  "fields": [
+   "engine+0x6a6a4c",
+   "engine+0x6a6a50",
+   "engine+0x6a6a54"
+  ],
+  "note": "默认 0 时不影响上面的公式；系数 1000.0 与缩放参数同一量纲",
+  "writer_bytes": "80390074330fbf410ac601008b156813480089824c6a6a000fbf410c8b15681348008982506a6a000fbf410e8b0d6813",
+  "writer_pc": "0x00424010"
+ }
+}

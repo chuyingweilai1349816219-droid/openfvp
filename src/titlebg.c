@@ -40,7 +40,7 @@ void fvp_titlebg_state(FvpTitleBgGame game, int elapsed_ms,
     out->animated = 0;
     out->scale_x1000 = 1000;
     out->scale_y1000 = 1000;
-    out->angle_x10 = 0;
+    out->angle_units = 0;
     out->done = 1;
     if (game != FVP_TITLEBG_GAME_HOSHIMEMO) {
         /* 五彩斑斓：4 层超尺寸图 + OP 轴心 + 旋转，尚未实现（见 titlebg.h）。 */

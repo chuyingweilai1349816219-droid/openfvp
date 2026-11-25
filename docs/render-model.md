@@ -58,7 +58,7 @@ $PY fvp/work/run_render.py --at 534000 --debug
 | +0x18/+0x1a | u16 | W / H（0=用图自身尺寸） | `PrimSetWH` |
 | +0x1c/+0x1e | u16 | U / V（贴图内偏移） | `PrimSetUV`（要求 `prim+4 == 4`） |
 | +0x20/+0x22 | u16 | OP：**缩放/旋转轴心**（最终位置 = prim.xy + OP + R·S·(图头 xy − OP)，见 docs/opening.md §3） | `PrimSetOP` |
-| +0x24 | u16 | 旋转角，单位 0.1°（%3600） | `PrimSetRS/RS2`（`idiv $0xe10`） |
+| +0x24 | u16 | 旋转角（**渲染 1 单位 = 0.05°**：`a/3600·π` rad）；`PrimSetRS/RS2` 里 `idiv $0xe10` 只是取模 | `PrimSetRS/RS2`（`idiv $0xe10`） |
 | +0x26/+0x28 | u16 | 缩放 X/Y ×100（1000 = 1.0） | `PrimSetRS/RS2` |
 | +0x2a/+0x2c | u16 | 首/末子节点 | `PrimGroupIn` |
 | +0x2e | u16 | 图形槽 id（type==4） | `PrimSetSprt` `mov %dx,0x2e(%eax)` |
@@ -177,7 +177,9 @@ y = graph[slot].y(0x516) + prim.y(0x16) + 额外的组偏移
 * 缩放：`prim.scaleX/Y / 1000`（`PrimSetRS(prim, angle, scale)` 同时写 X/Y）。
   立绘缩放围绕锚点做，尺寸先乘 scale 再落位。
 * alpha：`prim.alpha/255` 乘到素材的 alpha 通道。
-* 旋转：`prim.angle` 单位 0.1°，`PrimSetRS2` 还能分别给 X/Y 缩放。渲染层目前只对 UI 类做旋转。
+ * 旋转：`prim.angle` **渲染 1 单位 = 0.05°**（7200 单位 = 360°；exe 0x42B1E2 把
+   单位角 `/3600·π` 交给 D3DXMatrixRotationZ，见 `ref/exe-rs-transform.json`）。
+   `PrimSetRS2` 还能分别给 X/Y 缩放。渲染层目前只对 UI 类做旋转。
 * blend：`prim.blend=1` 时按加色近似（`_paste_clipped(additive=True)`）。
 * Z：`prim.z` 已经解析出来，但**引擎的绘制顺序不是按 Z 排序**，而是按 group 树深度优先
   （`0x438ab0` 的类型 1 分支：从 `prim+0x2a` 首子开始，沿 `prim+0x10` 兄弟链递归；
@@ -633,3 +635,26 @@ $PY fvp/work/render_assets.py "graph/BG063_000" "graph_bs/CHR_真紅_基_白衣�
 
 `render.py` 里 `RenderVM.stats` 是「命令名 → 调用次数」，`graph_log`/`text_log` 记录每次
 `GraphLoad`/`TextPrint`/`TextClear` 的步数与参数，排查"哪一帧该有什么"很方便。
+
+## RS 分支（缩放/旋转）的变换 —— 结构分析自 exe（`ref/exe-rs-transform.json`）
+
+`test byte [prim+0x6], 4`（RS/缩放脏位）成立时，exe 走 0x42B21E 起的另一条矩阵合成
+（和"只有 OP"的分支 0x42AF08 不是同一条）：
+
+* 四边形局部坐标 = **(图头 xy) − OP**（OP 在 `prim+0x20/+0x22`）；
+* `T1 = (prim+0x14, prim+0x16) + 累加平移`；
+* 矩阵顺序（D3D 行向量，M 从 I 起依次右乘）：`R`(0x446750) → `T1`(0x44674A) →
+  `S`(0x446744) → `T2`(0x44674A)，每步之间 `Multiply`(0x446732)；
+* **`T2 = (engine+0x60 / 2, engine+0x64 / 2)` = 画面中心**（0x42B343..0x42B37D：
+  读 `[engine+0x64]`、`[engine+0x60]` 再算术右移 1 位）。
+
+⇒ **`最终 = T2 + S·(R·(图头 − OP) + prim + accum)`**。
+
+自洽特例：背景层（prim=0、R=I、OP=图心）在 s=1 时 `最终 = 画面中心 − OP =
+(1920−2400)/2, (1080−1350)/2 = (−240,−135)`，正是本工程一直用的"超尺寸图居中裁剪
+240/135"；s=0.8 → (0,0) 整屏铺满；s=0.9 → (−120,−67.5)。
+
+**还没用上的一条**：`prim.xy ≠ 0` 的图元（例如开场 p1..p3）在这个分支里会多出
+"画面中心 − OP" 的偏移。渲染器目前仍用 `prim + OP + R·S·(图头−OP)`，接这部分时
+要单独验证，不能默认两者等价。
+

@@ -95,7 +95,7 @@ typedef enum GfxPrimField {
     GFX_F_V,
     GFX_F_OP1,
     GFX_F_OP2,
-    GFX_F_ANGLE,    /* 0.1 degree units, %3600                           */
+    GFX_F_ANGLE,    /* 角度单位：1 = 0.05°（7200 = 360°），见 exe 0x42B1E2 */
     GFX_F_SCALE_X,  /* *1000 (1000 = 1.0)                                */
     GFX_F_SCALE_Y,
     GFX_F_GRAPH,    /* graph slot (type 4), -1 = none                    */
@@ -360,9 +360,11 @@ int gfx_draw_image_xform(Gfx *g, int slot, int x, int y, int scale_x1000,
  * 0x42B41F..0x42B477 的平移；矩阵函数 0x446744/0x44674A/0x446750）。
  * 也就是在 OP 处缩放/旋转：identity 时与 gfx_draw_image_alpha 画在
  * (x + 图头 x, y + 图头 y) 完全等价。
- * angle_x10 单位 0.1°，缩放 per-mille（1000 = 1.0），参数见 src/openinganim.h。 */
+ * angle_units：1 单位 = 0.05°（7200 = 360°；exe 0x42B1E2 把单位角除以 3600
+ * 再乘 π 交给 D3DXMatrixRotationZ，见 ref/exe-rs-transform.json）；
+ * 缩放 per-mille（1000 = 1.0），参数见 src/openinganim.h。 */
 int gfx_draw_image_op_xform(Gfx *g, int slot, int x, int y, int op_x, int op_y,
-                            int scale_x1000, int scale_y1000, int angle_x10,
+                            int scale_x1000, int scale_y1000, int angle_units,
                             int alpha);
 
 /* 用 (r,gr,b,alpha) 铺满整张画布（开场白场用）。 */

@@ -41,7 +41,7 @@ typedef struct FvpOpenLayerState {
     int alpha;       /* 0..255 */
     int scale_x1000; /* per-mille，1000 = 原尺寸 */
     int scale_y1000;
-    int angle_x10;   /* 0.1°，0..3599 */
+    int angle_units; /* 角度单位：1 = 0.05°（7200 = 360°），0..3599 */
     int dx;          /* 相对素材头位置（图头 x/y）的 HD 像素偏移 */
     int dy;
     int op_x;        /* 缩放/旋转轴心（HD 像素） */

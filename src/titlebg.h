@@ -27,7 +27,7 @@ typedef struct FvpTitleBgState {
     int animated;    /* 0 = 本作还没实现背景动画（按 1:1 静态裁剪画） */
     int scale_x1000; /* per-mille */
     int scale_y1000;
-    int angle_x10;   /* 0.1° */
+    int angle_units; /* 角度单位：1 = 0.05°（7200 = 360°） */
     int done;
 } FvpTitleBgState;
 

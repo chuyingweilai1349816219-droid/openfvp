@@ -450,7 +450,7 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | 15 | 80 | PrimSetNull | 1 | (primId) | 重置/销毁 primitive（type→0 的初始化） | 0x43ba7b call 0x439bf0(id, 0)；0x439bf0 是按 type 初始化 prim 的公共函数 |
 | 16 | 91 | PrimSetZ | 2 | (primId, z 100..10000) | 设 Z 值（u16 `prim+0x12`），钳制到 100..10000；arg2 为 bool 时仅重刷 flags；非 int 则清除 Z 标记 | 0x43c01c `cmp $0x64` / 0x43c035 `cmp $0x2710`；0x43c02e/0x43c042 `mov %dx,0x12(%ecx)`；0x43c051 起 bool/其他分支 |
 | 17 | 54 | MotionMoveS2 | 8 | (primId, scaleX 100..10000, scaleY, ?, ?, timeMs 1..300000, mode 1..5, flag) | 缩放动画；省略时用 prim 当前缩放(+0x26/+0x28)，提交给 engine+0x67ce64 | 0x43af99 校验 arg6=time、arg7=mode；0x43afe9 读 `0x61dd8a/0x61dd8c`；0x43b07e `add $0x67ce64` + call 0x42d670 |
-| 18 | 83 | PrimSetRS2 | 4 | (primId, angle, scaleX 100..10000, scaleY) | 设旋转角（`angle % 3600`，单位 0.1°）写 `prim+0x24`，X/Y 缩放分别写 `prim+0x26/+0x28` | 0x43bbba `mov $0xe10,%edi; idiv` 取余 → 0x43bbd0 `mov %dx,0x24`；0x43bbf9/0x43bc2d 写 0x26/0x28 |
+| 18 | 83 | PrimSetRS2 | 4 | (primId, angle, scaleX 100..10000, scaleY) | 设旋转角（`angle % 3600`，**渲染 1 单位 = 0.05°**）写 `prim+0x24`，X/Y 缩放分别写 `prim+0x26/+0x28` | 0x43bbba `mov $0xe10,%edi; idiv` 取余 → 0x43bbd0 `mov %dx,0x24`；0x43bbf9/0x43bc2d 写 0x26/0x28 |
 | 19 | 49 | MotionMoveStop | 1 | (primId) | 停止位置移动动画 | 0x43accc `add $0x65ba54,%ecx; jmp 0x426ff0` |
 | 20 | 82 | PrimSetRS | 3 | (primId, angle, scale 100..10000) | 旋转 + 统一缩放（X/Y 都写同一个值） | 0x43bb1e `idiv $0xe10` → +0x24；0x43bb6b、0x43bb4f 都写 0x26/0x28 |
 | 21 | 112 | TextColor | 4 | (twIdx 0..31, R, G, B) 各 0..255 | 设文本窗口颜色：三个参数先经 `engine+0x6a491c` 的 dword 表转换，再分别存 `tw+0x598/0x59c/0x5a0`（表内容待运行时确认，见 §6-6） | 0x43c8e6 起分别 `cmpb $0x2`+`cmp $0xff` → 0x424800（R）/0x424830（G）/0x424890（B）；0x42480a `mov 0x6a491c(%edx,%eax,4),%eax`；0x424811 `mov %eax,0x598(%ecx)` |

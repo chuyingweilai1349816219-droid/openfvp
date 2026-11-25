@@ -419,7 +419,7 @@ int main(void)
     /* 180°：尺寸不变、位置不变（重采样会在边缘留下一圈过渡像素，
      * 所以断言包围盒而不是逐字节）。 */
     clear_canvas(g);
-    (void)gfx_draw_image_op_xform(g, 1, 10, 10, 20, 15, 1000, 1000, 1800, 255);
+    (void)gfx_draw_image_op_xform(g, 1, 10, 10, 20, 15, 1000, 1000, 3600, 255);
     CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1, "180° 有墨迹");
     CHECK(labs((long)bx0 - 10) <= 1 && labs((long)by0 - 10) <= 1 &&
               bx1 - bx0 + 1 == IMG_W && by1 - by0 + 1 == IMG_H,
@@ -429,7 +429,7 @@ int main(void)
 
     /* 90°：包围盒宽高互换（40x30 → 30x40），中心仍不动 */
     clear_canvas(g);
-    (void)gfx_draw_image_op_xform(g, 1, 10, 10, 20, 15, 1000, 1000, 900, 255);
+    (void)gfx_draw_image_op_xform(g, 1, 10, 10, 20, 15, 1000, 1000, 1800, 255);
     CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1, "90° 有墨迹");
     CHECK(bx1 - bx0 + 1 == 30 && by1 - by0 + 1 == 40,
           "旋转 90° 后包围盒 30x40，实际 %dx%d", bx1 - bx0 + 1,

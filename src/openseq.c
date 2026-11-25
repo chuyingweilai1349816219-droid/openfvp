@@ -31,7 +31,7 @@ typedef struct FvpOpenLayerDef {
     int scale_from;  /* per-mille */
     int scale_to;
     int scale_ms;
-    int angle_from; /* 0.1° */
+    int angle_from; /* 角度单位：1 = 0.05°（7200 = 360°） */
     int angle_to;
     int angle_ms;
     int move_from_x; /* 逻辑像素（脚本原值） */
@@ -295,7 +295,7 @@ int fvp_openseq_layer_state(const FvpOpenSeq *s, int index,
     out->scale_x1000 = lerp_ease(L->scale_from, L->scale_to, t, L->scale_ms,
                                  FVP_OPEN_EASE_MODE);
     out->scale_y1000 = out->scale_x1000;
-    out->angle_x10 = lerp_ease(L->angle_from, L->angle_to, t, L->angle_ms,
+    out->angle_units = lerp_ease(L->angle_from, L->angle_to, t, L->angle_ms,
                                FVP_OPEN_EASE_MODE);
     out->dx = lerp_ease(logical_to_hd_x(g, L->move_from_x),
                         logical_to_hd_x(g, L->move_to_x), t, L->move_ms,

@@ -132,3 +132,18 @@
 make test_motion        # 31 项：lerp 时间轴 / 零时长 / 负时长拒绝 / 回收 / 多补间 / NULL 安全
 make test_gfx_motion    # 21 项：补间 → 图元字段（默认关闭时不动画面）
 ```
+
+## 6. 修正：旋转角单位是 0.05°，不是 0.1°（2026-11-26）
+
+之前 render-model / title-menu / vm-commands 都把 `prim+0x24` 记成"0.1°/单位"。
+这次逐指令对完（`scripts/extract-exe-rs-transform.py` → `ref/exe-rs-transform.json`）：
+
+* `PrimSetRS`(82) 的 `idiv 0xE10(3600)` 只是**取模**（存 WORD），
+* 渲染 0x42B1E2: `fild 角度` → `fdiv 3600.0` → `fmul π`(0x472E20) →
+  `D3DXMatrixRotationZ(弧度)`，
+* ⇒ **渲染角 = a·0.05°**，**7200 单位 = 360°**。
+
+所以脚本里的 3600（开场 p1..p3 的 `MotionMoveR 3600→0`）渲染出来是 **180°→0**，
+标题背景的 150/250/550/1250 是 **7.5/12.5/27.5/62.5°**。`src/gfx.c` 的四处
+角度换算已从 `/10.0` 改成 `/20.0`，`tests/test_gfx_xform.c` 的 90°/180° 断言
+改用 1800/3600 单位；`angle_x10` 字段统一改名为 `angle_units`。

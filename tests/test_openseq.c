@@ -62,7 +62,7 @@ static FvpOpenLayerState state_at(FvpOpenGame game, int slot, int ms)
     st.alpha = -1;
     st.scale_x1000 = -1;
     st.scale_y1000 = -1;
-    st.angle_x10 = -1;
+    st.angle_units = -1;
     st.dx = 0;
     st.dy = 0;
     st.op_x = -1;
@@ -188,14 +188,14 @@ int main(void)
           "p1 scale is uniform on both axes");
 
     /* ---- 5. 旋转：3600 -> 0（0.1°） ---- */
-    CHECK(state_at(FVP_OPEN_GAME_IROSEKA, 255, 0).angle_x10 == 3600,
+    CHECK(state_at(FVP_OPEN_GAME_IROSEKA, 255, 0).angle_units == 3600,
           "p1 angle 3600 at t=0");
-    CHECK(state_at(FVP_OPEN_GAME_IROSEKA, 255, 700).angle_x10 == 900,
+    CHECK(state_at(FVP_OPEN_GAME_IROSEKA, 255, 700).angle_units == 900,
           "p1 angle 900 at 700 (got %d)",
-          state_at(FVP_OPEN_GAME_IROSEKA, 255, 700).angle_x10);
-    CHECK(state_at(FVP_OPEN_GAME_IROSEKA, 255, 1400).angle_x10 == 0,
+          state_at(FVP_OPEN_GAME_IROSEKA, 255, 700).angle_units);
+    CHECK(state_at(FVP_OPEN_GAME_IROSEKA, 255, 1400).angle_units == 0,
           "p1 angle 0 at 1400");
-    CHECK(state_at(FVP_OPEN_GAME_IROSEKA, 252, 700).angle_x10 == 0,
+    CHECK(state_at(FVP_OPEN_GAME_IROSEKA, 252, 700).angle_units == 0,
           "logo_favo never rotates");
 
     /* ---- 6. 位移：逻辑 (0,-200) → (0,0)，HD = ×1080/640 = -337 ---- */
@@ -246,7 +246,7 @@ int main(void)
             CHECK(st.alpha >= 0 && st.alpha <= 255, "alpha bounded");
             CHECK(st.scale_x1000 >= 750 && st.scale_x1000 <= 10000,
                   "scale bounded (%d)", st.scale_x1000);
-            CHECK(st.angle_x10 >= 0 && st.angle_x10 <= 3600, "angle bounded");
+            CHECK(st.angle_units >= 0 && st.angle_units <= 3600, "angle bounded");
         }
     }
     /* 淡入阶段 alpha 单调不减；淡出阶段单调不增（252） */

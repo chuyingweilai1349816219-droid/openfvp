@@ -2012,7 +2012,7 @@ static void render_sprite(Gfx *g, GfxPrim *p, const GfxXf *xf)
         if (mode == GFX_MODE_UI && angle_eff != 0) {
             int ow = 0, oh = 0;
             uint8_t *rot =
-                rotate_rgba(img, tw, th, -(double)angle_eff / 10.0, &ow, &oh);
+                rotate_rgba(img, tw, th, -(double)angle_eff / 20.0, &ow, &oh);
             free(img);
             if (rot == NULL) {
                 return;
@@ -2065,7 +2065,7 @@ static void walk_tree(Gfx *g, int pid, int depth, const GfxXf *parent)
             xf.sx *= (double)p->scale_x / 1000.0;
             xf.sy *= (double)p->scale_y / 1000.0;
             xf.alpha = (p->alpha * xf.alpha + 127) / 255;
-            xf.angle += (double)p->angle / 10.0;
+            xf.angle += (double)p->angle / 20.0;
         }
         for (i = 0; i < p->nchildren; i++) {
             walk_tree(g, p->children[i], depth + 1, &xf);
@@ -3878,20 +3878,113 @@ int gfx_draw_image_cropped(Gfx *g, int slot, int dx, int dy, int sx, int sy,
 /* 标题背景缩放（带缓存）：按 per-mille 缩放把整屏背景缩放后铺满 (0,0,dw,dh)。
  *
  * 轴心默认 (0,0)（左上锚）——对应星空背景（无 PrimSetOP，见
- * ref/title-bg-motion.json）。只处理"屏幕上可见的源区域"，并把源矩形量化到
- * 16 px 步进后缓存缩放结果：脚本 40 s 的动画每 ~0.6 s 才需要重算一次，
- * 其余帧只是贴一张缓存图（否则每帧 1920x1080 三角形滤波约 80 ms，只有 10 fps）。
+ * ref/title-bg-motion.json）。只处理"屏幕上可见的源区域"；源矩形**不量化**
+ * （逐像素跟着缩放走），用快速双线性重采样并缓存最近一帧的结果：
+ * 每帧重算一次约 10 ms（三角形滤波要 ~80 ms；而且**不量化源矩形**——直接按
+ * "屏幕像素 → 源坐标"的分数映射做双线性，避免整数源像素台阶造成的顿挫）。
+ * 静态/终态仍走 1:1 直贴，像素基线不受影响。
  */
+/* 分数缩放的屏幕→源坐标映射：屏幕像素 (x,y) 采样源坐标
+ * ((x+0.5)/sx - 0.5, (y+0.5)/sy - 0.5)，双线性取 4 邻域。
+ * 背景图不透明（alpha 全 255），所以不做 pre-multiply。 */
+/* 分数缩放的屏幕→源坐标映射：屏幕像素 (x,y) 采样源坐标
+ * ((x+0.5)/sx - 0.5, (y+0.5)/sy - 0.5)，双线性取 4 邻域。
+ * 背景图不透明（alpha 全 255），所以不做 pre-multiply。
+ * x 方向的源坐标/权重每帧预计算成表（dw 次除法），内层循环纯整数。 */
+static uint8_t *zoom_warp_rgba(const uint8_t *src, int sw, int sh, int dw,
+                               int dh, int sx1000, int sy1000)
+{
+    uint8_t *dst;
+    int *xtab;
+    int x, y;
+
+    dst = (uint8_t *)malloc((size_t)dw * (size_t)dh * 4u);
+    xtab = (int *)malloc((size_t)dw * 2u * sizeof(int));
+    if (dst == NULL || xtab == NULL) {
+        free(dst);
+        free(xtab);
+        return NULL;
+    }
+    for (x = 0; x < dw; ++x) {
+        double fx = ((double)x + 0.5) * 1000.0 / (double)sx1000 - 0.5;
+        int x0;
+        int wx;
+
+        if (fx < 0.0) {
+            fx = 0.0;
+        }
+        if (fx > (double)(sw - 1)) {
+            fx = (double)(sw - 1);
+        }
+        x0 = (int)fx;
+        wx = (int)((fx - (double)x0) * 256.0 + 0.5);
+        if (x0 > sw - 2) {
+            x0 = sw - 2;
+        }
+        xtab[x * 2 + 0] = x0;
+        xtab[x * 2 + 1] = wx;
+    }
+    for (y = 0; y < dh; ++y) {
+        double fy = ((double)y + 0.5) * 1000.0 / (double)sy1000 - 0.5;
+        int y0;
+        int wy;
+        const uint8_t *r0;
+        const uint8_t *r1;
+        uint8_t *orow = dst + (size_t)y * (size_t)dw * 4u;
+
+        if (fy < 0.0) {
+            fy = 0.0;
+        }
+        if (fy > (double)(sh - 1)) {
+            fy = (double)(sh - 1);
+        }
+        y0 = (int)fy;
+        wy = (int)((fy - (double)y0) * 256.0 + 0.5);
+        if (y0 > sh - 2) {
+            y0 = sh - 2;
+        }
+        r0 = src + (size_t)y0 * (size_t)sw * 4u;
+        r1 = src + (size_t)(y0 + 1) * (size_t)sw * 4u;
+        {
+            int iwy = 256 - wy;
+
+            for (x = 0; x < dw; ++x) {
+                int x0 = xtab[x * 2 + 0];
+                int wx = xtab[x * 2 + 1];
+                int iw = 256 - wx;
+                const uint8_t *a = r0 + (size_t)x0 * 4u;
+                const uint8_t *b = r0 + (size_t)(x0 + 1) * 4u;
+                const uint8_t *c = r1 + (size_t)x0 * 4u;
+                const uint8_t *d = r1 + (size_t)(x0 + 1) * 4u;
+                uint8_t *o = orow + (size_t)x * 4u;
+
+                o[0] = (uint8_t)(((((int)a[0] * iw + (int)b[0] * wx) >> 8) *
+                                  iwy +
+                                  (((int)c[0] * iw + (int)d[0] * wx) >> 8) *
+                                      wy) >> 8);
+                o[1] = (uint8_t)(((((int)a[1] * iw + (int)b[1] * wx) >> 8) *
+                                  iwy +
+                                  (((int)c[1] * iw + (int)d[1] * wx) >> 8) *
+                                      wy) >> 8);
+                o[2] = (uint8_t)(((((int)a[2] * iw + (int)b[2] * wx) >> 8) *
+                                  iwy +
+                                  (((int)c[2] * iw + (int)d[2] * wx) >> 8) *
+                                      wy) >> 8);
+                o[3] = 255;
+            }
+        }
+    }
+    free(xtab);
+    return dst;
+}
+
 int gfx_draw_image_zoomed(Gfx *g, int slot, int scale_x1000, int scale_y1000,
                           int dw, int dh)
 {
     const uint8_t *compo = NULL;
     int cw = 0;
     int ch = 0;
-    int sw;
-    int sh;
     int s;
-    int step = 16;
 
     if (g == NULL || dw <= 0 || dh <= 0) {
         return 0;
@@ -3906,49 +3999,24 @@ int gfx_draw_image_zoomed(Gfx *g, int slot, int scale_x1000, int scale_y1000,
         cw <= 0 || ch <= 0) {
         return 0;
     }
-    sw = (int)(((long long)dw * 1000 + scale_x1000 / 2) / scale_x1000);
-    sh = (int)(((long long)dh * 1000 + scale_y1000 / 2) / scale_y1000);
-    sw = ((sw + step / 2) / step) * step;
-    sh = ((sh + step / 2) / step) * step;
-    if (sw < step) {
-        sw = step;
-    }
-    if (sh < step) {
-        sh = step;
-    }
-    if (sw > cw) {
-        sw = cw;
-    }
-    if (sh > ch) {
-        sh = ch;
-    }
     /* 恒等：直接贴原图（与静态画面逐字节相同） */
-    if (sw == cw && sh == ch && dw == cw && dh == ch) {
+    if (scale_x1000 == 1000 && scale_y1000 == 1000 && dw == cw && dh == ch) {
         return gfx_draw_image_at(g, slot, 0, 0);
     }
     s = (int)g->slot[slot].compo_version;
     if (g->zoom_ok && g->zoom_img != NULL && g->zoom_slot == slot &&
-        g->zoom_ver == s && g->zoom_sw == sw && g->zoom_sh == sh &&
-        g->zoom_dw == dw && g->zoom_dh == dh) {
+        g->zoom_ver == s && g->zoom_sw == scale_x1000 &&
+        g->zoom_sh == scale_y1000 && g->zoom_dw == dw &&
+        g->zoom_dh == dh) {
         blit_sprite_alpha(g, 0, 0, dw, dh, g->zoom_img, 0, 255);
         g->stats.sprites += 1;
         g->stats.resize_cache_hits += 1;
         return 1;
     }
     {
-        uint8_t *sub = (uint8_t *)malloc((size_t)sw * (size_t)sh * 4u);
-        uint8_t *img;
-        int y;
+        uint8_t *img = zoom_warp_rgba(compo, cw, ch, dw, dh, scale_x1000,
+                                      scale_y1000);
 
-        if (sub == NULL) {
-            return 0;
-        }
-        for (y = 0; y < sh; ++y) {
-            memcpy(sub + (size_t)y * (size_t)sw * 4u,
-                   compo + (size_t)y * (size_t)cw * 4u, (size_t)sw * 4u);
-        }
-        img = resize_rgba(sub, sw, sh, dw, dh);
-        free(sub);
         if (img == NULL) {
             return 0;
         }
@@ -3957,8 +4025,8 @@ int gfx_draw_image_zoomed(Gfx *g, int slot, int scale_x1000, int scale_y1000,
         g->zoom_ok = 1;
         g->zoom_slot = slot;
         g->zoom_ver = s;
-        g->zoom_sw = sw;
-        g->zoom_sh = sh;
+        g->zoom_sw = scale_x1000;
+        g->zoom_sh = scale_y1000;
         g->zoom_dw = dw;
         g->zoom_dh = dh;
         blit_sprite_alpha(g, 0, 0, dw, dh, img, 0, 255);
@@ -4140,7 +4208,7 @@ int gfx_draw_image_xform(Gfx *g, int slot, int x, int y, int scale_x1000,
  * 把素材按 scale 放大后绕自身中心旋转，再把**旋转后的中心**放到变换后的中心位置。
  */
 int gfx_draw_image_op_xform(Gfx *g, int slot, int x, int y, int op_x, int op_y,
-                            int scale_x1000, int scale_y1000, int angle_x10,
+                            int scale_x1000, int scale_y1000, int angle_units,
                             int alpha)
 {
     const uint8_t *compo = NULL;
@@ -4170,7 +4238,7 @@ int gfx_draw_image_op_xform(Gfx *g, int slot, int x, int y, int op_x, int op_y,
     if (compo == NULL || cw <= 0 || ch <= 0) {
         return 0;
     }
-    if (scale_x1000 == 1000 && scale_y1000 == 1000 && angle_x10 == 0) {
+    if (scale_x1000 == 1000 && scale_y1000 == 1000 && angle_units == 0) {
         return gfx_draw_image_alpha(g, slot, x + im->x, y + im->y, alpha);
     }
     sx = (double)scale_x1000 / 1000.0;
@@ -4189,8 +4257,8 @@ int gfx_draw_image_op_xform(Gfx *g, int slot, int x, int y, int op_x, int op_y,
     /* 素材中心相对 OP 的偏移，先缩放再旋转（y 轴向下的屏幕坐标）。 */
     du = ((double)im->x + (double)cw / 2.0 - (double)op_x) * sx;
     dv = ((double)im->y + (double)ch / 2.0 - (double)op_y) * sy;
-    if (angle_x10 != 0) {
-        double a = (double)angle_x10 / 10.0;
+    if (angle_units != 0) {
+        double a = (double)angle_units / 20.0;
         double ca = cos(a * 3.14159265358979323846 / 180.0);
         double sa = sin(a * 3.14159265358979323846 / 180.0);
         double ru = du * ca - dv * sa;
@@ -4205,9 +4273,9 @@ int gfx_draw_image_op_xform(Gfx *g, int slot, int x, int y, int op_x, int op_y,
     }
     ow = w;
     oh = h;
-    if (angle_x10 != 0) {
+    if (angle_units != 0) {
         uint8_t *rot =
-            rotate_rgba(img, w, h, -(double)angle_x10 / 10.0, &ow, &oh);
+            rotate_rgba(img, w, h, -(double)angle_units / 20.0, &ow, &oh);
 
         free(img);
         if (rot == NULL) {

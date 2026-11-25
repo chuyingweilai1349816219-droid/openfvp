@@ -61,7 +61,9 @@
  *      + MotionMove(prim, 逻辑坐标…, 1400, 3)（hcb 0x5822B..0x582EC）---- */
 #define FVP_OPEN_VIEW_SCALE_FROM 10000
 #define FVP_OPEN_VIEW_SCALE_TO 1000
-#define FVP_OPEN_VIEW_ANGLE_FROM 3600 /* 0.1° 单位：360° */
+#define FVP_OPEN_VIEW_ANGLE_FROM 3600 /* 角度单位：渲染 180°
+                                        * （1 单位 = 0.05°，见
+                                        * ref/exe-rs-transform.json） */
 #define FVP_OPEN_VIEW_ANGLE_TO 0
 #define FVP_OPEN_VIEW_MS 1400
 

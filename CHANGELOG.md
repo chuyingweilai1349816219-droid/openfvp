@@ -51,6 +51,43 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 修正/实现（标题背景缩放"卡顿"：改成逐帧分数映射双线性，10 → 52-59 fps）
+
+- 用户两次反馈"缩放很卡"。查明两个原因并都修掉：
+  1. 1920×1080 三角形滤波一次 ~80 ms（10 fps）；上一版用 16 px 源矩形量化 + 缓存
+     换到 48 fps，但每 ~0.6 s 跳 16 源像素，**台阶可见**；
+  2. 现在**不量化**：`gfx_draw_image_zoomed` 按
+     `源坐标 = (屏幕像素+0.5)/缩放 − 0.5` 做分数映射双线性（x/y 表预计算、
+     内层纯整数），每帧重算 ~10 ms ⇒ **52-59 fps**，相邻帧差
+     min 0.386 / median 0.917 / max 1.587（max/median 1.73，无 0 平台/无跳变）。
+- 新增调试选项 `--shot-every MS --shot-div N --shot-prefix P`：一次运行里周期性抓
+  降采样帧，用来拼平滑 demo（本轮产出 `title-bgzoom-smooth.mp4` / `.gif`，out/ 不入库）。
+- 门禁 `verify_title_bg_anim.py` 增加平滑度段落（4 s 序列、30+ 帧、min>0.02、
+  max<3·median+1）并把 fps 断言提到 ≥45；`docs/title-menu.md` §23 记录两次踩坑与
+  最终方案；`docs/win32-shell.md` 记录新选项。
+
+### 修正（旋转角单位是 0.05°，不是 0.1°；RS 分支变换冻结）
+
+- 逐指令对完 exe：`PrimSetRS`(82) 的 `idiv 3600` 只是**取模**；渲染 0x42B1E2
+  `fild 角度 → fdiv 3600.0 → fmul π → D3DXMatrixRotationZ` ⇒
+  **渲染角 = 单位 × π / 3600 rad = 0.05°/单位，7200 单位 = 360°**。
+  之前 render-model / title-menu / vm-commands / 代码（`/10.0`）都按 0.1° 算，是错的。
+- 影响：开场 p1..p3 的 `MotionMoveR 3600→0` 渲染是 **180°→0**（不是 360°→0）；
+  标题背景 150/250/550/1250 单位 = **7.5/12.5/27.5/62.5°**。
+- 源码：`src/gfx.c` 四处角度换算 `/10.0 → /20.0`；`angle_x10` 统一改名 `angle_units`
+  （gfx/openseq/titlebg/外壳/测试）；`tests/test_gfx_xform.c` 的 90°/180° 断言改用
+  1800/3600 单位。
+- 新增 `scripts/extract-exe-rs-transform.py` + 基线 `ref/exe-rs-transform.json`：
+  - 角度单位（含指令字节：`dc3578d74500` / `dc0d202e4700` / `bf100e0000`）；
+  - RS 分支（`test byte [prim+6],4`）矩阵顺序 R → T1 → S → T2、
+    `T2 = (engine+0x60/2, engine+0x64/2)` 画面中心 ⇒
+    `final = T2 + S·(R·(图头−OP) + prim + accum)`；
+    自洽特例：背景 s=1 → (−240,−135) 居中裁剪、s=0.8 → (0,0) 整屏；
+    并**明确记录** "prim.xy≠0 的图元会多出 (画面中心−OP) 偏移，尚未接进渲染器"。
+- 门禁 `tests/verify_exe_rs_transform.py`（重提取逐字节 + 源码 /20.0 + 文档无旧说法）；
+  `run_all` 68→**69 步**；文档 render-model/title-menu/vm-commands/opening/
+  animation-baseline §6 全部改到新单位。
+
 ### 实现（星空标题背景缩放：2000→1000 per-mille / 40000 ms，带缩放缓存）
 
 - 把 §上一轮冻结的背景参数里**规则最干净**的一条接到画面：星空单层 1920×1080、

@@ -683,6 +683,15 @@ def build_steps(args):
                            '(iroseka 2000/2400/2560 total 4000; '
                            'hoshimemo 1000/1400/1560 total 3000)'))
 
+    # 6.496865 RS 分支变换 + 旋转角单位（exe 静态分析 → 基线 → 源码一致）
+    vrs = os.path.join(HERE, 'verify_exe_rs_transform.py')
+    steps.append(Step('verify_exe_rs_transform.py',
+                      [PY, '-X', 'utf8', vrs], 300, skip_reason=None,
+                      note='rotation unit = 0.05 deg/unit (7200 per turn, '
+                           'exe 0x42B1E2 /3600*pi) and the RS-branch transform '
+                           'final = T2 + S*(R*(img-OP)+prim+accum) frozen in '
+                           'ref/exe-rs-transform.json'))
+
     # 6.49687 标题背景缩放的端到端门禁（星空；含一次 42 s 运行验证终态）
     vbgz = os.path.join(HERE, 'verify_title_bg_anim.py')
     steps.append(Step('verify_title_bg_anim.py', [PY, '-X', 'utf8', vbgz], 900,
