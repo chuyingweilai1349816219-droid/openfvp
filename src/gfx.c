@@ -3610,6 +3610,35 @@ int gfx_text_width(Gfx *g, const char *utf8, int px)
  * 的预渲染按钮贴图）。x/y 是左上角；返回 1 = 画了、0 = 槽里没图。
  * 走的是和精灵渲染同一条合成/贴图路径（slot_compose + blit_sprite），
  * 所以缩放/多帧/叠加层行为与图元一致。 */
+int gfx_draw_image_scaled(Gfx *g, int slot, int x, int y, int w, int h)
+{
+    const uint8_t *compo = NULL;
+    int cw = 0;
+    int ch = 0;
+    uint8_t *img;
+    GfxPrim tmp;
+
+    if (g == NULL || w <= 0 || h <= 0) {
+        return 0;
+    }
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0 || compo == NULL) {
+        return 0;
+    }
+    if (cw == w && ch == h) {
+        return gfx_draw_image_at(g, slot, x, y);
+    }
+    img = resize_rgba(compo, cw, ch, w, h);
+    if (img == NULL) {
+        return 0;
+    }
+    memset(&tmp, 0, sizeof tmp);
+    tmp.alpha = 255;
+    blit_sprite(g, x, y, w, h, img, 0, &tmp);
+    free(img);
+    g->stats.sprites += 1;
+    return 1;
+}
+
 int gfx_draw_image_cropped(Gfx *g, int slot, int dx, int dy, int sx, int sy,
                            int w, int h)
 {

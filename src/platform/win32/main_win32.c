@@ -113,6 +113,8 @@ typedef struct Options {
     int title_save_list; /* --title-save-list: 直接打开 Continue 的存档列表 */
     /* 调试钩子：脚本自己调 SaveWrite/Load 之前先手动造一个请求，用来端到端
      * 验证"请求 -> 外壳执行"这条链路（-1 = 不发）。 */
+    int no_input; /* --no-input：忽略真实鼠标/键盘事件（门禁截图要确定性） */
+    int preview_slot; /* --preview-slot N：存档列表里预选第 N 号槽并显示预览 */
     int opening;    /* --opening：启动先跑开场序列（logo 淡入→白场→标题） */
     double shot_at_ms; /* --shot-at N：跑到 N 毫秒时存一张截图（0 = 不存） */
     int title_no_bg; /* --title-no-bg：标题菜单不铺背景（几何测量用） */
@@ -508,6 +510,8 @@ static void defaults(Options *o)
     o->debug_save_request = -1;
     o->title_no_bg = 0;
     o->opening = 0;
+    o->preview_slot = -1;
+    o->no_input = 0;
     o->shot_at_ms = 0.0;
     o->title_hover_seed = -1;
     o->debug_load_request = -1;
@@ -665,6 +669,11 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--save-preview-every") == 0) {
             NEED_VALUE();
             o->save_preview_every = wcstod(v, NULL);
+        } else if (wcscmp(a, L"--no-input") == 0) {
+            o->no_input = 1;
+        } else if (wcscmp(a, L"--preview-slot") == 0 &&
+                   i + 1 < argc) {
+            o->preview_slot = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--opening") == 0) {
             o->opening = 1;
         } else if (wcscmp(a, L"--shot-at") == 0 && i + 1 < argc) {
@@ -1604,6 +1613,8 @@ static int title_bg_disabled;
 /* 开场序列占用两个槽：黑底/背景图 + FAVORITE logo */
 #define OPEN_BG_SLOT 0x0FE0
 #define OPEN_LOGO_SLOT 0x0FE1
+/* 存档列表的预览图（选中槽里记录的背景图） */
+#define SAVE_PREVIEW_SLOT 0x0FE2
 
 static int title_measure(void *ctx, const char *utf8, int px, int *width)
 {
@@ -2106,6 +2117,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int opening_active = 0;
     int opening_logo_loaded = 0;
     int shot_taken = 0;
+    int save_preview_ok = 0;
+    char save_preview_name[64];
     double opening_ms = 0.0;
     double title_shown_at = 0.0;
     double last_report = 0.0;
@@ -2301,6 +2314,20 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         (void)title_scan_saves(&save_list, opts.game_dir, game_u8,
                                slenc);
         fvp_logf("save list: %d slot(s) readable", save_list.count);
+        if (opts.preview_slot >= 0) {
+            int k;
+
+            for (k = 0; k < save_list.count; ++k) {
+                if (save_list.items[k].slot == opts.preview_slot) {
+                    save_list.selected = k;
+                    save_hover = k;
+                    save_list_active = 1;
+                    fvp_logf("save list: preselect slot %d (preview)",
+                             opts.preview_slot);
+                    break;
+                }
+            }
+        }
         if (save_list.count > 0) {
             char first[256];
             char last[256];
@@ -2662,6 +2689,15 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
         /* ---------------- input -> VM ---------------- */
         in->capture_nav = title_active ? 1 : 0;
+        if (opts.no_input) {
+            /* 门禁/截图：把真实输入抹掉，画面只由程序状态决定 */
+            in->mouse_pressed = 0;
+            in->mouse_released = 0;
+            in->mouse_down = 0;
+            in->key_down = 0;
+            in->key_pressed = 0;
+            in->nav = 0;
+        }
         vm.cx = in->canvas_x;
         vm.cy = in->canvas_y;
         click_edges = in->mouse_pressed + in->key_pressed;
@@ -2671,6 +2707,27 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         if (title_active && save_list_active) {
             /* 读档列表：左键选中一行就记日志；右键/退出键回标题菜单 */
             save_hover = fvp_savelist_hit(&save_list, vm.cx, vm.cy);
+            {
+                /* 选中槽里如果记了背景图名，就把那张图装进预览槽 */
+                int sel = save_list.selected >= 0 ? save_list.selected
+                                                  : save_hover;
+
+                if (sel >= 0 && sel < save_list.count && gfx != NULL) {
+                    const char *gname = save_list.items[sel].graph;
+
+                    if (gname[0] != '\0' &&
+                        strcmp(gname, save_preview_name) != 0) {
+                        snprintf(save_preview_name,
+                                 sizeof(save_preview_name), "%s", gname);
+                        save_preview_ok =
+                            gfx_graph_load(gfx, SAVE_PREVIEW_SLOT, gname) ==
+                            0;
+                        fvp_logf("save list: preview graph '%s' %s",
+                                 gname, save_preview_ok ? "loaded"
+                                                        : "missing");
+                    }
+                }
+            }
             if (in->nav & FVP_NAV_DOWN) {
                 save_hover = (save_hover < 0) ? 0
                              : (save_hover + 1) % save_list.count;
@@ -2929,6 +2986,19 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 } else if (save_list_active) {
                     int li;
 
+                    /* 预览：选中槽记录的背景图缩到右下角，底下再写那条台词 */
+                    if (save_preview_ok) {
+                        int sel = save_list.selected;
+
+                        (void)gfx_draw_image_scaled(gfx, SAVE_PREVIEW_SLOT,
+                                                    1200, 640, 640, 360);
+                        if (sel >= 0 && sel < save_list.count &&
+                            save_list.items[sel].line[0] != '\0') {
+                            (void)gfx_draw_text_line(
+                                gfx, save_list.items[sel].line, 120,
+                                1010, 26, 255, 255, 255, 255);
+                        }
+                    }
                     for (li = 0; li < save_list.count; ++li) {
                         char row[256];
                         int ry = save_list.y + li * save_list.row_h + 18;
@@ -3201,6 +3271,20 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             if (save_list_active) {
                 int li;
 
+                /* 预览图与台词也要出现在截图里（和帧循环里同一套画法） */
+                if (save_preview_ok) {
+                    int sel = save_list.selected;
+
+                    (void)gfx_draw_image_scaled(gfx, SAVE_PREVIEW_SLOT,
+                                                1200, 640, 640, 360);
+                    if (sel >= 0 && sel < save_list.count &&
+                        save_list.items[sel].line[0] != '\0') {
+                        (void)gfx_draw_text_line(gfx,
+                                                 save_list.items[sel].line,
+                                                 120, 1010, 26, 255, 255,
+                                                 255, 255);
+                    }
+                }
                 for (li = 0; li < save_list.count; ++li) {
                     char row[256];
 

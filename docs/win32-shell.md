@@ -78,6 +78,8 @@ fvp.exe --game <游戏目录> [选项]
 | `--save-template <槽文件>` | 写档模板：SaveWrite 请求用它当底，替换时间戳/字符串/缩略图后写 `<game_dir>\save\sNNN.bin` |
 | `--debug-save-request N` | 调试钩子：发一个 `SaveWrite(N)` 请求，验证"请求 → 外壳写档"链路 |
 | `--debug-load-request N` | 调试钩子：发一个 `Load(N)` 请求（目前只记日志，快照恢复未实现） |
+| `--preview-slot N` | 存档列表预选第 N 号槽并显示预览（槽尾记的背景图 + 台词） |
+| `--no-input` | 忽略真实鼠标/键盘事件：门禁/截图只由程序状态决定（消除偶发） |
 | `--opening` | 启动先跑开场序列（白底 → FAVORITE logo 淡入淡出 → 标题从白色淡入，5.4 s） |
 | `--shot-at N` | 跑到 N 毫秒时存一张截图（开场/淡入的中间态；结尾不再覆盖它） |
 | `--title-menu` | 启动后先显示**引擎侧标题菜单**（`New Game/Continue/Album/Option/Exit`），点 `New Game`（或回车）才开始跑脚本，`Exit` 关窗口。默认关 —— 关时行为与之前完全一致。菜单几何按原版实测（右对齐 x=1769、行距 100、字号 56），见 [`docs/title-menu.md`](title-menu.md)。汇总多一行 `title menu enabled (profile=..., align=..., continue=..., picked ...)`；`continue=` 由 `<game_dir>\save\sNNN.bin` 的个数决定 |

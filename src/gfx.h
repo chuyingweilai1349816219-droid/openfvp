@@ -356,6 +356,9 @@ int gfx_image_offset(const Gfx *g, int slot, int *x, int *y);
  * 是 2400x1350，屏幕 1920x1080）。越界部分自动裁掉，返回 1 = 画了。 */
 int gfx_draw_image_cropped(Gfx *g, int slot, int dx, int dy, int sx, int sy,
                            int w, int h);
+
+/* 把图形槽里的图缩放到 (x,y,w,h) 贴上去（存档预览缩略图用）。 */
+int gfx_draw_image_scaled(Gfx *g, int slot, int x, int y, int w, int h);
 int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
                        int gr, int b, int alpha);
 void gfx_text_clear(Gfx *g, int layer);

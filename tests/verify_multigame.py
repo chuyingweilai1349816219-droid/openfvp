@@ -66,7 +66,7 @@ GAMES = [
                     bg='title_bg1_A',
                     overlays=['title_bg1_C', 'title_bg1_D',
                               'title_bg1_B'],
-                    menu_navy=True,
+                    menu_navy=True, preview_slot=905,
                     logo='title_logo1', copyright='',
                     centres=[531, 631, 732, 831, 931])),
     dict(name='hoshimemo',  # 《星空的记忆 HD》
@@ -80,7 +80,8 @@ GAMES = [
                     continue_enabled=False, save_list=0,
                     bg='title_bg1',
                     overlays=['title_frame2', 'title_frame'],
-                    menu_navy=False, logo='title_logo1',
+                    menu_navy=False, preview_slot=-1,
+                    logo='title_logo1',
                     copyright='title_copyright',
                     centres=[597, 687, 777, 867, 957])),
     dict(name='sakura',  # 《樱花，萌放。（さくら、もゆ。）》
@@ -210,8 +211,10 @@ def have_font_atlas():
 def run_shell_frame(exe, game_dir, script_name, seconds, shot, log_path,
                     extra=None):
     """跑外壳 N 秒并抓一帧。返回 (rc 或 None=超时, 日志文本)。"""
-    cmd = [exe, '--game', game_dir, '--run-seconds', str(seconds),
-           '--no-audio', '--screenshot', shot, '--log', log_path]
+    # --no-input：忽略真实鼠标/键盘，截图只由程序状态决定（门禁确定性）
+    cmd = [exe, '--no-input', '--game', game_dir,
+           '--run-seconds', str(seconds), '--no-audio',
+           '--screenshot', shot, '--log', log_path]
     if script_name:
         cmd += ['--script', script_name]
     if extra:
@@ -781,7 +784,47 @@ def main():
                 check(before == after,
                       'save request wrote nothing into the game save dir '
                       '(%d -> %d entries)' % (len(before), len(after)))
-            # 7. 标题菜单：两部作品的 profile与菜单几何都要对
+            # 6.9 存档预览：选中槽里记了背景图名时，列表要显示那张图
+    if not args.no_shell:
+        shell_pv = shell_path()
+        if shell_pv is not None:
+            for g in have:
+                t = g.get('title') or {}
+                if t.get('preview_slot', -1) < 0 or not g.get('dir'):
+                    continue
+                name = g['name']
+                shot_pv = os.path.join(OUT_DIR, 'mg-%s-preview.bmp' % name)
+                log_pv = os.path.join(OUT_DIR, 'mg-%s-preview.log' % name)
+                for p4 in (shot_pv, log_pv):
+                    if os.path.isfile(p4):
+                        os.remove(p4)
+                rc4, log4 = run_shell_frame(
+                    shell_pv, g['dir'], os.path.basename(g['script']), 2,
+                    shot_pv, log_pv,
+                    extra=['--title-save-list',
+                           '--preview-slot', str(t['preview_slot'])])
+                check(rc4 == 0, 'save preview run exit 0 (got %s)' % rc4)
+                m = log_match(r"preview graph '([^']+)' loaded", log4)
+                check(m is not None,
+                      'save preview graph loaded (%s)'
+                      % (m.group(0) if m else 'missing'))
+                img = read_bmp32(shot_pv) if os.path.isfile(shot_pv) else None
+                check(img is not None, 'save preview frame readable')
+                if img is not None:
+                    rows_pv = img[2]
+                    lit = 0
+                    for yy in range(640, 1000, 8):
+                        row = rows_pv[yy]
+                        for xx in range(1200, 1840, 8):
+                            v = row[xx * 4] + row[xx * 4 + 1] + row[xx * 4 + 2]
+                            if v > 120:
+                                lit += 1
+                    check(lit > 200,
+                          'preview area shows the saved background '
+                          '(%d lit samples)' % lit)
+                print('')
+
+    # 7. 标题菜单：两部作品的 profile与菜单几何都要对
     if not args.no_shell:
         shell2 = shell_path()
         if shell2 is not None:
