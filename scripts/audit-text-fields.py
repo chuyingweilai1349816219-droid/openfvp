@@ -66,6 +66,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--asm', default=os.path.join(FVP, 'work',
                                                   'iroseka_HD.asm'))
+    ap.add_argument('--context', type=int, default=0,
+                    help='读点前后各打印 N 行静态分析（分析语义用）')
     args = ap.parse_args()
     if not os.path.isfile(args.asm):
         print('audit-text-fields: missing %s (analyse statically iroseka_HD.exe first)'
@@ -88,13 +90,27 @@ def main():
               % (off, name, len(h['read']) + len(h['read-write']),
                  len(h['write']) + len(h['read-write'])))
     print('')
+    n_ctx = args.context
+    all_lines = []
+    if n_ctx > 0:
+        with open(args.asm, encoding='utf-8', errors='replace') as f:
+            all_lines = f.read().split('\n')
     for off, name in FIELDS:
         h = hits[off]
         reads = h['read'] + h['read-write']
-        if reads:
-            print('-- 0x%04x (%s) 的读点：' % (off, name))
-            for line in reads:
-                print('   ' + line[:100])
+        if not reads:
+            continue
+        print('-- 0x%04x (%s) 的读点：' % (off, name))
+        for line in reads:
+            print('   ' + line[:100])
+            if n_ctx > 0:
+                addr = line.split(':')[0].strip()
+                idx = next((k for k, l in enumerate(all_lines)
+                            if l.strip().startswith(addr + ':')), None)
+                if idx is not None:
+                    for l in all_lines[max(0, idx - n_ctx):idx + n_ctx + 1]:
+                        print('       ' + l.rstrip()[:96])
+                    print('       ---')
     return 0
 
 
