@@ -575,6 +575,14 @@ def build_steps(args):
                       note='title diff broken down by region (asset-header rects); '
                            'copyright region is the worst, ranked baseline frozen'))
 
+    # 6.496 Motion*/PrimSet* 的实参约束（从 exe handler 静态分析提取；缺 work/ 时 SKIP）
+    vmp = os.path.join(HERE, 'verify_exe_motion_params.py')
+    steps.append(Step('verify_exe_motion_params.py', [PY, '-X', 'utf8', vmp], 600,
+                      skip_reason=None,
+                      note='argument constraints from the exe handlers: '
+                           'MotionMoveS2 = 8 args (scale 100..10000, dur 1..300000, '
+                           'mode 1..5), Stop only cancels; PrimSetRS angle unit 3600'))
+
     # 6.497 标题背景合成模型（18 个候选里 measured+over 最好；需 Pillow+numpy）
     vbb = os.path.join(HERE, 'verify_title_bg_blend.py')
     steps.append(Step('verify_title_bg_blend.py', [PY, '-X', 'utf8', vbb], 900,

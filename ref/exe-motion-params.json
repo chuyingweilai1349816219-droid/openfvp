@@ -1,0 +1,221 @@
+{
+ "commands": {
+  "42": {
+   "arg_ranges": [
+    {
+     "arg": 3,
+     "max": 300000,
+     "min": 1
+    },
+    {
+     "arg": 2,
+     "max": 255,
+     "min": 255
+    }
+   ],
+   "arg_types": [
+    {
+     "arg": 0,
+     "type": 2
+    },
+    {
+     "arg": 3,
+     "type": 2
+    },
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    },
+    {
+     "arg": 4,
+     "type": 2
+    },
+    {
+     "arg": 5,
+     "type": 0
+    }
+   ],
+   "argc": 6,
+   "calls_or_jumps": [
+    "jmp 0x0043a921",
+    "jmp 0x0043a947",
+    "call 0x0042d460"
+   ],
+   "handler": "0x0043a8b0",
+   "id": 42,
+   "name": "MotionAlpha",
+   "reg_index": 43,
+   "split_constants": [],
+   "struct_field_writes": []
+  },
+  "54": {
+   "arg_ranges": [
+    {
+     "arg": 0,
+     "max": 4095,
+     "min": 1
+    },
+    {
+     "arg": 5,
+     "max": 300000,
+     "min": 1
+    },
+    {
+     "arg": 6,
+     "max": 5,
+     "min": 1
+    },
+    {
+     "arg": 1,
+     "max": 10000,
+     "min": 100
+    },
+    {
+     "arg": 2,
+     "max": 10000,
+     "min": 100
+    },
+    {
+     "arg": 3,
+     "max": 10000,
+     "min": 100
+    },
+    {
+     "arg": 4,
+     "max": 10000,
+     "min": 100
+    }
+   ],
+   "arg_types": [
+    {
+     "arg": 0,
+     "type": 2
+    },
+    {
+     "arg": 5,
+     "type": 2
+    },
+    {
+     "arg": 6,
+     "type": 2
+    },
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    },
+    {
+     "arg": 3,
+     "type": 2
+    },
+    {
+     "arg": 4,
+     "type": 2
+    },
+    {
+     "arg": 7,
+     "type": 0
+    }
+   ],
+   "argc": 8,
+   "calls_or_jumps": [
+    "call 0x0042d670"
+   ],
+   "handler": "0x0043af70",
+   "id": 54,
+   "name": "MotionMoveS2",
+   "reg_index": 53,
+   "split_constants": [],
+   "struct_field_writes": []
+  },
+  "55": {
+   "arg_ranges": [
+    {
+     "arg": 0,
+     "max": 4095,
+     "min": 1
+    }
+   ],
+   "arg_types": [
+    {
+     "arg": 0,
+     "type": 2
+    }
+   ],
+   "argc": 1,
+   "calls_or_jumps": [
+    "jmp 0x00427460"
+   ],
+   "handler": "0x0043b0a0",
+   "id": 55,
+   "name": "MotionMoveS2Stop",
+   "reg_index": 54,
+   "split_constants": [],
+   "struct_field_writes": []
+  },
+  "82": {
+   "arg_ranges": [
+    {
+     "arg": null,
+     "max": 4095,
+     "min": 1
+    }
+   ],
+   "arg_types": [],
+   "argc": 3,
+   "calls_or_jumps": [],
+   "handler": "0x0043baf0",
+   "id": 82,
+   "name": "PrimSetRS",
+   "reg_index": 83,
+   "split_constants": [
+    3600
+   ],
+   "struct_field_writes": [
+    {
+     "field_off": 36,
+     "reg": "dx"
+    },
+    {
+     "field_off": 38,
+     "reg": "ax"
+    },
+    {
+     "field_off": 40,
+     "reg": "ax"
+    }
+   ]
+  },
+  "91": {
+   "arg_ranges": [
+    {
+     "arg": null,
+     "max": 4095,
+     "min": 1
+    }
+   ],
+   "arg_types": [],
+   "argc": 2,
+   "calls_or_jumps": [],
+   "handler": "0x0043bff0",
+   "id": 91,
+   "name": "PrimSetZ",
+   "reg_index": 92,
+   "split_constants": [],
+   "struct_field_writes": [
+    {
+     "field_off": 18,
+     "reg": "dx"
+    }
+   ]
+  }
+ },
+ "note": "从 exe handler 静态分析提取的实参约束（A 类事实）；由 scripts/extract-exe-motion-params.py 生成"
+}
