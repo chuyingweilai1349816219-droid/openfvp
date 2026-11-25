@@ -559,6 +559,14 @@ def build_steps(args):
                            'menu items are prims (iroseka 1501..1529 / hoshimemo '
                            '266..274) hit-tested by PrimHit'))
 
+    # 6.49 标题按钮矩形（来自 graph.bin 的素材头；缺游戏目录时自己 SKIP）
+    vtr = os.path.join(HERE, 'verify_title_rects.py')
+    steps.append(Step('verify_title_rects.py', [PY, '-X', 'utf8', vtr], 1800,
+                      skip_reason=None,
+                      note='title button rects come from the HZC1 asset headers: '
+                           'iroseka right edge 1785 / pitch 100, hoshimemo centre '
+                           '960 / pitch 90'))
+
     # 6.55 游戏内菜单的三个动作（SAVE/LOAD/OPTION）
     vma = os.path.join(HERE, 'verify_menu_actions.py')
     steps.append(Step('verify_menu_actions.py', [PY, vma], 900,

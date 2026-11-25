@@ -1,0 +1,379 @@
+{
+ "games": {
+  "hoshimemo": {
+   "all_right_aligned": false,
+   "asset_count": 25,
+   "distinct_right_edges": [
+    1015,
+    1040,
+    1045,
+    1075,
+    1095
+   ],
+   "items": {
+    "title_album": {
+     "rect": {
+      "bottom": 800,
+      "h": 40,
+      "right": 1040,
+      "w": 160,
+      "x": 880,
+      "y": 760
+     },
+     "variants": {
+      "title_album2": {
+       "h": 69,
+       "w": 160,
+       "x": 880,
+       "y": 757
+      },
+      "title_album_ray": {
+       "h": 20,
+       "w": 1920,
+       "x": 0,
+       "y": 770
+      }
+     }
+    },
+    "title_continue": {
+     "rect": {
+      "bottom": 710,
+      "h": 40,
+      "right": 1075,
+      "w": 230,
+      "x": 845,
+      "y": 670
+     },
+     "variants": {
+      "title_continue2": {
+       "h": 71,
+       "w": 230,
+       "x": 845,
+       "y": 666
+      },
+      "title_continue_ray": {
+       "h": 20,
+       "w": 1920,
+       "x": 0,
+       "y": 680
+      }
+     }
+    },
+    "title_end": {
+     "rect": {
+      "bottom": 980,
+      "h": 40,
+      "right": 1015,
+      "w": 110,
+      "x": 905,
+      "y": 940
+     },
+     "variants": {
+      "title_end2": {
+       "h": 70,
+       "w": 110,
+       "x": 905,
+       "y": 937
+      },
+      "title_end_ray": {
+       "h": 20,
+       "w": 1920,
+       "x": 0,
+       "y": 950
+      }
+     }
+    },
+    "title_option": {
+     "rect": {
+      "bottom": 890,
+      "h": 40,
+      "right": 1045,
+      "w": 170,
+      "x": 875,
+      "y": 850
+     },
+     "variants": {
+      "title_option2": {
+       "h": 68,
+       "w": 170,
+       "x": 875,
+       "y": 846
+      },
+      "title_option_ray": {
+       "h": 20,
+       "w": 1920,
+       "x": 0,
+       "y": 860
+      }
+     }
+    },
+    "title_start": {
+     "rect": {
+      "bottom": 620,
+      "h": 40,
+      "right": 1095,
+      "w": 275,
+      "x": 820,
+      "y": 580
+     },
+     "variants": {
+      "title_start2": {
+       "h": 71,
+       "w": 276,
+       "x": 820,
+       "y": 576
+      },
+      "title_start_ray": {
+       "h": 20,
+       "w": 1920,
+       "x": 0,
+       "y": 590
+      }
+     }
+    }
+   },
+   "package": "graph.bin",
+   "row_pitch": [
+    90
+   ],
+   "rows_y": [
+    580,
+    670,
+    760,
+    850,
+    940
+   ]
+  },
+  "iroseka": {
+   "all_right_aligned": true,
+   "asset_count": 36,
+   "distinct_right_edges": [
+    1785
+   ],
+   "items": {
+    "title_album": {
+     "rect": {
+      "bottom": 775,
+      "h": 80,
+      "right": 1785,
+      "w": 225,
+      "x": 1560,
+      "y": 695
+     },
+     "variants": {
+      "title_album1": {
+       "h": 91,
+       "w": 225,
+       "x": 1560,
+       "y": 695
+      },
+      "title_album2": {
+       "h": 80,
+       "w": 225,
+       "x": 1560,
+       "y": 695
+      },
+      "title_album3": {
+       "h": 80,
+       "w": 225,
+       "x": 1560,
+       "y": 695
+      },
+      "title_album4": {
+       "h": 80,
+       "w": 225,
+       "x": 1560,
+       "y": 695
+      },
+      "title_album5": {
+       "h": 80,
+       "w": 225,
+       "x": 1560,
+       "y": 695
+      }
+     }
+    },
+    "title_continue": {
+     "rect": {
+      "bottom": 675,
+      "h": 80,
+      "right": 1785,
+      "w": 290,
+      "x": 1495,
+      "y": 595
+     },
+     "variants": {
+      "title_continue1": {
+       "h": 91,
+       "w": 290,
+       "x": 1495,
+       "y": 595
+      },
+      "title_continue2": {
+       "h": 80,
+       "w": 290,
+       "x": 1495,
+       "y": 595
+      },
+      "title_continue3": {
+       "h": 80,
+       "w": 290,
+       "x": 1495,
+       "y": 595
+      },
+      "title_continue4": {
+       "h": 80,
+       "w": 290,
+       "x": 1495,
+       "y": 595
+      },
+      "title_continue5": {
+       "h": 80,
+       "w": 290,
+       "x": 1495,
+       "y": 595
+      }
+     }
+    },
+    "title_end": {
+     "rect": {
+      "bottom": 975,
+      "h": 80,
+      "right": 1785,
+      "w": 140,
+      "x": 1645,
+      "y": 895
+     },
+     "variants": {
+      "title_end1": {
+       "h": 92,
+       "w": 140,
+       "x": 1645,
+       "y": 895
+      },
+      "title_end2": {
+       "h": 80,
+       "w": 140,
+       "x": 1645,
+       "y": 895
+      },
+      "title_end3": {
+       "h": 80,
+       "w": 140,
+       "x": 1645,
+       "y": 895
+      },
+      "title_end4": {
+       "h": 80,
+       "w": 140,
+       "x": 1645,
+       "y": 895
+      },
+      "title_end5": {
+       "h": 80,
+       "w": 140,
+       "x": 1645,
+       "y": 895
+      }
+     }
+    },
+    "title_option": {
+     "rect": {
+      "bottom": 885,
+      "h": 90,
+      "right": 1785,
+      "w": 225,
+      "x": 1560,
+      "y": 795
+     },
+     "variants": {
+      "title_option1": {
+       "h": 92,
+       "w": 225,
+       "x": 1560,
+       "y": 795
+      },
+      "title_option2": {
+       "h": 84,
+       "w": 225,
+       "x": 1560,
+       "y": 795
+      },
+      "title_option3": {
+       "h": 80,
+       "w": 225,
+       "x": 1560,
+       "y": 795
+      },
+      "title_option4": {
+       "h": 80,
+       "w": 225,
+       "x": 1560,
+       "y": 795
+      },
+      "title_option5": {
+       "h": 80,
+       "w": 225,
+       "x": 1560,
+       "y": 795
+      }
+     }
+    },
+    "title_start": {
+     "rect": {
+      "bottom": 575,
+      "h": 80,
+      "right": 1785,
+      "w": 340,
+      "x": 1445,
+      "y": 495
+     },
+     "variants": {
+      "title_start1": {
+       "h": 91,
+       "w": 340,
+       "x": 1445,
+       "y": 495
+      },
+      "title_start2": {
+       "h": 80,
+       "w": 340,
+       "x": 1445,
+       "y": 495
+      },
+      "title_start3": {
+       "h": 80,
+       "w": 340,
+       "x": 1445,
+       "y": 495
+      },
+      "title_start4": {
+       "h": 80,
+       "w": 340,
+       "x": 1445,
+       "y": 495
+      },
+      "title_start5": {
+       "h": 80,
+       "w": 340,
+       "x": 1445,
+       "y": 495
+      }
+     }
+    }
+   },
+   "package": "graph.bin",
+   "row_pitch": [
+    100
+   ],
+   "rows_y": [
+    495,
+    595,
+    695,
+    795,
+    895
+   ]
+  }
+ },
+ "note": "标题菜单按钮矩形（来自素材 HZC1 头的 x/y/w/h）；由 scripts/extract-title-rects.py 生成，不含像素数据"
+}
