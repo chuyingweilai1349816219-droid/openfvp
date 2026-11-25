@@ -65,6 +65,7 @@
 | 渲染层像素 | **293 px / 2,073,600 = 0.0141%**，PSNR 49.94 dB，SSIM 0.99971 |
 | 标题画面 vs 原版实拍 | mean abs diff **13.79 / 255**（基线 13.93 + 1.5） |
 | 原版绘制协议（静态提取） | `fdwCharSet = 0x80`、`GetGlyphOutlineA` 只用 `GGO_METRICS`/`GGO_BITMAP`、`MAT2` = 单位矩阵、字体名表 2 份 × 4 项 |
+| 命令表 argc 实测对账 | 两部作品 **825 / 865** 个可判定调用点，**82 / 83** 条命令的 argc 被证实；仅 3 条已知表达式临时值异常（两作完全相同） |
 | 抗锯齿 vs 原版协议（同字同字号） | 「日」@32：**54 / 1224 ≈ 4.4%** 的像素是原版根本不会产生的中间值 |
 | `make check` | **30 组**单测全 PASS |
 | `tests/run_all.py` | **45 PASS / 0 FAIL / 1 SKIP（46 步）**，约 275 s；SKIP 是缺 numpy 的 `verify_assets` |
@@ -86,6 +87,7 @@ python tests/run_all.py                           # 全部 46 步
 
 # 原版相关（缺语料/缺 exe 时自己 SKIP 并返回 0）
 python tests/verify_exe_gdi_params.py             # 从 exe 静态提取的绘制协议
+python tests/verify_script_argc.py                # 命令表 argc 与真实调用点对账
 python tests/verify_vs_original.py                # 与原版实拍帧的平均差
 
 # 文档
@@ -100,12 +102,12 @@ python scripts/check-docs.py
 > 一律先结构分析，不用抓帧/视觉方法反推。** 抓帧只在方法覆盖不到的地方用（最终像素验证、
 > 影片解码后的画面），而且只用来**验证**结构分析结果，不用来当主要依据。
 
-1. **`TitleMenu` 的按钮分布（脚本参数，优先做）**：`TitleMenu` 是 FVP **脚本命令**
-   （cmd 141）。证据：exe 的 61 个 MSVC RTTI 类里**没有** TitleMenu 类；HCB 内嵌命令表
-   里有 `TitleMenu`；脚本里有 **6 处** `03 8D 00` 调用（`0x5a794`、`0x5a858`、`0x5f5bb`、
-   `0x6133d`、`0x61367`、`0x64073`）。→ 用现成解码器把这 6 个调用点的前导 `push` 实参
-   dump 出来，得到菜单项数与命中矩形；并查清 `ref/cmd_table.json` 的 `argc=1` 与 HCB
-   名字表里该命令后随字节 `0x06` 的矛盾（若真是 6 参数，VM 只弹 1 个会栈失衡）。
+1. **标题画面由谁画（把上一条错误线索改掉）**：`TitleMenu`(141) 已证实**只收 1 个布尔**
+   （两部作品 6 / 7 个调用点，紧邻前一条指令全是 `pushtrue`），handler 与
+   `MenuMessSkip`/`SysAtSkipName` 是同一个 `0x437950`（纯空操作）→ **按钮位置不在
+   脚本参数里**。下一步查"引擎启动代码用图元摆贴图"或"另一段脚本场景"这两条路，
+   证据都在文件里（前者看 exe 里 `PrimSetXY`/`GraphLoad` 的常量，后者看脚本其它
+   入口）。详见 `docs/title-menu.md` §6；对账工具 `scripts/audit-script-argc.py`。
 2. **`TextShadowDist`(125) / `TextFormat`(118) 的真实参数**：先查 exe 里 `HTextStyler`
    类（这个类有 RTTI）的字段读写与命令 handler 的写入偏移，再谈实现；
    `TextFormat` 的 d 参数会移动冻结基线，需要授权。

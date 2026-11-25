@@ -543,6 +543,14 @@ def build_steps(args):
                       note='static extraction of the original GDI text protocol '
                            '(charset/GGO format/MAT2) must stay byte-identical'))
 
+    # 6.47 脚本侧实参审计（命令表 argc 与真实调用点对账；缺 HCB 时自己 SKIP）
+    vsa = os.path.join(HERE, 'verify_script_argc.py')
+    steps.append(Step('verify_script_argc.py', [PY, '-X', 'utf8', vsa], 900,
+                      skip_reason=None,
+                      note='command-table argc cross-checked against real call '
+                           'sites in both works (TitleMenu = 1 bool; 3 known '
+                           'expression-temp anomalies)'))
+
     # 6.55 游戏内菜单的三个动作（SAVE/LOAD/OPTION）
     vma = os.path.join(HERE, 'verify_menu_actions.py')
     steps.append(Step('verify_menu_actions.py', [PY, vma], 900,

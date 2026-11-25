@@ -1,0 +1,2524 @@
+{
+ "games": {
+  "hoshimemo": {
+   "anomalies": [
+    {
+     "id": 24,
+     "name": "IntToText",
+     "observed": {
+      "3": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 48
+    },
+    {
+     "id": 114,
+     "name": "TextFontCount",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 1
+    },
+    {
+     "id": 116,
+     "name": "TextFontName",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 3
+    }
+   ],
+   "exact_sites": 865,
+   "focus": {
+    "141": {
+     "name": "TitleMenu",
+     "prev_instr_hist": {
+      "pushtrue": 7
+     },
+     "table_argc": 1
+    }
+   },
+   "hcb_sha256": "e23b7958f897392e3535370956b7c9a722c562f0a6d65e91d589cfdd2b741802",
+   "hcb_size": 4618610,
+   "instructions": 1135159,
+   "per_command": {
+    "0": {
+     "name": "AudioLoad",
+     "observed": {
+      "2": 2
+     },
+     "table_argc": 2,
+     "unknown_sites": 15,
+     "verdict": "match"
+    },
+    "1": {
+     "name": "AudioPlay",
+     "observed": {
+      "2": 4
+     },
+     "table_argc": 2,
+     "unknown_sites": 5,
+     "verdict": "match"
+    },
+    "10": {
+     "name": "CursorChange",
+     "observed": {
+      "1": 3
+     },
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "match"
+    },
+    "100": {
+     "name": "SoundLoad",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 20,
+     "verdict": "match"
+    },
+    "101": {
+     "name": "SoundMasterVol",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "102": {
+     "name": "SoundPlay",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 8,
+     "verdict": "no-exact-sites"
+    },
+    "103": {
+     "name": "SoundSilentOn",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "104": {
+     "name": "SoundStop",
+     "observed": {
+      "2": 4
+     },
+     "table_argc": 2,
+     "unknown_sites": 10,
+     "verdict": "match"
+    },
+    "105": {
+     "name": "SoundType",
+     "observed": {
+      "2": 4
+     },
+     "table_argc": 2,
+     "unknown_sites": 4,
+     "verdict": "match"
+    },
+    "106": {
+     "name": "SoundTypeVol",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 15,
+     "verdict": "no-exact-sites"
+    },
+    "107": {
+     "name": "SoundVol",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "108": {
+     "name": "SysAtSkipName",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "109": {
+     "name": "SysProjFolder",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "11": {
+     "name": "CursorMove",
+     "observed": {
+      "3": 16
+     },
+     "table_argc": 3,
+     "unknown_sites": 14,
+     "verdict": "match"
+    },
+    "110": {
+     "name": "TextBuff",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 8,
+     "verdict": "no-exact-sites"
+    },
+    "111": {
+     "name": "TextClear",
+     "observed": {
+      "1": 6
+     },
+     "table_argc": 1,
+     "unknown_sites": 45,
+     "verdict": "match"
+    },
+    "112": {
+     "name": "TextColor",
+     "observed": {
+      "4": 8
+     },
+     "table_argc": 4,
+     "unknown_sites": 71,
+     "verdict": "match"
+    },
+    "113": {
+     "name": "TextFont",
+     "observed": {
+      "3": 1
+     },
+     "table_argc": 3,
+     "unknown_sites": 19,
+     "verdict": "match"
+    },
+    "114": {
+     "name": "TextFontCount",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 1,
+     "verdict": "mismatch"
+    },
+    "115": {
+     "name": "TextFontGet",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 8,
+     "verdict": "match"
+    },
+    "116": {
+     "name": "TextFontName",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "mismatch"
+    },
+    "117": {
+     "name": "TextFontSet",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "118": {
+     "name": "TextFormat",
+     "observed": {},
+     "table_argc": 7,
+     "unknown_sites": 4,
+     "verdict": "no-exact-sites"
+    },
+    "119": {
+     "name": "TextFunction",
+     "observed": {},
+     "table_argc": 4,
+     "unknown_sites": 7,
+     "verdict": "no-exact-sites"
+    },
+    "12": {
+     "name": "CursorShow",
+     "observed": {
+      "1": 4
+     },
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "120": {
+     "name": "TextOutSize",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 8,
+     "verdict": "no-exact-sites"
+    },
+    "121": {
+     "name": "TextPause",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "122": {
+     "name": "TextPos",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "123": {
+     "name": "TextPrint",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 36,
+     "verdict": "match"
+    },
+    "124": {
+     "name": "TextRepaint",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "125": {
+     "name": "TextShadowDist",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 8,
+     "verdict": "no-exact-sites"
+    },
+    "126": {
+     "name": "TextSize",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 8,
+     "verdict": "no-exact-sites"
+    },
+    "127": {
+     "name": "TextSkip",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 3,
+     "verdict": "match"
+    },
+    "128": {
+     "name": "TextSpace",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 5,
+     "verdict": "no-exact-sites"
+    },
+    "129": {
+     "name": "TextSpeed",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 20,
+     "verdict": "no-exact-sites"
+    },
+    "13": {
+     "name": "Debmess",
+     "observed": {
+      "2": 17
+     },
+     "table_argc": 2,
+     "unknown_sites": 9,
+     "verdict": "match"
+    },
+    "130": {
+     "name": "TextSuspendChr",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 5,
+     "verdict": "no-exact-sites"
+    },
+    "131": {
+     "name": "TextTest",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "132": {
+     "name": "ThreadExit",
+     "observed": {
+      "1": 19
+     },
+     "table_argc": 1,
+     "unknown_sites": 68,
+     "verdict": "match"
+    },
+    "133": {
+     "name": "ThreadNext",
+     "observed": {
+      "0": 9
+     },
+     "table_argc": 0,
+     "unknown_sites": 14,
+     "verdict": "match"
+    },
+    "134": {
+     "name": "ThreadRaise",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "135": {
+     "name": "ThreadSleep",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "136": {
+     "name": "ThreadStart",
+     "observed": {
+      "2": 25
+     },
+     "table_argc": 2,
+     "unknown_sites": 78,
+     "verdict": "match"
+    },
+    "137": {
+     "name": "ThreadWait",
+     "observed": {
+      "1": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "138": {
+     "name": "TimerGet",
+     "observed": {
+      "2": 12
+     },
+     "table_argc": 2,
+     "unknown_sites": 11,
+     "verdict": "match"
+    },
+    "139": {
+     "name": "TimerSet",
+     "observed": {
+      "2": 15
+     },
+     "table_argc": 2,
+     "unknown_sites": 32,
+     "verdict": "match"
+    },
+    "14": {
+     "name": "Dissolve",
+     "observed": {
+      "7": 2
+     },
+     "table_argc": 7,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "140": {
+     "name": "TimerSuspend",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "141": {
+     "name": "TitleMenu",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 7,
+     "verdict": "no-exact-sites"
+    },
+    "142": {
+     "name": "V3DMotion",
+     "observed": {},
+     "table_argc": 6,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "143": {
+     "name": "V3DMotionPause",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "144": {
+     "name": "V3DMotionStop",
+     "observed": {
+      "0": 1
+     },
+     "table_argc": 0,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "145": {
+     "name": "V3DMotionTest",
+     "observed": {
+      "0": 6
+     },
+     "table_argc": 0,
+     "unknown_sites": 8,
+     "verdict": "match"
+    },
+    "146": {
+     "name": "V3DSet",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "147": {
+     "name": "WindowMode",
+     "observed": {
+      "1": 7,
+      "2": 2
+     },
+     "table_argc": 1,
+     "unknown_sites": 7,
+     "verdict": "match"
+    },
+    "15": {
+     "name": "DissolveWait",
+     "observed": {
+      "1": 7
+     },
+     "table_argc": 1,
+     "unknown_sites": 9,
+     "verdict": "match"
+    },
+    "16": {
+     "name": "ExitDialog",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "17": {
+     "name": "ExitMode",
+     "observed": {
+      "1": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 4,
+     "verdict": "match"
+    },
+    "18": {
+     "name": "FlagGet",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "19": {
+     "name": "FlagSet",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "2": {
+     "name": "AudioSilentOn",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "20": {
+     "name": "FloatToInt",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 51,
+     "verdict": "no-exact-sites"
+    },
+    "21": {
+     "name": "GaijiLoad",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "22": {
+     "name": "GraphLoad",
+     "observed": {
+      "2": 43
+     },
+     "table_argc": 2,
+     "unknown_sites": 192,
+     "verdict": "match"
+    },
+    "23": {
+     "name": "GraphRGB",
+     "observed": {
+      "4": 1
+     },
+     "table_argc": 4,
+     "unknown_sites": 27,
+     "verdict": "match"
+    },
+    "24": {
+     "name": "IntToText",
+     "observed": {
+      "3": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 48,
+     "verdict": "mismatch"
+    },
+    "25": {
+     "name": "HistoryGet",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 4,
+     "verdict": "match"
+    },
+    "26": {
+     "name": "HistorySet",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 7,
+     "verdict": "no-exact-sites"
+    },
+    "27": {
+     "name": "InputFlash",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 16,
+     "verdict": "match"
+    },
+    "28": {
+     "name": "InputGetCursIn",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 4,
+     "verdict": "no-exact-sites"
+    },
+    "29": {
+     "name": "InputGetCursX",
+     "observed": {
+      "0": 2,
+      "1": 1
+     },
+     "table_argc": 0,
+     "unknown_sites": 19,
+     "verdict": "match"
+    },
+    "3": {
+     "name": "AudioState",
+     "observed": {
+      "1": 5
+     },
+     "table_argc": 1,
+     "unknown_sites": 5,
+     "verdict": "match"
+    },
+    "30": {
+     "name": "InputGetCursY",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 21,
+     "verdict": "match"
+    },
+    "31": {
+     "name": "InputGetDown",
+     "observed": {
+      "0": 32
+     },
+     "table_argc": 0,
+     "unknown_sites": 111,
+     "verdict": "match"
+    },
+    "32": {
+     "name": "InputGetEvent",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "33": {
+     "name": "InputGetRepeat",
+     "observed": {
+      "0": 5
+     },
+     "table_argc": 0,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "34": {
+     "name": "InputGetState",
+     "observed": {
+      "0": 33
+     },
+     "table_argc": 0,
+     "unknown_sites": 49,
+     "verdict": "match"
+    },
+    "35": {
+     "name": "InputGetUp",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 3,
+     "verdict": "match"
+    },
+    "36": {
+     "name": "InputGetWheel",
+     "observed": {
+      "0": 3,
+      "1": 1
+     },
+     "table_argc": 0,
+     "unknown_sites": 12,
+     "verdict": "match"
+    },
+    "37": {
+     "name": "InputSetClick",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "38": {
+     "name": "LipAnim",
+     "observed": {},
+     "table_argc": 8,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "39": {
+     "name": "LipSync",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "4": {
+     "name": "AudioStop",
+     "observed": {
+      "2": 8
+     },
+     "table_argc": 2,
+     "unknown_sites": 16,
+     "verdict": "match"
+    },
+    "40": {
+     "name": "Load",
+     "observed": {
+      "1": 3
+     },
+     "table_argc": 1,
+     "unknown_sites": 6,
+     "verdict": "match"
+    },
+    "41": {
+     "name": "MenuMessSkip",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "42": {
+     "name": "MotionAlpha",
+     "observed": {
+      "6": 107
+     },
+     "table_argc": 6,
+     "unknown_sites": 176,
+     "verdict": "match"
+    },
+    "43": {
+     "name": "MotionAlphaStop",
+     "observed": {
+      "1": 3
+     },
+     "table_argc": 1,
+     "unknown_sites": 17,
+     "verdict": "match"
+    },
+    "44": {
+     "name": "MotionAlphaTest",
+     "observed": {
+      "1": 5
+     },
+     "table_argc": 1,
+     "unknown_sites": 49,
+     "verdict": "match"
+    },
+    "45": {
+     "name": "MotionAnim",
+     "observed": {
+      "4": 1
+     },
+     "table_argc": 4,
+     "unknown_sites": 88,
+     "verdict": "match"
+    },
+    "46": {
+     "name": "MotionAnimStop",
+     "observed": {
+      "1": 5
+     },
+     "table_argc": 1,
+     "unknown_sites": 13,
+     "verdict": "match"
+    },
+    "47": {
+     "name": "MotionAnimTest",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 4,
+     "verdict": "no-exact-sites"
+    },
+    "48": {
+     "name": "MotionMove",
+     "observed": {
+      "8": 1
+     },
+     "table_argc": 8,
+     "unknown_sites": 6,
+     "verdict": "match"
+    },
+    "49": {
+     "name": "MotionMoveStop",
+     "observed": {
+      "1": 11
+     },
+     "table_argc": 1,
+     "unknown_sites": 110,
+     "verdict": "match"
+    },
+    "5": {
+     "name": "AudioType",
+     "observed": {
+      "2": 2
+     },
+     "table_argc": 2,
+     "unknown_sites": 4,
+     "verdict": "match"
+    },
+    "50": {
+     "name": "MotionMoveTest",
+     "observed": {
+      "1": 12,
+      "2": 4
+     },
+     "table_argc": 1,
+     "unknown_sites": 202,
+     "verdict": "match"
+    },
+    "51": {
+     "name": "MotionMoveR",
+     "observed": {},
+     "table_argc": 6,
+     "unknown_sites": 29,
+     "verdict": "no-exact-sites"
+    },
+    "52": {
+     "name": "MotionMoveRStop",
+     "observed": {
+      "1": 6
+     },
+     "table_argc": 1,
+     "unknown_sites": 2,
+     "verdict": "match"
+    },
+    "53": {
+     "name": "MotionMoveRTest",
+     "observed": {
+      "1": 7
+     },
+     "table_argc": 1,
+     "unknown_sites": 21,
+     "verdict": "match"
+    },
+    "54": {
+     "name": "MotionMoveS2",
+     "observed": {},
+     "table_argc": 8,
+     "unknown_sites": 34,
+     "verdict": "no-exact-sites"
+    },
+    "55": {
+     "name": "MotionMoveS2Stop",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "match"
+    },
+    "56": {
+     "name": "MotionMoveS2Test",
+     "observed": {
+      "1": 7
+     },
+     "table_argc": 1,
+     "unknown_sites": 47,
+     "verdict": "match"
+    },
+    "57": {
+     "name": "MotionMoveZ",
+     "observed": {
+      "6": 1
+     },
+     "table_argc": 6,
+     "unknown_sites": 69,
+     "verdict": "match"
+    },
+    "58": {
+     "name": "MotionMoveZStop",
+     "observed": {
+      "1": 7
+     },
+     "table_argc": 1,
+     "unknown_sites": 27,
+     "verdict": "match"
+    },
+    "59": {
+     "name": "MotionMoveZTest",
+     "observed": {
+      "1": 7
+     },
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "6": {
+     "name": "AudioVol",
+     "observed": {
+      "3": 4
+     },
+     "table_argc": 3,
+     "unknown_sites": 18,
+     "verdict": "match"
+    },
+    "60": {
+     "name": "MotionPause",
+     "observed": {
+      "2": 3
+     },
+     "table_argc": 2,
+     "unknown_sites": 7,
+     "verdict": "match"
+    },
+    "61": {
+     "name": "Movie",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "62": {
+     "name": "MovieState",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "63": {
+     "name": "MovieStop",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "64": {
+     "name": "PartsAssign",
+     "observed": {
+      "2": 19
+     },
+     "table_argc": 2,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "65": {
+     "name": "PartsLoad",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 59,
+     "verdict": "no-exact-sites"
+    },
+    "66": {
+     "name": "PartsMotion",
+     "observed": {
+      "3": 1
+     },
+     "table_argc": 3,
+     "unknown_sites": 20,
+     "verdict": "match"
+    },
+    "67": {
+     "name": "PartsMotionPause",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "68": {
+     "name": "PartsMotionStop",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "69": {
+     "name": "PartsMotionTest",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "7": {
+     "name": "ColorSet",
+     "observed": {
+      "5": 73
+     },
+     "table_argc": 5,
+     "unknown_sites": 54,
+     "verdict": "match"
+    },
+    "70": {
+     "name": "PartsRGB",
+     "observed": {},
+     "table_argc": 4,
+     "unknown_sites": 19,
+     "verdict": "no-exact-sites"
+    },
+    "71": {
+     "name": "PartsSelect",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 20,
+     "verdict": "no-exact-sites"
+    },
+    "72": {
+     "name": "PrimExitGroup",
+     "observed": {
+      "1": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "73": {
+     "name": "PrimGroupIn",
+     "observed": {
+      "2": 6
+     },
+     "table_argc": 2,
+     "unknown_sites": 169,
+     "verdict": "match"
+    },
+    "74": {
+     "name": "PrimGroupMove",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "75": {
+     "name": "PrimGroupOut",
+     "observed": {
+      "1": 8
+     },
+     "table_argc": 1,
+     "unknown_sites": 20,
+     "verdict": "match"
+    },
+    "76": {
+     "name": "PrimHit",
+     "observed": {
+      "2": 49
+     },
+     "table_argc": 2,
+     "unknown_sites": 129,
+     "verdict": "match"
+    },
+    "77": {
+     "name": "PrimSetAlpha",
+     "observed": {
+      "2": 12
+     },
+     "table_argc": 2,
+     "unknown_sites": 553,
+     "verdict": "match"
+    },
+    "78": {
+     "name": "PrimSetBlend",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 63,
+     "verdict": "no-exact-sites"
+    },
+    "79": {
+     "name": "PrimSetDraw",
+     "observed": {
+      "2": 36
+     },
+     "table_argc": 2,
+     "unknown_sites": 143,
+     "verdict": "match"
+    },
+    "8": {
+     "name": "ControlMask",
+     "observed": {
+      "1": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "80": {
+     "name": "PrimSetNull",
+     "observed": {
+      "1": 9
+     },
+     "table_argc": 1,
+     "unknown_sites": 100,
+     "verdict": "match"
+    },
+    "81": {
+     "name": "PrimSetOP",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 9,
+     "verdict": "no-exact-sites"
+    },
+    "82": {
+     "name": "PrimSetRS",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 69,
+     "verdict": "no-exact-sites"
+    },
+    "83": {
+     "name": "PrimSetRS2",
+     "observed": {
+      "4": 8
+     },
+     "table_argc": 4,
+     "unknown_sites": 74,
+     "verdict": "match"
+    },
+    "84": {
+     "name": "PrimSetSnow",
+     "observed": {},
+     "table_argc": 4,
+     "unknown_sites": 74,
+     "verdict": "no-exact-sites"
+    },
+    "85": {
+     "name": "PrimSetSprt",
+     "observed": {
+      "4": 9
+     },
+     "table_argc": 4,
+     "unknown_sites": 23,
+     "verdict": "match"
+    },
+    "86": {
+     "name": "PrimSetText",
+     "observed": {
+      "4": 2
+     },
+     "table_argc": 4,
+     "unknown_sites": 11,
+     "verdict": "match"
+    },
+    "87": {
+     "name": "PrimSetTile",
+     "observed": {},
+     "table_argc": 6,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "88": {
+     "name": "PrimSetUV",
+     "observed": {
+      "3": 6
+     },
+     "table_argc": 3,
+     "unknown_sites": 81,
+     "verdict": "match"
+    },
+    "89": {
+     "name": "PrimSetWH",
+     "observed": {
+      "3": 3
+     },
+     "table_argc": 3,
+     "unknown_sites": 15,
+     "verdict": "match"
+    },
+    "9": {
+     "name": "ControlPulse",
+     "observed": {
+      "0": 55
+     },
+     "table_argc": 0,
+     "unknown_sites": 6,
+     "verdict": "match"
+    },
+    "90": {
+     "name": "PrimSetXY",
+     "observed": {
+      "3": 4
+     },
+     "table_argc": 3,
+     "unknown_sites": 54,
+     "verdict": "match"
+    },
+    "91": {
+     "name": "PrimSetZ",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 88,
+     "verdict": "no-exact-sites"
+    },
+    "92": {
+     "name": "Rand",
+     "observed": {
+      "0": 2,
+      "1": 1
+     },
+     "table_argc": 0,
+     "unknown_sites": 12,
+     "verdict": "match"
+    },
+    "93": {
+     "name": "SaveCreate",
+     "observed": {
+      "2": 5,
+      "3": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 5,
+     "verdict": "match"
+    },
+    "94": {
+     "name": "SaveThumbSize",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "95": {
+     "name": "SaveData",
+     "observed": {
+      "3": 24
+     },
+     "table_argc": 3,
+     "unknown_sites": 16,
+     "verdict": "match"
+    },
+    "96": {
+     "name": "SaveWrite",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "97": {
+     "name": "Snow",
+     "observed": {},
+     "table_argc": 18,
+     "unknown_sites": 74,
+     "verdict": "no-exact-sites"
+    },
+    "98": {
+     "name": "SnowStart",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "99": {
+     "name": "SnowStop",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    }
+   },
+   "unknown_sites": 4118
+  },
+  "iroseka": {
+   "anomalies": [
+    {
+     "id": 24,
+     "name": "IntToText",
+     "observed": {
+      "3": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 46
+    },
+    {
+     "id": 114,
+     "name": "TextFontCount",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 1
+    },
+    {
+     "id": 116,
+     "name": "TextFontName",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 3
+    }
+   ],
+   "exact_sites": 825,
+   "focus": {
+    "141": {
+     "name": "TitleMenu",
+     "prev_instr_hist": {
+      "pushtrue": 6
+     },
+     "table_argc": 1
+    }
+   },
+   "hcb_sha256": "8c362ff7178628bef90f0d7bf35a48be5ee22f9f762d4c76e86799f6f063c0ff",
+   "hcb_size": 4275282,
+   "instructions": 948219,
+   "per_command": {
+    "0": {
+     "name": "AudioLoad",
+     "observed": {
+      "2": 2
+     },
+     "table_argc": 2,
+     "unknown_sites": 15,
+     "verdict": "match"
+    },
+    "1": {
+     "name": "AudioPlay",
+     "observed": {
+      "2": 4
+     },
+     "table_argc": 2,
+     "unknown_sites": 5,
+     "verdict": "match"
+    },
+    "10": {
+     "name": "CursorChange",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "match"
+    },
+    "100": {
+     "name": "SoundLoad",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 20,
+     "verdict": "match"
+    },
+    "101": {
+     "name": "SoundMasterVol",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "102": {
+     "name": "SoundPlay",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 8,
+     "verdict": "no-exact-sites"
+    },
+    "103": {
+     "name": "SoundSilentOn",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "104": {
+     "name": "SoundStop",
+     "observed": {
+      "2": 4
+     },
+     "table_argc": 2,
+     "unknown_sites": 10,
+     "verdict": "match"
+    },
+    "105": {
+     "name": "SoundType",
+     "observed": {
+      "2": 4
+     },
+     "table_argc": 2,
+     "unknown_sites": 4,
+     "verdict": "match"
+    },
+    "106": {
+     "name": "SoundTypeVol",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 15,
+     "verdict": "no-exact-sites"
+    },
+    "107": {
+     "name": "SoundVol",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "108": {
+     "name": "SysAtSkipName",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "109": {
+     "name": "SysProjFolder",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "11": {
+     "name": "CursorMove",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 6,
+     "verdict": "no-exact-sites"
+    },
+    "110": {
+     "name": "TextBuff",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 6,
+     "verdict": "no-exact-sites"
+    },
+    "111": {
+     "name": "TextClear",
+     "observed": {
+      "1": 6
+     },
+     "table_argc": 1,
+     "unknown_sites": 49,
+     "verdict": "match"
+    },
+    "112": {
+     "name": "TextColor",
+     "observed": {
+      "4": 12
+     },
+     "table_argc": 4,
+     "unknown_sites": 54,
+     "verdict": "match"
+    },
+    "113": {
+     "name": "TextFont",
+     "observed": {
+      "3": 1
+     },
+     "table_argc": 3,
+     "unknown_sites": 18,
+     "verdict": "match"
+    },
+    "114": {
+     "name": "TextFontCount",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 1,
+     "verdict": "mismatch"
+    },
+    "115": {
+     "name": "TextFontGet",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 8,
+     "verdict": "match"
+    },
+    "116": {
+     "name": "TextFontName",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "mismatch"
+    },
+    "117": {
+     "name": "TextFontSet",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "118": {
+     "name": "TextFormat",
+     "observed": {},
+     "table_argc": 7,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "119": {
+     "name": "TextFunction",
+     "observed": {},
+     "table_argc": 4,
+     "unknown_sites": 5,
+     "verdict": "no-exact-sites"
+    },
+    "12": {
+     "name": "CursorShow",
+     "observed": {
+      "1": 4
+     },
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "120": {
+     "name": "TextOutSize",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 6,
+     "verdict": "no-exact-sites"
+    },
+    "121": {
+     "name": "TextPause",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "122": {
+     "name": "TextPos",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "123": {
+     "name": "TextPrint",
+     "observed": {
+      "2": 2
+     },
+     "table_argc": 2,
+     "unknown_sites": 46,
+     "verdict": "match"
+    },
+    "124": {
+     "name": "TextRepaint",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "125": {
+     "name": "TextShadowDist",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 6,
+     "verdict": "no-exact-sites"
+    },
+    "126": {
+     "name": "TextSize",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 8,
+     "verdict": "no-exact-sites"
+    },
+    "127": {
+     "name": "TextSkip",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 3,
+     "verdict": "match"
+    },
+    "128": {
+     "name": "TextSpace",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 4,
+     "verdict": "no-exact-sites"
+    },
+    "129": {
+     "name": "TextSpeed",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 19,
+     "verdict": "no-exact-sites"
+    },
+    "13": {
+     "name": "Debmess",
+     "observed": {
+      "2": 15
+     },
+     "table_argc": 2,
+     "unknown_sites": 14,
+     "verdict": "match"
+    },
+    "130": {
+     "name": "TextSuspendChr",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "131": {
+     "name": "TextTest",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "132": {
+     "name": "ThreadExit",
+     "observed": {
+      "1": 5
+     },
+     "table_argc": 1,
+     "unknown_sites": 16,
+     "verdict": "match"
+    },
+    "133": {
+     "name": "ThreadNext",
+     "observed": {
+      "0": 12
+     },
+     "table_argc": 0,
+     "unknown_sites": 14,
+     "verdict": "match"
+    },
+    "134": {
+     "name": "ThreadRaise",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "135": {
+     "name": "ThreadSleep",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "136": {
+     "name": "ThreadStart",
+     "observed": {
+      "2": 17
+     },
+     "table_argc": 2,
+     "unknown_sites": 22,
+     "verdict": "match"
+    },
+    "137": {
+     "name": "ThreadWait",
+     "observed": {
+      "1": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "138": {
+     "name": "TimerGet",
+     "observed": {
+      "2": 12
+     },
+     "table_argc": 2,
+     "unknown_sites": 11,
+     "verdict": "match"
+    },
+    "139": {
+     "name": "TimerSet",
+     "observed": {
+      "2": 15
+     },
+     "table_argc": 2,
+     "unknown_sites": 32,
+     "verdict": "match"
+    },
+    "14": {
+     "name": "Dissolve",
+     "observed": {
+      "7": 2
+     },
+     "table_argc": 7,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "140": {
+     "name": "TimerSuspend",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "141": {
+     "name": "TitleMenu",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 6,
+     "verdict": "no-exact-sites"
+    },
+    "142": {
+     "name": "V3DMotion",
+     "observed": {},
+     "table_argc": 6,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "143": {
+     "name": "V3DMotionPause",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "144": {
+     "name": "V3DMotionStop",
+     "observed": {
+      "0": 1
+     },
+     "table_argc": 0,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "145": {
+     "name": "V3DMotionTest",
+     "observed": {
+      "0": 8
+     },
+     "table_argc": 0,
+     "unknown_sites": 8,
+     "verdict": "match"
+    },
+    "146": {
+     "name": "V3DSet",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "147": {
+     "name": "WindowMode",
+     "observed": {
+      "1": 7,
+      "2": 2
+     },
+     "table_argc": 1,
+     "unknown_sites": 7,
+     "verdict": "match"
+    },
+    "15": {
+     "name": "DissolveWait",
+     "observed": {
+      "1": 7
+     },
+     "table_argc": 1,
+     "unknown_sites": 9,
+     "verdict": "match"
+    },
+    "16": {
+     "name": "ExitDialog",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "17": {
+     "name": "ExitMode",
+     "observed": {
+      "1": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 4,
+     "verdict": "match"
+    },
+    "18": {
+     "name": "FlagGet",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "19": {
+     "name": "FlagSet",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "2": {
+     "name": "AudioSilentOn",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "20": {
+     "name": "FloatToInt",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 57,
+     "verdict": "no-exact-sites"
+    },
+    "21": {
+     "name": "GaijiLoad",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "22": {
+     "name": "GraphLoad",
+     "observed": {
+      "2": 43
+     },
+     "table_argc": 2,
+     "unknown_sites": 176,
+     "verdict": "match"
+    },
+    "23": {
+     "name": "GraphRGB",
+     "observed": {
+      "4": 1
+     },
+     "table_argc": 4,
+     "unknown_sites": 20,
+     "verdict": "match"
+    },
+    "24": {
+     "name": "IntToText",
+     "observed": {
+      "3": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 46,
+     "verdict": "mismatch"
+    },
+    "25": {
+     "name": "HistoryGet",
+     "observed": {
+      "2": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 4,
+     "verdict": "match"
+    },
+    "26": {
+     "name": "HistorySet",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 7,
+     "verdict": "no-exact-sites"
+    },
+    "27": {
+     "name": "InputFlash",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 16,
+     "verdict": "match"
+    },
+    "28": {
+     "name": "InputGetCursIn",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 4,
+     "verdict": "no-exact-sites"
+    },
+    "29": {
+     "name": "InputGetCursX",
+     "observed": {
+      "0": 2,
+      "1": 1
+     },
+     "table_argc": 0,
+     "unknown_sites": 26,
+     "verdict": "match"
+    },
+    "3": {
+     "name": "AudioState",
+     "observed": {
+      "1": 4
+     },
+     "table_argc": 1,
+     "unknown_sites": 6,
+     "verdict": "match"
+    },
+    "30": {
+     "name": "InputGetCursY",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 28,
+     "verdict": "match"
+    },
+    "31": {
+     "name": "InputGetDown",
+     "observed": {
+      "0": 36
+     },
+     "table_argc": 0,
+     "unknown_sites": 111,
+     "verdict": "match"
+    },
+    "32": {
+     "name": "InputGetEvent",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "33": {
+     "name": "InputGetRepeat",
+     "observed": {
+      "0": 6
+     },
+     "table_argc": 0,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "34": {
+     "name": "InputGetState",
+     "observed": {
+      "0": 33
+     },
+     "table_argc": 0,
+     "unknown_sites": 58,
+     "verdict": "match"
+    },
+    "35": {
+     "name": "InputGetUp",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 3,
+     "verdict": "match"
+    },
+    "36": {
+     "name": "InputGetWheel",
+     "observed": {
+      "0": 3,
+      "1": 1
+     },
+     "table_argc": 0,
+     "unknown_sites": 12,
+     "verdict": "match"
+    },
+    "37": {
+     "name": "InputSetClick",
+     "observed": {},
+     "table_argc": 0,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "38": {
+     "name": "LipAnim",
+     "observed": {},
+     "table_argc": 8,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "39": {
+     "name": "LipSync",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "4": {
+     "name": "AudioStop",
+     "observed": {
+      "2": 8
+     },
+     "table_argc": 2,
+     "unknown_sites": 16,
+     "verdict": "match"
+    },
+    "40": {
+     "name": "Load",
+     "observed": {
+      "1": 3
+     },
+     "table_argc": 1,
+     "unknown_sites": 6,
+     "verdict": "match"
+    },
+    "41": {
+     "name": "MenuMessSkip",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "42": {
+     "name": "MotionAlpha",
+     "observed": {
+      "6": 74
+     },
+     "table_argc": 6,
+     "unknown_sites": 196,
+     "verdict": "match"
+    },
+    "43": {
+     "name": "MotionAlphaStop",
+     "observed": {
+      "1": 3
+     },
+     "table_argc": 1,
+     "unknown_sites": 5,
+     "verdict": "match"
+    },
+    "44": {
+     "name": "MotionAlphaTest",
+     "observed": {
+      "1": 5
+     },
+     "table_argc": 1,
+     "unknown_sites": 49,
+     "verdict": "match"
+    },
+    "45": {
+     "name": "MotionAnim",
+     "observed": {
+      "4": 11
+     },
+     "table_argc": 4,
+     "unknown_sites": 109,
+     "verdict": "match"
+    },
+    "46": {
+     "name": "MotionAnimStop",
+     "observed": {
+      "1": 7
+     },
+     "table_argc": 1,
+     "unknown_sites": 15,
+     "verdict": "match"
+    },
+    "47": {
+     "name": "MotionAnimTest",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "48": {
+     "name": "MotionMove",
+     "observed": {
+      "8": 9
+     },
+     "table_argc": 8,
+     "unknown_sites": 464,
+     "verdict": "match"
+    },
+    "49": {
+     "name": "MotionMoveStop",
+     "observed": {
+      "1": 10
+     },
+     "table_argc": 1,
+     "unknown_sites": 62,
+     "verdict": "match"
+    },
+    "5": {
+     "name": "AudioType",
+     "observed": {
+      "2": 2
+     },
+     "table_argc": 2,
+     "unknown_sites": 4,
+     "verdict": "match"
+    },
+    "50": {
+     "name": "MotionMoveTest",
+     "observed": {
+      "1": 12,
+      "2": 4
+     },
+     "table_argc": 1,
+     "unknown_sites": 213,
+     "verdict": "match"
+    },
+    "51": {
+     "name": "MotionMoveR",
+     "observed": {},
+     "table_argc": 6,
+     "unknown_sites": 38,
+     "verdict": "no-exact-sites"
+    },
+    "52": {
+     "name": "MotionMoveRStop",
+     "observed": {
+      "1": 6
+     },
+     "table_argc": 1,
+     "unknown_sites": 9,
+     "verdict": "match"
+    },
+    "53": {
+     "name": "MotionMoveRTest",
+     "observed": {
+      "1": 7
+     },
+     "table_argc": 1,
+     "unknown_sites": 17,
+     "verdict": "match"
+    },
+    "54": {
+     "name": "MotionMoveS2",
+     "observed": {
+      "8": 6
+     },
+     "table_argc": 8,
+     "unknown_sites": 72,
+     "verdict": "match"
+    },
+    "55": {
+     "name": "MotionMoveS2Stop",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 1,
+     "unknown_sites": 7,
+     "verdict": "match"
+    },
+    "56": {
+     "name": "MotionMoveS2Test",
+     "observed": {
+      "1": 9
+     },
+     "table_argc": 1,
+     "unknown_sites": 46,
+     "verdict": "match"
+    },
+    "57": {
+     "name": "MotionMoveZ",
+     "observed": {},
+     "table_argc": 6,
+     "unknown_sites": 33,
+     "verdict": "no-exact-sites"
+    },
+    "58": {
+     "name": "MotionMoveZStop",
+     "observed": {
+      "1": 6
+     },
+     "table_argc": 1,
+     "unknown_sites": 22,
+     "verdict": "match"
+    },
+    "59": {
+     "name": "MotionMoveZTest",
+     "observed": {
+      "1": 7
+     },
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "6": {
+     "name": "AudioVol",
+     "observed": {
+      "3": 4
+     },
+     "table_argc": 3,
+     "unknown_sites": 17,
+     "verdict": "match"
+    },
+    "60": {
+     "name": "MotionPause",
+     "observed": {
+      "2": 3
+     },
+     "table_argc": 2,
+     "unknown_sites": 7,
+     "verdict": "match"
+    },
+    "61": {
+     "name": "Movie",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "62": {
+     "name": "MovieState",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 3,
+     "verdict": "no-exact-sites"
+    },
+    "63": {
+     "name": "MovieStop",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "64": {
+     "name": "PartsAssign",
+     "observed": {
+      "2": 12
+     },
+     "table_argc": 2,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "65": {
+     "name": "PartsLoad",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 38,
+     "verdict": "no-exact-sites"
+    },
+    "66": {
+     "name": "PartsMotion",
+     "observed": {
+      "3": 1
+     },
+     "table_argc": 3,
+     "unknown_sites": 13,
+     "verdict": "match"
+    },
+    "67": {
+     "name": "PartsMotionPause",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "68": {
+     "name": "PartsMotionStop",
+     "observed": {},
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "69": {
+     "name": "PartsMotionTest",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "7": {
+     "name": "ColorSet",
+     "observed": {
+      "5": 73
+     },
+     "table_argc": 5,
+     "unknown_sites": 44,
+     "verdict": "match"
+    },
+    "70": {
+     "name": "PartsRGB",
+     "observed": {},
+     "table_argc": 4,
+     "unknown_sites": 12,
+     "verdict": "no-exact-sites"
+    },
+    "71": {
+     "name": "PartsSelect",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 13,
+     "verdict": "no-exact-sites"
+    },
+    "72": {
+     "name": "PrimExitGroup",
+     "observed": {
+      "1": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "73": {
+     "name": "PrimGroupIn",
+     "observed": {
+      "2": 6
+     },
+     "table_argc": 2,
+     "unknown_sites": 168,
+     "verdict": "match"
+    },
+    "74": {
+     "name": "PrimGroupMove",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 0,
+     "verdict": "no-exact-sites"
+    },
+    "75": {
+     "name": "PrimGroupOut",
+     "observed": {
+      "1": 8
+     },
+     "table_argc": 1,
+     "unknown_sites": 15,
+     "verdict": "match"
+    },
+    "76": {
+     "name": "PrimHit",
+     "observed": {
+      "2": 55
+     },
+     "table_argc": 2,
+     "unknown_sites": 156,
+     "verdict": "match"
+    },
+    "77": {
+     "name": "PrimSetAlpha",
+     "observed": {
+      "2": 6
+     },
+     "table_argc": 2,
+     "unknown_sites": 481,
+     "verdict": "match"
+    },
+    "78": {
+     "name": "PrimSetBlend",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 51,
+     "verdict": "no-exact-sites"
+    },
+    "79": {
+     "name": "PrimSetDraw",
+     "observed": {
+      "2": 40
+     },
+     "table_argc": 2,
+     "unknown_sites": 134,
+     "verdict": "match"
+    },
+    "8": {
+     "name": "ControlMask",
+     "observed": {
+      "1": 1
+     },
+     "table_argc": 1,
+     "unknown_sites": 0,
+     "verdict": "match"
+    },
+    "80": {
+     "name": "PrimSetNull",
+     "observed": {
+      "1": 9
+     },
+     "table_argc": 1,
+     "unknown_sites": 74,
+     "verdict": "match"
+    },
+    "81": {
+     "name": "PrimSetOP",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 44,
+     "verdict": "no-exact-sites"
+    },
+    "82": {
+     "name": "PrimSetRS",
+     "observed": {},
+     "table_argc": 3,
+     "unknown_sites": 71,
+     "verdict": "no-exact-sites"
+    },
+    "83": {
+     "name": "PrimSetRS2",
+     "observed": {
+      "4": 8
+     },
+     "table_argc": 4,
+     "unknown_sites": 69,
+     "verdict": "match"
+    },
+    "84": {
+     "name": "PrimSetSnow",
+     "observed": {},
+     "table_argc": 4,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "85": {
+     "name": "PrimSetSprt",
+     "observed": {
+      "4": 7
+     },
+     "table_argc": 4,
+     "unknown_sites": 18,
+     "verdict": "match"
+    },
+    "86": {
+     "name": "PrimSetText",
+     "observed": {
+      "4": 2
+     },
+     "table_argc": 4,
+     "unknown_sites": 11,
+     "verdict": "match"
+    },
+    "87": {
+     "name": "PrimSetTile",
+     "observed": {},
+     "table_argc": 6,
+     "unknown_sites": 11,
+     "verdict": "no-exact-sites"
+    },
+    "88": {
+     "name": "PrimSetUV",
+     "observed": {
+      "3": 6
+     },
+     "table_argc": 3,
+     "unknown_sites": 94,
+     "verdict": "match"
+    },
+    "89": {
+     "name": "PrimSetWH",
+     "observed": {
+      "3": 3
+     },
+     "table_argc": 3,
+     "unknown_sites": 16,
+     "verdict": "match"
+    },
+    "9": {
+     "name": "ControlPulse",
+     "observed": {
+      "0": 56
+     },
+     "table_argc": 0,
+     "unknown_sites": 6,
+     "verdict": "match"
+    },
+    "90": {
+     "name": "PrimSetXY",
+     "observed": {
+      "3": 4
+     },
+     "table_argc": 3,
+     "unknown_sites": 101,
+     "verdict": "match"
+    },
+    "91": {
+     "name": "PrimSetZ",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 80,
+     "verdict": "no-exact-sites"
+    },
+    "92": {
+     "name": "Rand",
+     "observed": {
+      "0": 2
+     },
+     "table_argc": 0,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "93": {
+     "name": "SaveCreate",
+     "observed": {
+      "2": 5,
+      "3": 1
+     },
+     "table_argc": 2,
+     "unknown_sites": 5,
+     "verdict": "match"
+    },
+    "94": {
+     "name": "SaveThumbSize",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "95": {
+     "name": "SaveData",
+     "observed": {
+      "3": 24
+     },
+     "table_argc": 3,
+     "unknown_sites": 17,
+     "verdict": "match"
+    },
+    "96": {
+     "name": "SaveWrite",
+     "observed": {
+      "1": 2
+     },
+     "table_argc": 1,
+     "unknown_sites": 1,
+     "verdict": "match"
+    },
+    "97": {
+     "name": "Snow",
+     "observed": {},
+     "table_argc": 18,
+     "unknown_sites": 1,
+     "verdict": "no-exact-sites"
+    },
+    "98": {
+     "name": "SnowStart",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    },
+    "99": {
+     "name": "SnowStop",
+     "observed": {},
+     "table_argc": 2,
+     "unknown_sites": 2,
+     "verdict": "no-exact-sites"
+    }
+   },
+   "unknown_sites": 4239
+  }
+ },
+ "note": "用真实脚本反查命令表 argc；由 scripts/audit-script-argc.py 生成"
+}

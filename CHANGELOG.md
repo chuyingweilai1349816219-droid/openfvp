@@ -92,6 +92,26 @@
     提取结果表、与实现的差距表、以及"⑥ 的结论修正"；
     `docs/vm-commands.md` 的"我们没有那份表"同步更正
 
+### 新增（脚本侧实参审计）
+
+- **命令表 argc 用真实脚本对账；顺带否掉"TitleMenu 传布局参数"的猜测**
+  - 新增 `scripts/audit-script-argc.py`：不用跑原版、不用截图，直接看脚本在每个
+    `syscall` 之前实际压了几个值（基本块回溯；遇到 call / 表达式 / 上一条 syscall
+    的返回值记为"不可判定"），与 `ref/cmd_table.json` 的 argc 对账
+  - 产物 `ref/script-argc.json`：五彩斑斓 **948,219 条指令 / 825 个可判定调用点 /
+    82 条命令的 argc 被证实**；星空 **1,135,159 / 865 / 83**；异常各 3 条且
+    **两作完全相同**（IntToText 24 / TextFontCount 114 / TextFontName 116，
+    成因是表达式临时值留在栈上，不是表错）
+  - 新门禁 `tests/verify_script_argc.py`（接入 `run_all` 46 → 47 步，约 2 s）：
+    `--check` 逐字节 + 异常清单只允许这 3 条 + **TitleMenu(141) 的 argc=1 且每个
+    调用点紧邻前一条都是 `pushtrue`**（两作 6 / 7 处）
+  - 结论修正：`TitleMenu` 只收 1 个布尔（"进/不进标题菜单"），handler 与
+    `MenuMessSkip`/`SysAtSkipName` 同为纯空操作 `0x437950` → **标题按钮位置不在
+    脚本参数里**；HCB 命令名表里名字后随的那个字节也不是 argc（`TitleMenu` 后面是
+    `0x06` 却只传 1 个实参，整表按该布局解析只能对上 135 条且与调用点冲突）
+  - `docs/title-menu.md` 新增 §6/§7 记录这条被证否的线索与对账方法；
+    `docs/status.md` §6 的下一步同步改向（查"标题画面由谁画"的两条候选路径）
+
 ### 新增（原版 GDI 协议实现）
 
 - **⑥ 的第二块：缺字回退可按原版同协议栅格化（`--glyph-original`）**
