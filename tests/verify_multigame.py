@@ -484,6 +484,18 @@ def stage_title_menu(shell, games, check):
 
         # 第三次跑：--title-hover 1。hover 态必须真的画出东西（贴图模式 = 发光层，
         # 文字模式 = 高亮色）；和第一次的截图逐像素比，差异要落在被 hover 的那一行。
+        # hover 对照自采基线：同一个步骤里先拍"无 hover"帧，再拍 hover 帧，
+        # 两次用同一组参数，避免依赖前面阶段/机器负载（曾两次出现 diff=0 的假失败）。
+        shot_base = os.path.join(OUT_DIR, 'mg-%s-hover-base.bmp' % name)
+        log_base_path = os.path.join(OUT_DIR, 'mg-%s-hover-base.log' % name)
+        for p6 in (shot_base, log_base_path):
+            if os.path.isfile(p6):
+                os.remove(p6)
+        rc_base, log_base = run_shell_frame(shell, g['dir'],
+                                            os.path.basename(g['script']), 2,
+                                            shot_base, log_base_path,
+                                            extra=['--title-menu'])
+        check(rc_base == 0, 'hover baseline run exit 0 (got %s)' % rc_base)
         shot3 = os.path.join(OUT_DIR, 'mg-%s-hover.bmp' % name)
         log3_path = os.path.join(OUT_DIR, 'mg-%s-hover.log' % name)
         for p3 in (shot3, log3_path):
@@ -494,7 +506,11 @@ def stage_title_menu(shell, games, check):
                                     log3_path,
                                     extra=['--title-menu', '--title-hover', '1'])
         check(rc3 == 0, 'hover run exit 0 (got %s)' % rc3)
-        img_a = read_bmp32(shot_bg) if os.path.isfile(shot_bg) else None
+        img_a = None
+        for cand in (shot_base, shot_bg):
+            if os.path.isfile(cand):
+                img_a = read_bmp32(cand)
+                break
         img_b = read_bmp32(shot3) if os.path.isfile(shot3) else None
         if img_a is not None and img_b is not None:
             diff = 0

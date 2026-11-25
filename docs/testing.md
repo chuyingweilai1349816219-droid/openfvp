@@ -470,3 +470,11 @@ out\fuzz\fvm_guard.exe out\fuzz\repro\case_12345.hcb --steps 2048
 > `--steps 300000`、每次约 80 秒。结论：**未复现**，更像是机器负载高时的时序抖动
 > （外壳截图/窗口初始化都在固定秒数后取帧）。若再次出现，优先怀疑"截图早于首帧"，
 > 可用 `--no-input`（已在所有门禁跑法里默认带上）与增大 `--run-seconds` 复核。
+
+> **2026-11-25 修掉 hover 门禁的偶发失败（根因是跨步骤时序依赖）**：
+> `verify_multigame` 的 hover 断言原本拿"前面阶段拍的背景帧"当对照，
+> 机器负载高时两次截图可能落到同一状态，出现过两次 `hover state changes pixels (0)`
+> 的假失败（直接复跑同一对命令都是 2973 px 差异，无法复现）。
+> 现在 hover 步骤**自己先拍一张无 hover 的基线帧**（同一组参数、同一步骤内），
+> 再拍 hover 帧对比：iroseka 差异 2973 px、hoshimemo 33343 px，两次 `run_all`
+> 都不再有 FLAKY。
