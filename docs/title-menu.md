@@ -959,3 +959,63 @@ Z 之后紧跟着的就是 OP/RS，alpha 可能在别处或用默认 255），�
 
 顺带把 ④「缓动 mode 1..5」也坐实了一格：mode 的合法范围 **1..5** 是 exe handler
 里的范围检查（`cmp $0x5`），不是我们从脚本里猜的。
+## 18. PrimSet* 的实参语义：**非整数 = 保持原值**，坐标是绝对值（2026-11-25）
+
+第 17 轮把 `Motion*` 的实参约束从 handler 里抄出来之后，同一套方法继续往
+`PrimSet*` 上补。目标是把"标题/演出怎么摆"里最后几格**缺省语义**也坐实——
+这类东西抓帧永远拿不到（帧里只有结果，没有"哪个实参不是整数时就跳过写入"）。
+
+`scripts/extract-exe-motion-params.py` 这一轮新增三类提取：
+
+1. **绝对寻址的字段写**：`mov %dl,0x61dd6b(%eax,%ecx,1)`（基准 `0x61dd64`，
+   低字节差就是字段偏移）——`PrimSetAlpha`/`PrimSetBlend` 是这种写法；
+2. **prim+6 的脏标记位**：`orb $0x1,0x6(%eax)` 这类，记录每个 handler 置了哪些位；
+3. **逐实参的 int 检查 ⇒ 只写那一个字段**（第 6 类事实，见下表"缺省规则"列）。
+
+产物 `ref/exe-motion-params.json` 新增 `abs_field_writes` / `dirty_flag_bits` 两个键，
+门禁 `tests/verify_exe_motion_params.py` 加 §6/§7/§8 断言它们；`MotionAlpha` 的
+旧断言（把 arg2 写成"钳到 255"）也按 asm 改正为"arg1/arg2 都是 0..255 的 alpha 值"。
+
+| 命令 | handler | 实参约束（asm 里的 `cmp`/`ja`/`jl`） | 写哪里 | prim+6 脏位 |
+|---|---|---|---|---|
+| `PrimSetAlpha`(77) | `0x00437990` | arg0 prim 1..0xFFF；arg1 必须 int 且 **0..255**（`cmpl $0xff ; ja` 无符号） | 直接写 **prim+7**（alpha 字节） | 无 |
+| `PrimSetBlend`(78) | `0x0043ba20` | arg0 prim 0..0xFFF；arg1 必须 int 且 **0..1** | 直接写 **prim+8**（混合模式字节） | 无 |
+| `PrimSetOP`(81) | `0x0043ba90` | arg0 prim 1..0xFFF；**只有 type==4 的图元**才继续 | +0x20 / +0x22（各 16 位） | 0x40 |
+| `PrimSetWH`(89) | `0x0043bf50` | arg0 prim 1..0xFFF；arg1→+0x18、arg2→+0x1a，**各看各的类型** | +0x18 / +0x1a（各 16 位） | 0x1+0x40 |
+| `PrimSetXY`(90) | `0x0043bfa0` | arg0 prim 1..0xFFF；arg1→+0x14、arg2→+0x16，**各看各的类型** | +0x14 / +0x16（各 16 位） | 0x40 |
+| `PrimSetZ`(91) | `0x0043bff0` | arg0 prim 1..0xFFF；arg1 int，**<100 钳到 100** | +0x12（16 位） | 0x4+0x40 |
+| `MotionAlpha`(42) | `0x0043a8b0` | arg0 prim 1..0xFFF；**arg1/arg2 是两个 0..255 的 alpha 值**（非 int 或越界 → 读 prim+7 的当前值当缺省）；arg3 时长 1..300000 ms；arg4 0..1；arg5 布尔 | 不直接写，调 `0x0042d460` 注册补间 | 无 |
+
+### 这一轮最有用的结论：缺省规则是**逐字段**的
+
+handler 对每个实参先 `cmpb $0x2,(%eax)`（"是不是 int"），**不是 int 就跳过那一条
+`mov`，其余字段照写**。所以：
+
+```text
+PrimSetXY(prim, true, -48)   ⇒  x 保持不动；y := -48（绝对值赋值，不是 y -= 48）
+PrimSetWH(prim, 800, true)   ⇒  w := 800；h 保持不动
+PrimSetAlpha(prim, 255)      ⇒  prim+7 := 255
+```
+
+这条规则正好解释了我们之前的一个**误读**：§14 把脚本里的
+`PrimSetXY(1521/1522, true, -48)` 读成"hover 时上移 48 px"。按 handler 的写入
+语义它其实是"**x 不动、y 设成 -48**"，也就是把图元挪到屏幕上方之外（iroseka 的
+`title_option` 高 90、行 y 从 495 起，-48 足够整块露出画面外）——这是**隐藏**，
+不是位移。调用点（`iroseka.hcb`）：
+
+| pc | 调用 | 上下文 |
+|---|---|---|
+| `0x58d97` | `PrimSetXY(1522, true, -48)` | 前面是 `pushglobal[3]; pushint8[1]; eq; jmpcond 0x58dab`（某全局状态的条件分支） |
+| `0x58da1` | `PrimSetXY(1521, true, -48)` | 同上分支 |
+
+同时脚本对这些图元是**成组**地先显后隐：`PrimSetDraw(1508,1)` + `PrimSetAlpha(1508,0)`
+（`0x58c8a..0x58d07`）——高亮变体图元先画出来但 alpha=0，基础图元 `PrimSetDraw(...,0)`
+关掉。所以 hover 的实现路线是"**高亮图元常驻 + alpha/显隐切换**"，不是"把基础图元
+挪一下"。§14 的 48 px 结论就此作废，下一轮按这个路线实现 hover。
+
+### 为什么值得单独记一笔
+
+字段偏移（+7 alpha、+8 blend、+0x12 z、+0x14/16 xy、+0x18/1a wh、+0x20/22 OP、
++0x24 角度、+0x26/28 缩放）、脏标记位、以及"非 int = 保持原值"的逐字段缺省语义，
+这三样都是**"实际操作上一样"的前提**，而它们全都只存在于 exe 的 handler 里：
+抓帧看到的永远只是某个时刻的结果，拿不到"传 `true` 时哪个字段不变"。

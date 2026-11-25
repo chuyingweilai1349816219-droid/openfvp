@@ -51,6 +51,32 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 结构分析（PrimSet* 的字段偏移、脏标记与"非 int = 保持原值"缺省规则）
+
+- **把 `PrimSetXY/WH/OP/Blend/Alpha` 的实参语义从 handler 里抄出来，并改正上一轮一处误读**
+  - `scripts/extract-exe-motion-params.py` 扩到 5 条 `PrimSet*`（77/78/81/89/90，加原有
+    42/54/55/82/91 共 10 条），新增三类提取：绝对寻址字段写
+    （`mov %dl,0x61dd6b(%eax,%ecx,1)`，基准 `0x61dd64`）、prim+6 的脏标记位、
+    以及"逐实参 int 检查 ⇒ 只写那一个字段"
+  - `ref/exe-motion-params.json` 新增 `abs_field_writes` / `dirty_flag_bits`；门禁
+    `tests/verify_exe_motion_params.py` 加 §6/§7/§8，并把 `MotionAlpha` 的旧断言
+    （"arg2 钳到 255"）按 asm 改正为 **arg1/arg2 都是 0..255 的 alpha 值**、
+    arg3 时长、arg4 0..1、arg5 布尔，调用 `0x0042d460` 注册补间
+  - 抄出来的硬事实：`PrimSetAlpha`(77) 直接写 **prim+7**、`PrimSetBlend`(78) 写
+    **prim+8**、`PrimSetWH`(89) 写 +0x18/+0x1a 且置脏位 **0x1|0x40**、
+    `PrimSetXY`(90) 写 +0x14/+0x16 只置 **0x40**、`PrimSetZ`(91) 把 <100 的 z
+    钳到 100、`PrimSetOP`(81) 只对 **type==4** 的图元生效
+  - **关键规则**：缺省语义是**逐字段**的——某个实参不是 int 就跳过那一条 `mov`，
+    其余字段照写。所以 `PrimSetXY(prim, true, -48)` 是"x 不动、**y := -48**（绝对值）"，
+    不是"y 减 48"
+  - 由此改正 `docs/title-menu.md` §14 的误读：脚本里
+    `PrimSetXY(1521/1522, true, -48)`（`iroseka.hcb` `0x58d97`/`0x58da1`，同一条件分支）
+    是把高亮图元**挪出屏幕隐藏**，不是 hover 上移；脚本对高亮变体是
+    `PrimSetDraw(prim,1)` + `PrimSetAlpha(prim,0)` 常驻 + alpha 切换，
+    hover 的实现路线据此改写（`docs/title-menu.md` 新增 §18）
+  - 这一项把"演出参数怎么生效"又坐实一格：字段偏移、脏位、缺省语义**只存在于 exe
+    handler 里**，抓帧拿不到
+
 ### 新增
 
 - **与原版实拍帧的回归门禁（把"和原版差多少"变成可测量的数字）**

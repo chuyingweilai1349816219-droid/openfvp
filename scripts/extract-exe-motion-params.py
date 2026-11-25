@@ -36,20 +36,32 @@ TARGETS = {
     42: 'MotionAlpha',
     54: 'MotionMoveS2',
     55: 'MotionMoveS2Stop',
+    77: 'PrimSetAlpha',
+    78: 'PrimSetBlend',
+    81: 'PrimSetOP',
     82: 'PrimSetRS',
+    89: 'PrimSetWH',
+    90: 'PrimSetXY',
     91: 'PrimSetZ',
 }
 
 LINE_RE = re.compile(r'^\s+([0-9a-f]+):\t([0-9a-f ]+?)\s*\t(.*)$')
 # Variant 数组按 8 字节步进：类型在 arg*8，值在 arg*8+4
-TYPE_RE = re.compile(r'cmpb\s+\$0x([0-9a-f]+),(?:0x([0-9a-f]+))?\(%e?a?x\)')
-CMP_RE = re.compile(r'^cmp\s+\$0x([0-9a-f]+),%e(dx|ax|di|si)$')
+TYPE_RE = re.compile(r'cmpb\s+\$0x([0-9a-f]+),(?:0x([0-9a-f]+))?\(%e([abcd]x|si|di)\)')
+TEST_RE = re.compile(r'^test\s+%e(\w+),%e\1$')
+CMP_RE = re.compile(r'^cmp\s+\$0x([0-9a-f]+),%e(dx|ax|di|si|bx|bp)$')
 STORE_RE = re.compile(r'mov\s+%e?\w+,0x([0-9a-f]+)\(%e?[abcd]x,%e?[abcd]x(?:,1)?\)')
 CALL_RE = re.compile(r'^call\s+0x([0-9a-f]+)$')
 CLAMP_RE = re.compile(r'^cmp\s+\$0x([0-9a-f]+),%e([abcd]x|di|si|bp)$')
 IDIV_RE = re.compile(r'^idiv\s+%e(\w+)$')
 DIVSET_RE = re.compile(r'^mov\s+\$0x([0-9a-f]+),%edi$')
-FIELD_RE = re.compile(r'^mov\s+%([ad]x|dx),0x([0-9a-f]+)\(%ecx\)$')
+FIELD_RE = re.compile(r'^mov\s+%([a-z]{2}),0x([0-9a-f]+)\(%e([abcd]x)\)$')
+# PrimSetOP 只对 type==4 的图元生效：cmpb $0x4,0x61dd68(%eax,%ecx,1)
+PRIM_TYPE_RE = re.compile(r'cmpb\s+\$0x([0-9a-f]+),0x61dd6[0-9a-f]+\(%e?[abcd]x,%e?[abcd]x,1\)')
+# 绝对寻址的字段写：mov %dl,0x61dd6b(%eax,%ecx,1) —— 基准 0x61dd64，低字节差即字段偏移
+ABS_FIELD_RE = re.compile(r'^mov\s+%([a-z]{2}),0x(61dd[0-9a-f]{2})\(%e[abcd]x,%e[abcd]x,1\)$')
+# 脏标记：orb $0x1,0x6(%eax) —— prim+6 是 dirty 位图
+DIRTY_RE = re.compile(r'^orb\s+\$0x([0-9a-f]+),0x6\(%e[abcd]x\)$')
 JMP_RE = re.compile(r'^j(?:mp)?\s+0x([0-9a-f]+)$')
 
 
@@ -81,6 +93,10 @@ def extract(win):
     tails = []
     dividers = []        # idiv 的除数（角度 3600 这种单位常量）
     fields = []          # 写进 prim 结构体的字段偏移
+    abs_fields = []      # 绝对寻址的字段写（PrimSetAlpha 的 +7 这种）
+    dirty = []           # prim+6 的脏标记位
+    gates = []           # 图元类型门（例如 PrimSetOP 只对 type==4 生效）
+    cond = []            # 条件写入：arg 是 int 才写某个字段（非 int = 保持原值）
     pending = None       # 最近的 cmp $MIN 值
     for addr, text in win:
         m = TYPE_RE.search(text)
@@ -88,6 +104,10 @@ def extract(win):
             want = int(m.group(1), 16)
             off = int(m.group(2), 16) if m.group(2) else 0
             types.append({'arg': off // 8, 'type': want})
+            continue
+        m = TEST_RE.match(text)
+        if m:
+            pending = 0        # test/jl => 下界 0
             continue
         m = CMP_RE.match(text)
         if m:
@@ -115,11 +135,44 @@ def extract(win):
             continue
         m = FIELD_RE.match(text)
         if m:
-            fields.append({'field_off': int(m.group(2), 16), 'reg': m.group(1)})
+            fields.append({'field_off': int(m.group(2), 16), 'reg': m.group(1),
+                           'base': m.group(3)})
             continue
+        m = ABS_FIELD_RE.match(text)
+        if m:
+            abs_fields.append({'field_off': int(m.group(2), 16) - 0x61DD64,
+                               'reg': m.group(1)})
+            continue
+        m = DIRTY_RE.match(text)
+        if m:
+            dirty.append(int(m.group(1), 16))
+            continue
+        m = PRIM_TYPE_RE.search(text)
+        if m:
+            gates.append({'kind': 'prim_type', 'value': int(m.group(1), 16),
+                          'source': text})
+            continue
+    # 条件写入：TypeCheck(arg) 之后 6 条内出现的 (%eax) 字段写
+    pending_arg = None
+    for k, (addr, text) in enumerate(win):
+        m = TYPE_RE.search(text)
+        if m:
+            off = int(m.group(2), 16) if m.group(2) else 0
+            pending_arg = (off // 8, k)
+            continue
+        m = FIELD_RE.match(text)
+        if m and pending_arg is not None and m.group(3) in ('ax', 'cx') \
+                and k - pending_arg[1] <= 6:
+            cond.append({'arg': pending_arg[0], 'field_off': int(m.group(2), 16),
+                         'only_if_int': True})
+            pending_arg = None
     return {'arg_types': types, 'arg_ranges': ranges, 'calls_or_jumps': tails,
             'split_constants': sorted(set(dividers)),
-            'struct_field_writes': fields}
+            'struct_field_writes': fields,
+            'abs_field_writes': abs_fields,
+            'dirty_flag_bits': sorted(set(dirty)),
+            'type_gates': gates,
+            'conditional_field_writes': cond}
 
 
 def main(argv=None):
@@ -154,6 +207,11 @@ def main(argv=None):
         for r in info['arg_ranges']:
             print('     arg%s 范围 0x%X..0x%X (%d..%d)'
                   % (r['arg'], r['min'], r['max'], r['min'], r['max']))
+        for f in info['abs_field_writes']:
+            print('     绝对寻址写入 prim+0x%X' % f['field_off'])
+        if info['dirty_flag_bits']:
+            print('     prim+6 脏标记 %s'
+                  % ' '.join('0x%X' % b for b in info['dirty_flag_bits']))
         for t in info['calls_or_jumps']:
             print('     %s' % t)
 

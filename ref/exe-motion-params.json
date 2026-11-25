@@ -1,16 +1,32 @@
 {
  "commands": {
   "42": {
+   "abs_field_writes": [],
    "arg_ranges": [
+    {
+     "arg": 0,
+     "max": 4095,
+     "min": 1
+    },
     {
      "arg": 3,
      "max": 300000,
      "min": 1
     },
     {
+     "arg": 1,
+     "max": 255,
+     "min": 0
+    },
+    {
      "arg": 2,
      "max": 255,
-     "min": 255
+     "min": 0
+    },
+    {
+     "arg": 4,
+     "max": 1,
+     "min": 0
     }
    ],
    "arg_types": [
@@ -45,14 +61,18 @@
     "jmp 0x0043a947",
     "call 0x0042d460"
    ],
+   "conditional_field_writes": [],
+   "dirty_flag_bits": [],
    "handler": "0x0043a8b0",
    "id": 42,
    "name": "MotionAlpha",
    "reg_index": 43,
    "split_constants": [],
-   "struct_field_writes": []
+   "struct_field_writes": [],
+   "type_gates": []
   },
   "54": {
+   "abs_field_writes": [],
    "arg_ranges": [
     {
      "arg": 0,
@@ -128,14 +148,18 @@
    "calls_or_jumps": [
     "call 0x0042d670"
    ],
+   "conditional_field_writes": [],
+   "dirty_flag_bits": [],
    "handler": "0x0043af70",
    "id": 54,
    "name": "MotionMoveS2",
    "reg_index": 53,
    "split_constants": [],
-   "struct_field_writes": []
+   "struct_field_writes": [],
+   "type_gates": []
   },
   "55": {
+   "abs_field_writes": [],
    "arg_ranges": [
     {
      "arg": 0,
@@ -153,14 +177,95 @@
    "calls_or_jumps": [
     "jmp 0x00427460"
    ],
+   "conditional_field_writes": [],
+   "dirty_flag_bits": [],
    "handler": "0x0043b0a0",
    "id": 55,
    "name": "MotionMoveS2Stop",
    "reg_index": 54,
    "split_constants": [],
-   "struct_field_writes": []
+   "struct_field_writes": [],
+   "type_gates": []
   },
-  "82": {
+  "77": {
+   "abs_field_writes": [
+    {
+     "field_off": 7,
+     "reg": "dl"
+    }
+   ],
+   "arg_ranges": [
+    {
+     "arg": 0,
+     "max": 4096,
+     "min": 1
+    }
+   ],
+   "arg_types": [
+    {
+     "arg": 0,
+     "type": 2
+    },
+    {
+     "arg": 1,
+     "type": 2
+    }
+   ],
+   "argc": 2,
+   "calls_or_jumps": [],
+   "conditional_field_writes": [],
+   "dirty_flag_bits": [],
+   "handler": "0x00437990",
+   "id": 77,
+   "name": "PrimSetAlpha",
+   "reg_index": 78,
+   "split_constants": [],
+   "struct_field_writes": [],
+   "type_gates": []
+  },
+  "78": {
+   "abs_field_writes": [
+    {
+     "field_off": 8,
+     "reg": "dl"
+    }
+   ],
+   "arg_ranges": [
+    {
+     "arg": 0,
+     "max": 4095,
+     "min": 0
+    },
+    {
+     "arg": 1,
+     "max": 1,
+     "min": 0
+    }
+   ],
+   "arg_types": [
+    {
+     "arg": 0,
+     "type": 2
+    },
+    {
+     "arg": 1,
+     "type": 2
+    }
+   ],
+   "argc": 2,
+   "calls_or_jumps": [],
+   "conditional_field_writes": [],
+   "dirty_flag_bits": [],
+   "handler": "0x0043ba20",
+   "id": 78,
+   "name": "PrimSetBlend",
+   "reg_index": 79,
+   "split_constants": [],
+   "struct_field_writes": [],
+   "type_gates": []
+  },
+  "81": {
+   "abs_field_writes": [],
    "arg_ranges": [
     {
      "arg": null,
@@ -171,6 +276,69 @@
    "arg_types": [],
    "argc": 3,
    "calls_or_jumps": [],
+   "conditional_field_writes": [],
+   "dirty_flag_bits": [
+    64
+   ],
+   "handler": "0x0043ba90",
+   "id": 81,
+   "name": "PrimSetOP",
+   "reg_index": 82,
+   "split_constants": [],
+   "struct_field_writes": [
+    {
+     "base": "ax",
+     "field_off": 32,
+     "reg": "cx"
+    },
+    {
+     "base": "ax",
+     "field_off": 34,
+     "reg": "dx"
+    }
+   ],
+   "type_gates": [
+    {
+     "kind": "prim_type",
+     "source": "cmpb   $0x4,0x61dd68(%eax,%ecx,1)",
+     "value": 4
+    }
+   ]
+  },
+  "82": {
+   "abs_field_writes": [],
+   "arg_ranges": [
+    {
+     "arg": 0,
+     "max": 4095,
+     "min": 1
+    },
+    {
+     "arg": 2,
+     "max": 100,
+     "min": 0
+    }
+   ],
+   "arg_types": [
+    {
+     "arg": 0,
+     "type": 2
+    },
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    }
+   ],
+   "argc": 3,
+   "calls_or_jumps": [],
+   "conditional_field_writes": [],
+   "dirty_flag_bits": [
+    64
+   ],
    "handler": "0x0043baf0",
    "id": 82,
    "name": "PrimSetRS",
@@ -180,30 +348,164 @@
    ],
    "struct_field_writes": [
     {
+     "base": "cx",
      "field_off": 36,
      "reg": "dx"
     },
     {
+     "base": "cx",
      "field_off": 38,
      "reg": "ax"
     },
     {
+     "base": "cx",
      "field_off": 40,
      "reg": "ax"
     }
-   ]
+   ],
+   "type_gates": []
   },
-  "91": {
+  "89": {
+   "abs_field_writes": [],
    "arg_ranges": [
     {
-     "arg": null,
+     "arg": 0,
      "max": 4095,
      "min": 1
     }
    ],
-   "arg_types": [],
+   "arg_types": [
+    {
+     "arg": 0,
+     "type": 2
+    },
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    }
+   ],
+   "argc": 3,
+   "calls_or_jumps": [],
+   "conditional_field_writes": [
+    {
+     "arg": 1,
+     "field_off": 24,
+     "only_if_int": true
+    },
+    {
+     "arg": 2,
+     "field_off": 26,
+     "only_if_int": true
+    }
+   ],
+   "dirty_flag_bits": [
+    1,
+    64
+   ],
+   "handler": "0x0043bf50",
+   "id": 89,
+   "name": "PrimSetWH",
+   "reg_index": 90,
+   "split_constants": [],
+   "struct_field_writes": [
+    {
+     "base": "ax",
+     "field_off": 24,
+     "reg": "cx"
+    },
+    {
+     "base": "ax",
+     "field_off": 26,
+     "reg": "dx"
+    }
+   ],
+   "type_gates": []
+  },
+  "90": {
+   "abs_field_writes": [],
+   "arg_ranges": [
+    {
+     "arg": 0,
+     "max": 4095,
+     "min": 1
+    }
+   ],
+   "arg_types": [
+    {
+     "arg": 0,
+     "type": 2
+    },
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    }
+   ],
+   "argc": 3,
+   "calls_or_jumps": [],
+   "conditional_field_writes": [
+    {
+     "arg": 1,
+     "field_off": 20,
+     "only_if_int": true
+    },
+    {
+     "arg": 2,
+     "field_off": 22,
+     "only_if_int": true
+    }
+   ],
+   "dirty_flag_bits": [
+    64
+   ],
+   "handler": "0x0043bfa0",
+   "id": 90,
+   "name": "PrimSetXY",
+   "reg_index": 91,
+   "split_constants": [],
+   "struct_field_writes": [
+    {
+     "base": "ax",
+     "field_off": 20,
+     "reg": "cx"
+    },
+    {
+     "base": "ax",
+     "field_off": 22,
+     "reg": "dx"
+    }
+   ],
+   "type_gates": []
+  },
+  "91": {
+   "abs_field_writes": [],
+   "arg_ranges": [
+    {
+     "arg": 0,
+     "max": 4095,
+     "min": 1
+    }
+   ],
+   "arg_types": [
+    {
+     "arg": 0,
+     "type": 2
+    }
+   ],
    "argc": 2,
    "calls_or_jumps": [],
+   "conditional_field_writes": [],
+   "dirty_flag_bits": [
+    4,
+    64
+   ],
    "handler": "0x0043bff0",
    "id": 91,
    "name": "PrimSetZ",
@@ -211,10 +513,12 @@
    "split_constants": [],
    "struct_field_writes": [
     {
+     "base": "cx",
      "field_off": 18,
      "reg": "dx"
     }
-   ]
+   ],
+   "type_gates": []
   }
  },
  "note": "从 exe handler 静态分析提取的实参约束（A 类事实）；由 scripts/extract-exe-motion-params.py 生成"
