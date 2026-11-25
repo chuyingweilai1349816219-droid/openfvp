@@ -92,6 +92,25 @@
     提取结果表、与实现的差距表、以及"⑥ 的结论修正"；
     `docs/vm-commands.md` 的"我们没有那份表"同步更正
 
+### 实现（标题菜单改用贴图）
+
+- **五彩斑斓的标题菜单改成贴图模式：与原版标题帧的平均差 13.79 → 13.13**
+  - 更正一个旧判断：§3 说"iroseka 的 `title_start*` 是 New Game 的状态变体、
+    其它项由引擎用字体画"——**不对**。素材头清单里 `title_continue` /
+    `title_album` / `title_option` / `title_end` 都存在且尺寸不同
+    （290×80 / 225×80 / **225×90** / 140×80），右边缘统一 1785
+  - `src/titlemenu.h`：`FvpTitleItemDef` 新增 `tex_x/tex_y`（0 = 未提供时按墨迹反推）
+  - `src/titlemenu.c`：iroseka 5 项填上素材名 + 素材头尺寸/位置；
+    hoshimemo 的 5 项也改成素材头原值（820,580 / 845,670 / 880,760 / 875,850 / 905,940）
+  - `tests/test_titlemenu` 从 227 项扩到 **243 项**（每项贴图尺寸/位置/素材名）
+  - `tests/verify_title_rects.py` 新增第 4 段：直接检查 `src/titlemenu.c` 的常数
+    是否等于 `ref/title-rects.json` 的素材头原值（代码漂移立刻红）
+  - `tests/original-baseline.json` 的 iroseka 冻结值刷新为 **13.13**（±1.5）
+  - `tests/verify_multigame.py`：五彩斑斓的期望改成贴图模式（`textures=5`、
+    右边缘 1785）；新增 `hover_glow=False` 分支，把"五彩斑斓 hover 暂不改变画面"
+    **冻结成已知缺口**（变体映射未定，按方法论应静态比对变体像素后再实现）
+  - `docs/title-menu.md` 新增 §10（这次更正与实测数字）与 §10.1（hover 已知缺口）
+
 ### 新增（标题按钮矩形 = 素材头原值）
 
 - **标题菜单的按钮矩形从 `graph.bin` 的素材头读出来了（不再靠截图反推）**

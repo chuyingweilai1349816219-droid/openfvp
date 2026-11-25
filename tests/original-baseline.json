@@ -10,19 +10,40 @@
       "name": "iroseka-title",
       "game": "iroseka",
       "frame": "out/orig-title/orig-title-005.png",
-      "offset": [3, 29],
-      "args": ["--title-menu", "--title-font", "bin/gfx-font-61.bin"],
+      "offset": [
+        3,
+        29
+      ],
+      "args": [
+        "--title-menu",
+        "--title-font",
+        "bin/gfx-font-61.bin"
+      ],
       "assert": true,
-      "baseline": {"mean_abs": 13.93, "tol": 1.5}
+      "baseline": {
+        "mean_abs": 13.13,
+        "tol": 1.5
+      },
+      "note": "2026-11-25 更新：iroseka 菜单改成**贴图模式**（title_start/continue/album/option/end，位置来自素材头）后实测从 13.79 降到 13.13"
     },
     {
       "name": "hoshimemo-title",
       "game": "hoshimemo",
       "frame": "out/orig-hoshi2/frame-001.png",
-      "offset": [3, 29],
-      "args": ["--title-menu", "--title-font", "bin/gfx-font-61.bin"],
+      "offset": [
+        3,
+        29
+      ],
+      "args": [
+        "--title-menu",
+        "--title-font",
+        "bin/gfx-font-61.bin"
+      ],
       "assert": false,
-      "baseline": {"mean_abs": 36.23, "tol": 2.0},
+      "baseline": {
+        "mean_abs": 36.23,
+        "tol": 2.0
+      },
       "note": "帧的归属是推断的（orig-hoshi2 未在笔记里逐帧标注），只记录不断言"
     }
   ]

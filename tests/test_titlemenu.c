@@ -33,6 +33,12 @@ static const int kOrigW[FVP_TITLE_ITEMS] = { 309, 256, 189, 194, 107 };
 static const int kOrigCy[FVP_TITLE_ITEMS] = { 531, 631, 732, 831, 931 };
 static const int kOrigInkH[FVP_TITLE_ITEMS] = { 42, 42, 42, 42, 40 };
 
+/* iroseka 每个菜单项贴图的尺寸/左上角 x —— 来自素材头（ref/title-rects.json，
+ * scripts/extract-title-rects.py 从 graph.bin 读）。行 y 一律 495 + i*100。 */
+static const int kIroTexW[FVP_TITLE_ITEMS] = { 340, 290, 225, 225, 140 };
+static const int kIroTexH[FVP_TITLE_ITEMS] = { 80, 80, 80, 90, 80 };
+static const int kIroTexX[FVP_TITLE_ITEMS] = { 1445, 1495, 1560, 1560, 1645 };
+
 /* 假测宽：按标签返回上表里的实测宽度（字符串比较，不用查表顺序） */
 static int fake_measure(void *ctx, const char *utf8, int font_px, int *width)
 {
@@ -258,10 +264,22 @@ int main(void)
             CHECK(abs_diff(y0, kOrigCy[i3] - kOrigInkH[i3] / 2) <= 1,
                   "iroseka item %d ink y0 %d (want %d)", i3, y0,
                   kOrigCy[i3] - kOrigInkH[i3] / 2);
-            /* iroseka 的菜单项没有独立贴图（title_start* 是 New Game 的
-             * 状态变体），走文字模式；这里只要求墨迹表有数据。 */
-            CHECK(ir->items[i3].tex_w == 0 || ir->items[i3].tex_w == 340,
-                  "iroseka item %d tex size %d", i3, ir->items[i3].tex_w);
+            /* 2026-11-25 更正：iroseka 的 5 个菜单项**各自都有贴图**
+             * （title_start / title_continue / title_album / title_option /
+             * title_end），尺寸与左上角来自素材头（ref/title-rects.json）。 */
+            CHECK(kIroTexW[i3] == ir->items[i3].tex_w,
+                  "iroseka item %d tex_w %d (want %d)", i3,
+                  ir->items[i3].tex_w, kIroTexW[i3]);
+            CHECK(ir->items[i3].tex_h == kIroTexH[i3],
+                  "iroseka item %d tex_h %d (want %d)", i3,
+                  ir->items[i3].tex_h, kIroTexH[i3]);
+            CHECK(ir->items[i3].tex_x == kIroTexX[i3] &&
+                      ir->items[i3].tex_y == 495 + i3 * 100,
+                  "iroseka item %d tex pos (%d,%d) want (%d,%d)", i3,
+                  ir->items[i3].tex_x, ir->items[i3].tex_y, kIroTexX[i3],
+                  495 + i3 * 100);
+            CHECK(ir->items[i3].asset[0] != '\0',
+                  "iroseka item %d has a texture asset", i3);
         }
 
         /* --- hoshimemo：**居中**、行距 90、第 1 项墨迹上沿 581 --- */
@@ -286,19 +304,22 @@ int main(void)
                   "hoshimemo item %d has a separate glow asset", i3);
         }
 
-        /* --- 贴图位置：由"墨迹 + 贴图尺寸对称留白"反推，和实测对得上 --- */
+        /* --- 贴图位置：优先用素材头原值（ref/title-rects.json） --- */
         {
             int ix = 0, iy = 0;
 
-            /* iroseka 走文字模式，没有贴图位置可算；hoshimemo 才验贴图位置。 */
+            /* iroseka 的贴图位置就是素材头的 (1445,495) 起、逐行 +100。 */
             CHECK(fvp_title_profile_image_pos(ir, 0, &ix, &iy) == 1,
-                  "iroseka image pos returns ok even without a texture");
+                  "iroseka image pos");
+            CHECK(ix == 1445 && iy == 495, "iroseka item0 tex pos (%d,%d) want (1445,495)",
+                  ix, iy);
             CHECK(fvp_title_profile_image_pos(ho, 0, &ix, &iy) == 1,
                   "hoshimemo image pos");
-            CHECK(abs_diff(ix + ho->items[0].tex_w / 2, 960) <= 2,
-                  "hoshimemo item0 texture centre %d want 960",
+            /* GAME START 的素材宽 275 是奇数、右边有透明边：中心 957.5，差 2.5 px。 */
+            CHECK(abs_diff(ix + ho->items[0].tex_w / 2, 960) <= 3,
+                  "hoshimemo item0 texture centre %d within 3 of 960",
                   ix + ho->items[0].tex_w / 2);
-            CHECK(abs_diff(iy, 578) <= 1, "hoshimemo item0 texture y=%d want 578",
+            CHECK(iy == 580, "hoshimemo item0 texture y=%d want 580 (asset header)",
                   iy);
         }
 

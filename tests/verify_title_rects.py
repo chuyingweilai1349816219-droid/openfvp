@@ -20,6 +20,7 @@
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -134,6 +135,39 @@ def main():
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
     print('\nOK: 标题菜单按钮矩形与素材头一致（右对齐 1785 / 居中 960，行距 100 / 90）')
+
+    print('== 4. 实现里的常数必须与素材头一致（src/titlemenu.c） ==')
+    src = os.path.join(FVP, 'src', 'titlemenu.c')
+    with io.open(src, encoding='utf-8') as fp:
+        text = fp.read()
+    pat = re.compile(
+        r'\{\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*'
+        r'(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,')
+    starts = {
+        'iroseka': text.find('fvp_title_profile_iroseka = {'),
+        'hoshimemo': text.find('fvp_title_profile_hoshimemo = {'),
+    }
+    bounds = {
+        'iroseka': (starts['iroseka'], starts['hoshimemo']),
+        'hoshimemo': (starts['hoshimemo'], len(text)),
+    }
+    for name in sorted(GAMES):
+        lo, hi = bounds[name]
+        if not check(lo >= 0 and hi > lo, '%s 的 profile 在 titlemenu.c 里找得到' % name):
+            continue
+        block = text[lo:hi]
+        found = {}
+        for m in pat.finditer(block):
+            found[m.group(2)] = tuple(int(m.group(k)) for k in (4, 5, 6, 7))
+        for item, rect in EXPECT[name]['rects'].items():
+            want = (rect[2], rect[3], rect[0], rect[1])   # (w, h, x, y)
+            got = found.get(item)
+            check(got == want, '%s %s: titlemenu.c 里 (w,h,x,y)=%s（实际 %s）'
+                  % (name, item, want, got))
+
+    if fails:
+        print('\nFAIL: %d 项不满足' % len(fails))
+        return 1
     return 0
 
 

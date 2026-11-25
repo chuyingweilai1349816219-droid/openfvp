@@ -56,14 +56,19 @@ void fvp_title_init(FvpTitleMenu *m)
 const FvpTitleProfile fvp_title_profile_iroseka = {
     "iroseka", FVP_TITLE_ALIGN_RIGHT, 1920, 1080, 100, 511, 1769, 960,
     {
-        /* iroseka 的 title_start/title_start1..5 是 "New Game" 的**状态变体**
-         * （正常 / 选中带「はじめから」/ 淡出…），不是 5 个菜单项；其它项
-         * 在原版里是引擎用字体画的。所以这里 asset 留空 → 走文字模式。 */
-        { "New Game", "", "", 0, 0, 1461, 1769, 511, 552 },
-        { "Continue", "", "", 0, 0, 1514, 1769, 611, 652 },
-        { "Album", "", "", 0, 0, 1580, 1768, 712, 753 },
-        { "Option", "", "", 0, 0, 1575, 1768, 811, 852 },
-        { "Exit", "", "", 0, 0, 1662, 1768, 912, 951 }
+        /* 2026-11-25 更正：iroseka 的 5 个菜单项**各自都有贴图**
+         * （`title_start` / `title_continue` / `title_album` / `title_option` /
+         * `title_end`），每项另有 5 个状态变体（`title_start1..5` 这种，选中/
+         * 悬停是**换图**）。贴图矩形直接来自素材头（ref/title-rects.json）：
+         *   start    (1445,495,340,80)  continue (1495,595,290,80)
+         *   album    (1560,695,225,80)  option   (1560,795,225,90)
+         *   end      (1645,895,140,80)
+         * 右边缘 5 项全部 1785、行距恰好 100 —— 见 docs/title-menu.md §9。 */
+        { "New Game", "title_start", "", 340, 80, 1445, 495, 1461, 1769, 511, 552 },
+        { "Continue", "title_continue", "", 290, 80, 1495, 595, 1514, 1769, 611, 652 },
+        { "Album", "title_album", "", 225, 80, 1560, 695, 1580, 1768, 712, 753 },
+        { "Option", "title_option", "", 225, 90, 1560, 795, 1575, 1768, 811, 852 },
+        { "Exit", "title_end", "", 140, 80, 1645, 895, 1662, 1768, 912, 951 }
     },
     "title_bg1_A", /* 白天背景 2400x1350：只显示中间 1920x1080 一块 */
     240, 135,      /* 中心裁剪（(2400-1920)/2, (1350-1080)/2) */
@@ -82,15 +87,18 @@ const FvpTitleProfile fvp_title_profile_iroseka = {
 const FvpTitleProfile fvp_title_profile_hoshimemo = {
     "hoshimemo", FVP_TITLE_ALIGN_CENTER, 1920, 1080, 90, 581, 1769, 960,
     {
-        { "GAME START", "title_start", "title_start_ray", 275, 40, 830, 1088,
+        /* 贴图矩形来自素材头（ref/title-rects.json）：行距恰好 90、中心 960；
+         * GAME START 的素材宽 275 是奇数（右边有透明边），所以它的 tex_x 是 820
+         * 而不是 822。2026-11-25 把 tex_x/tex_y 填成素材头的原值。 */
+        { "GAME START", "title_start", "title_start_ray", 275, 40, 820, 580, 830, 1088,
           581, 614 },
-        { "CONTINUE", "title_continue", "title_continue_ray", 230, 40, 856,
+        { "CONTINUE", "title_continue", "title_continue_ray", 230, 40, 845, 670, 856,
           1064, 671, 704 },
-        { "ALBUM", "title_album", "title_album_ray", 160, 40, 891, 1028, 761,
+        { "ALBUM", "title_album", "title_album_ray", 160, 40, 880, 760, 891, 1028, 761,
           793 },
-        { "OPTION", "title_option", "title_option_ray", 170, 40, 884, 1036, 851,
+        { "OPTION", "title_option", "title_option_ray", 170, 40, 875, 850, 884, 1036, 851,
           884 },
-        { "EXIT", "title_end", "title_end_ray", 110, 40, 914, 1005, 941, 973 }
+        { "EXIT", "title_end", "title_end_ray", 110, 40, 905, 940, 914, 1005, 941, 973 }
     },
     "title_bg1",       /* 整屏白天背景（1920x1080，已与原版截图核对内容） */
     0, 0,
@@ -209,12 +217,20 @@ int fvp_title_profile_image_pos(const FvpTitleProfile *p, int item, int *x,
         return 0;
     }
     d = &p->items[item];
-    /* 贴图和墨迹的差按"四周均分"分摊：贴图把文字居中，四周留白对称。
-     * 用两部作品实测数据验算过：
-     *   iroseka  item0: ink 309x42，tex 340x80 → pad (15,19)
-     *            → 贴图位置 (1461-15, 511-19) = (1446, 492)（实测 1445,492）
-     *   hoshimemo item0: ink 259x34，tex 275x40 → pad (8,3)
-     *            → (830-8, 581-3) = (822,578)，贴图中心 959 ≈ 960 */
+    /* 素材头给了 x/y 就直接用（2026-11-25：ref/title-rects.json）。
+     * 只有没给的时候，才退回"墨迹 + 四周均分留白"的反推：
+     *   iroseka  item0: ink 309x42，tex 340x80 → pad (15,19) → (1446, 492)
+     *   hoshimemo item0: ink 259x34，tex 275x40 → pad (8,3) → (822,578)
+     * 素材头的原值分别是 (1445,495) 与 (820,580)——反推差 1–3 px，所以优先用原值。 */
+    if (d->tex_x != 0 || d->tex_y != 0) {
+        if (x != NULL) {
+            *x = d->tex_x;
+        }
+        if (y != NULL) {
+            *y = d->tex_y;
+        }
+        return 1;
+    }
     ink_w = d->ink_x1 - d->ink_x0 + 1;
     ink_h = d->ink_y1 - d->ink_y0 + 1;
     pad_x = (d->tex_w - ink_w) / 2;

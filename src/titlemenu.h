@@ -92,6 +92,10 @@ typedef struct FvpTitleItemDef {
     char asset[FVP_TITLE_ASSET_MAX];      /* graph.bin 里的贴图名 */
     char asset_glow[FVP_TITLE_ASSET_MAX]; /* 发光层素材名（没有就空串） */
     int tex_w, tex_h;                     /* 贴图尺寸 */
+    /* 贴图左上角（客户区坐标），来自**素材头自带的 x/y**（2026-11-25：
+     * ref/title-rects.json，由 scripts/extract-title-rects.py 从 graph.bin 读）。
+     * 0/0 表示未提供 → 由 fvp_title_profile_image_pos() 按墨迹+留白反推。 */
+    int tex_x, tex_y;
     int ink_x0, ink_x1, ink_y0, ink_y1;   /* 实测墨迹包围盒 */
 } FvpTitleItemDef;
 
