@@ -81,8 +81,9 @@ const FvpTitleProfile fvp_title_profile_iroseka = {
     { "title_bg1_C", "title_bg1_D", "title_bg1_B", "" }, 3,
     /* 原版菜单是深蓝衬线字：实测暗部均值 RGB(7,26,146) */
     { 10, 30, 140 },
-    "title_logo1", /* 标题 logo（位置在图片头里） */
-    "",            /* 版权行素材还没指认 */
+    "title_logo1",       /* 标题 logo：1150x283 @ (701,149)（素材头） */
+    "title_copyright",   /* 版权行：590x37 @ (1189,1043)（素材头）；
+                          * 2026-11-25 从 graph.bin 的 name→header 清单里认出来 */
     0              /* bg_on_top：实测背景 A 应在最下（见 §13 的 Z 语义讨论） */
 };
 

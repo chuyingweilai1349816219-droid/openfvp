@@ -567,6 +567,14 @@ def build_steps(args):
                            'iroseka right edge 1785 / pitch 100, hoshimemo centre '
                            '960 / pitch 90'))
 
+    # 6.495 标题画面误差分布（总平均差拆到 logo/menu/copyright/rest；
+    #       需要 Pillow+numpy，缺了会自己 SKIP）
+    vtd = os.path.join(HERE, 'verify_title_diff.py')
+    steps.append(Step('verify_title_diff.py', [PY, '-X', 'utf8', vtd], 900,
+                      skip_reason=None,
+                      note='title diff broken down by region (asset-header rects); '
+                           'copyright region is the worst, ranked baseline frozen'))
+
     # 6.50 标题菜单状态变体（整幅不同的状态/动画帧，不是轻微高亮）
     vtv = os.path.join(HERE, 'verify_title_variants.py')
     steps.append(Step('verify_title_variants.py', [PY, '-X', 'utf8', vtv], 1800,

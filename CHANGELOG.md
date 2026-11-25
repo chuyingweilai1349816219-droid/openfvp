@@ -92,6 +92,24 @@
     提取结果表、与实现的差距表、以及"⑥ 的结论修正"；
     `docs/vm-commands.md` 的"我们没有那份表"同步更正
 
+### 修复（标题版权行）+ 分析（误差分布）
+
+- **版权行素材认出来了，而且发现它一直被一条过早的 `return` 跳过**
+  - 资源包里 `title_copyright` = **590×37 @ (1189,1043)**（素材头原值），填进
+    iroseka profile；但填完数字不动 —— 真因是 `title_draw_overlay()` 的贴图模式
+    分支画完菜单就 `return`，版权行绘制在其后，**贴图模式下永远画不到**。
+    把版权行挪到 logo 之后（贴图分支之前）后生效
+  - 实测：iroseka 13.13 → **13.11**；星空 36.09 → **36.01**（基线同步刷新）
+  - 新增 `scripts/analyze-title-diff.py` + 基线 `ref/title-diff-regions.json`
+    + 门禁 `tests/verify_title_diff.py`（`run_all` 50 → 51 步）：按**素材头矩形**把
+    总差拆成 logo / menu / copyright / rest 四块，采样口径与 `verify_vs_original`
+    一致（隔 2 像素），并冻结"copyright 是误差最大区域"的排名
+  - 实测分布：**copyright 56.86**（最差，素材对不齐）／menu 19.09（原版帧含 hover 态）／
+    logo 15.67／rest 占差异像素的 88%（背景四层合成仍是总量大头）
+  - 顺带发现：脚本对菜单图元有 `PrimSetXY(prim, true, -48)` —— **hover 会整行上移
+    48 px**，本轮只记录未实现（下一轮）
+  - `docs/title-menu.md` 新增 §14（版权行修复 + 误差分布表 + 三条结论）
+
 ### 分析（标题背景四层与 Z 顺序）
 
 - **背景四层的 Z 值从脚本读出来了；但它不是剩余像素差的主因（如实记录）**

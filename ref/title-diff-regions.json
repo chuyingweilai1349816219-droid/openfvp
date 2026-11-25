@@ -1,0 +1,35 @@
+{
+ "game": "iroseka",
+ "note": "标题画面与原版帧的分区域差异（区域矩形来自素材头）；由 scripts/analyze-title-diff.py 生成",
+ "regions": {
+  "copyright": {
+   "diff_px": 5371,
+   "max_channel": 251,
+   "mean_abs": 56.8637,
+   "px": 5605
+  },
+  "logo": {
+   "diff_px": 64452,
+   "max_channel": 255,
+   "mean_abs": 15.6714,
+   "px": 81650
+  },
+  "menu": {
+   "diff_px": 39205,
+   "max_channel": 255,
+   "mean_abs": 19.0913,
+   "px": 41650
+  },
+  "rest": {
+   "diff_px": 344531,
+   "mean_abs": null,
+   "px": 389495
+  }
+ },
+ "total": {
+  "diff_px": 453559,
+  "max_channel": 255,
+  "mean_abs": 13.1107,
+  "px": 518400
+ }
+}

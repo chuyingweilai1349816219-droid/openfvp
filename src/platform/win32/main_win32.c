@@ -1842,6 +1842,13 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
         (void)gfx_image_offset(gfx, TITLE_LOGO_SLOT, &lx, &ly);
         (void)gfx_draw_image_at(gfx, TITLE_LOGO_SLOT, lx, ly);
     }
+    if (title_copy_on) {
+        int cx = 0;
+        int cy = 0;
+
+        (void)gfx_image_offset(gfx, TITLE_COPY_SLOT, &cx, &cy);
+        (void)gfx_draw_image_at(gfx, TITLE_COPY_SLOT, cx, cy);
+    }
     if (title_textures_on) {
         for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
             int ix = 0;
@@ -1982,13 +1989,7 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
         }
     }
     /* 版权行压在最上面（原版在屏幕底部） */
-    if (title_copy_on) {
-        int cx = 0;
-        int cy = 0;
 
-        (void)gfx_image_offset(gfx, TITLE_COPY_SLOT, &cx, &cy);
-        (void)gfx_draw_image_at(gfx, TITLE_COPY_SLOT, cx, cy);
-    }
 #endif
 }
 

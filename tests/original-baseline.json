@@ -21,10 +21,10 @@
       ],
       "assert": true,
       "baseline": {
-        "mean_abs": 13.13,
+        "mean_abs": 13.11,
         "tol": 1.5
       },
-      "note": "2026-11-25 更新：iroseka 菜单改成**贴图模式**（title_start/continue/album/option/end，位置来自素材头）后实测从 13.79 降到 13.13"
+      "note": "2026-11-25 更新：iroseka 菜单改贴图 + hover 变体 + 补上版权行素材（此前贴图模式下版权行被过早 return 跳过）→ 13.13 → 13.11"
     },
     {
       "name": "hoshimemo-title",
@@ -41,7 +41,7 @@
       ],
       "assert": false,
       "baseline": {
-        "mean_abs": 36.23,
+        "mean_abs": 36.01,
         "tol": 2.0
       },
       "note": "帧的归属是推断的（orig-hoshi2 未在笔记里逐帧标注），只记录不断言"
