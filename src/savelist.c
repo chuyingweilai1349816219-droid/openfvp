@@ -66,7 +66,47 @@ static unsigned char *read_whole_file(const char *path, size_t *len)
     return buf;
 }
 
-/* 把原编码字节解成 UTF-8 放进定长缓冲（截断时保证不切半个字符）。 */
+
+/* 判断解出来的 UTF-8 是否"看着不对"：半角片假名（U+FF61..U+FF9F）或替换字符
+ * 占比过高，通常意味着用错了编码（层数据是 CP932、汉化文本是 GBK，同一槽里
+ * 三条字符串可能来自不同编码）。 */
+static int looks_wrong(const char *utf8)
+{
+    const unsigned char *p = (const unsigned char *)utf8;
+    int total = 0;
+    int bad = 0;
+
+    while (*p != 0) {
+        unsigned int cp;
+
+        if (p[0] < 0x80) {
+            cp = p[0];
+            p += 1;
+        } else if ((p[0] & 0xE0) == 0xC0 && (p[1] & 0xC0) == 0x80) {
+            cp = ((unsigned int)(p[0] & 0x1F) << 6) | (unsigned int)(p[1] & 0x3F);
+            p += 2;
+        } else if ((p[0] & 0xF0) == 0xE0 && (p[1] & 0xC0) == 0x80 &&
+                   (p[2] & 0xC0) == 0x80) {
+            cp = ((unsigned int)(p[0] & 0x0F) << 12) |
+                 ((unsigned int)(p[1] & 0x3F) << 6) |
+                 (unsigned int)(p[2] & 0x3F);
+            p += 3;
+        } else {
+            cp = 0xFFFD;
+            p += 1;
+        }
+        if (cp < 0x20) {
+            continue;
+        }
+        total += 1;
+        if ((cp >= 0xFF61 && cp <= 0xFF9F) || cp == 0xFFFD) {
+            bad += 1;
+        }
+    }
+    return total > 0 && bad * 4 > total;
+}
+
+/* 解码并挑"更合理"的编码：先用给定 enc，若看着不对再试另一种。 */
 static void decode_into(char *dst, size_t cap, FvpEncoding enc,
                         const unsigned char *src, unsigned int n)
 {
@@ -83,6 +123,15 @@ static void decode_into(char *dst, size_t cap, FvpEncoding enc,
     }
     fvp_arena_init(&arena);
     s = fvp_decode(&arena, enc, src, n);
+    if (s != NULL && looks_wrong(s->data)) {
+        FvpEncoding other = (enc == FVP_ENC_CP932) ? FVP_ENC_GBK
+                                                   : FVP_ENC_CP932;
+        FvpStr *alt = fvp_decode(&arena, other, src, n);
+
+        if (alt != NULL && !looks_wrong(alt->data)) {
+            s = alt;
+        }
+    }
     if (s != NULL) {
         take = s->len;
         while (take > 0 && take + 1 > cap - 1) {

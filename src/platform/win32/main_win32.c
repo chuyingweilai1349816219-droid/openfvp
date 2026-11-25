@@ -117,6 +117,7 @@ typedef struct Options {
     wchar_t title_font[PATH_CAP]; /* --title-font：标题菜单专用字库 */
     int pick_seed;  /* --pick N：启动就把第 N 项当作已选中（门禁/截图用） */
     int title_fade_ms; /* 点 New Game 后的白场过渡时长（0 = 直接进，默认 800） */
+    int load_slot; /* --load-slot N：启动就进"部分恢复"视图（截图/门禁用） */
     int preview_slot; /* --preview-slot N：存档列表里预选第 N 号槽并显示预览 */
     int opening;    /* --opening：启动先跑开场序列（logo 淡入→白场→标题） */
     double shot_at_ms; /* --shot-at N：跑到 N 毫秒时存一张截图（0 = 不存） */
@@ -514,6 +515,7 @@ static void defaults(Options *o)
     o->title_no_bg = 0;
     o->opening = 0;
     o->preview_slot = -1;
+    o->load_slot = -1;
     o->pick_seed = -1;
     o->title_fade_ms = 800;
     o->title_font[0] = L'\0';
@@ -682,6 +684,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--title-font") == 0 &&
                    i + 1 < argc) {
             wcsncpy(o->title_font, argv[++i], PATH_CAP - 1);
+        } else if (wcscmp(a, L"--load-slot") == 0 && i + 1 < argc) {
+            o->load_slot = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--no-input") == 0) {
             o->no_input = 1;
         } else if (wcscmp(a, L"--preview-slot") == 0 &&
@@ -1851,6 +1855,31 @@ static int title_textures_on;
  * 标题菜单的 Continue 就靠它决定能不能点。 */
 /* 扫描 <game_dir>\save\sNNN.bin，把每个槽读成一条列表记录（只读）。
  * 返回读到的条数。目录枚举在平台层做，savelist.c 只吃"一个槽文件路径"。 */
+
+/* 进入"部分恢复"视图：只还原存档里记录的画面与台词，不恢复任何游戏状态。
+ * 这是 ② Load(40) 的诚实中间态，日志明确写 partial。 */
+
+/* 进入"部分恢复"视图：只还原存档里记录的画面与台词，不恢复任何游戏状态。
+ * 这是 ② Load(40) 的诚实中间态，日志明确写 partial。 */
+static void enter_load_view(int slot_index, const FvpSaveList *list,
+                            int *active, int *slot_out, char *graph_out,
+                            size_t graph_cap, char *line_out, size_t line_cap)
+{
+    const FvpSaveEntry *it;
+
+    if (list == NULL || slot_index < 0 || slot_index >= list->count) {
+        return;
+    }
+    it = &list->items[slot_index];
+    *active = 1;
+    *slot_out = it->slot;
+    snprintf(graph_out, graph_cap, "%s", it->graph);
+    snprintf(line_out, line_cap, "%s", it->line);
+    fvp_logf("load: partial restore slot=%d graph='%s' line='%s' "
+             "(visual+text only, game state NOT restored)",
+             it->slot, it->graph, it->line);
+}
+
 static int title_scan_saves(FvpSaveList *list, const wchar_t *game_dir,
                             const char *game_dir_u8, FvpEncoding enc)
 {
@@ -2149,6 +2178,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int opening_logo_loaded = 0;
     int shot_taken = 0;
     int save_preview_ok = 0;
+    int load_view_active = 0;      /* 部分恢复视图（仅画面+文本） */
+    int load_view_slot = -1;
+    char load_view_graph[64];
+    char load_view_line[512];
     int title_fade_active = 0;  /* New Game 后的白场过渡中 */
     double title_fade_elapsed = 0.0;
     int title_fade_started_vm = 0;
@@ -2348,6 +2381,22 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         (void)title_scan_saves(&save_list, opts.game_dir, game_u8,
                                slenc);
         fvp_logf("save list: %d slot(s) readable", save_list.count);
+        if (opts.load_slot >= 0) {
+            int k;
+
+            for (k = 0; k < save_list.count; ++k) {
+                if (save_list.items[k].slot == opts.load_slot) {
+                    save_list.selected = k;
+                    save_hover = k;
+                    save_list_active = 1;
+                    enter_load_view(k, &save_list, &load_view_active,
+                                    &load_view_slot, load_view_graph,
+                                    sizeof(load_view_graph), load_view_line,
+                                    sizeof(load_view_line));
+                    break;
+                }
+            }
+        }
         if (opts.preview_slot >= 0) {
             int k;
 
@@ -2790,8 +2839,13 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 save_list.selected = save_hover;
             }
             if (in->nav & FVP_NAV_ESC) {
-                save_list_active = 0;
-                fvp_logf("save list: ESC -> back to title menu");
+                if (load_view_active) {
+                    load_view_active = 0;
+                    fvp_logf("load: ESC -> back to save list");
+                } else {
+                    save_list_active = 0;
+                    fvp_logf("save list: ESC -> back to title menu");
+                }
                 in->nav = 0;
             }
             if ((in->nav & FVP_NAV_ENTER) && save_hover >= 0 &&
@@ -2803,6 +2857,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 save_list.selected = save_hover;
                 fvp_logf("save list: selected %s (chapter='%s')", row,
                          save_list.items[save_hover].chapter);
+                enter_load_view(save_hover, &save_list, &load_view_active,
+                                &load_view_slot, load_view_graph,
+                                sizeof(load_view_graph), load_view_line,
+                                sizeof(load_view_line));
                 in->nav = 0;
             }
             if (click_edges > 0 && save_hover >= 0) {
@@ -2813,6 +2871,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 save_list.selected = save_hover;
                 fvp_logf("save list: selected %s (chapter='%s' ", row,
                          save_list.items[save_hover].chapter);
+                enter_load_view(save_hover, &save_list, &load_view_active,
+                                &load_view_slot, load_view_graph,
+                                sizeof(load_view_graph), load_view_line,
+                                sizeof(load_view_line));
                 fvp_logf("save list: snapshot restore is not implemented "
                          "yet, staying in the menu");
                 click_edges = 0;
@@ -3045,6 +3107,21 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 }
                 if (opening_active) {
                     /* 开场序列自己画（见下面的 opening 块），这里不画菜单 */
+                } else if (load_view_active) {
+                    /* 部分恢复：整屏背景图 + 存档记的那句台词 + 明确标注 */
+                    if (load_view_graph[0] != '\0' && save_preview_ok) {
+                        (void)gfx_draw_image_scaled(gfx, SAVE_PREVIEW_SLOT,
+                                                    0, 0, 1920, 1080);
+                    } else {
+                        (void)gfx_fill_canvas(gfx, 0, 0, 0, 255);
+                    }
+                    if (load_view_line[0] != '\0') {
+                        (void)gfx_draw_text_line(gfx, load_view_line, 120, 900,
+                                                 32, 255, 255, 255, 255);
+                    }
+                    (void)gfx_draw_text_line(
+                        gfx, "[PARTIAL RESTORE] visual + text only", 56, 40,
+                        28, 255, 210, 120, 255);
                 } else if (save_list_active) {
                     int li;
 
@@ -3379,6 +3456,20 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     p = 1.0;
                 }
                 gfx_fill_canvas(gfx, 255, 255, 255, (int)(p * 255.0));
+            } else if (load_view_active) {
+                if (load_view_graph[0] != '\0' && save_preview_ok) {
+                    (void)gfx_draw_image_scaled(gfx, SAVE_PREVIEW_SLOT, 0, 0,
+                                                1920, 1080);
+                } else {
+                    (void)gfx_fill_canvas(gfx, 0, 0, 0, 255);
+                }
+                if (load_view_line[0] != '\0') {
+                    (void)gfx_draw_text_line(gfx, load_view_line, 120, 900, 32,
+                                             255, 255, 255, 255);
+                }
+                (void)gfx_draw_text_line(gfx,
+                                         "[PARTIAL RESTORE] visual + text only",
+                                         56, 40, 28, 255, 210, 120, 255);
             } else if (save_list_active) {
                 int li;
 

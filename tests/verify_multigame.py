@@ -864,6 +864,37 @@ def main():
                     check(lit > 200,
                           'preview area shows the saved background '
                           '(%d lit samples)' % lit)
+
+                # 部分恢复视图：Enter 选中槽 → 整屏背景 + 台词 + [PARTIAL RESTORE]
+                shot_lv = os.path.join(OUT_DIR, 'mg-%s-loadview.bmp' % name)
+                log_lv = os.path.join(OUT_DIR, 'mg-%s-loadview.log' % name)
+                for p5 in (shot_lv, log_lv):
+                    if os.path.isfile(p5):
+                        os.remove(p5)
+                rc5, log5 = run_shell_frame(
+                    shell_pv, g['dir'], os.path.basename(g['script']), 2,
+                    shot_lv, log_lv,
+                    extra=['--title-save-list',
+                           '--load-slot', str(t['preview_slot'])])
+                check(rc5 == 0, 'partial restore run exit 0 (got %s)' % rc5)
+                check('load: partial restore slot=%d' % t['preview_slot'] in log5,
+                      'partial restore logged (not a silent fake load)')
+                img5 = read_bmp32(shot_lv) if os.path.isfile(shot_lv) else None
+                check(img5 is not None, 'partial restore frame readable')
+                if img5 is not None:
+                    rows5 = img5[2]
+                    lum5 = 0
+                    cnt5 = 0
+                    for yy in range(0, 1080, 24):
+                        row5 = rows5[yy]
+                        for xx in range(0, 1920, 24):
+                            lum5 += (row5[xx * 4] + row5[xx * 4 + 1] +
+                                     row5[xx * 4 + 2])
+                            cnt5 += 1
+                    mean5 = lum5 / (3.0 * cnt5)
+                    check(mean5 > 80.0,
+                          'restored background fills the screen (mean %.0f)'
+                          % mean5)
                 print('')
 
     # 7. 标题菜单：两部作品的 profile与菜单几何都要对

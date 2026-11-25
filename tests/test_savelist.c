@@ -154,6 +154,67 @@ static int write_slot_with_graph(const char *path, int year, int month, int day,
     return 1;
 }
 
+/* str[2] 用 GBK 字节写（汉化文本），str[0] 用 CP932（层数据）——同一个槽里
+ * 两条字符串编码不同，调用方只传 FVP_ENC_CP932，靠"看着不对就换编码"纠正。 */
+static int write_slot_with_gbk_line(const char *path, int year, int month,
+                                    int day, int hour, int minute)
+{
+    FvpSaveSlot s;
+    unsigned char *buf;
+    size_t need;
+    size_t wrote;
+    FILE *f;
+    int i;
+
+    memset(&s, 0, sizeof(s));
+    s.year = (unsigned short)year;
+    s.month = (unsigned char)month;
+    s.day = (unsigned char)day;
+    s.hour = (unsigned char)hour;
+    s.minute = (unsigned char)minute;
+    s.str[0] = dup_bytes("\x83v\x83\x8d\x83\x8d\x81[\x83O", 10);
+    s.len[0] = 10;
+    /* "　谁这样说道。" 的 GBK 字节 */
+    s.str[2] = dup_bytes("\xa1\xa1\xcb\xad\xd5\xe2\xd1\xf9\xcb\xb5\xb5\xc0\xa1\xa3", 14);
+    s.len[2] = 14;
+    s.thumb_w = 2;
+    s.thumb_h = 2;
+    s.thumb = (unsigned char *)malloc(16);
+    for (i = 0; i < 16; ++i) {
+        s.thumb[i] = (unsigned char)(i & 0xFF);
+    }
+    for (i = 3; i < 16; i += 4) {
+        s.thumb[i] = 0xFF;
+    }
+    s.tail_len = 0x19440;
+    s.tail = (unsigned char *)calloc(1, s.tail_len);
+    s.tail[0x19408] = 0x20;
+    s.tail[0x1940c] = 1;
+    s.tail[0x19410] = 11;
+    memcpy(s.tail + 0x19412, "BG063_000b\0", 11);
+
+    need = fvp_save_slot_size(&s);
+    buf = (unsigned char *)malloc(need);
+    wrote = fvp_save_slot_store(&s, buf, need);
+    if (wrote != need) {
+        free(buf);
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        free(buf);
+        return 0;
+    }
+    if (fwrite(buf, 1, need, f) != need) {
+        fclose(f);
+        free(buf);
+        return 0;
+    }
+    fclose(f);
+    free(buf);
+    return 1;
+}
+
 int main(void)
 {
     const char *path = "bin/_savelist_slot.bin";
@@ -298,6 +359,48 @@ int main(void)
         CHECK(fvp_savetail_parse(&info, NULL, 0x19440, FVP_ENC_CP932) == 0,
               "NULL tail rejected");
         free(t);
+    }
+
+    /* --- 8.5 编码启发式：CP932 解 GBK 文本会被纠正成真正的汉字 --- */
+    {
+        const char *p2 = "bin/_savelist_gbk.bin";
+        FvpSaveList l2;
+        int cjk = 0;
+        int kana = 0;
+        const unsigned char *q;
+
+        if (write_slot_with_gbk_line(p2, 2023, 3, 19, 23, 44)) {
+            fvp_savelist_init(&l2);
+            CHECK(fvp_savelist_add_slot_file(&l2, p2, 905,
+                                             FVP_ENC_CP932) == 1,
+                  "gbk-line slot accepted");
+            /* 取第一个非 ASCII 码点：正确解码时应是 CJK（>= 0x4E00），
+             * 而不是半角片假名（0xFF61..0xFF9F）。 */
+            q = (const unsigned char *)l2.items[0].line;
+            while (*q != 0) {
+                if ((q[0] & 0xF0) == 0xE0 && (q[1] & 0xC0) == 0x80 &&
+                    (q[2] & 0xC0) == 0x80) {
+                    unsigned int cp = ((unsigned int)(q[0] & 0x0F) << 12) |
+                                      ((unsigned int)(q[1] & 0x3F) << 6) |
+                                      (unsigned int)(q[2] & 0x3F);
+
+                    if (cp >= 0x4E00 && cp <= 0x9FFF) {
+                        cjk += 1;
+                    }
+                    if (cp >= 0xFF61 && cp <= 0xFF9F) {
+                        kana += 1;
+                    }
+                    q += 3;
+                    continue;
+                }
+                q += 1;
+            }
+            CHECK(cjk >= 3 && kana == 0,
+                  "gbk line decodes to CJK ideographs (cjk=%d kana=%d, "
+                  "line='%s')", cjk, kana, l2.items[0].line);
+        } else {
+            CHECK(0, "could not write the gbk-line slot");
+        }
     }
 
     /* --- 9. 存档记录里带上图名，行文本要显示出来 --- */
