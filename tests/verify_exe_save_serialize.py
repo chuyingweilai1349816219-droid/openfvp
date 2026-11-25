@@ -114,6 +114,8 @@ def main():
     check(labels[0] == 'per-slot globals', '槽尾第一段 = 每槽全局变量')
     check(labels[1] == 'coroutine snapshots', '槽尾第二段 = 32 个协程快照')
     check('prim array' in labels, '槽尾含 prim 数组（0x34000 定长）')
+    check('history ring' in labels,
+          '槽尾含台词历史环（第 20 段 0x438120，见 ref/exe-history.json）')
     check(labels[-2:] == ['byte at 0x458', 'byte at 0x85 != 0'],
           '末两段 = 0x458 / 0x85!=0 两个字节')
     prim = [s for s in tail if s['label'] == 'prim array'][0]

@@ -337,8 +337,8 @@
     "e8cc9cffff"
    ],
    "kind": "call",
-   "label": "globals + flags",
-   "note": "全局变量数组 + flag 位图（长度由子序列化器决定）",
+   "label": "history ring",
+   "note": "台词历史环（container = count/pos/base，100 条 × 12B 记录，每条写 {strlen(text0), text0, strlen(text1), text1, i32 value}）；前两版文档把它写成\"全局变量 + flag 位图\"是错的，见 ref/exe-history.json",
    "order": 20,
    "src": "engine+0x6a49c0",
    "stage": "tail",

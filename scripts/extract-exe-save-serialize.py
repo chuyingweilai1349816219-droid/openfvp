@@ -146,11 +146,14 @@ SEGMENTS = [
      'kind': 'blob', 'va': '0x0043e3ff',
      'frags': ['81c100040000', '8d96c0446a00'],
      'src': 'engine+0x6a44c0', 'size': 0x400, 'note': '256 × BGRA（ColorSet 写的调色板）'},
-    {'order': 20, 'stage': 'tail', 'label': 'globals + flags',
+    {'order': 20, 'stage': 'tail', 'label': 'history ring',
      'kind': 'call', 'va': '0x0043e448',
      'frags': ['568d8ec0496a00', 'e8cc9cffff'],
      'src': 'engine+0x6a49c0', 'call': '0x00438120',
-     'note': '全局变量数组 + flag 位图（长度由子序列化器决定）'},
+     'note': '台词历史环（container = count/pos/base，100 条 × 12B 记录，'
+             '每条写 {strlen(text0), text0, strlen(text1), text1, i32 value}）；'
+             '前两版文档把它写成"全局变量 + flag 位图"是错的，见 '
+             'ref/exe-history.json'},
     {'order': 21, 'stage': 'tail', 'label': 'gaiji table',
      'kind': 'call', 'va': '0x0043e454',
      'frags': ['568d8ecc496a00', 'e880f8ffff'],

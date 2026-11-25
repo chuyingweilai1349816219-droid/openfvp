@@ -511,7 +511,7 @@ prim 数组（4096×0x34，其中大量 `type==0` 的空记录本身就是特征
 | 17 | 单字节 | `engine+0x6A65FC+0xC0` | 1 |
 | 18 | 16 × 12 B | `engine+0x6A65FC`，`0x4386D0` | 0xC0 |
 | 19 | 调色板 | `engine+0x6A44C0` | 0x400（256 × BGRA） |
-| 20 | 全局变量 + flag 位图 | `engine+0x6A49C0`，`0x438120` | 变长 |
+| 20 | **台词历史环** | `engine+0x6A49C0`，`0x438120` | `8 + Σ`（100 条 × `{u32 len, text0, u32 len, text1, i32 value}`，长度 0 不写字节；实测 s481 在 `tail+0x20622`、s905 在 `tail+0x20633`，见 `ref/exe-history.json`） |
 | 21 | 外字表 | `engine+0x6A49CC`，`0x43DCE0` | 变长 |
 | 22 | 4096 × 0x51C 对象数组 | `engine+0x101064`，`0x4292B0` | 每项变长 |
 | 23 | 64 × 0x34 | `engine+0x61D064`，`0x429570` | 变长 |

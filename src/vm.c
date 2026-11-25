@@ -1506,6 +1506,104 @@ int fvp_vm_lip_sync(FvpVM *vm, const FvpValue *id, const FvpValue *on)
     return 1;
 }
 
+int fvp_vm_history_set(FvpVM *vm, const FvpValue *args, int argc)
+{
+    int kind;
+
+    if (vm == NULL) {
+        return 0;
+    }
+    vm->history.sets += 1u;
+    if (args == NULL || argc < 1) {
+        return 0;
+    }
+    /* 原版 0x43A5E4：`mov (%eax),%dl; test %dl,%dl` —— 只有 Variant **type 0
+     * （null）**才走"开新的一条"，int 0 不是。 */
+    if (fvp_value_is_null(&args[0])) {
+        return fvp_history_begin(&vm->history);
+    }
+    if (args[0].type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    kind = (int)args[0].i;
+    if (kind < 0 || kind > 2) {
+        return 0;
+    }
+    if (kind == 2) {
+        /* 0x43A6B5：第二参数必须是 int（type 2）且 >= 0。 */
+        if (argc < 2 || args[1].type != (uint8_t)FVP_INT) {
+            return 0;
+        }
+        return fvp_history_set_value(&vm->history, (int)args[1].i);
+    }
+    /* kind 0/1：第二参数必须是字符串（0x438DF0 取不到就整条忽略）。 */
+    if (argc < 2 || args[1].type != (uint8_t)FVP_STR ||
+        args[1].str == NULL) {
+        return 0;
+    }
+    return fvp_history_set_text(&vm->history, kind, args[1].str->data,
+                                args[1].str->len);
+}
+
+int fvp_vm_history_get(FvpVM *vm, const FvpValue *args, int argc,
+                       FvpValue *out)
+{
+    int kind;
+    int idx;
+
+    if (vm == NULL) {
+        return 0;
+    }
+    vm->history.gets += 1u;
+    if (args == NULL || argc < 1) {
+        return 0;
+    }
+    /* 0x43A4AB：type 0（null）→ 返回 count。 */
+    if (fvp_value_is_null(&args[0])) {
+        if (out != NULL) {
+            *out = fvp_make_int((int64_t)vm->history.count);
+        }
+        return 1;
+    }
+    if (args[0].type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    kind = (int)args[0].i;
+    if (kind < 0 || kind > 2) {
+        return 0;
+    }
+    if (argc < 2 || args[1].type != (uint8_t)FVP_INT) {
+        return 0; /* 0x43A4E6：第二参数必须 int */
+    }
+    idx = (int)args[1].i;
+    /* 0x43A4F3 - 0x43A50C：idx < 0 或 idx > count-1 → 不写返回值。 */
+    if (idx < 0 || (int64_t)idx >= (int64_t)vm->history.count) {
+        return 0;
+    }
+    if (kind == 0 || kind == 1) {
+        const char *s = fvp_history_text(&vm->history, kind, idx);
+
+        if (s == NULL) {
+            return 0;
+        }
+        if (out != NULL) {
+            *out = fvp_make_str(fvp_arena_str(&vm->arena, s, fvp_strlen(s)));
+        }
+        return 1;
+    }
+    {
+        int32_t v = 0;
+
+        if (!fvp_history_value(&vm->history, idx, &v)) {
+            return 0;
+        }
+        if (out != NULL) {
+            *out = fvp_make_int(v);
+        }
+    }
+    return 1;
+}
+
 void fvp_vm_input_flash(FvpVM *vm)
 {
     if (vm != NULL) {

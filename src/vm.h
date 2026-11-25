@@ -597,6 +597,21 @@ int fvp_vm_lip_anim(FvpVM *vm, const FvpValue *args, int argc);
  * 返回 1 = 生效。 */
 int fvp_vm_lip_sync(FvpVM *vm, const FvpValue *id, const FvpValue *on);
 
+/* HistorySet(26)：handler 0x43A5E0。
+ *   args[0] == null            → 开新的一条（count+1 上限 100、pos 环进）
+ *   args[0] 是 int kind 0/1    → 需要 args[1] 是字符串，整串替换 text0/text1
+ *   args[0] 是 int kind 2      → 需要 args[1] 是 int 且 >= 0，写 value
+ *   其它 kind / 类型不符       → 整条命令被忽略
+ * 返回 1 = 命中上述任一分支（诊断用），0 = 被忽略。 */
+int fvp_vm_history_set(FvpVM *vm, const FvpValue *args, int argc);
+
+/* HistoryGet(25)：handler 0x43A490。
+ *   args[0] == null                     → *out = count（int）
+ *   args[0] 是 int kind 0..2 且 idx 合法 → *out = text/kinds/value
+ * 返回 1 = 有返回值（*out 有效），0 = 原版不写返回值（越界/类型不符）。 */
+int fvp_vm_history_get(FvpVM *vm, const FvpValue *args, int argc,
+                       FvpValue *out);
+
 /* InputFlash(27)：只计数（原版 call 0x442400(engine+0x120)）。 */
 void fvp_vm_input_flash(FvpVM *vm);
 /* InputGetRepeat(33)：返回 engine+0x448 的记录值（默认 0）。 */

@@ -51,6 +51,30 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 结构分析/修正（台词历史：count 初值 = 1、begin 判据是 Variant type 0、槽尾第 20 段就是历史环）
+
+- `HistorySet(26)` 0x43A5E0 / `HistoryGet(25)` 0x43A490 的**每一条判据**（地址 +
+  指令字节）、容器构造、记录环的读写顺序、读档路径的回填，全部冻结进
+  `ref/exe-history.json`（提取器 `scripts/extract-exe-history.py`，门禁
+  `tests/verify_exe_history.py`，run_all 73→**74 步**）。
+- **修正两条**（旧注释写错了）：
+  1. `count` 初值是 **1** 不是 0 —— 构造函数 `0x442C4A movl $0x1,(%esi)`，
+     "当前这一行"天生算第 1 条；`pos` 初值 0，`begin` 先 `pos++` 再写
+     （`0x43A5FC`），所以回绕前恒有 `pos == count-1`；
+  2. `begin` 的判据是 Variant **type 0（null）**，**int 0 不算** —— 旧代码用
+     `argc < 1` 当 null 分支（永远不成立），现已改成
+     `fvp_value_is_null(&args[0])`，并抽成 `fvp_vm_history_set/get` 由
+     `tests/test_history.c` 的 VM 级用例钉住（172→**202 项**）。
+- **槽尾第 20 段是台词历史环**（不是上一版写的"全局变量 + flag 位图"）：
+  `u32 count + u32 pos + 100 × {u32 strlen(text0), text0?, u32 strlen(text1),
+  text1?, i32 value}`。6 份真实存档全部解析成功：`s481` 环在 `tail+0x20622`
+  （count=1/pos=0）、`s905` 在 `tail+0x20633`（count=11/pos=10，11 条真实台词，
+  最新一条 == 槽头当前台词）；`s485` 这类"槽头台词为空"的档里历史仍留着上一句。
+- **仍未解**：静态扫描两作各只有 7 个 `HistorySet` 调用点（arg0 全是 int/bool），
+  看不到 null，但存档里 count 能到 11 ⇒ `begin` 的真实触发源（引擎内部换行？
+  读档链？）还没找到，列进基线的 `unknown`。
+- 顺带：`save-format.md` §2.4.5 第 20 段、`vm-commands.md` 历史小节已按上面改。
+
 ### 结构分析（存档槽写档顺序：31 段逐指令冻结，读档续玩 step-2 的地基）
 
 - 把写档序列化器 `0x43DE90..0x43E67B`（**2,028 字节 / 31 段**）按指令流读完，

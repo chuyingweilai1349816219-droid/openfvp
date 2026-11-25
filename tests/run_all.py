@@ -712,6 +712,17 @@ def build_steps(args):
                            '128-slot string table ends at tail+0x16608, '
                            'tail+0x18 = 02, last two bytes 01 01)'))
 
+    # 6.4968636 台词历史（HistorySet 26 / HistoryGet 25）的 handler + 槽尾历史环
+    vhi = os.path.join(HERE, 'verify_exe_history.py')
+    steps.append(Step('verify_exe_history.py', [PY, '-X', 'utf8', vhi], 600,
+                      skip_reason=None,
+                      note='history frozen: HistorySet 0x43A5E0 / HistoryGet '
+                           '0x43A490 (Variant type 0 = begin, kind 0..2, '
+                           'idx < count), container count starts at 1, ring '
+                           'writer 0x437FA0 / reader 0x437EE0; 6 real saves '
+                           'parse their slot-tail ring (s481 count=1, '
+                           's905 count=11)'))
+
     # 6.496864 脚本全局开关（global3 体验版布局 / global236/232 跳过动画）
     vg = os.path.join(HERE, 'verify_script_globals.py')
     steps.append(Step('verify_script_globals.py', [PY, '-X', 'utf8', vg], 300,

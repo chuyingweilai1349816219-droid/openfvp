@@ -423,8 +423,8 @@ HISTORY_TEST = bin/test_history$(EXE)
 
 test_history: $(HISTORY_TEST)
 
-$(HISTORY_TEST): tests/test_history.c src/history.c src/history.h | bin
-	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_history.c src/history.c $(LDFLAGS)
+$(HISTORY_TEST): tests/test_history.c src/history.c src/history.h src/vm.h src/vm.c $(OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_history.c $(filter-out src/main.o,$(OBJ)) $(LDFLAGS) -lm
 
 clean-history:
 	-rm -f $(HISTORY_TEST)

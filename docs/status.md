@@ -68,12 +68,13 @@
 | 命令表 argc 实测对账 | 两部作品 **825 / 865** 个可判定调用点，**82 / 83** 条命令的 argc 被证实；仅 3 条已知表达式临时值异常（两作完全相同） |
 | 抗锯齿 vs 原版协议（同字同字号） | 「日」@32：**54 / 1224 ≈ 4.4%** 的像素是原版根本不会产生的中间值 |
 | `make check` | **32 组**单测全 PASS（新增 `test_titlebg` 503 项） |
-| `tests/run_all.py` | **73 步**（本轮加 `verify_exe_save_serialize.py` 后全 PASS；缺游戏数据时相关步 SKIP） |
+| `tests/run_all.py` | **74 步**（本轮加 `verify_exe_history.py` 后全 PASS；缺游戏数据时相关步 SKIP） |
 | `scripts/check-docs.py` | PASS：**33 篇**文档，引用路径 0 缺失，DeepSeek 声明齐全 |
 | 健壮性 | 27,300 次 HCB 变异（0 崩溃）、339 个资产畸形用例、43 个 VM 边界用例 |
 | 读档续玩 step-1 | `--load-restart`：读槽文件（thumb 200×113/tail 584.9 KB）→ 场景复位（prim/motion/text）→ 重建 VM 从入口重启并保留 globals/flags；重启后脚本继续跑（40952 步、有文本）、画面非黑；槽尾快照段暂不应用 |
 | 存档/读档引擎侧流程 | `Load(40)`/`SaveWrite(96)` handler、请求字段 `0xFCA/0xFCB/0xFCC`、每帧消费点、线程重启 `+0xFD9`、路径 `%s/save/s%03d.bin` 已冻结（`ref/exe-load-flow.json`）；`0x4344C0` 字段映射与场景选择仍未知 |
-| 存档槽写档顺序（本轮） | 序列化器 `0x43DE90..0x43E67B`（**2,028 B**）逐指令读完 → **31 段**（5 文件头 + 26 槽尾）冻结进 `ref/exe-save-serialize.json`；两种 u16 长度语义分清（槽头字符串**不含** NUL，`0x434410` 动态串**含** NUL）；6 份真实存档验证 4 条可证伪推论：32 个协程快照紧贴 tail+0（活跃恒为 0..7 号）、128 槽字符串表正好止于 `tail+0x16608`、`tail+0x18 = 02`、末两字节 `01 01` |
+| 存档槽写档顺序（2026-11-26） | 序列化器 `0x43DE90..0x43E67B`（**2,028 B**）逐指令读完 → **31 段**（5 文件头 + 26 槽尾）冻结进 `ref/exe-save-serialize.json`；两种 u16 长度语义分清（槽头字符串**不含** NUL，`0x434410` 动态串**含** NUL）；6 份真实存档验证 4 条可证伪推论：32 个协程快照紧贴 tail+0（活跃恒为 0..7 号）、128 槽字符串表正好止于 `tail+0x16608`、`tail+0x18 = 02`、末两字节 `01 01` |
+| 台词历史（本轮） | `HistorySet(26)` 0x43A5E0 / `HistoryGet(25)` 0x43A490 的判据、容器构造（**count 初值 = 1**，不是 0）、记录环（100 × 12B `{text0,text1,value}`）的写 0x437FA0 / 读 0x437EE0、读档回填全部冻结进 `ref/exe-history.json`；C 侧修掉"用 argc<1 当 null"的判据、`fvp_history_init` 改成 count=1，新增 VM 级用例（`test_history` 172→**202 项**）；6 份真实存档的槽尾历史环全部解析成功（s481 `count=1/pos=0`、s905 `count=11/pos=10`，最新一条台词 == 槽头台词）；**槽尾第 20 段 = 台词历史环**（旧文档误标"全局变量 + flag 位图"）；`begin` 的真实触发源仍列为未解 |
 | 脚本开关（global3 / global236 / global232） | `global3` = 体验版布局开关：两作都只有 1 个写点且写 0 ⇒ 隐藏 1521/1522/1528/1529、trial 徽标、−81 px 分支都**不可达**；`global236`（五彩）/`global232`（星空）= 跳过动画开关（写 0/1 都有，读点 25/24）。`ref/script-globals.json` + 门禁 `verify_script_globals.py` |
 | RS 分支变换 / 旋转角单位 | exe 0x42B21E：`final = T2 + S·(R·(图头−OP) + prim + accum)`，`T2 = 画面中心`；**渲染 1 角度单位 = 0.05°**（`a/3600·π`，7200 一圈；旧文档的 0.1° 已修正）。`ref/exe-rs-transform.json` + 门禁 `verify_exe_rs_transform.py` |
 | 截图门禁确定性 | 新增 `--title-no-hover`：之前"静态标题帧"会随宿主鼠标停在菜单上变成 hover 变体，`verify_opening_render` 偶发 0.42 mean_abs 失败；三个渲染门禁现在都带这个开关 |
@@ -93,7 +94,7 @@ mingw32-make -f Makefile all headless check
 # 核心三道
 python tests/compare.py --run                     # 逐字节
 powershell -ExecutionPolicy Bypass -File tests/verify_gfx.ps1 -SkipDump   # 像素
-python tests/run_all.py                           # 全部 73 步
+python tests/run_all.py                           # 全部 74 步
 
 # 原版相关（缺语料/缺 exe 时自己 SKIP 并返回 0）
 python tests/verify_exe_gdi_params.py             # 从 exe 静态提取的绘制协议

@@ -22,6 +22,11 @@ void fvp_history_init(FvpHistory *h)
         return;
     }
     memset(h, 0, sizeof(*h));
+    /* 0x442C4A `movl $0x1,(%esi)`：容器构造时 count 就是 **1**（当前这一行
+     * 天生算第 1 条），pos = 0（0x442C0C 清 +4）。存档数据可以印证：
+     * s481 是还没开过新一条的存档 → count=1/pos=0；s905 开过 10 次 →
+     * count=11/pos=10（pos == count-1，与"先 ++ 再写"一致）。 */
+    h->count = 1u;
     for (i = 0; i < FVP_HISTORY_SLOTS; ++i) {
         h->entry[i].value = -1;
     }

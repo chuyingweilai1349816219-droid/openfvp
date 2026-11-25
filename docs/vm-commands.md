@@ -508,15 +508,38 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 | `(1, 字符串)` | 70 | 54 | 写台词正文 |
 | `(2, 整数)` | 120 | 106 | 写行 id（实测 `2000130` / `600010`，序列 10/20/30/40…） |
 | `(0\|1, 整数)` | 53 / 170 | 54 / 159 | **原版忽略**（类型不符），脚本发的是 `pushtrue` 的 1 |
-| `HistorySet(null)` | **0** | **0** | 从不调用 |
+| `HistorySet(null)` | **0**（静态调用点） | **0**（静态调用点） | 静态扫描看不到，但**存档证明运行期发生过**（见下） |
 | `HistoryGet` 动态调用 | **0** | **0** | 从不调用 |
 
-所以 `count` 恒 0、`pos` 恒 0，历史里永远只有槽 0 那一条"当前台词"。这不是移植
-缺陷 —— 原版程序里能让 `count` 增长的唯一路径就是 null 调用（另一个写 count 的
-地方是存档反序列化 0x43F264）。实测 `fvm --dump-history` 的槽 0：
-`value=2000130 text1="　指をさす。" text0="　　 澪　　 "`。
-另外，槽尾快照里 0x43F264 处的 `count/pos/base` 就是这三样东西 —— 对以后解
-存档快照有用。
+**2026-11-26 修正两处**（依据静态分析 + 真实存档，基线 `ref/exe-history.json`、
+门禁 `tests/verify_exe_history.py`）：
+
+1. **`count` 的初值是 1，不是 0**：容器构造函数 `0x442BE0` 里
+   `0x442C4A movl $0x1,(%esi)`（count=1）、`0x442C0C mov %edi,0x4(%esi)`（pos=0）。
+   也就是说"当前这一行"天生算第 1 条，`begin` 只是"再开一条"。
+   `begin` 的顺序是**先 `pos++` 再写**（`0x43A5FC`），所以回绕前恒有
+   `pos == count-1`。
+2. **`begin` 真的会发生**：6 份真实存档的槽尾里能找到历史环的序列化，
+   `s481.bin` 是"还没开过新条"的样本（`count=1 / pos=0`，环里只有当前台词
+   `"　……。"`），`s905.bin` 是"开过 10 次"的样本（`count=11 / pos=10`，
+   环里有 11 条真实台词，例如 `"　从天而降的羽毛。"`、`"　“……求求你”"`）。
+   两个样本的 `pos == count-1` 与上面的构造值/自增顺序**完全吻合**。
+
+   但**静态扫描找不到 null 调用点**（两作各 7 个 `HistorySet` 调用点，arg0
+   全是 int 或 `pushtrue` 的 bool）—— 所以"谁在换行时开新条"仍是**未解**：
+   可能是引擎内部直接调了这个 handler（不经脚本），也可能来自读档链
+   （`0x43F25A` 起会把 `count/pos` 写回 container）。这条列在
+   `ref/exe-history.json` 的 `unknown` 里，不假装知道。
+
+   环的序列化格式（写 `0x437FA0` / 读 `0x437EE0`）：
+   `u32 count` + `u32 pos` + **100 条** `{u32 strlen(text0), text0?,
+   u32 strlen(text1), text1?, i32 value}`（长度 0 就不写字节）。
+   实测位置：`s481.bin` 在 `tail+0x20622`、`s905.bin` 在 `tail+0x20633`
+   （都是"槽尾第 20 段"，紧跟 0x400 调色板之后；段顺序见
+   [`save-format.md`](save-format.md) §2.4.5）。
+
+   另外，实测 `fvm --dump-history` 的槽 0：
+   `value=2000130 text1="　指をさす。" text0="　　 澪　　 "`。
 
 ### PartsMotion(66) / PartsMotionPause(67) / PartsMotionStop(68) / PartsRGB(70) / PrimGroupMove(74)（**已实现：状态记录**）
 

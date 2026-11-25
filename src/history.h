@@ -2,10 +2,11 @@
  *
  * 语义逐条来自静态分析，不是猜的（iroseka_HD.exe，2026-11 重实现）：
  *
- *   引擎对象在 `engine + 0x6a49c0`，布局三个 dword：
- *     +0x00  u32  count   已记录条数，上限 100
- *     +0x04  u32  pos     当前写入槽位，0..99 循环
- *     +0x08  ptr  base    100 条 × 12 字节的记录数组
+ *   引擎对象在 `engine + 0x6a49c0`，布局三个 dword（构造见 0x442be0）：
+ *     +0x00  u32  count   条数；构造时就是 **1**（0x442C4A `movl $0x1`，
+ *                          当前这一行天生算第 1 条），上限 100
+ *     +0x04  u32  pos     当前写入槽位，0..99 循环（构造时清 0）
+ *     +0x08  ptr  base    100 条 × 12 字节的记录数组（new 0x4B4）
  *   每条记录 12 字节：
  *     +0x00  char* text0  HistorySet(0, str) 写入 → **说话人名字**（实测
  *                           例："　　 悠馬　　 " / "　女の子　"）
@@ -14,21 +15,27 @@
  *                           （实测例：iroseka 2000130、hoshimemo 600010）；
  *                           清空时置 -1
  *
- *   实测（900k 步，两部作品）HistorySet 的四种调用形态：
+ *   实测（900k 步，两部作品）脚本发的四种形态：
  *     (0, str) 人名 / (1, str) 台词 / (2, int) 行 id / (0|1, int) 无操作
  *   —— 脚本也会用 `pushtrue` 发 (0, int)、(1, int)，原版按类型不符整条忽略。
- *   **两部作品都从不发 HistorySet(null)**，所以 count 恒 0、pos 恒 0，历史里
- *   永远只有"当前这一条"（槽 0）。这不是移植缺陷：唯一能让 count 增长的路径
- *   就是这条 null 调用，原版程序里没有第二个写 count 的地方（存档反序列化除外，
- *   见 0x43F264）。HistoryGet 在两部作品里动态调用次数都是 0。
+ *   **`begin`（arg0 为 Variant type 0/null）的触发源还没解清**：静态扫描两作
+ *   各只有 7 个 HistorySet 调用点，arg0 全是 int（kind）或 bool，看不到 null；
+ *   但存档槽尾的历史环里有 **count=11 / pos=10** 的样本（`s905.bin`，10 条
+ *   真实台词，pos = count-1 与"先 ++ 再写"吻合），⇒ 运行期确实发生过 begin。
+ *   这条矛盾记在 `docs/vm-commands.md`，下一轮继续查（可能是引擎内部在换行时
+ *   直接调 handler，也可能是读档链把 count 带过来）。
  *
  *   HistorySet  handler 0x43A5E0：
- *     arg0.type == 0（null）→ count = min(count+1,100)；pos = (pos+1) % 100；
+ *     arg0.type == 0（**Variant type 0 = null**，不是 int 0）→
+ *                              count = min(count+1,100)；pos = (pos+1) % 100；
  *                              base[pos] = {NULL, NULL, -1}      （"开新的一条"）
  *     arg0 = 0 → base[pos].text0 = strdup(arg1)  仅当 arg1 是字符串
  *     arg0 = 1 → base[pos].text1 = strdup(arg1)  仅当 arg1 是字符串
  *     arg0 = 2 → base[pos].value = arg1          仅当 arg1 是整型且 >= 0
  *     其它 kind（<0 / >2）整条命令被忽略。arg0 不是整型也不是 null 也忽略。
+ *   （判定的落点在 src/vm.c 的 fvp_vm_history_set()，VM 级用例在
+ *    tests/test_history.c；基线 `ref/exe-history.json` + 门禁
+ *    `tests/verify_exe_history.py` 把 handler 地址/常量/数据证据钉住。）
  *
  *   HistoryGet  handler 0x43A490：
  *     arg0.type == 0 → 返回 count（整型）
@@ -69,7 +76,8 @@ typedef struct FvpHistory {
     uint64_t gets;  /* 诊断：HistoryGet 调用次数 */
 } FvpHistory;
 
-/* 全部清零：count = pos = 0，所有记录的 value = -1、字符串 = NULL。 */
+/* 初始化：count = 1（当前这一行）、pos = 0，所有记录的 value = -1、字符串 = NULL。
+ * 注意 count **不是 0** —— 原版容器构造时就是 1（0x442C4A）。 */
 void fvp_history_init(FvpHistory *h);
 
 /* 释放所有字符串并把结构清零（可重复调用）。 */

@@ -1,0 +1,687 @@
+{
+ "checks": [
+  {
+   "bytes": "c706010000008b4c241064890d00000000595f5e83c410c3cccccccccccccccccccccccccccc55568bf1578d8e387e6a00e8f0f8ffff8bbe347e6a0033ed3bfd",
+   "fact": "构造时 count = 1（`movl $0x1,(%esi)`）",
+   "id": "ctor_count_1",
+   "va": "0x00442c4a"
+  },
+  {
+   "bytes": "897e04e8d744000083c4048944240c897c24183bc7742268604b430068c02b44006a648d78046a0c57c70064000000e89a630000897e08eb0533c0894608c706",
+   "fact": "构造时 pos = 0（`mov %edi,0x4(%esi)`，edi 已被 xor 清零）",
+   "id": "ctor_pos_0",
+   "va": "0x00442c0c"
+  },
+  {
+   "bytes": "68b4040000897e04e8d744000083c4048944240c897c24183bc7742268604b430068c02b44006a648d78046a0c57c70064000000e89a630000897e08eb0533c0",
+   "fact": "记录环 = new 0x4B4 字节（100 × 12 + 4 的头），数组头写入 0x64=100",
+   "id": "ctor_ring_new",
+   "va": "0x00442c07"
+  },
+  {
+   "bytes": "897e08eb0533c0894608c706010000008b4c241064890d00000000595f5e83c410c3cccccccccccccccccccccccccccc55568bf1578d8e387e6a00e8f0f8ffff",
+   "fact": "base（记录数组 +4 之后）写进 container+8",
+   "id": "ctor_base_store",
+   "va": "0x00442c40"
+  },
+  {
+   "bytes": "8b038902017e088b4e088b460403cf3bc87e158b4e0c8d44010399f7f90fafc1508bcee8e4beffff8b0e034e088b53048911017e0833ffeb038d49008b4b0856",
+   "fact": "序列化先写 u32 count（取 container+0）",
+   "id": "ser_count",
+   "va": "0x00438154"
+  },
+  {
+   "bytes": "8b53048911017e0833ffeb038d49008b4b085603cfe805feffff83c70c81ffb00400007cea5f5e5bc20400cccccccc80390275178b41043b4424047c0e3b4424",
+   "fact": "再写 u32 pos（取 container+4）",
+   "id": "ser_pos",
+   "va": "0x00438181"
+  },
+  {
+   "bytes": "8b4b085603cfe805feffff83c70c81ffb00400007cea5f5e5bc20400cccccccc80390275178b41043b4424047c0e3b4424087f08b801000000c2080033c0c208",
+   "fact": "然后 100 次（0x4B0 / 0xC）调用 0x437FA0 写每条记录",
+   "id": "ser_ring",
+   "va": "0x00438190"
+  },
+  {
+   "bytes": "8b035733ff85c0740e8d50018a084084c975f92bc28bf88b7424108b4e088b460483c1043bc87e158b4e0c8d44010399f7f90fafc1508bcee87fc0ffff8b5608",
+   "fact": "记录写入 0x437FA0：先 u32 strlen(text0)（0 就不写字节）",
+   "id": "rec_writer_s0",
+   "va": "0x00437fa4"
+  },
+  {
+   "bytes": "8b430433ff85c0740e8d50018a084084c975f92bc28bf88b4e088b460483c1043bc87e158b4e0c8d44010399f7f90fafc1508bcee82cc0ffff8b56080316893a",
+   "bytes2": "8b4e088b460483c1043bc87e158b4e0c8d44010399f7f90fafc1508bcee82cc0ffff8b56080316893a8346080485ff740c8b430457508bcee8119efeff8b4e08",
+   "fact": "再 u32 strlen(text1)（0 就不写字节）",
+   "id": "rec_writer_s1",
+   "va": "0x00437ffb",
+   "va2": "0x00438012"
+  },
+  {
+   "bytes": "8b560803168b43085f8902834608045e5bc20400cccccccccccccccccccccc8b5424043b117c0533c0c204008b41042bc2790383c0648b49088d04408b0481c2",
+   "fact": "最后把 +8 的 i32（value）**原样**写 4 字节",
+   "id": "rec_writer_value",
+   "va": "0x00438071"
+  },
+  {
+   "bytes": "8b028986c0496a00015e088b46088b0e8b140103c88996c4496a00015e0833ff8b8ec8496a005603cfe8508cffff83c70c81ffb00400007ce7568d8ecc496a00",
+   "fact": "读档：u32 → engine+0x6A49C0（count）",
+   "id": "deser_count",
+   "va": "0x0043f262"
+  },
+  {
+   "bytes": "8b140103c88996c4496a00015e0833ff8b8ec8496a005603cfe8508cffff83c70c81ffb00400007ce7568d8ecc496a00e809faffff8dbe64101000bd00100000",
+   "fact": "读档：u32 → engine+0x6A49C4（pos）",
+   "id": "deser_pos",
+   "va": "0x0043f272"
+  },
+  {
+   "bytes": "8b8ec8496a005603cfe8508cffff83c70c81ffb00400007ce7568d8ecc496a00e809faffff8dbe64101000bd00100000568bcfe8d69efeff81c71c05000083ed",
+   "fact": "读档：100 次（0x4B0/0xC）调用 0x437EE0 读每条记录",
+   "id": "deser_ring",
+   "va": "0x0043f282"
+  },
+  {
+   "bytes": "5356578bf98b0785c0740f50e88004010083c404c707000000008b7424108b46088b0e8b1c0103c883c00489460885db74248d530152e8d0f1000089078b4e08",
+   "fact": "记录读取 0x437EE0：先释放旧串（0x448371=free），再按 len 分配 len+1",
+   "id": "rec_reader",
+   "va": "0x00437ee0"
+  },
+  {
+   "bytes": "8b4424048a1084d275548b81c0496a0083f8647d07408981c0496a00ff81c4496a0083b9c4496a0064750ac781c4496a00000000008b81c4496a008b89c8496a",
+   "fact": "HistorySet：arg0 的第一字节（Variant type）为 0 才是 begin",
+   "id": "set_null_gate",
+   "va": "0x0043a5e0"
+  },
+  {
+   "bytes": "8b81c0496a0083f8647d07408981c0496a00ff81c4496a0083b9c4496a0064750ac781c4496a00000000008b81c4496a008b89c8496a008d04408d0481c70000",
+   "fact": "begin：count < 0x64 才自增（上限 100）",
+   "id": "set_begin",
+   "va": "0x0043a5ea"
+  },
+  {
+   "bytes": "ff81c4496a0083b9c4496a0064750ac781c4496a00000000008b81c4496a008b89c8496a008d04408d0481c70000000000c7400400000000c74008ffffffffc2",
+   "fact": "begin：pos++，到 100 归零（先 ++ 再写 → 第一条落在槽 0 需 pos 初值 0）",
+   "id": "set_pos_wrap",
+   "va": "0x0043a5fc"
+  },
+  {
+   "bytes": "c70000000000c7400400000000c74008ffffffffc2040080fa020f858d0000008b500485d20f8c8200000083fa027f7d85d2752883c00850e88ce7ffff85c074",
+   "fact": "begin：新记录清成 {NULL, NULL, -1}",
+   "id": "set_clear",
+   "va": "0x0043a627"
+  },
+  {
+   "bytes": "80fa020f858d0000008b500485d20f8c8200000083fa027f7d85d2752883c00850e88ce7ffff85c0746c894424048b81c4496a008d14408b81c8496a008d0c90",
+   "fact": "arg0 必须是 Variant type 2（int），否则整条忽略",
+   "id": "set_kind_gate",
+   "va": "0x0043a63e"
+  },
+  {
+   "bytes": "83fa027f7d85d2752883c00850e88ce7ffff85c0746c894424048b81c4496a008d14408b81c8496a008d0c90e9add7ffff83fa01752883c00850e85fe7ffff85",
+   "fact": "kind 必须 0..2",
+   "id": "set_kind_range",
+   "va": "0x0043a652"
+  },
+  {
+   "bytes": "83fa02751f385008751a8b400c85c07c138b91c4496a008b89c8496a008d145289449108c20400cccccccccccccccccc53568b74240c8bd9b102380e0f853101",
+   "fact": "kind 2：arg1 必须是 int（type 2）且 >= 0，才写 record+8",
+   "id": "set_kind2_gate",
+   "va": "0x0043a6b0"
+  },
+  {
+   "bytes": "e9add7ffff83fa01752883c00850e85fe7ffff85c0743f894424048b81c4496a008d14408b81c8496a008d0c90e9d0d7ffff83fa02751f385008751a8b400c85",
+   "fact": "kind 0 写 record+0（跳 0x437E30）",
+   "id": "set_text_writers",
+   "va": "0x0043a67e"
+  },
+  {
+   "bytes": "e9d0d7ffff83fa02751f385008751a8b400c85c07c138b91c4496a008b89c8496a008d145289449108c20400cccccccccccccccccc53568b74240c8bd9b10238",
+   "fact": "kind 1 写 record+4（跳 0x437E80）",
+   "id": "set_text_writers2",
+   "va": "0x0043a6ab"
+  },
+  {
+   "bytes": "568bf18b86d0666a0069c0280b0000578dbc30c0df68008b44240c8a0884c97518c68714080000028b8ec0496a00898f180800005f5ec2040080f9020f850401",
+   "fact": "返回槽 = engine+0x68DFC0 + engine[0x6A66D0] * 0xB28（线程对象的 +0x814/+0x818）",
+   "id": "get_thread",
+   "va": "0x0043a490"
+  },
+  {
+   "bytes": "8a0884c97518c68714080000028b8ec0496a00898f180800005f5ec2040080f9020f85040100008b480485c90f8cf900000083f9020f8ff0000000807808020f",
+   "fact": "arg0 为 type 0（null）→ 返回值 = count（type 2/int）",
+   "id": "get_null_returns_count",
+   "va": "0x0043a4ab"
+  },
+  {
+   "bytes": "80f9020f85040100008b480485c90f8cf900000083f9020f8ff0000000807808020f85e60000008b500c85d20f8cdb000000538b9ec0496a00558daec0496a00",
+   "fact": "arg0 必须是 int，kind 必须 0..2",
+   "id": "get_kind_gate",
+   "va": "0x0043a4c9"
+  },
+  {
+   "bytes": "807808020f85e60000008b500c85d20f8cdb000000538b9ec0496a00558daec0496a004b3bd30f8fc20000008bda85c975458bcfe8c1a000008db486ec496a00",
+   "fact": "arg1 必须是 int（type 2）且 idx >= 0",
+   "id": "get_arg1_gate",
+   "va": "0x0043a4e6"
+  },
+  {
+   "bytes": "8b9ec0496a00558daec0496a004b3bd30f8fc20000008bda85c975458bcfe8c1a000008db486ec496a008bce89442414e80f97ffff538bcde857dbffff85c074",
+   "fact": "idx > count-1 → 不写返回值",
+   "id": "get_idx_range",
+   "va": "0x0043a4fc"
+  },
+  {
+   "bytes": "538bcde857dbffff85c07408508bcee81b97ffff8b5424145d5bc68714080000058997180800005f5ec2040083f90175458bcfe877a000008db486ec496a008b",
+   "fact": "取字段调 0x438090（slot = pos - idx，负数 +100）",
+   "id": "get_slot_map",
+   "va": "0x0043a531"
+  },
+  {
+   "bytes": "8bcfe8c1a000008db486ec496a008bce89442414e80f97ffff538bcde857dbffff85c07408508bcee81b97ffff8b5424145d5bc6871408000005899718080000",
+   "fact": "kind 0/1：先 0x4445E0 取 128 槽动态字符串句柄、0x433C40 清空、0x433C60 追加（未设置 → 空串）",
+   "id": "get_kind0_string",
+   "va": "0x0043a518"
+  },
+  {
+   "bytes": "8b5424043b117c0533c0c204008b41042bc2790383c0648b49088d04408b0481c20400cccccccccccccccccccccccccc8b5424043b117c0533c0c204008b4104",
+   "fact": "0x438090：slot = pos - idx；< 0 时 +0x64（100）",
+   "id": "slot_map_body",
+   "va": "0x00438090"
+  }
+ ],
+ "container": {
+  "engine_offset": "engine+0x6a49c0",
+  "fields": {
+   "+0x00": "u32 count（构造 = 1，上限 100）",
+   "+0x04": "u32 pos（构造 = 0，写前先 ++，到 100 归零）",
+   "+0x08": "记录数组 base（new 0x4B4，100 × 12B）"
+  },
+  "record": {
+   "fields": {
+    "+0x00": "char* text0（人名）",
+    "+0x04": "char* text1（台词正文）",
+    "+0x08": "i32 value（行 id，-1 = 未设置）"
+   },
+   "size": 12
+  }
+ },
+ "data_evidence": [
+  {
+   "claim": "槽尾里有历史环的序列化：u32 count + u32 pos + 100 条 {u32 len0, text0, u32 len1, text1, i32 value}",
+   "id": "ring_in_slot_tail",
+   "sample": "s481.bin 环 @tail+0x20622（count=1 pos=0，1 条 = 当前行）；s905.bin 环 @tail+0x20633（count=11 pos=10，11 条台词，含\"　从天而降的羽毛。\"等）"
+  },
+  {
+   "claim": "pos == count-1（未回绕时）且 count=1 表示\"只有当前这一行\"",
+   "id": "count_semantics",
+   "sample": "s481: count=1/pos=0；s905: count=11/pos=10 —— 与\"构造 count=1、begin 先 ++ 再写\"完全一致"
+  },
+  {
+   "claim": "最新一条（槽 pos）的 text1 == 槽头第 3 条字符串（当前台词行）",
+   "id": "line_matches_header",
+   "sample": "s481/s905 都成立；脚本从没发过 null，但存档里 count>1 ⇒ begin 的真实触发源仍未解"
+  }
+ ],
+ "exe": {
+  "image_base": "0x00400000",
+  "sha256": "cacdbe6ba9bb90b3818e0ac748b391681d5483db406b90ea7319204e0c3ab90a",
+  "size": 817664
+ },
+ "handlers": {
+  "HistoryGet": {
+   "cmd": 25,
+   "kind_gate": "arg0 type == 2、kind 0..2、arg1 int 且 0 <= idx < count",
+   "null_returns": "arg0 type == 0 → 返回 count（int）",
+   "slot_map": "slot = pos - idx（<0 时 +100），见 0x438090",
+   "string_field": "kind 0/1 返回 128 槽动态字符串表里的句柄（未设置 → 空串）",
+   "thread_result": "engine+0x68DFC0 + engine[0x6A66D0]*0xB28 的 +0x814（type）/ +0x818（值）",
+   "va": "0x0043a490"
+  },
+  "HistorySet": {
+   "begin_gate": "arg0 的 Variant type == 0（null）",
+   "cmd": 26,
+   "kind_gate": "arg0 type == 2（int），kind 0..2",
+   "text_gate": "kind 0/1 时 arg1 必须是字符串",
+   "va": "0x0043a5e0",
+   "value_gate": "kind 2 时 arg1 必须是 int 且 >= 0"
+  }
+ },
+ "script_sites": {
+  "hoshimemo": {
+   "HistoryGet": [
+    {
+     "pc": "0x00052a9e",
+     "recent_pushes": [
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "jmpcond",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0007fdbe",
+     "recent_pushes": [
+      {
+       "op": "pushtrue",
+       "type": "bool"
+      },
+      {
+       "op": "pushtrue",
+       "type": "bool"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x000810c4",
+     "recent_pushes": [
+      {
+       "op": "pushstack",
+       "type": "stack"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "copystack",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x000810ce",
+     "recent_pushes": [
+      {
+       "op": "pushstack",
+       "type": "stack"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "copystack",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x000810d8",
+     "recent_pushes": [
+      {
+       "op": "pushstack",
+       "type": "stack"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "copystack",
+       "type": "?"
+      }
+     ]
+    }
+   ],
+   "HistorySet": [
+    {
+     "pc": "0x0004f526",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "popglobal",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0004f52e",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0004f536",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0004f6b7",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "popglobal",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0004f6bf",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0004f6c7",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0004fa2a",
+     "recent_pushes": [
+      {
+       "op": "pushtrue",
+       "type": "bool"
+      },
+      {
+       "op": "pushtrue",
+       "type": "bool"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    }
+   ]
+  },
+  "iroseka": {
+   "HistoryGet": [
+    {
+     "pc": "0x0003d9fc",
+     "recent_pushes": [
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "jmpcond",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x00068954",
+     "recent_pushes": [
+      {
+       "op": "pushtrue",
+       "type": "bool"
+      },
+      {
+       "op": "pushtrue",
+       "type": "bool"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x00069c5a",
+     "recent_pushes": [
+      {
+       "op": "pushstack",
+       "type": "stack"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "copystack",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x00069c64",
+     "recent_pushes": [
+      {
+       "op": "pushstack",
+       "type": "stack"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "copystack",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x00069c6e",
+     "recent_pushes": [
+      {
+       "op": "pushstack",
+       "type": "stack"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "copystack",
+       "type": "?"
+      }
+     ]
+    }
+   ],
+   "HistorySet": [
+    {
+     "pc": "0x0003a3eb",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "popglobal",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0003a3f3",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0003a3fb",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0003a57c",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "popglobal",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0003a584",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0003a58c",
+     "recent_pushes": [
+      {
+       "op": "pushglobal",
+       "type": "global"
+      },
+      {
+       "op": "pushint8",
+       "type": "int"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    },
+    {
+     "pc": "0x0003a8ef",
+     "recent_pushes": [
+      {
+       "op": "pushtrue",
+       "type": "bool"
+      },
+      {
+       "op": "pushtrue",
+       "type": "bool"
+      },
+      {
+       "op": "syscall",
+       "type": "?"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "serializer": {
+  "load_path": "0x43F25A 起（读档应用序列里紧跟在调色板之后）",
+  "order": [
+   "u32 count",
+   "u32 pos",
+   "100 × {u32 strlen(text0), text0?, u32 strlen(text1), text1?, i32 value}"
+  ],
+  "reader": "0x00437EE0",
+  "segment": "槽尾第 20 段（0x438120），紧跟 0x400 调色板之后",
+  "writer": "0x00437FA0"
+ },
+ "unknown": [
+  "begin（arg0 = Variant type 0）的真实触发源：静态扫描两作各只有 7 个 HistorySet 调用点，arg0 全是 int/bool，看不到 null；但存档里 count 会到 11（10 次 begin）⇒ 引擎内部某处调了这个 handler（或在换行时直接写 container），还没找到那个调用点",
+  "HistoryGet 在两作里动态调用次数都是 0（脚本只压参数不调），所以读档菜单（回想）到底走哪条路径仍未知",
+  "读档时 count/pos 由 0x43F25A 起的一段直接写回 container，但\"读回来之后当前行与文本窗口如何对齐\"未解"
+ ]
+}
