@@ -220,3 +220,38 @@ powershell -ExecutionPolicy Bypass -File scripts\capture-original.ps1 `
 
 > 本项目由 **6amm** 辅助 DeepSeek 完成，其中所有代码由 DeepSeek 生成。
 > 赞助：<https://afdian.com/a/6ammm>
+
+## 7. 原版帧回归门禁（2026-11-25）
+
+`verify_gfx` 的基准来自我们自己的参考渲染器，只能证明"C 实现 == Python 原型"。
+要回答"和原版差多少"，必须拿**原版实拍帧**来比。这就是本节的门禁：
+
+```
+python tests/verify_vs_original.py
+```
+
+- 语料在 `out/`（不入库）：`out/orig/`（splash）、`out/orig-title/`（标题）、
+  `out/orig-ng2/`（New Game 后 60 s）、`out/orig-hoshi2/`（星空的记忆的实拍）；
+  缺语料时脚本打印 **SKIP** 并返回 0（与其它依赖环境的门禁一致）。
+- 每个用例在 `tests/original-baseline.json` 里描述：原版帧路径、客户区偏移
+  （`out/orig-title/*` 是 1926×1109 全窗位图，客户区从 `(3,29)` 开始）、
+  我们外壳的重现参数、以及**冻结的实测平均绝对差**与允许余量。
+- 判定：`mean_abs <= baseline + tol` 才算通过；超过即回归。
+
+当前记录：
+
+| 用例 | 重现参数 | 实测 mean abs diff | 基线 | 断言 |
+|---|---|---:|---:|---|
+| iroseka 标题 | `--title-menu --title-font bin/gfx-font-61.bin` | **13.79** | 13.93 + 1.5 | ✅ |
+| 星空标题 | 同上 | 36.09 | 36.23 + 2.0 | ⚠️ 只记录（帧归属是推断的） |
+
+**为什么这是"和原版差多少"的权威数字**：它直接拿原版像素做差，不掺我们的参考实现。
+目前标题画面 13.79/255 ≈ 5.4% 的平均差，主要来自菜单字体（Palatino Bold 61 是最接近的
+候选，相关度 0.726）与背景叠加层的透明度/顺序。
+
+刷新基线的方法（语料更新或有意改渲染后）：
+```
+python tests/verify_vs_original.py      # 看新数值
+# 然后手改 tests/original-baseline.json 里的 mean_abs
+```
+

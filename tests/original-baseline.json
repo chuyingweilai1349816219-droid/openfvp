@@ -1,0 +1,29 @@
+{
+  "_comment": [
+    "与原版实拍帧的回归基线（docs/original-verification.md §7）。",
+    "frame/offset 指向 out/ 下的本地位图（不入库）；数值是本文件冻结的实测值，",
+    "门禁允许 mean_abs 有 +1.5 的余量，超过即判回归。",
+    "assert=false 的用例只打印数值（帧的来源是推断的），不做断言。"
+  ],
+  "cases": [
+    {
+      "name": "iroseka-title",
+      "game": "iroseka",
+      "frame": "out/orig-title/orig-title-005.png",
+      "offset": [3, 29],
+      "args": ["--title-menu", "--title-font", "bin/gfx-font-61.bin"],
+      "assert": true,
+      "baseline": {"mean_abs": 13.93, "tol": 1.5}
+    },
+    {
+      "name": "hoshimemo-title",
+      "game": "hoshimemo",
+      "frame": "out/orig-hoshi2/frame-001.png",
+      "offset": [3, 29],
+      "args": ["--title-menu", "--title-font", "bin/gfx-font-61.bin"],
+      "assert": false,
+      "baseline": {"mean_abs": 36.23, "tol": 2.0},
+      "note": "帧的归属是推断的（orig-hoshi2 未在笔记里逐帧标注），只记录不断言"
+    }
+  ]
+}

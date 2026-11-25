@@ -519,6 +519,12 @@ def build_steps(args):
                       'gcc unavailable: in-process harness cannot be built',
                       note='>= 20,000 mutations + fvm.exe E2E'))
 
+    # 6.4 与原版实拍帧的回归（缺语料时自己打印 SKIP 并返回 0）
+    vvo = os.path.join(HERE, 'verify_vs_original.py')
+    steps.append(Step('verify_vs_original.py', [PY, vvo], 900,
+                      skip_reason=None,
+                      note='title screen vs the original capture: mean abs diff baseline'))
+
     # 6.55 游戏内菜单的三个动作（SAVE/LOAD/OPTION）
     vma = os.path.join(HERE, 'verify_menu_actions.py')
     steps.append(Step('verify_menu_actions.py', [PY, vma], 900,

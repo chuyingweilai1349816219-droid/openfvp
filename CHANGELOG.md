@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **与原版实拍帧的回归门禁（把"和原版差多少"变成可测量的数字）**
+  - 新增 `tests/verify_vs_original.py` + `tests/original-baseline.json`：
+    直接用 `out/` 里的**原版截图**做基准（客户区偏移/重现参数/冻结阈值都写在
+    JSON 里），`mean_abs <= baseline + tol` 才算通过；缺语料时打印 SKIP 返回 0
+  - 实测：iroseka 标题 **13.79**（基线 13.93 + 1.5，通过）；星空标题 36.09
+    （帧归属是推断的，只记录不断言）
+  - 接入 run_all（43 → 44 步）；docs/original-verification.md 新增 §7 说明
+    语料位置、JSON 字段含义、刷新基线的方法
+  - 这一项把"离原版一模一样多远"从感觉变成了可回归的数字
+
+### 新增（设置）
+
 - **② OPTION 面板可调主音量（可写设置的第一块）**
   - 新增 `fvp_snd_bridge_set_master()` / `fvp_snd_bridge_master()`：夹紧 0..100、
     立即把新增益推到正在播放的通道；`syscall.c` 里与命令 101 共用同一实现
