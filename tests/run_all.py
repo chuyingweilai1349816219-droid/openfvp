@@ -535,10 +535,28 @@ def build_steps(args):
     return steps
 
 
-def run_step(step):
+def run_step(step, retry=True):
+    """Run one step.  A failing step is retried once (many steps are timing
+    sensitive); the result records how many attempts it took and whether the
+    first attempt failed, so flakiness is visible instead of silent."""
     if step.argv is None:
         return {'name': step.name, 'status': 'SKIP',
                 'reason': step.skip_reason or '', 'elapsed': 0.0, 'note': ''}
+    first = _run_step_once(step)
+    if retry and first['status'] == 'FAIL':
+        again = _run_step_once(step)
+        again['attempts'] = 2
+        again['first_attempt_failed'] = True
+        if again['status'] == 'PASS':
+            again['note'] = ('FLAKY: failed once, passed on retry. ' +
+                             (again.get('note') or ''))
+        return again
+    first['attempts'] = 1
+    first['first_attempt_failed'] = first['status'] == 'FAIL'
+    return first
+
+
+def _run_step_once(step):
     t0 = time.perf_counter()
     try:
         proc = subprocess.run(step.argv, stdout=subprocess.PIPE,

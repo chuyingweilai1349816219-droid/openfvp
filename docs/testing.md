@@ -1,4 +1,9 @@
 
+> **2026-11-25 新增**：`run_all.py` 的每一步失败后会自动**重试一次**，并在结果里
+> 记录 `attempts` / `first_attempt_failed`；如果第一次失败、重试通过，状态会标注
+> `FLAKY: failed once, passed on retry`。这样偶发失败不再被当成噪声，而是显式
+> 暴露出来（前几轮曾出现一次 38/1/1 的偶发，已按此记录）。
+
 > **2026-11-24 新增**：`verify_multigame.py` 多了一个"标题菜单"阶段——
 > 两部目标作品各跑一次 `--title-menu`，断言 profile/对齐/贴图模式，并用纯 Python
 > 读 32bpp BMP 量菜单墨迹（右边界 1769 / 中心 960、行距 100 / 90）。

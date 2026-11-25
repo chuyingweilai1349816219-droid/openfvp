@@ -67,6 +67,11 @@ const FvpTitleProfile fvp_title_profile_iroseka = {
     },
     "title_bg1_A", /* 白天背景 2400x1350：只显示中间 1920x1080 一块 */
     240, 135,      /* 中心裁剪（(2400-1920)/2, (1350-1080)/2) */
+    /* 实测（work/compose_iro_layers.py）：A 层只有云，风车/花瓣/光束在 B/C/D 里；
+     * 三种顺序的平均差相差 <0.6，这里用测到最好的 C→D→B。 */
+    { "title_bg1_C", "title_bg1_D", "title_bg1_B", "" }, 3,
+    /* 原版菜单是深蓝衬线字：实测暗部均值 RGB(7,26,146) */
+    { 10, 30, 140 },
     "title_logo1", /* 标题 logo（位置在图片头里） */
     ""             /* 版权行素材还没指认 */
 };
@@ -89,6 +94,10 @@ const FvpTitleProfile fvp_title_profile_hoshimemo = {
     },
     "title_bg1",       /* 整屏白天背景（1920x1080，已与原版截图核对内容） */
     0, 0,
+    /* 原版背景上还有一层整体提亮：title_frame2 是纯白 RGBA（alpha 均值 72），
+     * 叠上后与原版标题帧的平均差从 48.0 降到 34.6；title_frame 再补一点暗角。 */
+    { "title_frame2", "title_frame", "", "" }, 2,
+    { 246, 246, 252 }, /* 星空走贴图模式，颜色只用于兜底文字 */
     "title_logo1",     /* 标题 logo：1082x418 @ (419,72) */
     "title_copyright"  /* 版权行：445x24 @ (737,1043) */
 };

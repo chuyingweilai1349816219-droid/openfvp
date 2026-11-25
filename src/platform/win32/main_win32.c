@@ -1588,12 +1588,14 @@ static int title_textures_on;
 /* 标题画面背景是否装上（整屏图，画在菜单之前） */
 static int title_bg_on;
 static int title_logo_on;
+static int title_ovl_loaded;
 static int title_copy_on;
 /* --title-no-bg：只画菜单、不铺背景（几何测量/门禁用：背景的亮部会污染
  * 墨迹检测）。 */
 static int title_bg_disabled;
 /* 背景占用的图形槽 */
 #define TITLE_BG_SLOT 0x0FF0
+#define TITLE_OVL_SLOT 0x0FF3 /* 背景叠加层 0xFF3..0xFF6 */
 #define TITLE_LOGO_SLOT 0x0FF1
 #define TITLE_COPY_SLOT 0x0FF2
 
@@ -1662,6 +1664,23 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
             (void)gfx_draw_image_at(gfx, TITLE_BG_SLOT, 0, 0);
         }
     }
+    /* 背景叠加层：素材头里的坐标是"未裁剪大图"坐标系，要减掉背景裁剪起点 */
+    if (title_ovl_loaded > 0 && prof != NULL) {
+        int li;
+
+        for (li = 0; li < prof->bg_overlay_count && li < 4; ++li) {
+            int ox = 0;
+            int oy = 0;
+
+            if (prof->bg_overlay[li][0] == '\0') {
+                continue;
+            }
+            (void)gfx_image_offset(gfx, TITLE_OVL_SLOT + li, &ox, &oy);
+            (void)gfx_draw_image_at(gfx, TITLE_OVL_SLOT + li,
+                                    ox - prof->bg_src_x,
+                                    oy - prof->bg_src_y);
+        }
+    }
     if (title_logo_on) {
         int lx = 0;
         int ly = 0;
@@ -1716,8 +1735,28 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
         int gr = hovered ? 250 : 235;
         int b = hovered ? 255 : 240;
 
+        if (prof != NULL) {
+            /* 用 profile 里实测的基色；hover 用同色相提亮一点（原版的
+             * hover 具体样式还没实测，这里只做"能看出选中"的近似）。 */
+            int k = hovered ? 130 : 100;
+
+            r = (prof->menu_color[0] * k) / 100;
+            gr = (prof->menu_color[1] * k) / 100;
+            b = (prof->menu_color[2] * k) / 100;
+        }
         if (!m->enabled[i]) {
-            r = gr = b = 120; /* 不可用项压暗（例如没存档时的 Continue） */
+            r /= 2;
+            gr /= 2;
+            b /= 2; /* 不可用项压暗（例如没存档时的 Continue） */
+        }
+        if (r > 255) {
+            r = 255;
+        }
+        if (gr > 255) {
+            gr = 255;
+        }
+        if (b > 255) {
+            b = 255;
         }
         if (prof != NULL) {
             if (!fvp_title_profile_ink_rect(prof, i, &x0, &y0, &x1, &y1)) {
@@ -1956,6 +1995,21 @@ static int title_load_textures(Gfx *gfx, const FvpTitleProfile *prof)
         } else {
             fvp_logf("title: background '%s' failed to load",
                      prof->bg_asset);
+        }
+    }
+    if (!title_bg_disabled) {
+        int li;
+
+        for (li = 0; li < prof->bg_overlay_count && li < 4; ++li) {
+            if (prof->bg_overlay[li][0] == '\0') {
+                continue;
+            }
+            if (gfx_graph_load(gfx, TITLE_OVL_SLOT + li,
+                               prof->bg_overlay[li]) == 0) {
+                title_ovl_loaded += 1;
+                fvp_logf("title: bg overlay '%s' loaded (slot 0x%X)",
+                         prof->bg_overlay[li], TITLE_OVL_SLOT + li);
+            }
         }
     }
     if (prof->logo_asset[0] != '\0') {

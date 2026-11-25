@@ -113,6 +113,12 @@ typedef struct FvpTitleProfile {
     int bg_src_x;
     int bg_src_y;
     /* 标题 logo / 版权行的素材名（位置在各自图片头里，用 gfx_image_offset 取） */
+    /* 背景之上、logo 之下再叠的层（iroseka 的风车/花瓣/光束在 B/C/D 里；
+     * 星空的记忆的"整体提亮"在 title_frame2 里）。按数组顺序画。 */
+    char bg_overlay[4][FVP_TITLE_ASSET_MAX];
+    int bg_overlay_count;
+    /* 文字模式菜单的基色（从原版截图实测）。贴图模式用不到。 */
+    int menu_color[3];
     char logo_asset[FVP_TITLE_ASSET_MAX];
     char copyright_asset[FVP_TITLE_ASSET_MAX];
 } FvpTitleProfile;

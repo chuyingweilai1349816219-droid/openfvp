@@ -64,6 +64,9 @@ GAMES = [
                     right_edge=1769, textures=0,
                     continue_enabled=True, save_list=6,
                     bg='title_bg1_A',
+                    overlays=['title_bg1_C', 'title_bg1_D',
+                              'title_bg1_B'],
+                    menu_navy=True,
                     logo='title_logo1', copyright='',
                     centres=[531, 631, 732, 831, 931])),
     dict(name='hoshimemo',  # 《星空的记忆 HD》
@@ -75,7 +78,9 @@ GAMES = [
          title=dict(profile='hoshimemo', align='centre', pitch=90,
                     centre_x=960, textures=5,
                     continue_enabled=False, save_list=0,
-                    bg='title_bg1', logo='title_logo1',
+                    bg='title_bg1',
+                    overlays=['title_frame2', 'title_frame'],
+                    menu_navy=False, logo='title_logo1',
                     copyright='title_copyright',
                     centres=[597, 687, 777, 867, 957])),
     dict(name='sakura',  # 《樱花，萌放。（さくら、もゆ。）》
@@ -342,6 +347,12 @@ def stage_title_menu(shell, games, check):
                                         extra=['--title-menu'])
         check(rc_bg == 0, 'background run exit 0 (got %s)' % rc_bg)
 
+        # 背景叠加层：iroseka 的风车/花瓣/光束在 B/C/D 里，星空的"整体提亮"
+        # 在 title_frame2 里；都要真的装上
+        for ov in t.get('overlays') or []:
+            check(("bg overlay '%s' loaded" % ov) in log_bg,
+                  'background overlay %s loaded' % ov)
+
         # logo / 版权行：名字来自 profile，位置来自素材头里的 x/y
         if t.get('logo'):
             m = log_match(r"title: logo '([^']+)' loaded", log_bg)
@@ -374,6 +385,24 @@ def stage_title_menu(shell, games, check):
         w, h, rows = img_geom
         check(w == 1920 and h == 1080, 'frame is 1920x1080 (got %dx%d)'
               % (w, h))
+        if t.get('menu_navy'):
+            # 第一项墨迹带里最暗的像素应该是深蓝（实测原版 RGB(0,19,143)）
+            dark = []
+            for yy in range(t['centres'][0] - 30, t['centres'][0] + 35):
+                row = img_bg[2][yy]
+                for xx in range(1440, 1830):
+                    px = row[xx * 4:xx * 4 + 3]
+                    dark.append((px[0] + px[1] + px[2], px))
+            dark.sort(key=lambda item: item[0])
+            pick = dark[:300]
+            if pick:
+                # BMP is BGRA: px[0]=B, px[1]=G, px[2]=R
+                bb = sum(p[1][0] for p in pick) / len(pick)
+                gg = sum(p[1][1] for p in pick) / len(pick)
+                rr = sum(p[1][2] for p in pick) / len(pick)
+                check(bb > 90 and bb > rr + 60,
+                      'text menu uses the measured navy colour '
+                      '(mean BGR %.0f,%.0f,%.0f)' % (bb, gg, rr))
         # 背景铺上后整帧不再是黑的；没有背景素材的作品仍是文字菜单（黑底）
         bright = 0
         rows_bg = img_bg[2]
@@ -392,9 +421,14 @@ def stage_title_menu(shell, games, check):
             check(bright < total // 3,
                   'title frame stays mostly dark without a background asset '
                   '(only the logo lights up: %d of %d)' % (bright, total))
+        # Text-mode menus use dark navy glyphs, so on the black
+        # --title-no-bg frame the ink is the DARK pixels; texture menus
+        # are white on black, so they need the bright threshold.
+        ink_thresh = 24 if t.get('menu_navy') else 420
         got_centres = []
         for i, cy in enumerate(t['centres']):
-            minx, maxx, miny, maxy, cnt = ink_span(rows, cy - 34, cy + 40)
+            minx, maxx, miny, maxy, cnt = ink_span(rows, cy - 34, cy + 40,
+                                                  thresh=ink_thresh)
             check(cnt > 40, 'row %d has ink (%d px)' % (i, cnt))
             if minx is None:
                 got_centres.append(None)
