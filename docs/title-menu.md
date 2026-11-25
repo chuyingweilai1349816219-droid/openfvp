@@ -496,7 +496,9 @@ iroseka 的菜单是深蓝衬线字。用 `scripts/identify-title-font.py` 把�
     指定的路径，**绝不写进游戏自己的 `save/`**（日志里明说 game save dir untouched）；
   * `LOAD`：先扫描 `save/sNNN.bin` 再打开存档列表（实测 6 个槽与磁盘一致）；
     真正的"读档"仍是部分恢复，见 `docs/save-snapshot.md` §4.6；
-  * `OPTION`：只读设置面板（主音量/文本速度/跳过模式当前值），不做可写设置；
+  * `OPTION`：设置面板——**主音量可调**（面板打开时 ↑/↓ 每次 ±10%，通过
+    `fvp_snd_bridge_set_master()` 立即作用到正在播放的通道并读回显示；
+    文字速度/跳过模式仍只显示当前值）。`--menu-adjust N` 可连调 N 步（门禁用）；
   * `TITLE` 回标题画面、`QUIT` 退出进程；
 - `--menu-at N` 是截图/门禁钩子：脚本开始跑 N 毫秒后自动打开菜单。
 

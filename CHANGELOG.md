@@ -53,6 +53,17 @@
 
 ### 新增
 
+- **② OPTION 面板可调主音量（可写设置的第一块）**
+  - 新增 `fvp_snd_bridge_set_master()` / `fvp_snd_bridge_master()`：夹紧 0..100、
+    立即把新增益推到正在播放的通道；`syscall.c` 里与命令 101 共用同一实现
+  - 外壳：OPTION 面板打开时 ↑/↓ 每次 ±10%，面板实时读回显示（实测 100→90→80→70）
+  - `--menu-adjust N` 连调 N 步（截图/门禁钩子）
+  - 单测 `test_snd_gain` 扩到 51 项：桥默认 100、set 50/150/-5 的夹紧、读回、
+    NULL 安全、attach/detach
+  - 门禁 `verify_menu_actions` 增加断言：OPTION 三连调后日志出现 90%/70%
+
+### 新增（菜单动作）
+
 - **② 游戏内菜单的三个动作变成真动作（SAVE/LOAD/OPTION）**
   - `SAVE`：模板槽 + 当前画面写一份真实存档，只写 `--save-preview` 指定的路径，
     不碰游戏 `save/`（实测写出 616,572 B、时间戳 2026-11-25）

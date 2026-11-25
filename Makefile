@@ -74,8 +74,8 @@ bin/test_platform$(EXE): tests/test_platform.c src/platform/portable/platform_po
 	$(CC) $(CFLAGS) -o $@ tests/test_platform.c src/platform/portable/platform_portable.c $(LDFLAGS)
 bin/test_gamemenu$(EXE): tests/test_gamemenu.c src/gamemenu.c src/gamemenu.h | bin
 	$(CC) $(CFLAGS) -o $@ tests/test_gamemenu.c src/gamemenu.c $(LDFLAGS)
-bin/test_snd_gain$(EXE): tests/test_snd_gain.c src/syscall.c src/vm.h $(GFX_OBJ) | bin
-	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_snd_gain.c src/syscall.c src/fvp.c src/encoding.c src/hcb.c src/vm.c src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c src/timer.c src/history.c src/gamemenu.c $(LDFLAGS) -lm
+bin/test_snd_gain$(EXE): tests/test_snd_gain.c src/syscall.c src/snd.c src/vm.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_snd_gain.c src/syscall.c src/snd.c src/fvp.c src/encoding.c src/hcb.c src/vm.c src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c src/timer.c src/history.c src/gamemenu.c $(LDFLAGS) -lm
 
 
 

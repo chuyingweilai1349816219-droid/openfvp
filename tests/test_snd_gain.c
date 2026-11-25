@@ -8,8 +8,10 @@
  * `fvp_snd_gain_calc()`，这里把它钉死（不依赖音频设备/解码器）。
  */
 #include <stdio.h>
+#include <string.h>
 
 #include "../src/vm.h"
+#include "../src/snd.h"
 
 static int g_fail = 0;
 static int g_pass = 0;
@@ -100,6 +102,42 @@ int main(void)
           "master 60 affects a slot with default type");
     CHECK(near(fvp_snd_gain_calc(100, 100, 60, 0), 0.6f),
           "type 60 affects only its own group");
+
+    /* --- 9. 桥上的主音量 setter：夹紧 + 立即生效 + 可读回 --- */
+    {
+        Snd *snd = snd_create(8000, 2);
+        FvpVM vm;
+
+        memset(&vm, 0, sizeof vm);
+        CHECK(snd != NULL, "snd_create for the bridge test");
+        if (snd != NULL) {
+            fvp_vm_attach_snd(&vm, snd);
+            CHECK(vm.snd_bridge != NULL, "bridge attached");
+            CHECK(fvp_snd_bridge_master(vm.snd_bridge) == 100,
+                  "default master is 100 (got %d)",
+                  fvp_snd_bridge_master(vm.snd_bridge));
+            CHECK(fvp_snd_bridge_set_master(vm.snd_bridge, 50) == 50,
+                  "set master 50");
+            CHECK(fvp_snd_bridge_master(vm.snd_bridge) == 50,
+                  "read back 50 (got %d)",
+                  fvp_snd_bridge_master(vm.snd_bridge));
+            CHECK(fvp_snd_bridge_set_master(vm.snd_bridge, 150) == 100,
+                  "150 clamps to 100 (got %d)",
+                  fvp_snd_bridge_set_master(vm.snd_bridge, 150));
+            CHECK(fvp_snd_bridge_set_master(vm.snd_bridge, -5) == 0,
+                  "negative clamps to 0 (got %d)",
+                  fvp_snd_bridge_set_master(vm.snd_bridge, -5));
+            CHECK(fvp_snd_bridge_set_master(vm.snd_bridge, 80) == 80,
+                  "set master 80");
+            CHECK(fvp_snd_bridge_set_master(NULL, 30) == -1,
+                  "NULL bridge returns -1");
+            CHECK(fvp_snd_bridge_master(NULL) == 100,
+                  "NULL bridge reports the default");
+            fvp_vm_attach_snd(&vm, NULL);
+            CHECK(vm.snd_bridge == NULL, "bridge detached");
+            snd_destroy(snd);
+        }
+    }
 
     printf("test_snd_gain: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

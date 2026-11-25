@@ -681,6 +681,12 @@ void fvp_vm_attach_snd(FvpVM *vm, struct Snd *snd);
  * 抽成纯函数便于单测（不依赖音频设备/解码器），syscall 侧按此实现。 */
 float fvp_snd_gain_calc(int slot_vol, int master_vol, int type_vol,
                         int silent);
+
+/* 运行中改主音量（0..100，越界夹紧），立即把新增益推到正在播放的通道。
+ * 返回夹紧后的值；桥不存在时返回 -1。 */
+int fvp_snd_bridge_set_master(FvpSndBridge *b, int vol);
+/* 当前主音量（未配置时按 100 算）。 */
+int fvp_snd_bridge_master(const FvpSndBridge *b);
 /* BGM 交叉淡入淡出时长（ms，0 = 硬切） */
 void fvp_vm_snd_set_bgm_xfade(FvpVM *vm, int ms);
 int fvp_vm_snd_add_archive(FvpVM *vm, const char *path);

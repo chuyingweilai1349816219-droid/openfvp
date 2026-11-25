@@ -1254,6 +1254,23 @@ static int fvp_sys_snd(FvpVM *vm, FvpThread *t, const FvpValue *a, uint32_t argc
     return 0;
 }
 
+int fvp_snd_bridge_set_master(FvpSndBridge *b, int vol)
+{
+    if (b == NULL) {
+        return -1;
+    }
+    vol = fvp_snd_clamp(vol, 0, 100);
+    b->master_vol = vol;
+    b->master_configured = 1;
+    fvp_snd_refresh_gains(b);
+    return vol;
+}
+
+int fvp_snd_bridge_master(const FvpSndBridge *b)
+{
+    return fvp_snd_master_effective(b);
+}
+
 void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
 {
     uint32_t argc = cid < FVP_CMD_COUNT ? (uint32_t)fvp_cmd_argc[cid] : 0u;

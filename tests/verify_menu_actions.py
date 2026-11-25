@@ -127,11 +127,15 @@ def main():
     for p in (log3, shot3):
         if os.path.isfile(p):
             os.remove(p)
-    rc, _o = run(base + ['--menu-pick', '2', '--log', log3,
-                         '--screenshot', shot3] + extra)
+    rc, _o = run(base + ['--menu-pick', '2', '--menu-adjust', '-3',
+                         '--log', log3, '--screenshot', shot3] + extra)
     check(rc == 0, 'OPTION run exit 0 (got %s)' % rc)
     text = read_log(log3)
     check('menu: OPTION panel opened' in text, 'OPTION panel opened')
+    check('menu: master volume -> 90%' in text,
+          'OPTION adjusts master volume (100 -> 90)')
+    check('menu: master volume -> 70%' in text,
+          'OPTION reaches 70% after three -10 steps')
     if os.path.isfile(shot3):
         ink = bmp_ink(shot3, 110, 740, 900, 940)
         check(ink > 200, 'OPTION panel has text ink (%d samples)' % ink)

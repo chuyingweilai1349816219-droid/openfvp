@@ -119,6 +119,7 @@ typedef struct Options {
     wchar_t title_font[PATH_CAP]; /* --title-font：标题菜单专用字库 */
     int pick_seed;  /* --pick N：启动就把第 N 项当作已选中（门禁/截图用） */
     int title_fade_ms; /* 点 New Game 后的白场过渡时长（0 = 直接进，默认 800） */
+    int menu_adjust; /* --menu-adjust N：OPTION 面板里连调 N 步音量（±10，门禁用） */
     int menu_pick; /* --menu-pick N：菜单打开后自动激活第 N 项（截图/门禁用） */
     int menu_at; /* --menu-at N：第 N 毫秒自动打开游戏内菜单（截图/门禁用） */
     int load_slot; /* --load-slot N：启动就进"部分恢复"视图（截图/门禁用） */
@@ -522,6 +523,7 @@ static void defaults(Options *o)
     o->load_slot = -1;
     o->menu_at = -1;
     o->menu_pick = -1;
+    o->menu_adjust = 0;
     o->pick_seed = -1;
     o->title_fade_ms = 800;
     o->title_font[0] = L'\0';
@@ -690,6 +692,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--title-font") == 0 &&
                    i + 1 < argc) {
             wcsncpy(o->title_font, argv[++i], PATH_CAP - 1);
+        } else if (wcscmp(a, L"--menu-adjust") == 0 && i + 1 < argc) {
+            o->menu_adjust = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--menu-pick") == 0 && i + 1 < argc) {
             o->menu_pick = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--menu-at") == 0 && i + 1 < argc) {
@@ -1627,6 +1631,7 @@ static int title_bg_on;
 static const GfxFont *title_ui_font;
 /* 游戏内菜单的 OPTION 面板（只读：音量/文本速度等当前值） */
 static int g_menu_option_panel;
+static const FvpSndBridge *g_gmenu_bridge;
 static int title_logo_on;
 static int title_ovl_loaded;
 static int title_copy_on;
@@ -1721,8 +1726,17 @@ static void draw_game_menu(Gfx *gfx, const FvpGameMenu *m)
 
         (void)gfx_draw_text_line(gfx, "OPTION (read-only)", 120, y, px, 255,
                                  232, 140, 255);
-        (void)gfx_draw_text_line(gfx, "master volume : 100%", 120, y + 48, px,
-                                 220, 220, 230, 255);
+        {
+            char vol_line[64];
+            int vol = (g_gmenu_bridge != NULL)
+                          ? fvp_snd_bridge_master(g_gmenu_bridge)
+                          : 100;
+
+            _snprintf(vol_line, sizeof(vol_line) - 1,
+                      "master volume : %d%%  (Up/Down adjusts)", vol);
+            (void)gfx_draw_text_line(gfx, vol_line, 120, y + 48, px, 220, 220,
+                                     230, 255);
+        }
         (void)gfx_draw_text_line(gfx, "text speed    : script-controlled",
                                  120, y + 96, px, 220, 220, 230, 255);
         (void)gfx_draw_text_line(gfx, "skip / auto   : not implemented",
@@ -3077,6 +3091,26 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     fvp_logf("menu: opened with %d item(s)", gmenu.count);
                 }
             }
+            g_gmenu_bridge = vm.snd_bridge;
+            if (g_menu_option_panel && gmenu.active) {
+                /* OPTION 面板打开时，↑/↓ 直接调主音量 */
+                if (in->nav & FVP_NAV_UP) {
+                    int before = fvp_snd_bridge_master(vm.snd_bridge);
+
+                    in->nav &= ~FVP_NAV_UP;
+                    fvp_logf("menu: master volume -> %d%%",
+                             fvp_snd_bridge_set_master(vm.snd_bridge,
+                                                       before + 10));
+                }
+                if (in->nav & FVP_NAV_DOWN) {
+                    int before = fvp_snd_bridge_master(vm.snd_bridge);
+
+                    in->nav &= ~FVP_NAV_DOWN;
+                    fvp_logf("menu: master volume -> %d%%",
+                             fvp_snd_bridge_set_master(vm.snd_bridge,
+                                                       before - 10));
+                }
+            }
             if (opts.menu_pick >= 0 && gmenu.active) {
                 int pk = opts.menu_pick;
 
@@ -3137,11 +3171,34 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                                 fvp_logf("menu: LOAD -> save list (%d "
                                          "slot(s))", save_list.count);
                             } else if (act == 2) {
+                                int step;
+
                                 menu_option_panel = !menu_option_panel;
                                 g_menu_option_panel = menu_option_panel;
                                 fvp_logf("menu: OPTION panel %s", 
                                          menu_option_panel ? "opened"
                                                            : "closed");
+                                /* --menu-adjust N：连调 N 步主音量（门禁/截图用） */
+                                for (step = 0; step < abs(opts.menu_adjust);
+                                     ++step) {
+                                    int before = vm.snd_bridge != NULL
+                                                     ? fvp_snd_bridge_master(
+                                                           vm.snd_bridge)
+                                                     : 100;
+                                    int want = before +
+                                               (opts.menu_adjust > 0 ? 10 : -10);
+                                    int after = fvp_snd_bridge_set_master(
+                                        vm.snd_bridge, want);
+
+                                    fvp_logf("menu: master volume -> %d%% "
+                                             "(was %d%%, bridge=%s)",
+                                             after, before,
+                                             vm.snd_bridge != NULL ? "live"
+                                                                   : "none");
+                                    if (after < 0) {
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
