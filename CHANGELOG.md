@@ -51,6 +51,63 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 实现/结构分析（开场 FAVORITE logo：从抓帧拟合换成脚本时间轴，六层全画）
+
+- **`--opening` 的时间轴不再是"近似值"，全部从 hcb 开场函数读出来**
+  - 开场函数 `0x58096..0x584CB`（星空同构 `0x6EFF1..0x6F415`）整段解出：
+    六层 `GraphLoad`（250 `logo_bg` / 252 `logo_favo` / 254 `logo_favo_view` /
+    255..257 `logo_favo_view_p1..p3`）、逐层 `PrimSetAlpha/Z/OP`、
+    淡入 1200/1400 ms、logo 淡出 2500 ms、白底淡出 3500 ms、100 ms 收尾
+  - **总时长 3800 ms**（旧拟合值 5400 ms 作废）；`0x5834A` 的
+    `MotionAlphaTest(252)` 决定淡出从 1200 ms 开始
+  - 新增 `scripts/extract-opening-scene.py` + 基线 `ref/opening-scene.json`
+    （两个作品：装载/实参/动画/时间轴/素材头，只含参数）+ 门禁
+    `tests/verify_opening_anim.py`（重新提取逐字节比对 + C 常量逐项断言）
+  - 新增 `src/openinganim.h`（脚本常量）+ 重写 `src/openseq.h/.c`
+    （层表 + 每作品表；淡入线性、缩放/旋转/位移 mode 3；`gfx` 无关，可单测）；
+    `src/titleanim.h` 里的开场常量删除，避免两处数字打架
+  - **三层 p1..p3 现在真的画出来了**：46×36 三角碎片，`10×→1×` +
+    `360°→0°` + 从 (±200,±200) / (0,-200) 收拢到「V」字（mode 3 缓出）
+  - **两份作品的差异也从文件里读出来**：逻辑画布 1024×640 / 800×600
+    （helper 里的 float32 因子 1.875/1.6875 与 2.4/1.8，按 **float32** 算才对得上
+    原版：`300×1.8f` 在 float32 下正好是 540.0）、p1..p3 的 OP y = 628 / 610
+
+- **顺带从 exe 解出 `PrimSetOP` 的语义（缩放/旋转轴心）**
+  - `0x42AF08` 的 OP 分支取局部坐标 `(图头 xy − OP)`，`0x42B41F..0x42B477` 的平移是
+    `prim.xy + OP + 父链累加`；矩阵函数 `0x446744/0x44674A/0x446732/0x446750` =
+    `D3DXMatrixScaling/Translation/Multiply/RotationZ`
+  - 即 **最终位置 = prim.xy + OP + R(angle)·S(scale)·(图头 xy − OP)**（identity 时
+    OP 抵消）。这解释了脚本为什么先 `PrimSetOP(960,540/628)` 再排缩放/旋转
+  - 新增 `gfx_draw_image_op_xform()`（`src/gfx.c/.h`）；`tests/test_gfx_xform.c`
+    加第 8 组：identity 抵消、OP=左上角与 xform 逐字节相同、0.5× 绕中心 20×15、
+    90° 宽高互换、180° 位置尺寸不变、alpha=0/确定性
+  - `docs/render-model.md`：`+0x20/+0x22` 从"语义未明"改成"缩放/旋转轴心"，
+    并删掉"OP 未用于渲染"的旧结论；新增 `docs/opening.md` 专文
+
+- **发现脚本顺序：标题场景先建、开场后跑（渲染上最重要的一条）**
+  - `0x590CC call 0x584D8` 先建标题场景（载入 258..261、排 25 s 的
+    `MotionMoveS2 1300→900` 与 `MotionMoveR 150/250/550/1250→0`），
+    `0x591EC call 0x58096` 才跑开场。**所以白底淡出露出来的是标题背景**，不是黑屏
+  - `main_win32.c`：开场期间先画一次 `title_draw_overlay()` 并把 `title_fade`
+    临时压成 0（标题 logo/菜单的淡入是开场返回后才排的），再画六层
+  - 端到端门禁 `tests/verify_opening_render.py`：早期帧近白 98.6%、
+    淡出帧 B−R = 59.7（标题背景）、vs 早期 mean_abs 47.98、
+    **结束帧与静态标题帧逐字节 0 差**、标题淡入日志出现在开场结束之后
+  - `main_win32.c` 的 `--shot-at` 日志在开场期间附带 `opening t=… ms`，
+    门禁可以按开场自己的时间轴核对（墙钟里含窗口创建/解码素材开销）
+
+- **标题进场的 500 ms 被标记为"待复核"（诚实记录，本轮不改）**
+  - `local5 = 500` 那一处（0x59120）属于背景动画分支；标题对象第一次进场的时长在
+    `0x592C7` 被重设为 `local5=2000 / local7=3000`，菜单项在 `0x593B7` 是
+    `local5=800` ⇒ 标题进场应是"逐元素时长 + 1000 ms 间隔 + 菜单 800 ms"。
+    已写进 `src/titleanim.h` 文件头、`tests/verify_title_anim.py` 断言说明和
+    `docs/opening.md` §5.1，下一轮重做
+
+- **验收**：`make check` PASS（30 组；`test_openseq` 从 20 项扩到 **2620 项**）；
+  `tests/compare.py --run` 仍 6,496 B / `7F9837FF…`；`verify_gfx` 仍 293 px /
+  PSNR 49.94；`run_all.py` 45 → **62 步**（新增两个开场门禁）全 PASS；
+  `check-docs.py` PASS（33 篇）
+
 ### 修正（标题进场动画挂错了图元：标题是 500 ms 淡入，不是 10 倍缩放）
 
 - **用户实机查看后指出「原版标题是淡入淡出」——按 hcb 加载顺序复核，确认之前挂错了图元**

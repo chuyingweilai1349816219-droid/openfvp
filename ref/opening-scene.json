@@ -1,0 +1,1832 @@
+{
+ "games": {
+  "hoshimemo": {
+   "assets": {
+    "logo_bg": {
+     "h": 1080,
+     "w": 1920,
+     "x": 0,
+     "y": 0
+    },
+    "logo_favo": {
+     "h": 195,
+     "w": 531,
+     "x": 694,
+     "y": 390
+    },
+    "logo_favo_view": {
+     "h": 92,
+     "w": 301,
+     "x": 809,
+     "y": 609
+    },
+    "logo_favo_view_p1": {
+     "h": 36,
+     "w": 46,
+     "x": 926,
+     "y": 613
+    },
+    "logo_favo_view_p2": {
+     "h": 37,
+     "w": 46,
+     "x": 926,
+     "y": 606
+    },
+    "logo_favo_view_p3": {
+     "h": 36,
+     "w": 46,
+     "x": 926,
+     "y": 600
+    }
+   },
+   "hcb_sha256": "e23b7958f897392e3535370956b7c9a722c562f0a6d65e91d589cfdd2b741802",
+   "hcb_size": 4618610,
+   "helper_calls": [
+    {
+     "args": [
+      252,
+      960,
+      540
+     ],
+     "factors": [
+      2.4000000953674316,
+      1.7999999523162842
+     ],
+     "helper": "0x0004af07",
+     "pc": "0x0006f043",
+     "prim": 252,
+     "raw_args": [
+      252,
+      400,
+      300
+     ],
+     "wrapped": 81,
+     "wrapped_name": "PrimSetOP"
+    },
+    {
+     "args": [
+      254,
+      960,
+      540
+     ],
+     "factors": [
+      2.4000000953674316,
+      1.7999999523162842
+     ],
+     "helper": "0x0004af07",
+     "pc": "0x0006f086",
+     "prim": 254,
+     "raw_args": [
+      254,
+      400,
+      300
+     ],
+     "wrapped": 81,
+     "wrapped_name": "PrimSetOP"
+    },
+    {
+     "args": [
+      255,
+      960,
+      610
+     ],
+     "factors": [
+      2.4000000953674316,
+      1.7999999523162842
+     ],
+     "helper": "0x0004af07",
+     "pc": "0x0006f0bb",
+     "prim": 255,
+     "raw_args": [
+      255,
+      400,
+      339
+     ],
+     "wrapped": 81,
+     "wrapped_name": "PrimSetOP"
+    },
+    {
+     "args": [
+      256,
+      960,
+      610
+     ],
+     "factors": [
+      2.4000000953674316,
+      1.7999999523162842
+     ],
+     "helper": "0x0004af07",
+     "pc": "0x0006f0f0",
+     "prim": 256,
+     "raw_args": [
+      256,
+      400,
+      339
+     ],
+     "wrapped": 81,
+     "wrapped_name": "PrimSetOP"
+    },
+    {
+     "args": [
+      257,
+      960,
+      610
+     ],
+     "factors": [
+      2.4000000953674316,
+      1.7999999523162842
+     ],
+     "helper": "0x0004af07",
+     "pc": "0x0006f125",
+     "prim": 257,
+     "raw_args": [
+      257,
+      400,
+      339
+     ],
+     "wrapped": 81,
+     "wrapped_name": "PrimSetOP"
+    },
+    {
+     "args": [
+      257,
+      0,
+      -360,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "factors": [
+      2.4000000953674316,
+      1.7999999523162842,
+      2.4000000953674316,
+      1.7999999523162842
+     ],
+     "helper": "0x0004ae87",
+     "pc": "0x0006f14f",
+     "prim": 257,
+     "raw_args": [
+      257,
+      0,
+      -200,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "wrapped": 48,
+     "wrapped_name": "MotionMove"
+    },
+    {
+     "args": [
+      256,
+      480,
+      360,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "factors": [
+      2.4000000953674316,
+      1.7999999523162842,
+      2.4000000953674316,
+      1.7999999523162842
+     ],
+     "helper": "0x0004ae87",
+     "pc": "0x0006f1a3",
+     "prim": 256,
+     "raw_args": [
+      256,
+      200,
+      200,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "wrapped": 48,
+     "wrapped_name": "MotionMove"
+    },
+    {
+     "args": [
+      255,
+      -480,
+      360,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "factors": [
+      2.4000000953674316,
+      1.7999999523162842,
+      2.4000000953674316,
+      1.7999999523162842
+     ],
+     "helper": "0x0004ae87",
+     "pc": "0x0006f1f8",
+     "prim": 255,
+     "raw_args": [
+      255,
+      -200,
+      200,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "wrapped": 48,
+     "wrapped_name": "MotionMove"
+    },
+    {
+     "args": [
+      254,
+      null,
+      90,
+      null,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "factors": [
+      2.4000000953674316,
+      1.7999999523162842,
+      2.4000000953674316,
+      1.7999999523162842
+     ],
+     "helper": "0x0004ae87",
+     "pc": "0x0006f27c",
+     "prim": 254,
+     "raw_args": [
+      254,
+      null,
+      50,
+      null,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "wrapped": 48,
+     "wrapped_name": "MotionMove"
+    }
+   ],
+   "loads": [
+    {
+     "kind": 7,
+     "name": "logo_bg",
+     "pc": "0x0006f015",
+     "slot": 250
+    },
+    {
+     "kind": 7,
+     "name": "logo_favo",
+     "pc": "0x0006f02c",
+     "slot": 252
+    },
+    {
+     "kind": 7,
+     "name": "logo_favo_view",
+     "pc": "0x0006f067",
+     "slot": 254
+    },
+    {
+     "kind": 7,
+     "name": "logo_favo_view_p1",
+     "pc": "0x0006f0a5",
+     "slot": 255
+    },
+    {
+     "kind": 7,
+     "name": "logo_favo_view_p2",
+     "pc": "0x0006f0da",
+     "slot": 256
+    },
+    {
+     "kind": 7,
+     "name": "logo_favo_view_p3",
+     "pc": "0x0006f10f",
+     "slot": 257
+    }
+   ],
+   "logical": {
+    "fx": 2.4000000953674316,
+    "fy": 1.7999999523162842,
+    "h": 600,
+    "w": 800
+   },
+   "motions": [
+    {
+     "args": [
+      0,
+      255,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f161",
+     "prim": 257
+    },
+    {
+     "args": [
+      3600,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0006f175",
+     "prim": 257
+    },
+    {
+     "args": [
+      10000,
+      1000,
+      10000,
+      1000,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x0006f18d",
+     "prim": 257
+    },
+    {
+     "args": [
+      0,
+      255,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f1b5",
+     "prim": 256
+    },
+    {
+     "args": [
+      3600,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0006f1c9",
+     "prim": 256
+    },
+    {
+     "args": [
+      10000,
+      1000,
+      10000,
+      1000,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x0006f1e1",
+     "prim": 256
+    },
+    {
+     "args": [
+      0,
+      255,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f20a",
+     "prim": 255
+    },
+    {
+     "args": [
+      3600,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0006f21e",
+     "prim": 255
+    },
+    {
+     "args": [
+      10000,
+      1000,
+      10000,
+      1000,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x0006f236",
+     "prim": 255
+    },
+    {
+     "args": [
+      750,
+      1000,
+      1200,
+      3,
+      null
+     ],
+     "cmd": 57,
+     "name": "MotionMoveZ",
+     "pc": "0x0006f248",
+     "prim": 252
+    },
+    {
+     "args": [
+      0,
+      255,
+      1200,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f258",
+     "prim": 252
+    },
+    {
+     "args": [
+      750,
+      1000,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 57,
+     "name": "MotionMoveZ",
+     "pc": "0x0006f26a",
+     "prim": 254
+    },
+    {
+     "args": [
+      0,
+      255,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f28e",
+     "prim": 254
+    },
+    {
+     "args": [
+      null,
+      0,
+      3500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f2d0",
+     "prim": 250
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f320",
+     "prim": 253
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f32e",
+     "prim": 252
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f33c",
+     "prim": 254
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f34a",
+     "prim": 255
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f358",
+     "prim": 256
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f366",
+     "prim": 257
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f3c3",
+     "prim": 254
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f3d0",
+     "prim": 255
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f3dd",
+     "prim": 256
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f3ea",
+     "prim": 257
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f3f7",
+     "prim": 250
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f404",
+     "prim": 253
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006f411",
+     "prim": 252
+    }
+   ],
+   "opening_end": "0x0006f415",
+   "opening_start": "0x0006eff1",
+   "prim_setup": [
+    {
+     "args": [
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0006f037",
+     "prim": 252
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x0006f04d",
+     "prim": 252
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x0006f071",
+     "prim": 254
+    },
+    {
+     "args": [
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0006f07a",
+     "prim": 254
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x0006f0af",
+     "prim": 255
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x0006f0e4",
+     "prim": 256
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x0006f119",
+     "prim": 257
+    }
+   ],
+   "timeline": {
+    "alpha_in_ms": {
+     "252": 1200,
+     "254": 1400,
+     "255": 1400,
+     "256": 1400,
+     "257": 1400
+    },
+    "alpha_out_ms": {
+     "250": 3500,
+     "252": 2500,
+     "253": 2500,
+     "254": 2500,
+     "255": 2500,
+     "256": 2500,
+     "257": 2500
+    },
+    "cut_ms": 100,
+    "cut_start_ms": 3700,
+    "move": {
+     "254": {
+      "from_x": 0,
+      "from_y": 90,
+      "mode": 3,
+      "ms": 1400,
+      "raw_from_x": null,
+      "raw_from_y": 90,
+      "raw_to_x": null,
+      "raw_to_y": 0,
+      "to_x": 0,
+      "to_y": 0
+     },
+     "255": {
+      "from_x": -480,
+      "from_y": 360,
+      "mode": 3,
+      "ms": 1400,
+      "raw_from_x": -480,
+      "raw_from_y": 360,
+      "raw_to_x": 0,
+      "raw_to_y": 0,
+      "to_x": 0,
+      "to_y": 0
+     },
+     "256": {
+      "from_x": 480,
+      "from_y": 360,
+      "mode": 3,
+      "ms": 1400,
+      "raw_from_x": 480,
+      "raw_from_y": 360,
+      "raw_to_x": 0,
+      "raw_to_y": 0,
+      "to_x": 0,
+      "to_y": 0
+     },
+     "257": {
+      "from_x": 0,
+      "from_y": -360,
+      "mode": 3,
+      "ms": 1400,
+      "raw_from_x": 0,
+      "raw_from_y": -360,
+      "raw_to_x": 0,
+      "raw_to_y": 0,
+      "to_x": 0,
+      "to_y": 0
+     }
+    },
+    "move_z": {
+     "252": {
+      "from": 750,
+      "mode": 3,
+      "ms": 1200,
+      "to": 1000
+     },
+     "254": {
+      "from": 750,
+      "mode": 3,
+      "ms": 1400,
+      "to": 1000
+     }
+    },
+    "op": {
+     "252": [
+      960,
+      540
+     ],
+     "254": [
+      960,
+      540
+     ],
+     "255": [
+      960,
+      610
+     ],
+     "256": [
+      960,
+      610
+     ],
+     "257": [
+      960,
+      610
+     ]
+    },
+    "out_start_ms": 1200,
+    "rotate": {
+     "255": {
+      "from": 3600,
+      "mode": 3,
+      "ms": 1400,
+      "to": 0
+     },
+     "256": {
+      "from": 3600,
+      "mode": 3,
+      "ms": 1400,
+      "to": 0
+     },
+     "257": {
+      "from": 3600,
+      "mode": 3,
+      "ms": 1400,
+      "to": 0
+     }
+    },
+    "scale": {
+     "255": {
+      "from_x": 10000,
+      "from_y": 10000,
+      "mode": 3,
+      "ms": 1400,
+      "to_x": 1000,
+      "to_y": 1000
+     },
+     "256": {
+      "from_x": 10000,
+      "from_y": 10000,
+      "mode": 3,
+      "ms": 1400,
+      "to_x": 1000,
+      "to_y": 1000
+     },
+     "257": {
+      "from_x": 10000,
+      "from_y": 10000,
+      "mode": 3,
+      "ms": 1400,
+      "to_x": 1000,
+      "to_y": 1000
+     }
+    },
+    "total_ms": 3800,
+    "z": {
+     "252": 1000,
+     "254": 1000
+    }
+   },
+   "waits": [
+    {
+     "name": "MotionAlphaTest",
+     "pc": "0x0006f294",
+     "prim": 252
+    },
+    {
+     "name": "MotionAlphaTest",
+     "pc": "0x0006f2fb",
+     "prim": 252
+    },
+    {
+     "name": "MotionAlphaTest",
+     "pc": "0x0006f388",
+     "prim": 252
+    }
+   ]
+  },
+  "iroseka": {
+   "assets": {
+    "logo_bg": {
+     "h": 1080,
+     "w": 1920,
+     "x": 0,
+     "y": 0
+    },
+    "logo_favo": {
+     "h": 133,
+     "w": 868,
+     "x": 526,
+     "y": 407
+    },
+    "logo_favo_view": {
+     "h": 92,
+     "w": 301,
+     "x": 820,
+     "y": 619
+    },
+    "logo_favo_view_p1": {
+     "h": 36,
+     "w": 46,
+     "x": 937,
+     "y": 623
+    },
+    "logo_favo_view_p2": {
+     "h": 37,
+     "w": 46,
+     "x": 937,
+     "y": 616
+    },
+    "logo_favo_view_p3": {
+     "h": 36,
+     "w": 46,
+     "x": 937,
+     "y": 610
+    }
+   },
+   "hcb_sha256": "8c362ff7178628bef90f0d7bf35a48be5ee22f9f762d4c76e86799f6f063c0ff",
+   "hcb_size": 4275282,
+   "helper_calls": [
+    {
+     "args": [
+      252,
+      960,
+      540,
+      null
+     ],
+     "factors": [
+      1.875,
+      1.6875,
+      1.875,
+      1.6875
+     ],
+     "helper": "0x00035ab7",
+     "pc": "0x000580ef",
+     "prim": 252,
+     "raw_args": [
+      252,
+      512,
+      320,
+      null
+     ],
+     "wrapped": 81,
+     "wrapped_name": "PrimSetOP"
+    },
+    {
+     "args": [
+      254,
+      960,
+      540,
+      null
+     ],
+     "factors": [
+      1.875,
+      1.6875,
+      1.875,
+      1.6875
+     ],
+     "helper": "0x00035ab7",
+     "pc": "0x00058139",
+     "prim": 254,
+     "raw_args": [
+      254,
+      512,
+      320,
+      null
+     ],
+     "wrapped": 81,
+     "wrapped_name": "PrimSetOP"
+    },
+    {
+     "args": [
+      257,
+      0,
+      -337,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "factors": [
+      1.875,
+      1.6875,
+      1.875,
+      1.6875
+     ],
+     "helper": "0x00035a37",
+     "pc": "0x00058205",
+     "prim": 257,
+     "raw_args": [
+      257,
+      0,
+      -200,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "wrapped": 48,
+     "wrapped_name": "MotionMove"
+    },
+    {
+     "args": [
+      256,
+      375,
+      337,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "factors": [
+      1.875,
+      1.6875,
+      1.875,
+      1.6875
+     ],
+     "helper": "0x00035a37",
+     "pc": "0x00058259",
+     "prim": 256,
+     "raw_args": [
+      256,
+      200,
+      200,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "wrapped": 48,
+     "wrapped_name": "MotionMove"
+    },
+    {
+     "args": [
+      255,
+      -375,
+      337,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "factors": [
+      1.875,
+      1.6875,
+      1.875,
+      1.6875
+     ],
+     "helper": "0x00035a37",
+     "pc": "0x000582ae",
+     "prim": 255,
+     "raw_args": [
+      255,
+      -200,
+      200,
+      0,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "wrapped": 48,
+     "wrapped_name": "MotionMove"
+    },
+    {
+     "args": [
+      254,
+      null,
+      84,
+      null,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "factors": [
+      1.875,
+      1.6875,
+      1.875,
+      1.6875
+     ],
+     "helper": "0x00035a37",
+     "pc": "0x00058332",
+     "prim": 254,
+     "raw_args": [
+      254,
+      null,
+      50,
+      null,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "wrapped": 48,
+     "wrapped_name": "MotionMove"
+    }
+   ],
+   "loads": [
+    {
+     "kind": 5,
+     "name": "logo_bg",
+     "pc": "0x000580ba",
+     "slot": 250
+    },
+    {
+     "kind": 5,
+     "name": "logo_favo",
+     "pc": "0x000580d1",
+     "slot": 252
+    },
+    {
+     "kind": 5,
+     "name": "logo_favo_view",
+     "pc": "0x00058113",
+     "slot": 254
+    },
+    {
+     "kind": 5,
+     "name": "logo_favo_view_p1",
+     "pc": "0x00058158",
+     "slot": 255
+    },
+    {
+     "kind": 5,
+     "name": "logo_favo_view_p2",
+     "pc": "0x0005818e",
+     "slot": 256
+    },
+    {
+     "kind": 5,
+     "name": "logo_favo_view_p3",
+     "pc": "0x000581c4",
+     "slot": 257
+    }
+   ],
+   "logical": {
+    "fx": 1.875,
+    "fy": 1.6875,
+    "h": 640,
+    "w": 1024
+   },
+   "motions": [
+    {
+     "args": [
+      0,
+      255,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00058217",
+     "prim": 257
+    },
+    {
+     "args": [
+      3600,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0005822b",
+     "prim": 257
+    },
+    {
+     "args": [
+      10000,
+      1000,
+      10000,
+      1000,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00058243",
+     "prim": 257
+    },
+    {
+     "args": [
+      0,
+      255,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0005826b",
+     "prim": 256
+    },
+    {
+     "args": [
+      3600,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0005827f",
+     "prim": 256
+    },
+    {
+     "args": [
+      10000,
+      1000,
+      10000,
+      1000,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00058297",
+     "prim": 256
+    },
+    {
+     "args": [
+      0,
+      255,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000582c0",
+     "prim": 255
+    },
+    {
+     "args": [
+      3600,
+      0,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x000582d4",
+     "prim": 255
+    },
+    {
+     "args": [
+      10000,
+      1000,
+      10000,
+      1000,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x000582ec",
+     "prim": 255
+    },
+    {
+     "args": [
+      750,
+      1000,
+      1200,
+      3,
+      null
+     ],
+     "cmd": 57,
+     "name": "MotionMoveZ",
+     "pc": "0x000582fe",
+     "prim": 252
+    },
+    {
+     "args": [
+      0,
+      255,
+      1200,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0005830e",
+     "prim": 252
+    },
+    {
+     "args": [
+      750,
+      1000,
+      1400,
+      3,
+      null
+     ],
+     "cmd": 57,
+     "name": "MotionMoveZ",
+     "pc": "0x00058320",
+     "prim": 254
+    },
+    {
+     "args": [
+      0,
+      255,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00058344",
+     "prim": 254
+    },
+    {
+     "args": [
+      null,
+      0,
+      3500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00058386",
+     "prim": 250
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000583d6",
+     "prim": 253
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000583e4",
+     "prim": 252
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000583f2",
+     "prim": 254
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00058400",
+     "prim": 255
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0005840e",
+     "prim": 256
+    },
+    {
+     "args": [
+      null,
+      0,
+      2500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0005841c",
+     "prim": 257
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00058479",
+     "prim": 254
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00058486",
+     "prim": 255
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00058493",
+     "prim": 256
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000584a0",
+     "prim": 257
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000584ad",
+     "prim": 250
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000584ba",
+     "prim": 253
+    },
+    {
+     "args": [
+      null,
+      0,
+      100,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000584c7",
+     "prim": 252
+    }
+   ],
+   "opening_end": "0x000584cb",
+   "opening_start": "0x00058096",
+   "prim_setup": [
+    {
+     "args": [
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x000580dc",
+     "prim": 252
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x000580f9",
+     "prim": 252
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x0005811d",
+     "prim": 254
+    },
+    {
+     "args": [
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x00058126",
+     "prim": 254
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x00058162",
+     "prim": 255
+    },
+    {
+     "args": [
+      960,
+      628
+     ],
+     "cmd": 81,
+     "name": "PrimSetOP",
+     "pc": "0x00058171",
+     "prim": 255
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x00058198",
+     "prim": 256
+    },
+    {
+     "args": [
+      960,
+      628
+     ],
+     "cmd": 81,
+     "name": "PrimSetOP",
+     "pc": "0x000581a7",
+     "prim": 256
+    },
+    {
+     "args": [
+      0
+     ],
+     "cmd": 77,
+     "name": "PrimSetAlpha",
+     "pc": "0x000581ce",
+     "prim": 257
+    },
+    {
+     "args": [
+      960,
+      628
+     ],
+     "cmd": 81,
+     "name": "PrimSetOP",
+     "pc": "0x000581dd",
+     "prim": 257
+    }
+   ],
+   "timeline": {
+    "alpha_in_ms": {
+     "252": 1200,
+     "254": 1400,
+     "255": 1400,
+     "256": 1400,
+     "257": 1400
+    },
+    "alpha_out_ms": {
+     "250": 3500,
+     "252": 2500,
+     "253": 2500,
+     "254": 2500,
+     "255": 2500,
+     "256": 2500,
+     "257": 2500
+    },
+    "cut_ms": 100,
+    "cut_start_ms": 3700,
+    "move": {
+     "254": {
+      "from_x": 0,
+      "from_y": 84,
+      "mode": 3,
+      "ms": 1400,
+      "raw_from_x": null,
+      "raw_from_y": 84,
+      "raw_to_x": null,
+      "raw_to_y": 0,
+      "to_x": 0,
+      "to_y": 0
+     },
+     "255": {
+      "from_x": -375,
+      "from_y": 337,
+      "mode": 3,
+      "ms": 1400,
+      "raw_from_x": -375,
+      "raw_from_y": 337,
+      "raw_to_x": 0,
+      "raw_to_y": 0,
+      "to_x": 0,
+      "to_y": 0
+     },
+     "256": {
+      "from_x": 375,
+      "from_y": 337,
+      "mode": 3,
+      "ms": 1400,
+      "raw_from_x": 375,
+      "raw_from_y": 337,
+      "raw_to_x": 0,
+      "raw_to_y": 0,
+      "to_x": 0,
+      "to_y": 0
+     },
+     "257": {
+      "from_x": 0,
+      "from_y": -337,
+      "mode": 3,
+      "ms": 1400,
+      "raw_from_x": 0,
+      "raw_from_y": -337,
+      "raw_to_x": 0,
+      "raw_to_y": 0,
+      "to_x": 0,
+      "to_y": 0
+     }
+    },
+    "move_z": {
+     "252": {
+      "from": 750,
+      "mode": 3,
+      "ms": 1200,
+      "to": 1000
+     },
+     "254": {
+      "from": 750,
+      "mode": 3,
+      "ms": 1400,
+      "to": 1000
+     }
+    },
+    "op": {
+     "252": [
+      960,
+      540
+     ],
+     "254": [
+      960,
+      540
+     ],
+     "255": [
+      960,
+      628
+     ],
+     "256": [
+      960,
+      628
+     ],
+     "257": [
+      960,
+      628
+     ]
+    },
+    "out_start_ms": 1200,
+    "rotate": {
+     "255": {
+      "from": 3600,
+      "mode": 3,
+      "ms": 1400,
+      "to": 0
+     },
+     "256": {
+      "from": 3600,
+      "mode": 3,
+      "ms": 1400,
+      "to": 0
+     },
+     "257": {
+      "from": 3600,
+      "mode": 3,
+      "ms": 1400,
+      "to": 0
+     }
+    },
+    "scale": {
+     "255": {
+      "from_x": 10000,
+      "from_y": 10000,
+      "mode": 3,
+      "ms": 1400,
+      "to_x": 1000,
+      "to_y": 1000
+     },
+     "256": {
+      "from_x": 10000,
+      "from_y": 10000,
+      "mode": 3,
+      "ms": 1400,
+      "to_x": 1000,
+      "to_y": 1000
+     },
+     "257": {
+      "from_x": 10000,
+      "from_y": 10000,
+      "mode": 3,
+      "ms": 1400,
+      "to_x": 1000,
+      "to_y": 1000
+     }
+    },
+    "total_ms": 3800,
+    "z": {
+     "252": 1000,
+     "254": 1000
+    }
+   },
+   "waits": [
+    {
+     "name": "MotionAlphaTest",
+     "pc": "0x0005834a",
+     "prim": 252
+    },
+    {
+     "name": "MotionAlphaTest",
+     "pc": "0x000583b1",
+     "prim": 252
+    },
+    {
+     "name": "MotionAlphaTest",
+     "pc": "0x0005843e",
+     "prim": 252
+    }
+   ]
+  }
+ },
+ "note": "开场 FAVORITE logo 序列的脚本侧事实（槽位/时长/坐标/轴心）；由 scripts/extract-opening-scene.py 生成，不含游戏数据本体"
+}

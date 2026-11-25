@@ -345,11 +345,25 @@ int gfx_image_size(const Gfx *g, int slot, int *w, int *h);
 /* 同 gfx_draw_image_at，但整张图乘一个 0..255 的 alpha（开场 logo 淡入用）。 */
 int gfx_draw_image_alpha(Gfx *g, int slot, int x, int y, int alpha);
 /* 缩放 + alpha 直贴（标题进场动画用）。scale 是 per-mille（1000 = 1.0），
- * 锚点是**左上角**——与 render_sprite() 里 GFX_MODE_UI 的缩放一致，原版
- * MotionMoveS2 的缩放也是左上锚。scale 都为 1000 时与 gfx_draw_image_alpha
- * 字节等价（内部直接转调）。参数来自脚本，见 src/titleanim.h。 */
+ * 锚点是**左上角**。scale 都为 1000 时与 gfx_draw_image_alpha 字节等价
+ * （内部直接转调）。注意：**这不是原版 MotionMoveS2 的语义**——原版缩放/旋转
+ * 以脚本设的 OP 为轴心（0x42AF08/0x42B41F 的分支），那个走
+ * gfx_draw_image_op_xform()。本函数只给"我们自己算好位置"的 UI 动画用。
+ * 参数来自脚本，见 src/titleanim.h。 */
 int gfx_draw_image_xform(Gfx *g, int slot, int x, int y, int scale_x1000,
                          int scale_y1000, int alpha);
+
+/* 按**脚本的 OP 轴心**缩放 + 旋转 + alpha（开场 FAVORITE logo 用）。
+ *
+ * 公式来自 exe 静态分析（不是拟合）：最终位置 =
+ * `(x, y) + OP + R(angle)·S(scale)·(图头 xy − OP)`（0x42AF08 的 OP 分支 +
+ * 0x42B41F..0x42B477 的平移；矩阵函数 0x446744/0x44674A/0x446750）。
+ * 也就是在 OP 处缩放/旋转：identity 时与 gfx_draw_image_alpha 画在
+ * (x + 图头 x, y + 图头 y) 完全等价。
+ * angle_x10 单位 0.1°，缩放 per-mille（1000 = 1.0），参数见 src/openinganim.h。 */
+int gfx_draw_image_op_xform(Gfx *g, int slot, int x, int y, int op_x, int op_y,
+                            int scale_x1000, int scale_y1000, int angle_x10,
+                            int alpha);
 
 /* 用 (r,gr,b,alpha) 铺满整张画布（开场白场用）。 */
 void gfx_fill_canvas(Gfx *g, int r, int gr, int b, int alpha);

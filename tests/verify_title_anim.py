@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""标题画面/开场动画的门禁：参数必须等于脚本里的常量，且**槽位要对**。
+"""标题画面进场动画的门禁：参数必须等于脚本里的常量，且**槽位要对**。
 
 ⚠️ 2026-11-25 修正：上一版门禁把「alpha 0→255 / 1400 ms + 缩放 10000→1000」当成
 **标题 logo** 的进场动画，是错的。按 hcb 的加载顺序复核后：
@@ -8,16 +8,19 @@
   * 250 `logo_bg` / 252 `logo_favo` / 254 `logo_favo_view` / 255..257
     `logo_favo_view_p1..p3` 是**开场 FAVORITE logo**（hcb 0x580AA..0x581C4 加载），
     缩放 10→1 / 1400 ms 属于其中的 p1..p3（hcb 0x58217..0x582EC）；
+    这套参数现在冻结在 `ref/opening-scene.json` + `src/openinganim.h`，门禁是
+    `tests/verify_opening_anim.py`（本文件不再重复断言开场）；
   * **标题画面**是 265 `title_logo1`（0x58B72 加载）+ 262..264 与菜单项，
-    进场动画是 `MotionAlpha(0, 255, <local5=500>)`（hcb 0x59349..0x595C1）——
-    **500 ms 淡入**；背景四层同时做 25 秒的极慢缩放（hcb 0x59143..，时长 local7=25000）。
+    进场动画是 `MotionAlpha(0, 255, <local5>)`（hcb 0x59349..0x595C1）；
+    背景四层同时做 25 秒的极慢缩放（hcb 0x59143..，时长 local7=25000）。
 
 本门禁断言：
 
-  1. `ref/title-scene.json` 里：logo_favo_view_p1..p3 的 MotionAlpha/MotionMoveS2 参数；
-     标题 262..265 的淡入条目（0→255，时长是栈局部变量 5/7，说明"时长由运行期设置"）；
-     背景 258 的 MotionMoveS2 = 1300→900（时长栈局部 7）；
-  2. `src/titleanim.h` 的宏与上面逐项一致（500 / 25000 / 10000→1000/1400 …）；
+  1. `ref/title-scene.json` 里：标题 262..265 的淡入条目（0→255，时长是栈局部
+     变量 5/7，说明"时长由运行期设置"）；背景 258 的 MotionMoveS2 = 1300→900
+     （时长栈局部 7）；
+  2. `src/titleanim.h` 的宏与上面逐项一致（500 / 25000 / 1300→900 …）；
+     开场常量**不再**定义在这里（已搬到 `src/openinganim.h`）；
   3. `main_win32.c` **只对标题做 alpha 淡入**（用 `gfx_draw_image_alpha`），
      不再把缩放动画挂到标题 logo 上（`gfx_draw_image_xform` 不应出现在标题绘制里），
      默认 title_fade = 255（冻结基线不变），`--title-anim`/`--opening` 才打开。
@@ -85,18 +88,19 @@ def main():
         'layer_motion') or []
     check(len(entries) > 0, 'layer_motion 非空（实际 %d 条）' % len(entries))
 
-    print('== 1. 开场 FAVORITE logo（255/256/257 = logo_favo_view_p1..p3）==')
-    for prim in OPENING_VIEW_PRIMS:
-        a = motion(entries, prim, 'MotionAlpha')
-        s = motion(entries, prim, 'MotionMoveS2')
-        check(a is not None and a['args'][1] == 0 and a['args'][2] == 255
-              and a['args'][3] == 1400,
-              '图元 %d 的 MotionAlpha = 0→255/1400 ms（实际 %r）'
-              % (prim, a['args'] if a else None))
-        check(s is not None and s['args'][1:5] == [10000, 1000, 10000, 1000]
-              and s['args'][5] == 1400 and s['args'][6] == 3,
-              '图元 %d 的 MotionMoveS2 = 10000→1000 两轴 / 1400 ms / mode 3（实际 %r）'
-              % (prim, s['args'] if s else None))
+    print('== 1. 开场参数已经独立成 openinganim.h / opening-scene.json ==')
+    open_h = os.path.join(FVP, 'src', 'openinganim.h')
+    open_ref = os.path.join(FVP, 'ref', 'opening-scene.json')
+    check(os.path.isfile(open_h) and os.path.isfile(open_ref),
+          '开场参数在 src/openinganim.h + ref/opening-scene.json')
+    if os.path.isfile(open_h):
+        text = io.open(open_h, encoding='utf-8').read()
+        check(re.search(r'FVP_OPEN_TOTAL_MS\s+3800', text) is not None,
+              '开场总时长 3800 ms（脚本 1200+2500+100，旧拟合值 5400 已作废）')
+        check(re.search(r'FVP_OPEN_VIEW_SCALE_FROM\s+10000', text) is not None,
+              '开场 p1..p3 缩放 10000→1000 在 openinganim.h')
+    check('FVP_OPENANIM_' not in io.open(HEADER, encoding='utf-8').read(),
+          'titleanim.h 不再定义开场常量')
 
     print('== 2. 标题画面：262..265 是 MotionAlpha 0→255，时长来自栈局部变量 ==')
     durations = set()
@@ -135,7 +139,8 @@ def main():
           '标题淡入 0→255（实际 %r/%r）'
           % (m.get('FVP_TITLEANIM_FADE_FROM'), m.get('FVP_TITLEANIM_FADE_TO')))
     check(m.get('FVP_TITLEANIM_FADE_MS') == 500,
-          '标题淡入时长 = 500 ms（脚本 local5，实际 %r）'
+          '标题淡入时长 = 500 ms（**待复核**：脚本按 global236 分支重设 local5，'
+          '第一次进场是 2000/3000 ms，见 src/titleanim.h 文件头，实际 %r）'
           % (m.get('FVP_TITLEANIM_FADE_MS'),))
     check(m.get('FVP_TITLEANIM_BG_SCALE_FROM') == 1300 and
           m.get('FVP_TITLEANIM_BG_SCALE_TO') == 900,
@@ -145,18 +150,8 @@ def main():
     check(m.get('FVP_TITLEANIM_BG_MS') == 25000,
           '背景缩放时长 = 25000 ms（脚本 local7，实际 %r）'
           % (m.get('FVP_TITLEANIM_BG_MS'),))
-    check(m.get('FVP_OPENANIM_VIEW_SCALE_FROM') == 10000 and
-          m.get('FVP_OPENANIM_VIEW_SCALE_TO') == 1000 and
-          m.get('FVP_OPENANIM_VIEW_MS') == 1400,
-          '开场 p1..p3 缩放 10000→1000 / 1400 ms（实际 %r/%r/%r）'
-          % (m.get('FVP_OPENANIM_VIEW_SCALE_FROM'),
-             m.get('FVP_OPENANIM_VIEW_SCALE_TO'),
-             m.get('FVP_OPENANIM_VIEW_MS')))
-    check(m.get('FVP_OPENANIM_LOGO_BG_MS') == 1200 and
-          m.get('FVP_OPENANIM_LOGO_FAVO_MS') == 1400,
-          '开场 logo_bg 1200 ms / logo_favo 1400 ms 淡入（实际 %r/%r）'
-          % (m.get('FVP_OPENANIM_LOGO_BG_MS'),
-             m.get('FVP_OPENANIM_LOGO_FAVO_MS')))
+    check(not [k for k in m if k.startswith('FVP_OPENANIM_')],
+          'titleanim.h 里没有开场常量（开场由 openinganim.h 负责）')
 
     print('== 5. main_win32.c：标题只做 alpha 淡入，不再用缩放 ==')
     src = io.open(MAIN, encoding='utf-8').read()
@@ -178,7 +173,7 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 标题 = 500 ms 淡入（262..265/菜单），背景 = 25000 ms 慢缩放；'
+    print('\nOK: 标题 = alpha 淡入（262..265/菜单；500 ms 待复核，见 src/titleanim.h 文件头），背景 = 25000 ms 慢缩放；'
           '缩放 10→1/1400 ms 属于开场 FAVORITE logo 的 p1..p3')
     return 0
 

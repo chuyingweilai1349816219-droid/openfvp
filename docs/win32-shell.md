@@ -89,7 +89,7 @@ fvp.exe --game <游戏目录> [选项]
 | `--no-input` | 忽略真实鼠标/键盘事件：门禁/截图只由程序状态决定（消除偶发） |
 | `--glyph-original` | 缺字回退改用**原版同协议**：`CreateFontA(SHIFTJIS_CHARSET)` + `GetGlyphOutlineA(GGO_BITMAP)` → 1bpp 二值掩码（默认走抗锯齿路径）。参数依据 `ref/exe-gdi-params.json`，见 [`docs/original-verification.md`](original-verification.md) §8；日志多一行 `gfx: glyph fallback = original GDI protocol (...)`。单测 `tests/test_gdi_ggo.c`（28 项） |
 | `--glyph-face <族名>` | 原版协议路径用的字体族名（UTF-8），默认 `ＭＳ ゴシック`（原版 exe 内置注册表第 0 项） |
-| `--opening` | 启动先跑开场序列（白底 → FAVORITE logo 淡入淡出 → 标题从白色淡入，5.4 s） |
+| `--opening` | 启动先跑开场序列：**脚本时间轴 3800 ms**（白底 + FAVORITE logo 六层，1200 ms 淡入 → 2500/3500 ms 淡出 → 100 ms 收尾），白底淡出露出已经建好的标题背景；参数来自 `ref/opening-scene.json`，见 [`docs/opening.md`](opening.md) |
 | `--shot-at N` | 跑到 N 毫秒时存一张截图（开场/淡入的中间态；结尾不再覆盖它） |
 | `--title-menu` | 启动后先显示**引擎侧标题菜单**（`New Game/Continue/Album/Option/Exit`），点 `New Game`（或回车）才开始跑脚本，`Exit` 关窗口。默认关 —— 关时行为与之前完全一致。菜单几何按原版实测（右对齐 x=1769、行距 100、字号 56），见 [`docs/title-menu.md`](title-menu.md)。汇总多一行 `title menu enabled (profile=..., align=..., continue=..., picked ...)`；`continue=` 由 `<game_dir>\save\sNNN.bin` 的个数决定 |
 | `--no-feed-text` | 关闭壳的临时文本桥（等 syscall 层接好 gfx 后应关闭） |

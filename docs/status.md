@@ -68,9 +68,10 @@
 | 命令表 argc 实测对账 | 两部作品 **825 / 865** 个可判定调用点，**82 / 83** 条命令的 argc 被证实；仅 3 条已知表达式临时值异常（两作完全相同） |
 | 抗锯齿 vs 原版协议（同字同字号） | 「日」@32：**54 / 1224 ≈ 4.4%** 的像素是原版根本不会产生的中间值 |
 | `make check` | **30 组**单测全 PASS |
-| `tests/run_all.py` | **45 PASS / 0 FAIL / 1 SKIP（46 步）**，约 275 s；SKIP 是缺 numpy 的 `verify_assets` |
-| `scripts/check-docs.py` | PASS：**31 篇**文档，引用路径 0 缺失，DeepSeek 声明齐全 |
+| `tests/run_all.py` | **62 步**（本轮加 `verify_opening_anim.py` / `verify_opening_render.py` 后全 PASS；缺游戏数据时相关步 SKIP） |
+| `scripts/check-docs.py` | PASS：**33 篇**文档，引用路径 0 缺失，DeepSeek 声明齐全 |
 | 健壮性 | 27,300 次 HCB 变异（0 崩溃）、339 个资产畸形用例、43 个 VM 边界用例 |
+| 开场 FAVORITE logo（脚本时间轴） | **3800 ms**（1200 淡入 + 2500 淡出 + 100 收尾，旧拟合值 5400 已作废）；六层/逐层 alpha/缩放/旋转/位移；端到端：淡出中 mean_abs 47.98、结束帧与静态标题帧**逐字节 0 差** |
 
 ---
 
@@ -83,7 +84,7 @@ mingw32-make -f Makefile all headless check
 # 核心三道
 python tests/compare.py --run                     # 逐字节
 powershell -ExecutionPolicy Bypass -File tests/verify_gfx.ps1 -SkipDump   # 像素
-python tests/run_all.py                           # 全部 46 步
+python tests/run_all.py                           # 全部 62 步
 
 # 原版相关（缺语料/缺 exe 时自己 SKIP 并返回 0）
 python tests/verify_exe_gdi_params.py             # 从 exe 静态提取的绘制协议
@@ -107,6 +108,7 @@ python scripts/check-docs.py
 > 之争就是范例：截图说 1.0、脚本参数被我误读成 0.9，最后是 handler 静态分析
 > （时长 7 ms + Stop 只取消）把结论定成 1.0。
 
+0. **开场/标题的动画收尾（见 `docs/opening.md` §6）**：① 标题背景的 25 s 慢缩放 + 慢旋转（`MotionMoveS2 1300→900`、`MotionMoveR 150/250/550/1250→0`，均 25000 ms）需要把标题背景改成按图元 OP 轴心绘制；② 标题进场的逐元素淡入（第一次进场 local5=2000 / local7=3000、菜单 800 ms，见 §5.1，现在的 500 ms 待复核）；③ 开场函数里的 `call 0x3F6A0` / `call 0x42AC6` 两个 helper（疑似 BGM/淡入）。
 1. **把标题菜单的图元矩形按素材头改正（第 123 轮已解出，见 `docs/title-menu.md` §9）**：
    `ref/title-rects.json` 里是**原值**——五彩斑斓右边缘全部 **1785**、行距 **100**、
    行 y=495/595/695/795/895，`title_option` 素材高 **90**；星空居中 **960**、行距 **90**。

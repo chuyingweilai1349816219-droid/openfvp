@@ -654,6 +654,21 @@ def build_steps(args):
                            'frame differs (mean_abs 14.15), frame after 1400 ms '
                            'is byte identical to the no-animation frame'))
 
+    # 6.4969 开场 FAVORITE logo 的时间轴 == 脚本常量（纯 JSON/源码检查，无依赖）
+    voa = os.path.join(HERE, 'verify_opening_anim.py')
+    steps.append(Step('verify_opening_anim.py', [PY, '-X', 'utf8', voa], 300,
+                      skip_reason=None,
+                      note='opening timeline == script constants (3800 ms, '
+                           'six layers, per-game OP pivot), both FVP titles'))
+
+    # 6.49695 开场端到端：真的启动外壳抓帧（缺游戏数据时 SKIP）
+    vor = os.path.join(HERE, 'verify_opening_render.py')
+    steps.append(Step('verify_opening_render.py', [PY, '-X', 'utf8', vor], 900,
+                      skip_reason=None,
+                      note='opening end to end: starts white, the fade reveals '
+                           'the title background (script sets the title up '
+                           'before the opening), end frame == static title'))
+
     # 6.497 标题背景合成模型（18 个候选里 measured+over 最好；需 Pillow+numpy）
     vbb = os.path.join(HERE, 'verify_title_bg_blend.py')
     steps.append(Step('verify_title_bg_blend.py', [PY, '-X', 'utf8', vbb], 900,

@@ -57,7 +57,7 @@ $PY fvp/work/run_render.py --at 534000 --debug
 | +0x14/+0x16 | u16 | X / Y（**偏移量**，见 §2） | `PrimSetXY` `mov %cx,0x14` / `0x16` |
 | +0x18/+0x1a | u16 | W / H（0=用图自身尺寸） | `PrimSetWH` |
 | +0x1c/+0x1e | u16 | U / V（贴图内偏移） | `PrimSetUV`（要求 `prim+4 == 4`） |
-| +0x20/+0x22 | u16 | OP 参数（语义未明） | `PrimSetOP` |
+| +0x20/+0x22 | u16 | OP：**缩放/旋转轴心**（最终位置 = prim.xy + OP + R·S·(图头 xy − OP)，见 docs/opening.md §3） | `PrimSetOP` |
 | +0x24 | u16 | 旋转角，单位 0.1°（%3600） | `PrimSetRS/RS2`（`idiv $0xe10`） |
 | +0x26/+0x28 | u16 | 缩放 X/Y ×100（1000 = 1.0） | `PrimSetRS/RS2` |
 | +0x2a/+0x2c | u16 | 首/末子节点 | `PrimGroupIn` |
@@ -350,7 +350,7 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
    但没有从渲染端静态分析确认（引擎里有相机/视差机制，`Dissolve`/`MotionMove` 会改）。
 5. **立绘用「底边中点」锚点**：同上，是出图调出来的规则；不是从 `0x42ae40` 里读出的唯一解
    （那段代码在做纹理 UV 与缩放矩阵，锚点枚举没完全逆完）。
-6. **Z 不参与排序**（按 group 树序），`PrimSetOP` 写进去的 +0x20/+0x22 未用于渲染，`PrimSetBlend=1` 用加色近似。
+6. **Z 不参与排序**（按 group 树序）；`PrimSetOP` 写进去的 +0x20/+0x22 是**缩放/旋转轴心**（2026-11-25 解出：exe 0x42AF08 的 OP 分支取局部坐标 (图头 − OP)，0x42B41F..0x42B477 的平移是 prim + OP；本站实现在 `gfx_draw_image_op_xform()`，见 docs/opening.md §3），`PrimSetBlend=1` 用加色近似。
 7. 未实现：`Dissolve`(14)、`GraphRGB`(23)、`PartsMotion`(66)、`V3D*`、`Movie`、`Snow*`、
    `TextFont/TextFormat` 的真实排版、`SaveThumbSize` 缩略图。
 8. `graph-not-found`：`taiken_start`、`title_trial`、部分 `SHINKU_e01*`、`graph/BG062_500(-b)`

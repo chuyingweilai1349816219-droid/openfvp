@@ -1714,9 +1714,9 @@ static int title_bg_disabled;
 /* hover/选中态贴图（五彩斑斓的 title_<item>1）装进 0xF10+i：2026-11-25 由静态
  * 像素比对定出映射（ref/title-variants.json + docs/title-menu.md §12）。 */
 #define TITLE_HOVER_SLOT_BASE (TITLE_SLOT_BASE + 16)
-/* 开场序列占用两个槽：黑底/背景图 + FAVORITE logo */
-#define OPEN_BG_SLOT 0x0FE0
-#define OPEN_LOGO_SLOT 0x0FE1
+/* 开场序列直接用**脚本的槽位号** 250/252/254/255/256/257（见 src/openseq.h 的层表），
+ * 不再借私有槽：这样槽位号本身就是脚本事实，门禁能直接比对。脚本此时还没跑，
+ * 所以不会和 VM 抢槽（New Game 之后脚本会重新 GraphLoad 这些槽，正好覆盖）。 */
 /* 存档列表的预览图（选中槽里记录的背景图） */
 #define SAVE_PREVIEW_SLOT 0x0FE2
 
@@ -2408,7 +2408,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     FvpOpenSeq opening;
     GfxFont *title_font = NULL;
     int opening_active = 0;
-    int opening_logo_loaded = 0;
+    int opening_layers_loaded = 0;
+    double opening_started_at = 0.0;
     int shot_taken = 0;
     int save_preview_ok = 0;
     int load_view_active = 0;      /* 部分恢复视图（仅画面+文本） */
@@ -2532,12 +2533,17 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     if (opts.title_anim < 0) {
         opts.title_anim = opts.opening ? 1 : 0;
     }
-    /* 开场序列（--opening）：logo 淡入 → 停留 → 淡出 → 白场 → 标题。
+    /* 开场序列（--opening）：白底 + FAVORITE logo 六层，时间轴来自脚本
+     * （见 src/openseq.h / openinganim.h，hcb 0x58096..0x584CB）。
      * 这里只置标志，标题资源的加载仍在上面按 title_active 做；
-     * 开场期间不画标题菜单（见帧循环里的 !opening_active 判断）。 */
+     * 开场期间不画标题菜单（见帧循环里的 opening_active 判断）。 */
     if (opts.opening) {
-        fvp_openseq_init(&opening);
+        FvpOpenGame open_game = fvp_openseq_game_from_name(
+            title_profile != NULL ? title_profile->game : NULL);
+
+        fvp_openseq_init(&opening, open_game);
         opening_active = 1;
+        /* 真正的日志在素材载入之后打（这里 log 文件还没打开）。 */
     }
     /* 存档字符串编码：显式 --save-encoding 优先，否则跟随脚本编码。 */
     save_enc = (opts.enc_mode == ENC_GBK) ? FVP_ENC_GBK : FVP_ENC_CP932;
@@ -2808,12 +2814,28 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             title_bg_disabled = opts.title_no_bg;
             title_textures = title_load_textures(gfx, title_profile);
             if (opts.opening) {
-                if (gfx_graph_load(gfx, OPEN_BG_SLOT, "logo_bg") == 0 &&
-                    gfx_graph_load(gfx, OPEN_LOGO_SLOT, "logo_favo") == 0) {
-                    opening_logo_loaded = 1;
-                    fvp_logf("opening: logo_bg + logo_favo loaded");
+                int i;
+                int loaded = 0;
+
+                for (i = 0; i < fvp_openseq_layer_count(); ++i) {
+                    if (gfx_graph_load(gfx, fvp_openseq_layer_slot(i),
+                                       fvp_openseq_layer_name(i)) == 0) {
+                        loaded += 1;
+                    }
+                }
+                opening_layers_loaded = loaded;
+                if (loaded == fvp_openseq_layer_count()) {
+                    fvp_logf("opening: %d/%d layers loaded (script slots "
+                             "250/252/254/255/256/257)", loaded,
+                             fvp_openseq_layer_count());
+                    fvp_logf("opening: script timeline (%s, %d ms): alpha in "
+                             "1200/1400, logo out 2500, bg out 3500, cut 100",
+                             fvp_openseq_game_name(opening.game),
+                             FVP_OPEN_TOTAL_MS);
+                    opening_started_at = now_sec();
                 } else {
-                    fvp_logf("opening: logo assets missing, skipping");
+                    fvp_logf("opening: only %d/%d layers loaded, skipping",
+                             loaded, fvp_openseq_layer_count());
                     opening_active = 0;
                     title_active = opts.title_menu ? 1 : 0;
                 }
@@ -3584,8 +3606,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         {
             double r0 = now_sec();
             gfx_render(gfx);
-            /* 标题菜单是引擎侧 UI 覆盖层，必须在 render 之后画。 */
-            if (title_active) {
+            /* 标题菜单是引擎侧 UI 覆盖层，必须在 render 之后画。
+             * 开场序列期间不画标题（脚本是等开场函数返回后才做标题的 500 ms
+             * 淡入，所以 title_anim 也不能在开场期间启动）。 */
+            if (title_active && !opening_active) {
                 if (title_shown_at == 0.0) {
                     /* 几何/可用性已在启动时按 profile 设好；
                      * 这里只记录菜单开始显示的时刻。 */
@@ -3603,9 +3627,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 if (title_anim_active) {
                     title_anim_advance(now);
                 }
-                if (opening_active) {
-                    /* 开场序列自己画（见下面的 opening 块），这里不画菜单 */
-                } else if (load_view_active) {
+                if (load_view_active) {
                     /* 部分恢复：整屏背景图 + 存档记的那句台词 + 明确标注 */
                     if (load_view_graph[0] != '\0' && save_preview_ok) {
                         (void)gfx_draw_image_scaled(gfx, SAVE_PREVIEW_SLOT,
@@ -3666,53 +3688,53 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             canvas = gfx_canvas(gfx, &cw, &ch);
             render_ms = (now_sec() - r0) * 1000.0;
         }
-        /* ---- 开场序列（--opening）----
-         * logo 淡入 → 停留 → 淡出 → 白场 → 进标题菜单。alpha 全部来自
-         * openseq 的时间轴（可单测），这里只负责按 alpha 画。 */
+        /* ---- 开场序列（--opening，脚本 0x58096..0x584CB）----
+         * 六层素材按脚本的 alpha/缩放/旋转/位移/OP 轴心画；时间轴由 openseq
+         * 从墙钟算（不用累加 frame_dt：开场第一帧要解码六张图，dt 可能有
+         * 几百毫秒，累加会让 1.2 s 的淡入在一帧里跳完）。 */
         if (opening_active) {
-            double dt_ms = frame_dt * 1000.0;
-
-            if (dt_ms > 0.0 && dt_ms < 250.0) {
-                fvp_openseq_advance(&opening, (int)dt_ms);
-            }
-            opening_ms = (double)fvp_openseq_elapsed(&opening);
+            opening_ms = (now - opening_started_at) * 1000.0;
+            fvp_openseq_set_elapsed(&opening, (int)opening_ms);
             if (gfx != NULL && canvas != NULL) {
-                FvpOpenPhase ph = fvp_openseq_phase(&opening);
+                int i;
 
-                if (ph == FVP_OPEN_TITLE_FADE) {
-                    /* 标题先画出来，再压一层 255→0 的白色遮罩 = 从白色里淡入 */
-                    int va = fvp_openseq_veil_alpha(&opening);
+                /* 脚本先建标题场景再跑开场（hcb 0x590CC `call 0x584D8` 载入
+                 * title_bg1_* 并排好 25 s 的慢缩放/旋转，0x591EC 才 `call`
+                 * 开场函数），所以**开场白底后面已经有标题背景**：白底 250
+                 * 淡出时露出来的是标题背景，不是黑屏。开场期间标题的
+                 * logo/菜单 alpha 还没开始排（它们的 MotionAlpha 在开场返回
+                 * 后才排，hcb 0x5933E 起），所以这里强制 title_fade=0：
+                 * 只画背景/叠加层，不画 logo/版权/菜单。 */
+                if (title_active) {
+                    int saved_fade = title_fade;
 
-                    if (title_active && !save_list_active) {
-                        title_draw_overlay(gfx, &title, title_profile,
-                                           title_hover);
+                    title_fade = 0;
+                    title_draw_overlay(gfx, &title, title_profile, title_hover);
+                    title_fade = saved_fade;
+                }
+                for (i = 0; i < fvp_openseq_layer_count(); ++i) {
+                    FvpOpenLayerState st;
+
+                    if (!fvp_openseq_layer_state(&opening, i, &st)) {
+                        continue;
                     }
-                    if (va > 0) {
-                        gfx_fill_canvas(gfx, 255, 255, 255, va);
+                    if (st.alpha <= 0) {
+                        continue;
                     }
-                } else {
-                    int la = fvp_openseq_logo_alpha(&opening);
-
-                    if (opening_logo_loaded) {
-                        int bx = 0;
-                        int by = 0;
-
-                        /* logo_bg 实测是纯白 1920x1080：白底 + logo 淡入 */
-                        (void)gfx_draw_image_alpha(gfx, OPEN_BG_SLOT, 0, 0, 255);
-                        (void)gfx_image_offset(gfx, OPEN_LOGO_SLOT, &bx, &by);
-                        (void)gfx_draw_image_alpha(gfx, OPEN_LOGO_SLOT, bx, by,
-                                                   la);
-                    } else {
-                        gfx_fill_canvas(gfx, 255, 255, 255, 255);
-                    }
+                    (void)gfx_draw_image_op_xform(
+                        gfx, fvp_openseq_layer_slot(i), st.dx, st.dy, st.op_x,
+                        st.op_y, st.scale_x1000, st.scale_y1000, st.angle_x10,
+                        st.alpha);
                 }
             }
             if (fvp_openseq_done(&opening)) {
                 opening_active = 0;
                 title_active = opts.title_menu ? 1 : 0;
                 title_shown_at = now;
-                fvp_logf("opening: finished in %.0f ms -> title menu %s",
-                         opening_ms, title_active ? "on" : "off (script)");
+                fvp_logf("opening: finished in %.0f ms (%d layers) -> "
+                         "title menu %s",
+                         opening_ms, opening_layers_loaded,
+                         title_active ? "on" : "off (script)");
             }
         }
         /* ---- New Game 的白场过渡 ---- */
@@ -3842,9 +3864,18 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
 
             shot_taken = 1;
             if (write_bmp32(opts.screenshot, canvas, cw, ch)) {
-                fvp_logf("screenshot: %s 1920x1080 at %.0f ms (shot-at)",
-                         w2u(opts.screenshot, u8s, sizeof(u8s)),
-                         opts.shot_at_ms);
+                if (opening_active) {
+                    /* 开场期间把"开场时间轴上的时刻"一并写进日志：--shot-at 是
+                     * 墙钟（含窗口创建/解码素材的开销），门禁要用开场自己的 t。 */
+                    fvp_logf("screenshot: %s 1920x1080 at %.0f ms "
+                             "(shot-at; opening t=%.0f ms)",
+                             w2u(opts.screenshot, u8s, sizeof(u8s)),
+                             opts.shot_at_ms, opening_ms);
+                } else {
+                    fvp_logf("screenshot: %s 1920x1080 at %.0f ms (shot-at)",
+                             w2u(opts.screenshot, u8s, sizeof(u8s)),
+                             opts.shot_at_ms);
+                }
             }
         }
             fvp_win32_present(&win, canvas, cw, ch);

@@ -1,0 +1,200 @@
+# 开场 FAVORITE logo（脚本时间轴 + 六层渲染）
+
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
+> 本项目由 **6amm** 辅助 DeepSeek 完成，其中所有代码由 DeepSeek 生成。
+> 赞助：[https://afdian.com/a/6ammm](https://afdian.com/a/6ammm)
+
+本文记录 `--opening` 这条**开场动画**从"按抓帧时间线拟合"改成"从 HCB 脚本里读出来"的
+全过程，以及顺带解出来的两件 exe 侧事实（OP 轴心语义、D3D9 之前的混合模型）。
+
+一句话结论：**开场不是两条图的淡入淡出，而是六层素材**（白底 + FAVORITE 字标 +
+FVP 字标 + 三片三角碎片），时间轴 **3800 ms**（1200 淡入 + 2500 淡出 + 100 收尾），
+白底淡出露出来的是**已经建好的标题背景**（脚本先建标题场景再跑开场）。
+
+---
+
+## 1. 旧实现错在哪
+
+`--opening` 原来（commit `cc73da6` 之前）是一条**拟合**的时间轴：
+
+| 相位 | 时长 | 依据 |
+|---|---:|---|
+| 白场 | 300 ms | 抓帧时间线（`docs/original-verification.md` §6） |
+| logo 淡入 | 1200 ms | 同上 |
+| 停留 | 2100 ms | 同上 |
+| 淡出 | 1200 ms | 同上 |
+| 标题白场遮罩 | 600 ms | 同上 |
+
+合计 5400 ms；`src/openseq.h` 的注释直接写着"时长与缓动是近似值"。按项目方法论
+（2026-11-25 用户两次强调：**先结构分析，不要先抓帧**），这条时间轴必须从脚本里读。
+
+本轮把 iroseka.hcb 的开场函数整段解出来（`0x58096..0x584CB`，星空同构：
+`0x6EFF1..0x6F415`），旧拟合值全部作废。
+
+---
+
+## 2. 脚本里的事实（A 类，全部有 pc）
+
+开场函数（`initstack[0,0]` 起）：
+
+| 步 | hcb pc | 内容 |
+|---|---|---|
+| 1 | `0x580AA..0x581C4` | `GraphLoad` 六层：250 `logo_bg`（1920×1080 纯白）、252 `logo_favo`、254 `logo_favo_view`、255/256/257 `logo_favo_view_p1..p3`（46×36） |
+| 2 | `0x580DC..0x581DD` | `PrimSetZ(252/254,1000)`、`PrimSetAlpha(252/254/255/256/257,0)`、`PrimSetOP`：252/254 → (960,540)，255..257 → (960,628)（星空 610） |
+| 3 | `0x58217..0x582EC` | p3/p2/p1：`MotionAlpha 0→255/1400`、`MotionMoveR 3600→0/1400`、`MotionMoveS2 10000→1000 两轴/1400`（三者的 mode 都是 **3**） |
+| 4 | `0x582FE..0x58344` | 252：`MotionMoveZ 750→1000/1200` + `MotionAlpha 0→255/1200`；254：`MotionMoveZ 750→1000/1400` + `MotionMove(0,50→0,1400)` + `MotionAlpha 0→255/1400` |
+| 5 | `0x58386` | `MotionAlpha(250, 保持当前, 0, 3500)` —— 白底 3.5 s 淡出 |
+| 6 | `0x583D6..0x5841C` | `MotionAlpha(253/252/254/255/256/257, 保持当前, 0, 2500)` —— logo 层 2.5 s 淡出 |
+| 7 | `0x58479..0x584C7` | `MotionAlpha(七层全部, 保持当前, 0, 100)` —— 100 ms 收尾 → 函数返回 |
+
+关键控制流：
+
+* `0x5834A` `MotionAlphaTest(252)`：**等 252 的淡入（1200 ms）跑完**才开始淡出；
+  期间按任意键/点击会走"快进"分支（`syscall 9 ControlPulse`）。
+* 第 5/6 步是**同时排队**的，所以看起来是"白底慢慢退、logo 更快退"；
+  3700 ms 时 logo 归零、白底还剩 73/255，再由第 7 步 100 ms 收干净。
+* 真正的总时长 = **1200 + 2500 + 100 = 3800 ms**（不是 5400），门禁
+  `tests/verify_opening_anim.py` 断言。
+
+### 2.1 三层 p1..p3 是三角碎片
+
+从 `graph.bin` 解出六张素材（`scripts/extract-opening-scene.py` 只读头，不存像素）：
+
+| 槽位 | 素材 | 尺寸 | 头里的摆放坐标 |
+|---|---|---:|---|
+| 250 | `logo_bg` | 1920×1080 | (0,0) 纯白 |
+| 252 | `logo_favo` | 868×133 | (526,407) |
+| 254 | `logo_favo_view` | 301×92 | (820,619) |
+| 255 | `logo_favo_view_p1` | 46×36 | (937,623) |
+| 256 | `logo_favo_view_p2` | 46×37 | (937,616) |
+| 257 | `logo_favo_view_p3` | 46×36 | (937,610) |
+
+p1..p3 是 46×36 的**三角碎片**（RGB 是纯色，形状在 alpha 里），开场时以 10 倍大小
+分别从 (±200,±200)/(0,-200) 逻辑坐标旋转 360° 收拢到「V」字上 —— 就是原版那个
+"三片光斑旋进来"的效果。旧实现只有一层 252，完全丢了这三片。
+
+### 2.2 两个作品的差异只有两处
+
+两个作品**共用同一段开场脚本**（槽位/时长/坐标一模一样），差异是：
+
+| 项 | 五彩斑斓的世界 HD | 星空的记忆 HD |
+|---|---|---|
+| 逻辑画布（脚本坐标） | 1024×640 | 800×600 |
+| 换算因子（helper 里的 float32） | ×1.875 / ×1.6875 | ×2.4 / ×1.8 |
+| p1..p3 的 OP y | 628（`PrimSetOP` 字面量） | 610（helper：339×1.8） |
+| p1 位移起点（换成 HD 像素） | (-375, 337) | (-480, 360) |
+
+换算因子是从 helper 函数体里的 `pushfloat 拼位 → mul → FloatToInt` 模式读出来的；
+原版 Variant 的 float 是 **float32**（`docs/vm-commands.md` §7：pushfloat handler
+`0x445B10` 用 `flds/fstps`），所以 `300 × 1.8f` 在 float32 下正好舍入回 540.0
+（用 double 算会得 539.99998 → 截断 539）——提取脚本按 float32 算才对得上原版。
+
+---
+
+## 3. 顺带解出来的 exe 事实：OP 是缩放/旋转轴心
+
+`PrimSetOP` 写 prim `+0x20/+0x22`，此前文档写的是"语义未明 / 未用于渲染"
+（`docs/render-model.md` 旧版第 60、353 行）。
+
+本轮在 exe 里找到了用它的地方（`iroseka_HD.exe`，不是拟合）：
+
+```
+0x42AF08  test BYTE PTR [edi+0x6],0x2      ; prim+6 bit1 = OP 已设
+0x42AF1D  movsx edx,WORD PTR [edi+0x20]    ; 局部坐标 = 图头 x − OP.x
+0x42AF2A  movsx ebx,WORD PTR [edi+0x22]    ;            = 图头 y − OP.y
+0x42B41F  test BYTE PTR [edi+0x6],0x2
+0x42B429  movsx edx,WORD PTR [edi+0x22]    ; 平移 = prim.y + OP.y + 父链累加
+0x42B434  movsx ecx,WORD PTR [edi+0x20]    ;        prim.x + OP.x + 父链累加
+0x446744/0x44674A/0x446732/0x446750        ; D3DXMatrixScaling/Translation/Multiply/RotationZ
+```
+
+即：
+
+```
+最终位置 = prim.xy + OP + R(angle) · S(scale) · (图头 xy − OP)
+```
+
+identity 时 OP 抵消、回到"图头 xy + prim 偏移"；缩放/旋转则**绕 OP**。这解释了
+脚本为什么在给 p1..p3 排 `MotionMoveS2/MotionMoveR` 之前先 `PrimSetOP(960,628)`：
+OP 就是它们旋转/缩放的中心点。
+
+本站实现：`gfx_draw_image_op_xform()`（`src/gfx.c`），语义与上式一致（位图旋转是
+"缩放后绕自身中心旋转 + 把变换后的中心放到目标点"，重采样边界有 ≤1 px 误差，
+`tests/test_gfx_xform.c` §8 有断言）。
+
+---
+
+## 4. 脚本顺序：标题场景先建，开场后跑
+
+这一条是渲染上最重要的发现：
+
+```
+hcb 0x590CC  call 0x584D8   ; 标题场景：GraphLoad 258..261 + Z/OP/RS
+hcb 0x5912F  258..261       ; MotionMoveS2(25 s 慢缩放) + MotionMoveR(15°/25°/55°/125° → 0, 25 s)
+hcb 0x591EC  call 0x58096   ; 开场函数（本文 §2，3800 ms）
+hcb 0x59209…                ; 开场返回后：标题 logo/菜单的 MotionAlpha（local5/local7）
+```
+
+也就是说**开场白底后面已经有标题背景**（蓝天/风车/羽毛，且正在做 25 s 的慢缩放+旋转）。
+白底 250 淡出时露出来的是它，**不是黑屏**。旧实现（在白场上压标题 + 白色遮罩）
+把这个顺序搞反了。
+
+本站处理：开场期间先画一次 `title_draw_overlay()`，但把 `title_fade` 临时压成 0
+（只画背景/叠加层，不画 logo/版权/菜单 —— 它们的淡入是开场返回后才排的），
+再画六层开场素材。端到端门禁 `tests/verify_opening_render.py` 断言
+"淡出中画面已经明显偏蓝"（标题背景）以及"开场结束帧 == 静态标题帧（逐字节）"。
+
+**还没做**：标题背景的那两条 25 s 动画（`MotionMoveS2 1300→900` 与
+`MotionMoveR 150/250/550/1250→0`）。要实现得先把标题背景从"按 profile 裁剪绘制"
+改成"按图元 OP 轴心缩放/旋转绘制"，见 §6。
+
+---
+
+## 5. 实现与验证
+
+| 文件 | 作用 |
+|---|---|
+| `src/openinganim.h` | 脚本常量（槽位、逐层 alpha/缩放/旋转/位移、OP、每作品逻辑画布） |
+| `src/openseq.h` / `src/openseq.c` | 时间轴：毫秒 → 每层 alpha/scale/angle/dx/dy/OP；淡入线性、其余 mode 3；含每作品表 |
+| `src/gfx.c` / `src/gfx.h` | `gfx_draw_image_op_xform()`：OP 轴心的缩放+旋转+alpha |
+| `src/platform/win32/main_win32.c` | `--opening`：按墙钟推进时间轴、画标题背景（`title_fade=0`）、逐层绘制、3800 ms 后进标题 |
+| `ref/opening-scene.json` | 两个作品的开场事实（装载/实参/动画/时间轴/素材头），只含参数 |
+| `scripts/extract-opening-scene.py` | 从 HCB + graph.bin 静态提取上面的事实；`--check` 供门禁逐字节比对 |
+
+门禁与数字（2026-11-25 实测）：
+
+| 门禁 | 结果 |
+|---|---|
+| `tests/test_openseq.c` | **2620 项**（层表/相位边界/逐层 alpha 线性、缩放/旋转/位移的 mode 3 取值、两端单调有界、两个作品差异、NULL/越界） |
+| `tests/test_gfx_xform.c` §8 | OP 轴心：identity 抵消、OP=左上角时与 xform 逐字节相同、0.5× 绕中心缩成 20×15、90° 宽高互换、180° 位置尺寸不变、确定性 |
+| `tests/verify_opening_anim.py` | 重新提取 == 基线；C 常量 == 脚本（3800/1200/1400/3500/2500/100/10000→1000/3600→0/628/610/1024×640/800×600）；层表与外壳用法 |
+| `tests/verify_opening_render.py` | 早期帧近白 98.6%；淡出帧 B−R = 59.7（标题背景）且 vs 早期 mean_abs 47.98；**结束帧 vs 静态标题帧逐字节 0 差**；标题淡入日志在开场结束之后 |
+
+冻结基线不受影响：`--opening` 默认关；`verify_gfx` 仍是 293 px / PSNR 49.94 dB；
+`compare.py --run` 仍是 6496 B / `7F9837FF…`。
+
+### 5.1 标题进场的"500 ms"待复核（诚实记录）
+
+本轮顺带发现 `src/titleanim.h` 的 `FVP_TITLEANIM_FADE_MS = 500` 出处有问题：
+0x59120 的 `local5 = 500` 属于**背景动画分支**，标题对象的淡入时长在 0x59209/0x592C7
+被重设 —— 第一次进场是 `local5 = 2000`、`local7 = 3000`（262 用 local7），
+菜单项在 0x593B7 分支是 `local5 = 800`。所以标题进场其实应该是
+"逐元素时长 + 0x59335 的 1000 ms 间隔 + 菜单 800 ms"，而不是统一的 500 ms。
+本轮不改标题渲染（避免和开场混在一起），已写进 `src/titleanim.h` 文件头与
+`tests/verify_title_anim.py` 的断言说明，下一轮重做。
+
+---
+
+## 6. 还差什么（下一轮候选）
+
+1. **标题背景的 25 s 慢缩放 + 慢旋转**（`MotionMoveS2` 1300/1600/2500/4000→900/800/800/800，
+   `MotionMoveR` 150/250/550/1250→0，均 25000 ms）。需要把标题背景从
+   "裁剪一块 1920×1080"改成"按 OP 轴心缩放/旋转绘制"，否则开场结束那一瞬
+   背景会是 1.0 而不是脚本里的 ~1.19（25 s 里的第 3.8 s）。
+2. **标题进场逐元素淡入**（见 §5.1）：时长 2000/3000/800 ms + 1000 ms 间隔 + 262 的
+   y −28→0 位移（`MotionMove` 的实参已能从 hcb 0x59373 读出）。
+3. 开场函数里的 `call 0x3F6A0(0,0,0,true)`、`call 0x42AC6(2000,1)` 这类 helper
+   还没解（怀疑是 BGM/淡入淡出的音频控制，不影响画面）。
+4. 星空（800×600 逻辑画布）的开场目前只有提取/门禁覆盖，渲染验证只在五彩斑斓上做
+   （端到端门禁需要星空能进标题；标题 profile 已经支持，但还差一张对照帧）。

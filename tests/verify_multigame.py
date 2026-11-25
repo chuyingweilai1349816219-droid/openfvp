@@ -585,7 +585,12 @@ def stage_title_menu(shell, games, check):
 
 
 def stage_opening(shell, games, check):
-    """开场序列：白底 → logo 淡入 → 白场 → 标题。用 --shot-at 抓三个时刻。"""
+    """开场序列（脚本时间轴，3800 ms）：白底 + 六层 logo → 淡出 → 标题背景。
+
+    hcb 0x58096 的开场函数是"从 t=0 就开始淡入"（252 是 0→255/1200 ms），
+    所以旧断言"200 ms 时一个 logo 像素都没有"不再成立 —— 改成断言
+    "早期只有少量、1500 ms 明显更多"。
+    """
     g = None
     for cand in games:
         if cand.get('dir') and not cand.get('known_blocker'):
@@ -595,7 +600,7 @@ def stage_opening(shell, games, check):
         return
     name = g['name']
     print('== %s opening sequence (--opening) ==' % name)
-    moments = [(200, 'white hold'), (1500, 'logo shown'), (6200, 'title')]
+    moments = [(250, 'fade-in'), (1500, 'logo shown'), (6200, 'title')]
     shots = {}
     for ms, tag in moments:
         shot = os.path.join(OUT_DIR, 'mg-%s-open-%d.bmp' % (name, ms))
@@ -609,8 +614,8 @@ def stage_opening(shell, games, check):
                                  extra=['--opening', '--title-menu',
                                         '--shot-at', str(ms)])
         check(rc == 0, 'opening run @%d ms exit 0 (got %s)' % (ms, rc))
-        check('opening: logo_bg + logo_favo loaded' in log,
-              'opening assets loaded @%d ms' % ms)
+        check('opening: 6/6 layers loaded' in log,
+              'opening six layers loaded @%d ms' % ms)
         check("shot-at" in log, 'mid-run screenshot taken @%d ms' % ms)
         img = read_bmp32(shot) if os.path.isfile(shot) else None
         check(img is not None, 'opening frame @%d ms readable' % ms)
@@ -627,10 +632,10 @@ def stage_opening(shell, games, check):
                 if 400 <= xx <= 1400 and 380 <= yy <= 560:
                     logo += 1 if v < 720 else 0
         shots[ms] = (total, logo)
-    if 200 in shots:
-        check(shots[200][1] == 0,
-              'white hold @200 ms has no logo pixels (%d)' % shots[200][1])
-    if 1500 in shots:
+    if 250 in shots and 1500 in shots:
+        check(0 < shots[250][1] < shots[1500][1],
+              'logo fades in: few dark samples early (%d) and more at 1500 ms (%d)'
+              % (shots[250][1], shots[1500][1]))
         check(shots[1500][1] > 100,
               'logo visible @1500 ms (%d dark samples in the logo box)'
               % shots[1500][1])

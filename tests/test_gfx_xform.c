@@ -1,19 +1,22 @@
-/* test_gfx_xform.c -- 标题进场动画的两块底层：缩放直贴 + 脚本补间。
+/* test_gfx_xform.c -- 动画渲染的两块底层：缩放/旋转直贴 + 脚本补间。
  *
  *   bin/test_gfx_xform.exe
  *
- * 为什么有这个测试：开场 FAVORITE logo 的缩放参数是从**脚本**里读出来的
- * （`src/titleanim.h` 的 FVP_OPENANIM_VIEW_*，出处 `ref/title-scene.json`）。
+ * 为什么有这个测试：开场 FAVORITE logo 的缩放/旋转/位移参数是从**脚本**里读出来的
+ * （`src/openinganim.h` 的 FVP_OPEN_VIEW_*，出处 `ref/opening-scene.json`）。
  * 标题画面本身的进场是 **alpha 淡入 500 ms**（`FVP_TITLEANIM_FADE_*`），不用缩放。
  * 这里验证：
  *
  *   1. `gfx_draw_image_xform()` 在 scale=1000 / alpha=255 时与静态绘制
- *      **字节等价** —— 所以动画结束后标题与不做动画完全一样（冻结基线不受影响）；
+ *      **字节等价** —— 所以动画结束时画面与不做动画完全一样（冻结基线不受影响）；
  *   2. scale / alpha 真的生效（画出包围盒 = round(w*scale)，alpha=0 不画）；
  *   3. 用脚本里的参数建两条补间（alpha 0→255、scale 10000→1000，1400 ms，mode 3），
  *      验证 t=0 / t=700 / t=1400 的取值符合 mode 3 的缓出曲线，并且
  *      **t>=1400 后画出的画布与静态绘制逐字节相同**（这条补间属于**开场**
- *      FAVORITE logo 的 p1..p3 层；标题画面的进场是 500 ms 线性淡入，见下）。
+ *      FAVORITE logo 的 p1..p3 层；标题画面的进场是 500 ms 线性淡入，见下）；
+ *   4. `gfx_draw_image_op_xform()` 的 OP（脚本 PrimSetOP）轴心语义：
+ *      identity 时 OP 抵消、OP=左上角时与 xform 逐字节相同、OP=中心时围绕中心
+ *      缩放/旋转（0.5 倍 20x15、90° 后宽高互换、180° 位置尺寸不变）。
  */
 #include <math.h>
 #include <stdio.h>
@@ -22,6 +25,7 @@
 
 #include "../src/gfx.h"
 #include "../src/motion.h"
+#include "../src/openinganim.h"
 #include "../src/titleanim.h"
 
 static int g_fail = 0;
@@ -306,9 +310,9 @@ int main(void)
     free(base);
 
     printf("== 5. 脚本参数 + motion：t=0 / 700 / 1400 的取值（开场 FAVORITE logo）==\n");
-    CHECK(FVP_OPENANIM_VIEW_SCALE_FROM == 10000 &&
-              FVP_OPENANIM_VIEW_SCALE_TO == 1000 &&
-              FVP_OPENANIM_VIEW_MS == 1400,
+    CHECK(FVP_OPEN_VIEW_SCALE_FROM == 10000 &&
+              FVP_OPEN_VIEW_SCALE_TO == 1000 &&
+              FVP_OPEN_VIEW_MS == 1400,
           "开场 p1..p3 的缩放常量 = 10000→1000 / 1400 ms（脚本 MotionMoveS2）");
     CHECK(FVP_TITLEANIM_FADE_FROM == 0 && FVP_TITLEANIM_FADE_TO == 255 &&
               FVP_TITLEANIM_FADE_MS == 500,
@@ -317,13 +321,13 @@ int main(void)
     alpha_id = fvp_motion_add(&m, 255, FVP_TWEEN_ALPHA,
                               FVP_TITLEANIM_FADE_FROM, 0.0,
                               FVP_TITLEANIM_FADE_TO, 0.0,
-                              FVP_OPENANIM_VIEW_MS, 3, 0);
+                              FVP_OPEN_VIEW_MS, 3, 0);
     scale_id = fvp_motion_add(&m, 255, FVP_TWEEN_SCALE,
-                              FVP_OPENANIM_VIEW_SCALE_FROM,
-                              FVP_OPENANIM_VIEW_SCALE_FROM,
-                              FVP_OPENANIM_VIEW_SCALE_TO,
-                              FVP_OPENANIM_VIEW_SCALE_TO,
-                              FVP_OPENANIM_VIEW_MS, 3, 0);
+                              FVP_OPEN_VIEW_SCALE_FROM,
+                              FVP_OPEN_VIEW_SCALE_FROM,
+                              FVP_OPEN_VIEW_SCALE_TO,
+                              FVP_OPEN_VIEW_SCALE_TO,
+                              FVP_OPEN_VIEW_MS, 3, 0);
     CHECK(alpha_id > 0 && scale_id > 0, "两条补间都建起来了");
     CHECK(fvp_motion_active_count(&m) == 2, "两条补间都在跑");
     CHECK(fvp_motion_value(&m, alpha_id, &av, NULL) == 1 && av == 0.0,
@@ -373,6 +377,84 @@ int main(void)
     CHECK(base != NULL &&
           memcmp(base, canvas_of(g, &w, &h), len) == 0,
           "同样参数两次绘制逐字节相同");
+    free(base);
+
+    printf("== 8. OP 轴心变换（exe 0x42AF08/0x42B41F：最终位置 = prim + OP + R*S*(img-OP)）==\n");
+    /* identity：OP 抵消，等价于静态绘制 */
+    clear_canvas(g);
+    (void)gfx_draw_image_at(g, 1, 10, 10);
+    base = canvas_snapshot(g, &len);
+    CHECK(base != NULL, "snapshot F");
+    clear_canvas(g);
+    CHECK(gfx_draw_image_op_xform(g, 1, 10, 10, 123, 45, 1000, 1000, 0, 255) == 1,
+          "op-xform identity 返回 1");
+    other = canvas_snapshot(g, &len2);
+    CHECK(base != NULL && other != NULL && len == len2 &&
+              memcmp(base, other, len) == 0,
+          "identity 时 OP 任意值都抵消（与静态绘制逐字节相同）");
+    free(other);
+
+    /* OP = 素材左上角（img 头是 0,0 → OP=(0,0)）时与左上锚 xform 逐字节相同 */
+    clear_canvas(g);
+    (void)gfx_draw_image_xform(g, 1, 10, 10, 500, 500, 255);
+    base = canvas_snapshot(g, &len);
+    CHECK(base != NULL, "snapshot G");
+    clear_canvas(g);
+    (void)gfx_draw_image_op_xform(g, 1, 10, 10, 0, 0, 500, 500, 0, 255);
+    other = canvas_snapshot(g, &len2);
+    CHECK(base != NULL && other != NULL && len == len2 &&
+              memcmp(base, other, len) == 0,
+          "OP=左上角 时与 gfx_draw_image_xform 逐字节相同");
+    free(other);
+
+    /* OP = 素材中心（20,15）：0.5 倍缩放围绕中心，包围盒 20x15、中心不动 */
+    clear_canvas(g);
+    (void)gfx_draw_image_op_xform(g, 1, 10, 10, 20, 15, 500, 500, 0, 255);
+    CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1, "OP 中心 500‰ 有墨迹");
+    CHECK(bx1 - bx0 + 1 == 20 && by1 - by0 + 1 == 15,
+          "围绕中心缩到 20x15，实际 %dx%d", bx1 - bx0 + 1, by1 - by0 + 1);
+    CHECK(labs((long)(bx0 + bx1) - 59) <= 2 && labs((long)(by0 + by1) - 49) <= 2,
+          "缩放后中心仍在 (30,25) 附近（bbox 中心 %d,%d）",
+          (bx0 + bx1) / 2, (by0 + by1) / 2);
+
+    /* 180°：尺寸不变、位置不变（重采样会在边缘留下一圈过渡像素，
+     * 所以断言包围盒而不是逐字节）。 */
+    clear_canvas(g);
+    (void)gfx_draw_image_op_xform(g, 1, 10, 10, 20, 15, 1000, 1000, 1800, 255);
+    CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1, "180° 有墨迹");
+    CHECK(labs((long)bx0 - 10) <= 1 && labs((long)by0 - 10) <= 1 &&
+              bx1 - bx0 + 1 == IMG_W && by1 - by0 + 1 == IMG_H,
+          "绕中心旋转 180° 后位置/尺寸不变（bbox %d,%d %dx%d，允许 1 px "
+          "的重采样边界误差）",
+          bx0, by0, bx1 - bx0 + 1, by1 - by0 + 1);
+
+    /* 90°：包围盒宽高互换（40x30 → 30x40），中心仍不动 */
+    clear_canvas(g);
+    (void)gfx_draw_image_op_xform(g, 1, 10, 10, 20, 15, 1000, 1000, 900, 255);
+    CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1, "90° 有墨迹");
+    CHECK(bx1 - bx0 + 1 == 30 && by1 - by0 + 1 == 40,
+          "旋转 90° 后包围盒 30x40，实际 %dx%d", bx1 - bx0 + 1,
+          by1 - by0 + 1);
+    CHECK(labs((long)(bx0 + bx1) - 59) <= 2 && labs((long)(by0 + by1) - 49) <= 2,
+          "90° 旋转中心仍在 (30,25) 附近（bbox 中心 %d,%d）",
+          (bx0 + bx1) / 2, (by0 + by1) / 2);
+
+    /* alpha=0 不画；确定性 */
+    clear_canvas(g);
+    base = canvas_snapshot(g, &len);
+    CHECK(gfx_draw_image_op_xform(g, 1, 10, 10, 20, 15, 500, 500, 900, 0) == 0,
+          "op-xform alpha=0 返回 0");
+    other = canvas_snapshot(g, &len2);
+    CHECK(base != NULL && other != NULL && memcmp(base, other, len) == 0,
+          "op-xform alpha=0 画布未变");
+    free(other);
+    clear_canvas(g);
+    (void)gfx_draw_image_op_xform(g, 1, 12, 14, 20, 15, 750, 1250, 450, 200);
+    base = canvas_snapshot(g, &len);
+    clear_canvas(g);
+    (void)gfx_draw_image_op_xform(g, 1, 12, 14, 20, 15, 750, 1250, 450, 200);
+    CHECK(base != NULL && memcmp(base, canvas_of(g, &w, &h), len) == 0,
+          "op-xform 同样参数两次绘制逐字节相同");
     free(base);
 
     gfx_destroy(g);

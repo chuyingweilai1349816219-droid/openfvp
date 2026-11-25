@@ -196,15 +196,17 @@ SAVELIST_TEST = bin/test_savelist$(EXE)
 test_savelist: $(SAVELIST_TEST)
 
 # ---------------------------------------------------------------------------
-# 开场序列时间轴（logo 淡入 -> 停留 -> 淡出 -> 白场 -> 标题）
+# 开场 FAVORITE logo 序列（脚本时间轴：淡入 1200/1400 → 淡出 2500/3500 → 100 收尾）
 #   make test_openseq
 # ---------------------------------------------------------------------------
 OPENSEQ_TEST = bin/test_openseq$(EXE)
 
 test_openseq: $(OPENSEQ_TEST)
 
-$(OPENSEQ_TEST): tests/test_openseq.c src/openseq.c src/openseq.h | bin
-	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_openseq.c src/openseq.c $(LDFLAGS)
+$(OPENSEQ_TEST): tests/test_openseq.c src/openseq.c src/openseq.h \
+                 src/openinganim.h src/motion.c src/motion.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_openseq.c src/openseq.c \
+	    src/motion.c $(LDFLAGS)
 
 clean-openseq:
 	-rm -f $(OPENSEQ_TEST)

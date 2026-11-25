@@ -110,7 +110,7 @@ powershell -ExecutionPolicy Bypass -File scripts\capture-original.ps1 `
 
 ## 4. 原版启动序列（实测）
 
-1. FVP / FAVORITE logo 淡入淡出（约 10 s）；
+1. FVP / FAVORITE logo 淡入淡出（约 10 s）——**这是抓帧时间线上的目测值，已被脚本取代**：hcb 开场函数是 1200 ms 淡入 + 2500 ms 淡出 + 100 ms 收尾 = **3800 ms**，六层素材，白底淡出后露出的是已经建好的标题背景；见 [`docs/opening.md`](opening.md)（`ref/opening-scene.json` 是冻结基线）。抓帧看到的"约 10 s"应该把标题自身的逐元素淡入也算进去了；
 2. **标题画面**：天空背景 + 作品 logo + 右侧 5 项菜单 + 右下版权行，静止等待输入；
 3. 点 `New Game` → 白屏过渡 → 播 OP 影片（`movie/`），画面有 WMV 的模糊/放大特征；
 4. 影片段结束后引擎**再次自行退出（退出码 0，无消息框）**——原因未查，见 §6。

@@ -3950,6 +3950,109 @@ int gfx_draw_image_xform(Gfx *g, int slot, int x, int y, int scale_x1000,
     return 1;
 }
 
+/* 以脚本的 OP（+0x20/+0x22）为轴心做缩放 + 旋转 + alpha。
+ *
+ * 公式来自 exe（不是拟合）：
+ *   * 0x42AF08 `test BYTE PTR [edi+0x6],0x2`（OP 已设）→ 局部坐标取
+ *     `(图头 x − OP.x, 图头 y − OP.y)`（0x42AF1D/0x42AF2A）；
+ *   * 0x42B41F 同一分支的平移是 `prim.x + OP.x + 累加偏移`（0x42B429..0x42B441）；
+ *   * 0x446744 / 0x44674A / 0x446732 = D3DXMatrixScaling / Translation / Multiply，
+ *     0x446750 = D3DXMatrixRotationZ（角度 = +0x24 / 10 度）。
+ * 所以：**最终位置 = prim.xy + OP + R(angle)·S(scale)·(图头 xy − OP)**，
+ * 即在 OP 处缩放/旋转（identity 时 OP 抵消，回到"图头 xy + prim 偏移"）。
+ *
+ * 本站的矩形是轴对齐 + 位图旋转（rotate_rgba，Pillow 语义、expand），等价做法是：
+ * 把素材按 scale 放大后绕自身中心旋转，再把**旋转后的中心**放到变换后的中心位置。
+ */
+int gfx_draw_image_op_xform(Gfx *g, int slot, int x, int y, int op_x, int op_y,
+                            int scale_x1000, int scale_y1000, int angle_x10,
+                            int alpha)
+{
+    const uint8_t *compo = NULL;
+    const GfxImage *im;
+    int cw = 0;
+    int ch = 0;
+    double sx;
+    double sy;
+    int w;
+    int h;
+    int ow;
+    int oh;
+    double du;
+    double dv;
+    uint8_t *img;
+
+    if (g == NULL || alpha <= 0 || slot < 0 || slot >= GFX_GRAPH_MAX) {
+        return 0;
+    }
+    if (g->slot[slot].tex == NULL) {
+        return 0;
+    }
+    im = &g->slot[slot].tex->img;
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0) {
+        return 0;
+    }
+    if (compo == NULL || cw <= 0 || ch <= 0) {
+        return 0;
+    }
+    if (scale_x1000 == 1000 && scale_y1000 == 1000 && angle_x10 == 0) {
+        return gfx_draw_image_alpha(g, slot, x + im->x, y + im->y, alpha);
+    }
+    sx = (double)scale_x1000 / 1000.0;
+    sy = (double)scale_y1000 / 1000.0;
+    if (sx <= 0.0) {
+        sx = 1.0;
+    }
+    if (sy <= 0.0) {
+        sy = 1.0;
+    }
+    w = py_round((double)cw * sx);
+    h = py_round((double)ch * sy);
+    if (w <= 0 || h <= 0) {
+        return 0;
+    }
+    /* 素材中心相对 OP 的偏移，先缩放再旋转（y 轴向下的屏幕坐标）。 */
+    du = ((double)im->x + (double)cw / 2.0 - (double)op_x) * sx;
+    dv = ((double)im->y + (double)ch / 2.0 - (double)op_y) * sy;
+    if (angle_x10 != 0) {
+        double a = (double)angle_x10 / 10.0;
+        double ca = cos(a * 3.14159265358979323846 / 180.0);
+        double sa = sin(a * 3.14159265358979323846 / 180.0);
+        double ru = du * ca - dv * sa;
+        double rv = du * sa + dv * ca;
+
+        du = ru;
+        dv = rv;
+    }
+    img = resize_rgba(compo, cw, ch, w, h);
+    if (img == NULL) {
+        return 0;
+    }
+    ow = w;
+    oh = h;
+    if (angle_x10 != 0) {
+        uint8_t *rot =
+            rotate_rgba(img, w, h, -(double)angle_x10 / 10.0, &ow, &oh);
+
+        free(img);
+        if (rot == NULL) {
+            return 0;
+        }
+        img = rot;
+    }
+    {
+        double fcx = (double)x + (double)op_x + du;
+        double fcy = (double)y + (double)op_y + dv;
+
+        blit_sprite_alpha(g, py_round(fcx - (double)ow / 2.0),
+                          py_round(fcy - (double)oh / 2.0), ow, oh, img, 0,
+                          clampi(alpha, 0, 255));
+    }
+    free(img);
+    g->stats.sprites += 1;
+    return 1;
+}
+
 void gfx_fill_canvas(Gfx *g, int r, int gr, int b, int alpha)
 {
     int n;
