@@ -92,6 +92,22 @@ def main():
               '%s/over 平均差 %.3f 必须大于 measured/over %.3f'
               % (order, other if other is not None else -1, m if m else -1))
 
+    print('== 3.5 缩放：原版帧处在缩放动画的**终点**（1.0），不是 0.9/0.8 ==')
+    def find_scale(scale_name, blend='over'):
+        for c in cands:
+            if (c.get('scales') == scale_name and c['blend'] == blend
+                    and c['order'] == 'measured'):
+                return c['mean_abs']
+        return None
+
+    check(best.get('scales') == 'all-1.0',
+          '最优候选的缩放是 all-1.0（实际 %r）' % (best.get('scales'),))
+    for tag in ('final-900/800', 'from-1300/1600/2500/4000'):
+        other = find_scale(tag)
+        check(other is not None and m is not None and other > m,
+              '%s 的平均差 %.3f 必须大于 all-1.0 的 %.3f'
+              % (tag, other if other is not None else -1, m if m else -1))
+
     print('== 4. 预乘/加色都不如 over ==')
     for blend in ('premul', 'add'):
         other = find('measured', blend)

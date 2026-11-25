@@ -3,116 +3,387 @@
   "base": "black",
   "blend": "over",
   "mean_abs": 11.562,
-  "order": "measured"
+  "order": "measured",
+  "scales": "all-1.0"
  },
  "candidates": [
   {
    "base": "black",
    "blend": "over",
    "mean_abs": 11.562,
-   "order": "measured"
+   "order": "measured",
+   "scales": "all-1.0"
   },
   {
    "base": "white",
    "blend": "over",
    "mean_abs": 11.562,
-   "order": "measured"
+   "order": "measured",
+   "scales": "all-1.0"
   },
   {
    "base": "black",
    "blend": "over",
    "mean_abs": 12.257,
-   "order": "z-descending"
+   "order": "z-descending",
+   "scales": "all-1.0"
   },
   {
    "base": "white",
    "blend": "over",
    "mean_abs": 12.257,
-   "order": "z-descending"
+   "order": "z-descending",
+   "scales": "all-1.0"
   },
   {
    "base": "black",
    "blend": "over",
    "mean_abs": 13.632,
-   "order": "z-ascending"
+   "order": "z-ascending",
+   "scales": "all-1.0"
   },
   {
    "base": "white",
    "blend": "over",
    "mean_abs": 13.632,
-   "order": "z-ascending"
+   "order": "z-ascending",
+   "scales": "all-1.0"
   },
   {
    "base": "black",
    "blend": "premul",
    "mean_abs": 13.632,
-   "order": "z-ascending"
+   "order": "z-ascending",
+   "scales": "all-1.0"
   },
   {
    "base": "white",
    "blend": "premul",
    "mean_abs": 13.632,
-   "order": "z-ascending"
+   "order": "z-ascending",
+   "scales": "all-1.0"
   },
   {
    "base": "black",
    "blend": "add",
    "mean_abs": 17.816,
-   "order": "z-ascending"
+   "order": "z-ascending",
+   "scales": "all-1.0"
   },
   {
    "base": "black",
    "blend": "add",
    "mean_abs": 17.816,
-   "order": "z-descending"
+   "order": "z-descending",
+   "scales": "all-1.0"
   },
   {
    "base": "black",
    "blend": "add",
    "mean_abs": 17.816,
-   "order": "measured"
+   "order": "measured",
+   "scales": "all-1.0"
+  },
+  {
+   "base": "black",
+   "blend": "over",
+   "mean_abs": 30.901,
+   "order": "z-ascending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "over",
+   "mean_abs": 30.901,
+   "order": "z-ascending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "black",
+   "blend": "premul",
+   "mean_abs": 30.901,
+   "order": "z-ascending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "premul",
+   "mean_abs": 30.901,
+   "order": "z-ascending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "black",
+   "blend": "over",
+   "mean_abs": 32.006,
+   "order": "measured",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "over",
+   "mean_abs": 32.006,
+   "order": "measured",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "black",
+   "blend": "over",
+   "mean_abs": 32.011,
+   "order": "z-descending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "over",
+   "mean_abs": 32.011,
+   "order": "z-descending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "black",
+   "blend": "add",
+   "mean_abs": 32.515,
+   "order": "z-ascending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "black",
+   "blend": "add",
+   "mean_abs": 32.515,
+   "order": "z-descending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "black",
+   "blend": "add",
+   "mean_abs": 32.515,
+   "order": "measured",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "over",
+   "mean_abs": 34.607,
+   "order": "z-ascending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "white",
+   "blend": "premul",
+   "mean_abs": 34.607,
+   "order": "z-ascending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "premul",
+   "mean_abs": 35.233,
+   "order": "measured",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "premul",
+   "mean_abs": 35.233,
+   "order": "measured",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "black",
+   "blend": "premul",
+   "mean_abs": 35.434,
+   "order": "z-descending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "premul",
+   "mean_abs": 35.434,
+   "order": "z-descending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "over",
+   "mean_abs": 35.976,
+   "order": "measured",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "white",
+   "blend": "over",
+   "mean_abs": 36.363,
+   "order": "z-descending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "white",
+   "blend": "premul",
+   "mean_abs": 41.155,
+   "order": "measured",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "white",
+   "blend": "premul",
+   "mean_abs": 42.68,
+   "order": "z-descending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "over",
+   "mean_abs": 50.79,
+   "order": "z-ascending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "premul",
+   "mean_abs": 50.79,
+   "order": "z-ascending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "over",
+   "mean_abs": 52.159,
+   "order": "measured",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "over",
+   "mean_abs": 52.546,
+   "order": "z-descending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "add",
+   "mean_abs": 53.804,
+   "order": "z-ascending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "add",
+   "mean_abs": 53.804,
+   "order": "z-descending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "add",
+   "mean_abs": 53.804,
+   "order": "measured",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "premul",
+   "mean_abs": 57.338,
+   "order": "measured",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "black",
+   "blend": "premul",
+   "mean_abs": 58.863,
+   "order": "z-descending",
+   "scales": "final-900/800"
   },
   {
    "base": "white",
    "blend": "add",
    "mean_abs": 102.244,
-   "order": "z-ascending"
+   "order": "z-ascending",
+   "scales": "all-1.0"
   },
   {
    "base": "white",
    "blend": "add",
    "mean_abs": 102.244,
-   "order": "z-descending"
+   "order": "z-ascending",
+   "scales": "final-900/800"
   },
   {
    "base": "white",
    "blend": "add",
    "mean_abs": 102.244,
-   "order": "measured"
+   "order": "z-ascending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "add",
+   "mean_abs": 102.244,
+   "order": "z-descending",
+   "scales": "all-1.0"
+  },
+  {
+   "base": "white",
+   "blend": "add",
+   "mean_abs": 102.244,
+   "order": "z-descending",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "white",
+   "blend": "add",
+   "mean_abs": 102.244,
+   "order": "z-descending",
+   "scales": "from-1300/1600/2500/4000"
+  },
+  {
+   "base": "white",
+   "blend": "add",
+   "mean_abs": 102.244,
+   "order": "measured",
+   "scales": "all-1.0"
+  },
+  {
+   "base": "white",
+   "blend": "add",
+   "mean_abs": 102.244,
+   "order": "measured",
+   "scales": "final-900/800"
+  },
+  {
+   "base": "white",
+   "blend": "add",
+   "mean_abs": 102.244,
+   "order": "measured",
+   "scales": "from-1300/1600/2500/4000"
   },
   {
    "base": "black",
    "blend": "premul",
    "mean_abs": 507.207,
-   "order": "measured"
+   "order": "measured",
+   "scales": "all-1.0"
   },
   {
    "base": "white",
    "blend": "premul",
    "mean_abs": 507.207,
-   "order": "measured"
+   "order": "measured",
+   "scales": "all-1.0"
   },
   {
    "base": "black",
    "blend": "premul",
    "mean_abs": 529.616,
-   "order": "z-descending"
+   "order": "z-descending",
+   "scales": "all-1.0"
   },
   {
    "base": "white",
    "blend": "premul",
    "mean_abs": 529.616,
-   "order": "z-descending"
+   "order": "z-descending",
+   "scales": "all-1.0"
   }
  ],
  "note": "标题背景四层合成模型的候选扫描（用原版帧的纯背景区域验证）；由 scripts/analyze-title-bg-blend.py 生成",

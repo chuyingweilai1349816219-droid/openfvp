@@ -113,6 +113,28 @@ def main():
           '四层 Z 跨度 200（实际 %s）'
           % (max(zmap.values()) - min(zmap.values()) if zmap else None))
 
+    print('== 5. 背景层的缩放动画（MotionMoveS2）与 logo 淡入 ==')
+    motions = ir.get('layer_motion') or []
+    s2 = {}
+    for m in motions:
+        if (m['name'] == 'MotionMoveS2' and len(m['args']) >= 5
+                and 258 <= m['prim'] <= 261):
+            s2[m['prim']] = (m['args'][1], m['args'][2])
+    check(s2 == {258: (1300, 900), 259: (1600, 800), 260: (2500, 800),
+                 261: (4000, 800)},
+          '五彩斑斓背景层缩放动画 from→to：A 1300→900 / B 1600→800 / '
+          'C 2500→800 / D 4000→800（实际 %s）' % s2)
+    # 同一图元可能有多段淡入淡出；这里取**第一次**（开场的淡入）
+    alpha = {}
+    for m in motions:
+        if m['name'] == 'MotionAlpha' and len(m['args']) >= 4:
+            alpha.setdefault(m['prim'], (m['args'][1], m['args'][2],
+                                         m['args'][3]))
+    for prim in (255, 256, 257):
+        check(alpha.get(prim) == (0, 255, 1400),
+              'logo 图元 %d 首次淡入 0→255 / 1400 ms（实际 %r）'
+              % (prim, alpha.get(prim)))
+
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1

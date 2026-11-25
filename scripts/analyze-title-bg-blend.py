@@ -42,6 +42,17 @@ ORDERS = {
     'measured': ['title_bg1_A', 'title_bg1_C', 'title_bg1_D', 'title_bg1_B'],
 }
 BLENDS = ['over', 'premul', 'add']
+# 缩放候选：脚本里背景层有 MotionMoveS2(from, to) 的缩放动画
+# （0x59143 起：A 1300→900、B 1600→800、C 2500→800、D 4000→800），
+# 这里把"动画终点"和"动画起点"都当候选，看原版帧处在哪个状态。
+SCALES = {
+    'all-1.0': {'title_bg1_A': 1000, 'title_bg1_B': 1000, 'title_bg1_C': 1000,
+                'title_bg1_D': 1000},
+    'final-900/800': {'title_bg1_A': 900, 'title_bg1_B': 800, 'title_bg1_C': 800,
+                      'title_bg1_D': 800},
+    'from-1300/1600/2500/4000': {'title_bg1_A': 1300, 'title_bg1_B': 1600,
+                                 'title_bg1_C': 2500, 'title_bg1_D': 4000},
+}
 
 
 def read_index(path):
@@ -108,7 +119,7 @@ def place(canvas, img, x, y):
     dst[...] = img[sy0:sy1, sx0:sx1]
 
 
-def composite(layers, order, blend, base):
+def composite(layers, order, blend, base, scales=None):
     import numpy as np
 
     canvas = np.zeros((H, W, 4), dtype=np.float32)
@@ -116,8 +127,32 @@ def composite(layers, order, blend, base):
     canvas[..., 3] = 255.0
     for name in order:
         img = layers[name]
+        if scales is not None and scales.get(name, 1000) != 1000:
+            img = _scale_layer(img, scales[name] / 1000.0)
         canvas = _over(canvas, img, blend)
     return canvas
+
+
+def _scale_layer(img, s):
+    """绕屏幕中心缩放一层（素材头坐标 = 设计画布坐标，中心 (960,540)+裁剪量）。"""
+    import numpy as np
+    from PIL import Image
+
+    h, w = img.shape[:2]
+    nw, nh = max(1, int(round(w * s))), max(1, int(round(h * s)))
+    src = img.astype(np.uint8)
+    small = np.asarray(Image.fromarray(src, 'RGBA').resize((nw, nh),
+                                                           Image.BILINEAR),
+                       dtype=np.float32)
+    out = np.zeros_like(img)
+    cx, cy = W / 2.0, H / 2.0
+    nx = int(round(cx + (0 - cx) * s))
+    ny = int(round(cy + (0 - cy) * s))
+    sx0, sy0 = max(0, -nx), max(0, -ny)
+    sx1, sy1 = min(nw, W - nx), min(nh, H - ny)
+    if sx1 > sx0 and sy1 > sy0:
+        out[ny + sy0:ny + sy1, nx + sx0:nx + sx1] = small[sy0:sy1, sx0:sx1]
+    return out
 
 
 def _over(dst, src, blend):
@@ -181,12 +216,14 @@ def main(argv=None):
     for order_name, order in ORDERS.items():
         for blend in BLENDS:
             for base_name, base in (('black', 0.0), ('white', 255.0)):
-                canvas = composite(layers, order, blend, base)
-                # 素材是 BGRA，PIL 读出来是 RGB → 比之前翻转通道
-                rgb = canvas[..., 0:3][..., ::-1]
-                m = mean_abs(rgb, theirs, mask)
-                rows.append({'order': order_name, 'blend': blend,
-                             'base': base_name, 'mean_abs': round(m, 3)})
+                for scale_name, scales in SCALES.items():
+                    canvas = composite(layers, order, blend, base, scales)
+                    # 素材是 BGRA，PIL 读出来是 RGB → 比之前翻转通道
+                    rgb = canvas[..., 0:3][..., ::-1]
+                    m = mean_abs(rgb, theirs, mask)
+                    rows.append({'order': order_name, 'blend': blend,
+                                 'base': base_name, 'scales': scale_name,
+                                 'mean_abs': round(m, 3)})
     rows.sort(key=lambda r: r['mean_abs'])
 
     result = {

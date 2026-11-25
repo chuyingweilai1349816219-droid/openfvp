@@ -75,6 +75,7 @@ def extract(path, argc_table, region):
     inputs = []           # {cmd, name, pc}
     prim_ops = []         # {prim, cmd, args, pc}  在标题区域内对图元的操作
     layer_z = []          # {prim, z, pc}  PrimSetZ 的字面量实参（背景层叠放顺序）
+    motion = []           # {cmd, prim, args, pc} 标题区里对背景/logo 图元的动画调用
 
     for i, pc in enumerate(order):
         op, name, args = code.instr[pc]
@@ -93,6 +94,20 @@ def extract(path, argc_table, region):
             if region[0] <= pc < region[1]:
                 inputs.append({'cmd': args[0], 'name': INPUT_CMDS[args[0]],
                                'pc': '0x%08x' % pc})
+        if name == 'syscall' and args and i >= 1:
+            cid = args[0]
+            e = argc_table.get(cid) or {}
+            nm = e.get('name') or ''
+            if nm.startswith('Motion') and region[0] <= pc < region[1] \
+                    and e.get('argc', 0) > 0 and i >= e['argc']:
+                vals = []
+                for k in range(e['argc'], 0, -1):
+                    a = code.instr[order[i - k]][2]
+                    vals.append(a[0] if a else None)
+                # 只收标题图层/logo 图元的动画（250..261），其余区域的不进基线
+                if vals and isinstance(vals[0], int) and 250 <= vals[0] <= 261:
+                    motion.append({'cmd': cid, 'name': nm, 'prim': vals[0],
+                                   'args': vals, 'pc': '0x%08x' % pc})
         if name == 'syscall' and args and args[0] == 91 and i >= 2:
             # PrimSetZ(prim, z)：两个字面量可以直接读出来，用来定背景层叠放顺序
             a1 = code.instr[order[i - 2]][2]
@@ -140,6 +155,7 @@ def extract(path, argc_table, region):
         'prim_ops_in_title_region': prim_ops,
         'prim_hit_ids': sorted({p['prim'] for p in prim_hit}),
         'layer_z': layer_z,
+        'layer_motion': motion,
     }
 
 
