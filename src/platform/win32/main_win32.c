@@ -1948,16 +1948,63 @@ static void title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
         return;
     }
     if (gfx != NULL && title_bg_anim_on) {
-        FvpTitleBgState st;
         int elapsed = (int)((title_bg_now - title_bg_t0) * 1000.0 + 0.5);
 
-        fvp_titlebg_state(title_bg_game, elapsed, &st);
-        if (st.animated && prof != NULL && st.scale_x1000 > 0 &&
-            st.scale_y1000 > 0) {
-            (void)gfx_draw_image_zoomed(gfx, TITLE_BG_SLOT, st.scale_x1000,
-                                        st.scale_y1000, prof->client_w,
-                                        prof->client_h);
-            return;
+        if (fvp_titlebg_uses_layers(title_bg_game) && prof != NULL) {
+            /* 五彩斑斓：四层各自 path A/B（脚本 MotionMoveS2 + MotionMoveR） */
+            GfxAffineLayer layers[FVP_TITLEBG_MAX_LAYERS];
+            int n = fvp_titlebg_layer_count(title_bg_game);
+            int li;
+            int cnt = 0;
+
+            for (li = 0; li < n; ++li) {
+                const FvpTitleBgLayerDef *def =
+                    fvp_titlebg_layer_def(title_bg_game, li);
+                FvpTitleBgLayerState lst;
+                GfxAffineLayer *L;
+
+                if (def == NULL ||
+                    !fvp_titlebg_layer_state(title_bg_game, li, elapsed,
+                                             &lst)) {
+                    continue;
+                }
+                L = &layers[cnt++];
+                memset(L, 0, sizeof *L);
+                L->slot = (def->slot_tag == 0)
+                              ? TITLE_BG_SLOT
+                              : TITLE_OVL_SLOT + def->slot_tag - 1;
+                L->img_x = def->img_x;
+                L->img_y = def->img_y;
+                L->op_x = def->op_x;
+                L->op_y = def->op_y;
+                L->anchor_center = def->anchor_center;
+                if (def->anchor_center) {
+                    L->anchor_x = prof->client_w / 2;
+                    L->anchor_y = prof->client_h / 2;
+                } else {
+                    L->anchor_x = def->op_x;
+                    L->anchor_y = def->op_y;
+                }
+                L->scale_x1000 = lst.scale_x1000;
+                L->scale_y1000 = lst.scale_y1000;
+                L->angle_units = lst.angle_units;
+                L->alpha = 255;
+            }
+            if (cnt > 0 &&
+                gfx_draw_affine_layers(gfx, layers, cnt, 8)) {
+                return;
+            }
+        } else {
+            FvpTitleBgState st;
+
+            fvp_titlebg_state(title_bg_game, elapsed, &st);
+            if (st.animated && prof != NULL && st.scale_x1000 > 0 &&
+                st.scale_y1000 > 0) {
+                (void)gfx_draw_image_zoomed(gfx, TITLE_BG_SLOT,
+                                            st.scale_x1000, st.scale_y1000,
+                                            prof->client_w, prof->client_h);
+                return;
+            }
         }
     }
     if (prof != NULL && gfx_image_size(gfx, TITLE_BG_SLOT, &bsw, &bsh) &&
@@ -2973,11 +3020,15 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     title_profile != NULL ? title_profile->game : NULL);
                 title_bg_t0 = now_sec();
                 fvp_logf("title: bg zoom started (%s, %d ms; script "
-                         "MotionMoveS2)",
+                         "MotionMoveS2%s)",
                          title_bg_game == FVP_TITLEBG_GAME_HOSHIMEMO
                              ? "hoshimemo 2000->1000/40000"
-                             : "iroseka: not implemented, static",
-                         fvp_titlebg_total_ms(title_bg_game));
+                             : "iroseka 4 layers 1300..4000->800..900, "
+                               "7.5..62.5deg->0/25000",
+                         fvp_titlebg_total_ms(title_bg_game),
+                         fvp_titlebg_uses_layers(title_bg_game)
+                             ? "+MotionMoveR, path A/B"
+                             : "");
             }
             if (opts.opening) {
                 int i;

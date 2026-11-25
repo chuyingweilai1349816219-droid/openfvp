@@ -3978,6 +3978,179 @@ static uint8_t *zoom_warp_rgba(const uint8_t *src, int sw, int sh, int dw,
     return dst;
 }
 
+/* 逐层仿射合成（见 gfx.h 的 GfxAffineLayer）：
+ *   屏幕 = 锚点 + S·R·(图头 + 源像素 − OP)
+ * 内部先合成到 (w/div)×(h/div) 的缓冲，再双线性放大回画布。 */
+int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
+                           int div)
+{
+    int w;
+    int h;
+    uint8_t *comp;
+    int i;
+    int ok = 0;
+
+    if (g == NULL || layers == NULL || n <= 0) {
+        return 0;
+    }
+    if (div < 1) {
+        div = 1;
+    }
+    w = (g->w + div - 1) / div;
+    h = (g->h + div - 1) / div;
+    comp = (uint8_t *)malloc((size_t)w * (size_t)h * 4u);
+    if (comp == NULL) {
+        return 0;
+    }
+    memset(comp, 0, (size_t)w * (size_t)h * 4u);
+    for (i = 0; i < n; ++i) {
+        const GfxAffineLayer *L = &layers[i];
+        const uint8_t *compo = NULL;
+        int cw = 0;
+        int ch = 0;
+        double s;
+        double rad;
+        double co;
+        double si;
+        float a;
+        float b;
+        float c0;
+        float d0;
+        int y;
+
+        if (L->scale_x1000 <= 0 || L->scale_y1000 <= 0) {
+            continue;
+        }
+        if (slot_compose(g, L->slot, &compo, &cw, &ch) != 0 || compo == NULL ||
+            cw < 2 || ch < 2) {
+            continue;
+        }
+        s = (double)L->scale_x1000 / 1000.0;
+        rad = (double)L->angle_units * 3.141592653589793 / 3600.0;
+        co = cos(rad);
+        si = sin(rad);
+        /* 屏幕点 q → 源像素 p：p = R(−θ)·(q − 锚点)/s + OP − 图头 */
+        a = (float)(co / s);
+        b = (float)(si / s);
+        c0 = (float)L->op_x - (float)L->img_x;
+        d0 = (float)L->op_y - (float)L->img_y;
+        for (y = 0; y < h; ++y) {
+            float dy = (float)(((double)y + 0.5) * (double)div -
+                               (double)L->anchor_y);
+            uint8_t *orow = comp + (size_t)y * (size_t)w * 4u;
+            int x;
+
+            for (x = 0; x < w; ++x) {
+                float dx = (float)(((double)x + 0.5) * (double)div -
+                                   (double)L->anchor_x);
+                float ux = a * dx + b * dy + c0;
+                float uy = -b * dx + a * dy + d0;
+                int ix;
+                int iy;
+                int wx;
+                int wy;
+                int iwx;
+                int iwy;
+                const uint8_t *p00;
+                const uint8_t *p10;
+                const uint8_t *p01;
+                const uint8_t *p11;
+                int sr;
+                int sg;
+                int sb;
+                int sa;
+                uint8_t *o;
+
+                if (ux < 0.0f || uy < 0.0f || ux >= (float)(cw - 1) ||
+                    uy >= (float)(ch - 1)) {
+                    continue;
+                }
+                ix = (int)ux;
+                iy = (int)uy;
+                wx = (int)((ux - (float)ix) * 256.0f);
+                wy = (int)((uy - (float)iy) * 256.0f);
+                if (wx > 255) {
+                    wx = 255;
+                }
+                if (wy > 255) {
+                    wy = 255;
+                }
+                iwx = 256 - wx;
+                iwy = 256 - wy;
+                p00 = compo + ((size_t)iy * (size_t)cw + (size_t)ix) * 4u;
+                p10 = p00 + 4u;
+                p01 = p00 + (size_t)cw * 4u;
+                p11 = p01 + 4u;
+                sr = (((int)p00[0] * iwx + (int)p10[0] * wx) >> 8) * iwy +
+                     (((int)p01[0] * iwx + (int)p11[0] * wx) >> 8) * wy;
+                sg = (((int)p00[1] * iwx + (int)p10[1] * wx) >> 8) * iwy +
+                     (((int)p01[1] * iwx + (int)p11[1] * wx) >> 8) * wy;
+                sb = (((int)p00[2] * iwx + (int)p10[2] * wx) >> 8) * iwy +
+                     (((int)p01[2] * iwx + (int)p11[2] * wx) >> 8) * wy;
+                sa = (((int)p00[3] * iwx + (int)p10[3] * wx) >> 8) * iwy +
+                     (((int)p01[3] * iwx + (int)p11[3] * wx) >> 8) * wy;
+                sr >>= 8;
+                sg >>= 8;
+                sb >>= 8;
+                sa = (sa >> 8) * L->alpha / 255;
+                if (sa <= 0) {
+                    continue;
+                }
+                o = orow + (size_t)x * 4u;
+                if (sa >= 255) {
+                    o[0] = (uint8_t)sr;
+                    o[1] = (uint8_t)sg;
+                    o[2] = (uint8_t)sb;
+                    o[3] = 255;
+                } else {
+                    int da = o[3];
+                    int ia = 255 - sa;
+                    int oa = sa + (da * ia + 127) / 255;
+                    int cc;
+
+                    if (oa <= 0) {
+                        continue;
+                    }
+                    o[0] = (uint8_t)(((sr * sa + o[0] * da * ia / 255) +
+                                      oa / 2) / oa);
+                    o[1] = (uint8_t)(((sg * sa + o[1] * da * ia / 255) +
+                                      oa / 2) / oa);
+                    o[2] = (uint8_t)(((sb * sa + o[2] * da * ia / 255) +
+                                      oa / 2) / oa);
+                    o[3] = (uint8_t)oa;
+                    (void)cc;
+                }
+            }
+        }
+        ok = 1;
+    }
+    if (ok) {
+        if (div == 1) {
+            GfxPrim tmp;
+
+            memset(&tmp, 0, sizeof tmp);
+            tmp.alpha = 255;
+            blit_sprite(g, 0, 0, g->w, g->h, comp, 0, &tmp);
+        } else {
+            uint8_t *img = zoom_warp_rgba(comp, w, h, g->w, g->h,
+                                          1000 * div, 1000 * div);
+            if (img != NULL) {
+                GfxPrim tmp;
+
+                memset(&tmp, 0, sizeof tmp);
+                tmp.alpha = 255;
+                blit_sprite(g, 0, 0, g->w, g->h, img, 0, &tmp);
+                free(img);
+            } else {
+                ok = 0;
+            }
+        }
+    }
+    free(comp);
+    g->stats.sprites += 1;
+    return ok;
+}
+
 int gfx_draw_image_zoomed(Gfx *g, int slot, int scale_x1000, int scale_y1000,
                           int dw, int dh)
 {

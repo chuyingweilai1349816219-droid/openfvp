@@ -8,7 +8,7 @@
   A. 星空 `--title-bg-anim --title-anim --shot-at 2200`  → 背景放大中（约 1.9×）
   B. 星空 `--title-bg-anim --title-anim --shot-at 41200` → 40 s 动画结束 + 进场结束
   C. 星空静态标题（不开动画）                             → 基线口径
-  D. 五彩斑斓 `--title-bg-anim` → 该作背景动画**尚未实现**，日志必须写明 static
+  D. 五彩斑斓 `--title-bg-anim` → 四层 path A/B 动画（见 4b 段）
 
 断言：
   1. **A != C**（mean_abs > 10、差异像素 > 10%）：背景缩放真的在画面上生效；
@@ -18,7 +18,9 @@
   4. 日志：A/B 有 `bg zoom started (hoshimemo`；D 有 `iroseka: not implemented, static`；
   5. 平滑度：`--shot-every 60` 抓 4 s 序列，相邻帧差 min > 0.02（没有
      "卡住不动"）、max < 3·median+1（没有跳变）；
-  6. 性能：A 那次的外壳 fps ≥ 45（逐帧双线性重算，实测 ~50-59）。
+  6. 性能：A 那次的外壳 fps ≥ 45（逐帧双线性重算，实测 ~50-59）；
+  7. **五彩斑斓四层**（path A/B）：动画中 vs 静态 mean_abs > 10、fps ≥ 35
+     （半分辨率合成）、日志写明四层/path A/B、相邻帧差同样没有平台/跳变。
 
 缺 `bin/fvp.exe` 或游戏目录时 SKIP 并返回 0。
 
@@ -102,17 +104,18 @@ def main():
         os.makedirs(OUT)
 
     shots = {k: os.path.join(OUT, 'bgzoom-%s.bmp' % k)
-             for k in ('mid', 'done', 'static', 'iro')}
+             for k in ('mid', 'done', 'static', 'iro', 'iro_static')}
     logs = {k: os.path.join(OUT, 'bgzoom-%s.log' % k)
-            for k in ('mid', 'done', 'static', 'iro')}
+            for k in ('mid', 'done', 'static', 'iro', 'iro_static')}
     plan = [
         ('mid', HOSHI, ['--title-bg-anim', '--title-anim', '--shot-at', '2200'],
          2.9),
         ('done', HOSHI, ['--title-bg-anim', '--title-anim', '--shot-at',
                          '41200'], 41.8),
         ('static', HOSHI, ['--shot-at', '1600'], 2.2),
-        ('iro', IRO, ['--title-bg-anim', '--title-anim', '--shot-at', '2200'],
-         2.9),
+        ('iro', IRO, ['--title-bg-anim', '--title-anim', '--shot-at', '3000'],
+         3.8),
+        ('iro_static', IRO, ['--shot-at', '1600'], 2.2),
     ]
     for key, game, extra, seconds in plan:
         for p in (shots[key], logs[key]):
@@ -155,10 +158,34 @@ def main():
     check('bg zoom started (hoshimemo' in done_log,
           'done 打印 bg zoom started (hoshimemo ...)')
     iro_log = read_log(logs['iro'])
-    check('iroseka: not implemented, static' in iro_log,
-          '五彩斑斓：--title-bg-anim 明确记为"尚未实现、static"')
+    check('not implemented' not in iro_log,
+          '五彩斑斓：背景动画已实现（不再打印 not implemented）')
     check('bg zoom started (hoshimemo' not in iro_log,
           '五彩斑斓没有跑星空的时间轴')
+    check('bg zoom started (iroseka 4 layers' in iro_log,
+          '五彩斑斓跑自己的四层时间轴')
+
+    print('== 4b. 五彩斑斓：四层 path A/B 背景动画 ==')
+    iro_mid = bmp_pixels(shots['iro'])
+    iro_static = bmp_pixels(shots['iro_static'])
+    check(iro_mid is not None and iro_static is not None,
+          '五彩两张 BMP 都读得出来')
+    iro_log = read_log(logs['iro'])
+    check('bg zoom started (iroseka 4 layers' in iro_log,
+          '日志打印 iroseka 四层路径')
+    check('path A/B' in iro_log, '日志注明 path A/B')
+    if iro_mid is not None and iro_static is not None:
+        m_s, p_s = mean_abs(iro_mid, iro_static)
+        print('  iroseka mid vs static mean_abs=%.3f changed=%.2f%%'
+              % (m_s, p_s))
+        check(m_s > 10.0,
+              '五彩：动画中 vs 静态 mean_abs > 10（实际 %.2f）' % m_s)
+        check(p_s > 10.0, '五彩：差异像素 > 10%%（实际 %.2f%%）' % p_s)
+        m = re.search(r'\(([0-9.]+) fps\)', iro_log)
+        iro_fps = int(float(m.group(1))) if m else -1
+        print('  iroseka fps=%s' % iro_fps)
+        check(iro_fps >= 35,
+              '五彩：四层合成时 fps ≥ 35（实际 %s；半分辨率合成）' % iro_fps)
 
     print('== 5. 平滑度：抓 4 s 帧序列，相邻帧差不能有平台/尖峰 ==')
     seq_dir = os.path.join(OUT, 'bgzseq')
@@ -194,6 +221,39 @@ def main():
     else:
         check(False, '相邻帧差算不出来')
 
+    print('== 5b. 五彩斑斓的平滑度序列 ==')
+    iro_seq = os.path.join(OUT, 'bgzseq-iro')
+    os.makedirs(iro_seq, exist_ok=True)
+    for f in os.listdir(iro_seq):
+        if f.endswith('.bmp'):
+            os.remove(os.path.join(iro_seq, f))
+    iro_seq_log = os.path.join(OUT, 'bgzseq-iro.log')
+    rc = run_shell(IRO, '', iro_seq_log,
+                   ['--title-bg-anim', '--title-anim', '--shot-every', '60',
+                    '--shot-div', '4', '--shot-prefix',
+                    os.path.join(iro_seq, 'g')], 4.6)
+    check(rc == 0, '五彩抓帧序列外壳退出码 0（实际 %s）' % rc)
+    inames = sorted(f for f in os.listdir(iro_seq) if f.endswith('.bmp'))
+    check(len(inames) >= 30, '五彩抓到足够多的帧（%d 张，>=30）'
+          % len(inames))
+    iframes = [bmp_pixels(os.path.join(iro_seq, f)) for f in inames]
+    iframes = [f for f in iframes if f is not None]
+    idiffs = []
+    for a, b in zip(iframes, iframes[1:]):
+        d, _ = mean_abs(a, b)
+        idiffs.append(d)
+    if idiffs:
+        ids = sorted(idiffs)
+        imed = ids[len(ids) // 2]
+        print('  五彩相邻帧差: min=%.4f median=%.4f max=%.4f'
+              % (ids[0], imed, ids[-1]))
+        check(ids[0] > 0.01,
+              '五彩：没有卡住的相邻帧（min %.4f > 0.01）' % ids[0])
+        check(ids[-1] < imed * 3.0 + 1.0,
+              '五彩：没有突兀跳变（max %.4f）' % ids[-1])
+    else:
+        check(False, '五彩相邻帧差算不出来')
+
     print('== 6. 性能（≥45 fps；带缓存的逐帧重算）==')
     m = re.search(r'\(([0-9.]+) fps\)', mid_log)
     fps = int(float(m.group(1))) if m else -1
@@ -203,8 +263,9 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 星空标题背景按脚本 2000→1000/40 s 缩放（缓存后 ~%d fps），'
-          '动画结束与静态帧逐字节相同；五彩斑斓明确记为未实现' % fps)
+    print('\nOK: 星空 2000→1000/40 s（~%d fps，结束与静态逐字节相同）；'
+          '五彩四层 path A/B 缩放+旋转（~%d fps，半分辨率合成，'
+          '动画中与静态 mean_abs %.2f）' % (fps, iro_fps, m_s))
     return 0
 
 

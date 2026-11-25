@@ -394,6 +394,30 @@ int gfx_draw_image_cropped_scaled(Gfx *g, int slot, int dx, int dy, int dw,
 int gfx_draw_image_zoomed(Gfx *g, int slot, int scale_x1000, int scale_y1000,
                           int dw, int dh);
 
+/* 标题背景的**逐层仿射合成**（ref/exe-rs-transform.json 的 path A/B）：
+ *   屏幕 = 锚点 + S·R·(图头 + 源像素 − OP)
+ *   anchor_center = 1 → 锚点 = 画面中心（path A，PrimSetRS 设过）；
+ *   anchor_center = 0 → 锚点 = OP（path B）。旋转角单位 0.05°。
+ * div = 1 全分辨率合成；div = 2 半分辨率合成后双线性放大（性能折中，
+ * 只用于引擎侧标题背景动画，不参与像素基线）。 */
+typedef struct GfxAffineLayer {
+    int slot;
+    int img_x;
+    int img_y;
+    int op_x;
+    int op_y;
+    int anchor_x;   /* 锚点（画面坐标）；anchor_center=1 时由调用方填画面中心 */
+    int anchor_y;
+    int anchor_center;
+    int scale_x1000;
+    int scale_y1000;
+    int angle_units;
+    int alpha;
+} GfxAffineLayer;
+
+int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
+                           int div);
+
 /* 把图形槽里的图缩放到 (x,y,w,h) 贴上去（存档预览缩略图用）。 */
 int gfx_draw_image_scaled(Gfx *g, int slot, int x, int y, int w, int h);
 int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
