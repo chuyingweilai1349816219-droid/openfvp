@@ -65,6 +65,7 @@
 | [win32-shell.md](win32-shell.md) | Win32 桌面运行器：用法、按键、帧循环与上屏路径、性能与已知限制 |
 | [android-shell.md](android-shell.md) | Android 外壳与构建流水线（能装能跑，渲染仍是占位，非当前主线） |
 | [roadmap.md](roadmap.md) | 阶段划分、阶段 0 的结论、关键技术风险与版本目标 |
+| [status.md](status.md) | **收尾对账**：七项目标的完成度、六个缺口的现状、可复核的数字、下一步清单与已知限制 |
 | [animation-baseline.md](animation-baseline.md) | 动画/时间模型的验收基线设计：哪些旧数字会失效、改用哪三组自洽断言、为什么在拿到实机对照前不默认开时间模型 |
 
 ---
