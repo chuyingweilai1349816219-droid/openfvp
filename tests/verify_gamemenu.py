@@ -115,7 +115,7 @@ def main():
         lit = 0
         stride = w * 4
         for y in range(280, 620, 3):
-            row = off + y * stride
+            row = off + (h - 1 - y) * stride  # BMP 自下而上
             for x in range(840, 1120, 3):
                 p = row + x * 4
                 if data[p] + data[p + 1] + data[p + 2] > 120:

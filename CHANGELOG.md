@@ -53,6 +53,20 @@
 
 ### 新增
 
+- **② 游戏内菜单的三个动作变成真动作（SAVE/LOAD/OPTION）**
+  - `SAVE`：模板槽 + 当前画面写一份真实存档，只写 `--save-preview` 指定的路径，
+    不碰游戏 `save/`（实测写出 616,572 B、时间戳 2026-11-25）
+  - `LOAD`：先扫描 `save/sNNN.bin` 再打开列表（实测 6 槽与磁盘一致），真读档仍是
+    部分恢复（§4.6）
+  - `OPTION`：只读设置面板（主音量/文本速度/跳过模式当前值），不做可写设置
+  - 新增 `--menu-pick N` 自动激活第 N 项（截图/门禁用）
+  - 新门禁 `tests/verify_menu_actions.py`（run_all 42 → 43 步）：SAVE 文件大小/年份、
+    LOAD 槽数与磁盘一致、OPTION 面板墨迹 7979 采样
+  - 修两个门禁的 BMP 行序错误：我们的写出器是自下而上，读取时必须按 `h-1-y` 翻转
+    （`verify_gamemenu` 之前靠"菜单在画面中部"碰巧通过）
+
+### 新增（音频）
+
 - **⑤ 三级音量链抽成纯函数 + 40 项单测**
   - 新增 `float fvp_snd_gain_calc(slot_vol, master_vol, type_vol, silent)`：
     有效增益 = 槽/100 × 主/100 × 类型/100，夹到 [0,1]，silent 恒 0

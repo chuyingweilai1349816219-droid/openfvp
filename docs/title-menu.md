@@ -491,8 +491,13 @@ iroseka 的菜单是深蓝衬线字。用 `scripts/identify-title-font.py` 把�
 - 外壳（`src/platform/win32/main_win32.c`）：游戏中按 **ESC** 打开/关闭，
   ↑/↓ 或鼠标移动选行，Enter/左键确认；画法是**压暗背景 + 居中列出 5 项 + hover 高亮**，
   文字复用标题菜单字库（`--title-font`，没有就退回位图字体），左上角常驻 `ESC: close`；
-- 动作：`TITLE` 回到标题画面、`QUIT` 退出进程；`SAVE`/`LOAD`/`OPTION` 目前只记日志
-  （游戏内存档/设置界面还没做，日志里明确写 stub，不假装可用）；
+- 动作（2026-11-25 起都是**真动作**）：
+  * `SAVE`：用模板槽 + 当前画面写一份**真实存档**，但只写到 `--save-preview`
+    指定的路径，**绝不写进游戏自己的 `save/`**（日志里明说 game save dir untouched）；
+  * `LOAD`：先扫描 `save/sNNN.bin` 再打开存档列表（实测 6 个槽与磁盘一致）；
+    真正的"读档"仍是部分恢复，见 `docs/save-snapshot.md` §4.6；
+  * `OPTION`：只读设置面板（主音量/文本速度/跳过模式当前值），不做可写设置；
+  * `TITLE` 回标题画面、`QUIT` 退出进程；
 - `--menu-at N` 是截图/门禁钩子：脚本开始跑 N 毫秒后自动打开菜单。
 
 门禁 `tests/verify_gamemenu.py`（`run_all` 第 6.5 步）：断言日志

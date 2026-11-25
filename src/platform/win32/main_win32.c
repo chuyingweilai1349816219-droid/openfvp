@@ -119,6 +119,7 @@ typedef struct Options {
     wchar_t title_font[PATH_CAP]; /* --title-font：标题菜单专用字库 */
     int pick_seed;  /* --pick N：启动就把第 N 项当作已选中（门禁/截图用） */
     int title_fade_ms; /* 点 New Game 后的白场过渡时长（0 = 直接进，默认 800） */
+    int menu_pick; /* --menu-pick N：菜单打开后自动激活第 N 项（截图/门禁用） */
     int menu_at; /* --menu-at N：第 N 毫秒自动打开游戏内菜单（截图/门禁用） */
     int load_slot; /* --load-slot N：启动就进"部分恢复"视图（截图/门禁用） */
     int preview_slot; /* --preview-slot N：存档列表里预选第 N 号槽并显示预览 */
@@ -520,6 +521,7 @@ static void defaults(Options *o)
     o->preview_slot = -1;
     o->load_slot = -1;
     o->menu_at = -1;
+    o->menu_pick = -1;
     o->pick_seed = -1;
     o->title_fade_ms = 800;
     o->title_font[0] = L'\0';
@@ -688,6 +690,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--title-font") == 0 &&
                    i + 1 < argc) {
             wcsncpy(o->title_font, argv[++i], PATH_CAP - 1);
+        } else if (wcscmp(a, L"--menu-pick") == 0 && i + 1 < argc) {
+            o->menu_pick = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--menu-at") == 0 && i + 1 < argc) {
             o->menu_at = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--load-slot") == 0 && i + 1 < argc) {
@@ -1621,6 +1625,8 @@ static int title_textures_on;
 static int title_bg_on;
 /* 标题菜单专用字库（--title-font）：文字模式用它画，脚本正文仍用位图图集 */
 static const GfxFont *title_ui_font;
+/* 游戏内菜单的 OPTION 面板（只读：音量/文本速度等当前值） */
+static int g_menu_option_panel;
 static int title_logo_on;
 static int title_ovl_loaded;
 static int title_copy_on;
@@ -1709,6 +1715,19 @@ static void draw_game_menu(Gfx *gfx, const FvpGameMenu *m)
         }
     }
     (void)gfx_draw_text_line(gfx, "ESC: close", 56, 40, 32, 220, 220, 230, 255);
+    if (g_menu_option_panel) {
+        int y = 760;
+        int px = 32;
+
+        (void)gfx_draw_text_line(gfx, "OPTION (read-only)", 120, y, px, 255,
+                                 232, 140, 255);
+        (void)gfx_draw_text_line(gfx, "master volume : 100%", 120, y + 48, px,
+                                 220, 220, 230, 255);
+        (void)gfx_draw_text_line(gfx, "text speed    : script-controlled",
+                                 120, y + 96, px, 220, 220, 230, 255);
+        (void)gfx_draw_text_line(gfx, "skip / auto   : not implemented",
+                                 120, y + 144, px, 200, 200, 210, 255);
+    }
 }
 
 static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
@@ -2228,6 +2247,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int load_view_active = 0;      /* 部分恢复视图（仅画面+文本） */
     FvpGameMenu gmenu;             /* 游戏内菜单（引擎侧 UI） */
     int menu_auto_armed = 0;
+    int menu_option_panel = 0;
     double menu_t0 = 0.0;
     int load_view_slot = -1;
     char load_view_graph[64];
@@ -3057,6 +3077,76 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     fvp_logf("menu: opened with %d item(s)", gmenu.count);
                 }
             }
+            if (opts.menu_pick >= 0 && gmenu.active) {
+                int pk = opts.menu_pick;
+
+                opts.menu_pick = -1;
+                if (pk >= 0 && pk < gmenu.count) {
+                    gmenu.hover = pk;
+                    {
+                        int act = fvp_gamemenu_activate(&gmenu);
+
+                        if (act >= 0) {
+                            fvp_logf("menu: auto-pick item %d ('%s')", act,
+                                     gmenu.items[act].label);
+                            if (act == 4) {
+                                win.quit = 1;
+                            } else if (act == 3) {
+                                fvp_gamemenu_close(&gmenu);
+                                title_active = 1;
+                                save_list_active = 0;
+                                fvp_logf("menu: TITLE -> title screen");
+                            } else if (act == 0) {
+                                if (opts.save_template[0] != L'\0' &&
+                                    opts.save_preview[0] != L'\0' &&
+                                    gfx != NULL) {
+                                    int cw2 = 0, ch2 = 0;
+                                    const uint32_t *cv = gfx_canvas(
+                                        gfx, &cw2, &ch2);
+                                    char u8b[PATH_CAP * 3];
+
+                                    if (cv != NULL &&
+                                        write_save_preview(
+                                            opts.save_template,
+                                            opts.save_preview,
+                                            (const unsigned char *)cv, cw2,
+                                            ch2, &vm, opts.enc_mode)) {
+                                        fvp_logf("menu: SAVE -> %s (template "
+                                                 "slot, game save dir "
+                                                 "untouched)",
+                                                 w2u(opts.save_preview, u8b,
+                                                     sizeof(u8b)));
+                                    }
+                                    fvp_gamemenu_close(&gmenu);
+                                } else {
+                                    fvp_logf("menu: SAVE needs "
+                                             "--save-template and "
+                                             "--save-preview");
+                                }
+                            } else if (act == 1) {
+                                char gd[PATH_CAP * 3];
+
+                                fvp_gamemenu_close(&gmenu);
+                                if (wide_to_ansi(opts.game_dir, gd, sizeof(gd))) {
+                                    (void)title_scan_saves(&save_list,
+                                                           opts.game_dir, gd,
+                                                           opts.enc_mode);
+                                }
+                                save_list_active = 1;
+                                title_active = 1;
+                                fvp_logf("menu: LOAD -> save list (%d "
+                                         "slot(s))", save_list.count);
+                            } else if (act == 2) {
+                                menu_option_panel = !menu_option_panel;
+                                g_menu_option_panel = menu_option_panel;
+                                fvp_logf("menu: OPTION panel %s", 
+                                         menu_option_panel ? "opened"
+                                                           : "closed");
+                            }
+                        }
+                    }
+                }
+            }
             if (gmenu.active) {
                 if (in->nav & FVP_NAV_DOWN) {
                     in->nav &= ~FVP_NAV_DOWN;
@@ -3086,10 +3176,51 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                             title_active = 1;
                             save_list_active = 0;
                             fvp_logf("menu: TITLE -> title screen");
-                        } else {
-                            fvp_logf("menu: item %d is a stub for now "
-                                     "(in-game save/load/option UI pending)",
-                                     pick);
+                        } else if (pick == 0) {
+                            /* SAVE：用模板槽 + 当前画面写一份真实存档文件，但**只写到
+                             * --save-preview 指定的路径**（不会碰游戏自己的 save/）。 */
+                            if (opts.save_template[0] != L'\0' &&
+                                opts.save_preview[0] != L'\0' &&
+                                gfx != NULL) {
+                                int cw2 = 0, ch2 = 0;
+                                const uint32_t *cv = gfx_canvas(gfx, &cw2,
+                                                                &ch2);
+                                char u8b[PATH_CAP * 3];
+
+                                if (cv != NULL &&
+                                    write_save_preview(
+                                        opts.save_template, opts.save_preview,
+                                        (const unsigned char *)cv, cw2, ch2,
+                                        &vm, opts.enc_mode)) {
+                                    fvp_logf("menu: SAVE -> %s (template slot, "
+                                             "game save dir untouched)",
+                                             w2u(opts.save_preview, u8b,
+                                                 sizeof(u8b)));
+                                } else {
+                                    fvp_logf("menu: SAVE failed (canvas or "
+                                             "template unavailable)");
+                                }
+                                fvp_gamemenu_close(&gmenu);
+                            } else {
+                                fvp_logf("menu: SAVE needs --save-template and "
+                                         "--save-preview (no silent write into "
+                                         "the game save dir)");
+                            }
+                        } else if (pick == 1) {
+                            /* LOAD：打开已有的存档列表（只读预览；真读档仍是
+                             * "部分恢复"，见 docs/save-snapshot.md §4.6）。 */
+                            fvp_gamemenu_close(&gmenu);
+                            save_list_active = 1;
+                            title_active = 1;
+                            fvp_logf("menu: LOAD -> save list (%d slot(s))",
+                                     save_list.count);
+                        } else if (pick == 2) {
+                            menu_option_panel = !menu_option_panel;
+                            g_menu_option_panel = menu_option_panel;
+                            fvp_logf("menu: OPTION panel %s (read-only: "
+                                     "master=%d%%, type[0]=%d%%)",
+                                     menu_option_panel ? "opened" : "closed",
+                                     100, 100);
                         }
                     }
                 }

@@ -519,6 +519,12 @@ def build_steps(args):
                       'gcc unavailable: in-process harness cannot be built',
                       note='>= 20,000 mutations + fvm.exe E2E'))
 
+    # 6.55 游戏内菜单的三个动作（SAVE/LOAD/OPTION）
+    vma = os.path.join(HERE, 'verify_menu_actions.py')
+    steps.append(Step('verify_menu_actions.py', [PY, vma], 900,
+                      skip_reason=None,
+                      note='menu SAVE writes a template slot, LOAD opens the list, OPTION panel renders'))
+
     # 6.5 游戏内菜单（引擎侧 UI，--menu-at 打开）
     vg = os.path.join(HERE, 'verify_gamemenu.py')
     steps.append(Step('verify_gamemenu.py', [PY, vg], 900,
