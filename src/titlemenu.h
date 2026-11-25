@@ -89,7 +89,12 @@ typedef enum FvpTitleAlign {
 /* 一项的实测几何（客户区 1920x1080 坐标）+ 它用的贴图素材名。 */
 typedef struct FvpTitleItemDef {
     const char *label;                    /* 菜单文字（英文原样） */
-    char asset[FVP_TITLE_ASSET_MAX];      /* graph.bin 里的贴图名 */
+    char asset[FVP_TITLE_ASSET_MAX];      /* graph.bin 里的贴图名（常态） */
+    /* hover/选中态的贴图名。2026-11-25 由静态像素比对定出：每个菜单项的
+     * `title_<item>1` 就是高亮态（比常态高 1–2 px、色相明显偏蓝绿、alpha 不降），
+     * 而 `title_<item>2..5` 是 alpha 单调递减的**淡出帧**（用于不可用态过渡）。
+     * 见 ref/title-variants.json 与 docs/title-menu.md §12。空串 = 没有 hover 图。 */
+    char asset_hover[FVP_TITLE_ASSET_MAX];
     char asset_glow[FVP_TITLE_ASSET_MAX]; /* 发光层素材名（没有就空串） */
     int tex_w, tex_h;                     /* 贴图尺寸 */
     /* 贴图左上角（客户区坐标），来自**素材头自带的 x/y**（2026-11-25：

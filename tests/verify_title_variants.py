@@ -24,6 +24,7 @@
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -92,6 +93,41 @@ def main():
         check(v1.get('h', 0) in (91, 92),
               '%s1 的高度是 91/92（实际 %s，基准 %s）'
               % (item, v1.get('h'), base_h[item]))
+
+    print('== 2.5 映射：变体 1 = 高亮态；变体 2..5 = alpha 单调递减的淡出帧 ==')
+    for item in ITEMS:
+        e = ir.get(item) or {}
+        variants = e.get('variants') or {}
+        base_mean = (e.get('base') or {}).get('mean_bgra') or [0, 0, 0, 0]
+        v1 = (variants.get('%s1' % item) or {}).get('mean_bgra') or [0, 0, 0, 0]
+        # 高亮态：色相明显更"蓝"（B - R 拉大），alpha 不下降
+        check(v1[0] - v1[2] >= (base_mean[0] - base_mean[2]) + 40,
+              '%s1 是偏蓝的高亮态（B-R %d vs 基准 %d）'
+              % (item, v1[0] - v1[2], base_mean[0] - base_mean[2]))
+        check(v1[3] >= base_mean[3] - 5,
+              '%s1 的 alpha 不下降（%d vs %d）' % (item, v1[3], base_mean[3]))
+        # 淡出帧：2..5 的 alpha 严格递减
+        alphas = [(variants.get('%s%d' % (item, k)) or {}).get('mean_bgra', [0, 0, 0, 0])[3]
+                  for k in range(2, 6)]
+        check(all(alphas[i] > alphas[i + 1] for i in range(len(alphas) - 1)),
+              '%s 的变体 2..5 alpha 严格递减（实际 %s）' % (item, alphas))
+        check(alphas[-1] < base_mean[3] // 2,
+              '%s5 的 alpha 不到基准的一半（%d vs %d）'
+              % (item, alphas[-1], base_mean[3]))
+
+    print('== 2.6 实现里的 hover 贴图名 == asset + "1"（src/titlemenu.c） ==')
+    src = os.path.join(FVP, 'src', 'titlemenu.c')
+    with io.open(src, encoding='utf-8') as fp:
+        text = fp.read()
+    lo = text.find('fvp_title_profile_iroseka = {')
+    hi = text.find('fvp_title_profile_hoshimemo = {')
+    block = text[lo:hi] if lo >= 0 and hi > lo else text
+    pat = re.compile(r'\{\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,')
+    pairs = {m.group(2): m.group(3) for m in pat.finditer(block)}
+    for item in ITEMS:
+        check(pairs.get(item) == '%s1' % item,
+              '五彩斑斓 %s 的 hover 贴图 = %s1（实际 %r）'
+              % (item, item, pairs.get(item)))
 
     print('== 3. 星空：每项 1 个变体（title_<item>2） ==')
     ho = ref['games'].get('hoshimemo') or {}

@@ -280,6 +280,19 @@ int main(void)
                   495 + i3 * 100);
             CHECK(ir->items[i3].asset[0] != '\0',
                   "iroseka item %d has a texture asset", i3);
+            /* hover/选中态 = 高亮变体贴图（title_<item>1）：
+             * 映射由静态像素比对定出（ref/title-variants.json，docs §12）。 */
+            CHECK(strcmp(ir->items[i3].asset_hover,
+                         ir->items[i3].asset) != 0 &&
+                      ir->items[i3].asset_hover[0] != '\0',
+                  "iroseka item %d has a distinct hover asset", i3);
+            CHECK(ir->items[i3].asset_hover[strlen(ir->items[i3].asset_hover) - 1] == '1',
+                  "iroseka item %d hover asset ends with '1' (%s)", i3,
+                  ir->items[i3].asset_hover);
+            CHECK(strncmp(ir->items[i3].asset_hover, ir->items[i3].asset,
+                          strlen(ir->items[i3].asset)) == 0,
+                  "iroseka item %d hover asset is <asset>1 (%s / %s)", i3,
+                  ir->items[i3].asset, ir->items[i3].asset_hover);
         }
 
         /* --- hoshimemo：**居中**、行距 90、第 1 项墨迹上沿 581 --- */
@@ -302,6 +315,8 @@ int main(void)
             CHECK(y0 == 581 + i3 * 90, "hoshimemo item %d ink top %d", i3, y0);
             CHECK(ho->items[i3].asset_glow[0] != '\0',
                   "hoshimemo item %d has a separate glow asset", i3);
+            CHECK(ho->items[i3].asset_hover[0] == '\0',
+                  "hoshimemo item %d uses the glow layer, no hover texture", i3);
         }
 
         /* --- 贴图位置：优先用素材头原值（ref/title-rects.json） --- */

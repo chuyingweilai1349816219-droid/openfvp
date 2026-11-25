@@ -63,7 +63,10 @@ GAMES = [
          # 5 个菜单项各有素材 title_start/continue/album/option/end，位置来自素材头，
          # 贴图右边缘统一 1785（墨迹 ~1769-1781，含发光）见 docs/title-menu.md §10）
          title=dict(profile='iroseka', align='right', pitch=100,
-                    right_edge=1785, textures=5, hover_glow=False,
+                    right_edge=1785, textures=5, hover_glow=True,
+                    # 2026-11-25：hover 已实现——换画高亮态贴图 title_<item>1
+                    # （映射由 ref/title-variants.json 的静态像素比对定出，
+                    #  见 docs/title-menu.md §12）
                     continue_enabled=True, save_list=6,
                     bg='title_bg1_A',
                     overlays=['title_bg1_C', 'title_bg1_D',
@@ -518,8 +521,11 @@ def stage_title_menu(shell, games, check):
         def compare_hover(a, b):
             diff = 0
             band = 0
+            # hover 态可能是**更高的高亮贴图**（五彩斑斓 title_<item>1 比常态高
+            # 11–12 px，素材头原值），所以 band 下端多留 12 px；这不是放宽判定，
+            # 而是让 band 覆盖"高亮图本身更大"这个事实。
             y0 = t['centres'][1] - 40
-            y1 = t['centres'][1] + 50
+            y1 = t['centres'][1] + 50 + 12
             if a is None or b is None:
                 return (0, 0)
             for yy in range(a[1]):

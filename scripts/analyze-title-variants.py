@@ -131,6 +131,22 @@ def compare(base, var):
     }
 
 
+def mean_rgba(img):
+    """整图均值（BGRA 四通道，取整）。用来判断"高亮态"与"淡出帧"。"""
+    raw, bpp = img['raw'], img['bpp']
+    n = img['w'] * img['h']
+    if n <= 0:
+        return [0, 0, 0, 0]
+    sb = sg = sr = sa = 0
+    for i in range(n):
+        b, g, r, a = raw[i * bpp:i * bpp + 4]
+        sb += b
+        sg += g
+        sr += r
+        sa += a
+    return [sb // n, sg // n, sr // n, sa // n]
+
+
 def analyze(folder):
     path = os.path.join(folder, PKG)
     if not os.path.isfile(path):
@@ -149,7 +165,8 @@ def analyze(folder):
         if base is None:
             continue
         entry = {'base': {'w': base['w'], 'h': base['h'],
-                          'fmt': base['fmt']},
+                          'fmt': base['fmt'],
+                          'mean_bgra': mean_rgba(base)},
                  'variants': {}}
         for n in present:
             if n == item:
@@ -164,6 +181,7 @@ def analyze(folder):
             st['w'] = var['w']
             st['h'] = var['h']
             st['fmt'] = var['fmt']
+            st['mean_bgra'] = mean_rgba(var)
             entry['variants'][n] = st
         entry['base']['present_variants'] = sorted(entry['variants'])
         rows[item] = entry

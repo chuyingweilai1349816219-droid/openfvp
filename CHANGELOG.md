@@ -92,6 +92,25 @@
     提取结果表、与实现的差距表、以及"⑥ 的结论修正"；
     `docs/vm-commands.md` 的"我们没有那份表"同步更正
 
+### 实现（标题 hover 态）
+
+- **五彩斑斓的 hover 态实现：换画高亮贴图 `title_<item>1`（映射由静态像素比对定出）**
+  - 判据（`ref/title-variants.json`，门禁 `tests/verify_title_variants.py` §2.5）：
+    变体 1 比常态**高 11 px**、**B−R 从 36 → 121**（明显偏蓝）、alpha 不下降
+    ⇒ 高亮/选中态；变体 2..5 的 alpha **93→81→66→52→35** 严格递减
+    ⇒ 淡出序列（不可用态过渡）。5 个菜单项全部一致
+  - `src/titlemenu.h`：`FvpTitleItemDef` 新增 `asset_hover`
+  - `src/titlemenu.c`：五彩斑斓 5 项填 `"title_<item>1"`；星空留空（走 `_ray` 发光层）
+  - `src/platform/win32/main_win32.c`：hover 贴图装进槽 `0xF10+i`；被 hover 的行
+    换画高亮图（坐标取它自己素材头，与常态同左上角）
+  - `tests/verify_multigame.py`：**删掉**"五彩斑斓 hover 暂不改变画面"的已知缺口
+    断言，恢复严格断言（差异 >200 px 且落在被 hover 的行）；band 下端按高亮图实际
+    高度放宽 12 px。实测 hover 触发 **18,982 px**，其中 **98.3%** 在该行 band 内
+  - `tests/test_titlemenu`：243 → **263 项**（hover 贴图名 = `<asset>1`、星空无 hover 图）
+  - `scripts/analyze-title-variants.py`：新增每张图的均值 BGRA，供门禁判定"高亮/淡出"
+  - `docs/title-menu.md` 新增 §12（映射表 + 实现 + 门禁变更 + 诚实说明：
+    尚无原版 hover 实拍帧可做像素对照）
+
 ### 新增（标题状态变体分析）
 
 - **状态变体是"整幅不同的帧"，不是"轻微高亮"——hover 不能用换一张图实现**

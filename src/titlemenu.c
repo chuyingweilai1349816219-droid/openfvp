@@ -64,11 +64,11 @@ const FvpTitleProfile fvp_title_profile_iroseka = {
          *   album    (1560,695,225,80)  option   (1560,795,225,90)
          *   end      (1645,895,140,80)
          * 右边缘 5 项全部 1785、行距恰好 100 —— 见 docs/title-menu.md §9。 */
-        { "New Game", "title_start", "", 340, 80, 1445, 495, 1461, 1769, 511, 552 },
-        { "Continue", "title_continue", "", 290, 80, 1495, 595, 1514, 1769, 611, 652 },
-        { "Album", "title_album", "", 225, 80, 1560, 695, 1580, 1768, 712, 753 },
-        { "Option", "title_option", "", 225, 90, 1560, 795, 1575, 1768, 811, 852 },
-        { "Exit", "title_end", "", 140, 80, 1645, 895, 1662, 1768, 912, 951 }
+        { "New Game", "title_start", "title_start1", "", 340, 80, 1445, 495, 1461, 1769, 511, 552 },
+        { "Continue", "title_continue", "title_continue1", "", 290, 80, 1495, 595, 1514, 1769, 611, 652 },
+        { "Album", "title_album", "title_album1", "", 225, 80, 1560, 695, 1580, 1768, 712, 753 },
+        { "Option", "title_option", "title_option1", "", 225, 90, 1560, 795, 1575, 1768, 811, 852 },
+        { "Exit", "title_end", "title_end1", "", 140, 80, 1645, 895, 1662, 1768, 912, 951 }
     },
     "title_bg1_A", /* 白天背景 2400x1350：只显示中间 1920x1080 一块 */
     240, 135,      /* 中心裁剪（(2400-1920)/2, (1350-1080)/2) */
@@ -90,15 +90,15 @@ const FvpTitleProfile fvp_title_profile_hoshimemo = {
         /* 贴图矩形来自素材头（ref/title-rects.json）：行距恰好 90、中心 960；
          * GAME START 的素材宽 275 是奇数（右边有透明边），所以它的 tex_x 是 820
          * 而不是 822。2026-11-25 把 tex_x/tex_y 填成素材头的原值。 */
-        { "GAME START", "title_start", "title_start_ray", 275, 40, 820, 580, 830, 1088,
+        { "GAME START", "title_start", "", "title_start_ray", 275, 40, 820, 580, 830, 1088,
           581, 614 },
-        { "CONTINUE", "title_continue", "title_continue_ray", 230, 40, 845, 670, 856,
+        { "CONTINUE", "title_continue", "", "title_continue_ray", 230, 40, 845, 670, 856,
           1064, 671, 704 },
-        { "ALBUM", "title_album", "title_album_ray", 160, 40, 880, 760, 891, 1028, 761,
+        { "ALBUM", "title_album", "", "title_album_ray", 160, 40, 880, 760, 891, 1028, 761,
           793 },
-        { "OPTION", "title_option", "title_option_ray", 170, 40, 875, 850, 884, 1036, 851,
+        { "OPTION", "title_option", "", "title_option_ray", 170, 40, 875, 850, 884, 1036, 851,
           884 },
-        { "EXIT", "title_end", "title_end_ray", 110, 40, 905, 940, 914, 1005, 941, 973 }
+        { "EXIT", "title_end", "", "title_end_ray", 110, 40, 905, 940, 914, 1005, 941, 973 }
     },
     "title_bg1",       /* 整屏白天背景（1920x1080，已与原版截图核对内容） */
     0, 0,

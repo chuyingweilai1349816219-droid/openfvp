@@ -140,8 +140,9 @@ def main():
     src = os.path.join(FVP, 'src', 'titlemenu.c')
     with io.open(src, encoding='utf-8') as fp:
         text = fp.read()
+    # 每项形如：{ "label", "asset", "asset_hover", "asset_glow", w, h, x, y, ... }
     pat = re.compile(
-        r'\{\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*'
+        r'\{\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*'
         r'(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,')
     starts = {
         'iroseka': text.find('fvp_title_profile_iroseka = {'),
@@ -158,7 +159,7 @@ def main():
         block = text[lo:hi]
         found = {}
         for m in pat.finditer(block):
-            found[m.group(2)] = tuple(int(m.group(k)) for k in (4, 5, 6, 7))
+            found[m.group(2)] = tuple(int(m.group(k)) for k in (5, 6, 7, 8))
         for item, rect in EXPECT[name]['rects'].items():
             want = (rect[2], rect[3], rect[0], rect[1])   # (w, h, x, y)
             got = found.get(item)

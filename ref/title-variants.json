@@ -5,6 +5,12 @@
     "base": {
      "fmt": 1,
      "h": 40,
+     "mean_bgra": [
+      228,
+      219,
+      212,
+      135
+     ],
      "present_variants": [
       "title_album2"
      ],
@@ -25,6 +31,12 @@
       "fmt": 1,
       "h": 69,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       252,
+       251,
+       222,
+       119
+      ],
       "w": 160
      }
     }
@@ -33,6 +45,12 @@
     "base": {
      "fmt": 1,
      "h": 40,
+     "mean_bgra": [
+      228,
+      220,
+      213,
+      141
+     ],
      "present_variants": [
       "title_continue2"
      ],
@@ -53,6 +71,12 @@
       "fmt": 1,
       "h": 71,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       251,
+       251,
+       219,
+       119
+      ],
       "w": 230
      }
     }
@@ -61,6 +85,12 @@
     "base": {
      "fmt": 1,
      "h": 40,
+     "mean_bgra": [
+      231,
+      223,
+      217,
+      128
+     ],
      "present_variants": [
       "title_end2"
      ],
@@ -81,6 +111,12 @@
       "fmt": 1,
       "h": 70,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       252,
+       251,
+       225,
+       111
+      ],
       "w": 110
      }
     }
@@ -89,6 +125,12 @@
     "base": {
      "fmt": 1,
      "h": 40,
+     "mean_bgra": [
+      227,
+      218,
+      211,
+      140
+     ],
      "present_variants": [
       "title_option2"
      ],
@@ -109,6 +151,12 @@
       "fmt": 1,
       "h": 68,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       251,
+       251,
+       218,
+       131
+      ],
       "w": 170
      }
     }
@@ -117,6 +165,12 @@
     "base": {
      "fmt": 1,
      "h": 40,
+     "mean_bgra": [
+      228,
+      220,
+      213,
+      137
+     ],
      "present_variants": [
       "title_start2"
      ],
@@ -137,6 +191,12 @@
       "fmt": 1,
       "h": 71,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       251,
+       251,
+       221,
+       114
+      ],
       "w": 276
      }
     }
@@ -147,6 +207,12 @@
     "base": {
      "fmt": 1,
      "h": 80,
+     "mean_bgra": [
+      238,
+      224,
+      201,
+      96
+     ],
      "present_variants": [
       "title_album1",
       "title_album2",
@@ -171,6 +237,12 @@
       "fmt": 1,
       "h": 91,
       "max_channel_delta": 255,
+      "mean_bgra": [
+       251,
+       242,
+       131,
+       96
+      ],
       "w": 225
      },
      "title_album2": {
@@ -187,6 +259,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 234,
+      "mean_bgra": [
+       241,
+       231,
+       189,
+       83
+      ],
       "w": 225
      },
      "title_album3": {
@@ -203,6 +281,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 231,
+      "mean_bgra": [
+       244,
+       236,
+       181,
+       67
+      ],
       "w": 225
      },
      "title_album4": {
@@ -219,6 +303,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 250,
+      "mean_bgra": [
+       245,
+       239,
+       171,
+       51
+      ],
       "w": 225
      },
      "title_album5": {
@@ -235,6 +325,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       245,
+       240,
+       162,
+       33
+      ],
       "w": 225
      }
     }
@@ -243,6 +339,12 @@
     "base": {
      "fmt": 1,
      "h": 80,
+     "mean_bgra": [
+      239,
+      225,
+      203,
+      96
+     ],
      "present_variants": [
       "title_continue1",
       "title_continue2",
@@ -267,6 +369,12 @@
       "fmt": 1,
       "h": 91,
       "max_channel_delta": 255,
+      "mean_bgra": [
+       251,
+       242,
+       128,
+       98
+      ],
       "w": 290
      },
      "title_continue2": {
@@ -283,6 +391,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 234,
+      "mean_bgra": [
+       242,
+       232,
+       190,
+       83
+      ],
       "w": 290
      },
      "title_continue3": {
@@ -299,6 +413,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 231,
+      "mean_bgra": [
+       244,
+       236,
+       181,
+       68
+      ],
       "w": 290
      },
      "title_continue4": {
@@ -315,6 +435,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 246,
+      "mean_bgra": [
+       245,
+       239,
+       171,
+       53
+      ],
       "w": 290
      },
      "title_continue5": {
@@ -331,6 +457,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       245,
+       240,
+       161,
+       35
+      ],
       "w": 290
      }
     }
@@ -339,6 +471,12 @@
     "base": {
      "fmt": 1,
      "h": 80,
+     "mean_bgra": [
+      240,
+      227,
+      206,
+      94
+     ],
      "present_variants": [
       "title_end1",
       "title_end2",
@@ -363,6 +501,12 @@
       "fmt": 1,
       "h": 92,
       "max_channel_delta": 255,
+      "mean_bgra": [
+       251,
+       242,
+       130,
+       94
+      ],
       "w": 140
      },
      "title_end2": {
@@ -379,6 +523,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 234,
+      "mean_bgra": [
+       242,
+       233,
+       192,
+       80
+      ],
       "w": 140
      },
      "title_end3": {
@@ -395,6 +545,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 231,
+      "mean_bgra": [
+       244,
+       237,
+       181,
+       65
+      ],
       "w": 140
      },
      "title_end4": {
@@ -411,6 +567,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 245,
+      "mean_bgra": [
+       245,
+       240,
+       171,
+       50
+      ],
       "w": 140
      },
      "title_end5": {
@@ -427,6 +589,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       245,
+       240,
+       162,
+       33
+      ],
       "w": 140
      }
     }
@@ -435,6 +603,12 @@
     "base": {
      "fmt": 1,
      "h": 90,
+     "mean_bgra": [
+      240,
+      227,
+      208,
+      91
+     ],
      "present_variants": [
       "title_option1",
       "title_option2",
@@ -459,6 +633,12 @@
       "fmt": 1,
       "h": 92,
       "max_channel_delta": 255,
+      "mean_bgra": [
+       252,
+       242,
+       126,
+       108
+      ],
       "w": 225
      },
      "title_option2": {
@@ -475,6 +655,12 @@
       "fmt": 1,
       "h": 84,
       "max_channel_delta": 234,
+      "mean_bgra": [
+       242,
+       232,
+       192,
+       84
+      ],
       "w": 225
      },
      "title_option3": {
@@ -491,6 +677,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 244,
+      "mean_bgra": [
+       244,
+       236,
+       181,
+       72
+      ],
       "w": 225
      },
      "title_option4": {
@@ -507,6 +699,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       245,
+       239,
+       170,
+       55
+      ],
       "w": 225
      },
      "title_option5": {
@@ -523,6 +721,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       245,
+       240,
+       161,
+       37
+      ],
       "w": 225
      }
     }
@@ -531,6 +735,12 @@
     "base": {
      "fmt": 1,
      "h": 80,
+     "mean_bgra": [
+      239,
+      225,
+      203,
+      93
+     ],
      "present_variants": [
       "title_start1",
       "title_start2",
@@ -555,6 +765,12 @@
       "fmt": 1,
       "h": 91,
       "max_channel_delta": 255,
+      "mean_bgra": [
+       251,
+       242,
+       130,
+       95
+      ],
       "w": 340
      },
      "title_start2": {
@@ -571,6 +787,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 234,
+      "mean_bgra": [
+       242,
+       232,
+       191,
+       81
+      ],
       "w": 340
      },
      "title_start3": {
@@ -587,6 +809,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 231,
+      "mean_bgra": [
+       244,
+       236,
+       181,
+       66
+      ],
       "w": 340
      },
      "title_start4": {
@@ -603,6 +831,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 246,
+      "mean_bgra": [
+       245,
+       239,
+       171,
+       52
+      ],
       "w": 340
      },
      "title_start5": {
@@ -619,6 +853,12 @@
       "fmt": 1,
       "h": 80,
       "max_channel_delta": 252,
+      "mean_bgra": [
+       245,
+       240,
+       161,
+       35
+      ],
       "w": 340
      }
     }

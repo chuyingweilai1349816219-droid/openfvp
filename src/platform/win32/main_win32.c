@@ -1664,6 +1664,9 @@ static int title_bg_disabled;
 
 /* 贴图占用的图形槽（脚本还没开始跑，用 0xF00 之后的高位，避免和脚本槽冲突） */
 #define TITLE_SLOT_BASE 0x0F00
+/* hover/选中态贴图（五彩斑斓的 title_<item>1）装进 0xF10+i：2026-11-25 由静态
+ * 像素比对定出映射（ref/title-variants.json + docs/title-menu.md §12）。 */
+#define TITLE_HOVER_SLOT_BASE (TITLE_SLOT_BASE + 16)
 /* 开场序列占用两个槽：黑底/背景图 + FAVORITE logo */
 #define OPEN_BG_SLOT 0x0FE0
 #define OPEN_LOGO_SLOT 0x0FE1
@@ -1850,7 +1853,26 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
                                             gy);
                 }
             }
-            (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + i, ix, iy);
+            /* hover 时换画高亮态贴图（素材头自带坐标，和常态同一左上角）。 */
+            {
+                int hv_w = 0;
+                int hv_h = 0;
+
+                if (i == hover &&
+                    gfx_image_size(gfx, TITLE_HOVER_SLOT_BASE + i, &hv_w,
+                                   &hv_h) &&
+                    hv_w > 0) {
+                    int hx = ix;
+                    int hy = iy;
+
+                    (void)gfx_image_offset(gfx, TITLE_HOVER_SLOT_BASE + i, &hx,
+                                           &hy);
+                    (void)gfx_draw_image_at(gfx, TITLE_HOVER_SLOT_BASE + i, hx,
+                                            hy);
+                } else {
+                    (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + i, ix, iy);
+                }
+            }
         }
         return;
     }
@@ -2194,6 +2216,23 @@ static int title_load_textures(Gfx *gfx, const FvpTitleProfile *prof)
             title_copy_on = 1;
             fvp_logf("title: copyright '%s' loaded (slot 0x%X)",
                      prof->copyright_asset, TITLE_COPY_SLOT);
+        }
+    }
+    /* hover/选中态贴图：五彩斑斓每项有一张高亮图（`title_<item>1`），hover 时
+     * 换画它；星空走发光层（asset_hover 为空串）。 */
+    for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+        const FvpTitleItemDef *d2 = &prof->items[i];
+
+        if (d2->asset_hover[0] == '\0') {
+            continue;
+        }
+        if (gfx_graph_load(gfx, TITLE_HOVER_SLOT_BASE + i,
+                           d2->asset_hover) == 0) {
+            fvp_logf("title: hover texture '%s' loaded (slot 0x%X)",
+                     d2->asset_hover, TITLE_HOVER_SLOT_BASE + i);
+        } else {
+            fvp_logf("title: hover texture '%s' failed (slot 0x%X)",
+                     d2->asset_hover, TITLE_HOVER_SLOT_BASE + i);
         }
     }
     return loaded;
