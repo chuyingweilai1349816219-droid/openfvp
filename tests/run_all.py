@@ -551,6 +551,14 @@ def build_steps(args):
                            'sites in both works (TitleMenu = 1 bool; 3 known '
                            'expression-temp anomalies)'))
 
+    # 6.48 标题画面场景的脚本侧事实（素材/槽位/菜单项图元号；缺 HCB 时自己 SKIP）
+    vts = os.path.join(HERE, 'verify_title_scene.py')
+    steps.append(Step('verify_title_scene.py', [PY, '-X', 'utf8', vts], 900,
+                      skip_reason=None,
+                      note='title screen is script-drawn: title_* GraphLoads + '
+                           'menu items are prims (iroseka 1501..1529 / hoshimemo '
+                           '266..274) hit-tested by PrimHit'))
+
     # 6.55 游戏内菜单的三个动作（SAVE/LOAD/OPTION）
     vma = os.path.join(HERE, 'verify_menu_actions.py')
     steps.append(Step('verify_menu_actions.py', [PY, vma], 900,

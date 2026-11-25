@@ -92,6 +92,22 @@
     提取结果表、与实现的差距表、以及"⑥ 的结论修正"；
     `docs/vm-commands.md` 的"我们没有那份表"同步更正
 
+### 新增（标题画面脚本侧事实）
+
+- **标题画面是脚本画的，菜单项就是图元（不是引擎 UI、不需要抓帧）**
+  - 新增 `scripts/extract-title-scene.py` + 基线 `ref/title-scene.json` + 门禁
+    `tests/verify_title_scene.py`（接入 `run_all` 47 → 48 步）
+  - 静态提取到的证据（两部作品）：`title_*` 素材字符串 39 / 27 条；
+    `title_*` 的 `GraphLoad` 5 / 8 处（槽位 258–261 背景、277 体验版按钮）；
+    菜单项素材 `title_start/continue/album/option/end` 各带状态变体
+    （五彩斑斓每项 6 个变体、星空每项 2 个 → 选中/悬停是**换图**不是改色）；
+    标题区交互命令 `InputGetCursX/Y`、`InputGetDown`、`InputGetState`、`PrimHit`
+  - 关键结论：命中由脚本对**图元**调 `PrimHit`，引擎只判"鼠标在不在图元矩形里" →
+    **按钮位置分布 = 图元矩形**，全在脚本里；菜单项图元号：五彩斑斓
+    **1501/1508/1515/1522/1529**（步长 7）、星空 **266/268/270/272/274**（步长 2）
+  - `docs/title-menu.md` 新增 §7（argc 实测对账）与 §8（标题画面归属 + 图元号表），
+    `docs/status.md` 的下一步改为"解出这些图元的 XY/WH/UV 得到按钮矩形"
+
 ### 新增（脚本侧实参审计）
 
 - **命令表 argc 用真实脚本对账；顺带否掉"TitleMenu 传布局参数"的猜测**

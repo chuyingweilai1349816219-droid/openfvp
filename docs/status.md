@@ -102,12 +102,13 @@ python scripts/check-docs.py
 > 一律先结构分析，不用抓帧/视觉方法反推。** 抓帧只在方法覆盖不到的地方用（最终像素验证、
 > 影片解码后的画面），而且只用来**验证**结构分析结果，不用来当主要依据。
 
-1. **标题画面由谁画（把上一条错误线索改掉）**：`TitleMenu`(141) 已证实**只收 1 个布尔**
-   （两部作品 6 / 7 个调用点，紧邻前一条指令全是 `pushtrue`），handler 与
-   `MenuMessSkip`/`SysAtSkipName` 是同一个 `0x437950`（纯空操作）→ **按钮位置不在
-   脚本参数里**。下一步查"引擎启动代码用图元摆贴图"或"另一段脚本场景"这两条路，
-   证据都在文件里（前者看 exe 里 `PrimSetXY`/`GraphLoad` 的常量，后者看脚本其它
-   入口）。详见 `docs/title-menu.md` §6；对账工具 `scripts/audit-script-argc.py`。
+1. **把标题菜单的图元矩形解出来（`docs/title-menu.md` §8 已把归属定死）**：
+   标题画面是**脚本画的**——`title_*` 素材 + `GraphLoad` + `PrimHit`；菜单项就是图元
+   （五彩斑斓 **1501/1508/1515/1522/1529**，星空 **266/268/270/272/274**）。
+   下一步把这些图元的 `PrimSetSprt`/`PrimSetXY`/`PrimSetWH`/`PrimSetUV` 实参解出来，
+   得到与原版一致的按钮矩形，冻结成基线并用 `PrimHit` 语义做门禁。
+   工具与基线：`scripts/extract-title-scene.py`、`ref/title-scene.json`、
+   `tests/verify_title_scene.py`。**全程不需要抓帧。**
 2. **`TextShadowDist`(125) / `TextFormat`(118) 的真实参数**：先查 exe 里 `HTextStyler`
    类（这个类有 RTTI）的字段读写与命令 handler 的写入偏移，再谈实现；
    `TextFormat` 的 d 参数会移动冻结基线，需要授权。

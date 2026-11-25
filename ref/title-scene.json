@@ -1,0 +1,2353 @@
+{
+ "games": {
+  "hoshimemo": {
+   "families": {
+    "title_album": [
+     "title_album",
+     "title_album2"
+    ],
+    "title_bg": [
+     "title_bg1",
+     "title_bg2",
+     "title_bg3"
+    ],
+    "title_continue": [
+     "title_continue",
+     "title_continue2"
+    ],
+    "title_copyright": [
+     "title_copyright"
+    ],
+    "title_end": [
+     "title_end",
+     "title_end2"
+    ],
+    "title_frame": [
+     "title_frame",
+     "title_frame2"
+    ],
+    "title_logo": [
+     "title_logo1",
+     "title_logo2",
+     "title_logo3",
+     "title_logo4"
+    ],
+    "title_option": [
+     "title_option",
+     "title_option2"
+    ],
+    "title_start": [
+     "title_start",
+     "title_start2"
+    ],
+    "title_trial": [
+     "title_trial"
+    ]
+   },
+   "hcb_sha256": "e23b7958f897392e3535370956b7c9a722c562f0a6d65e91d589cfdd2b741802",
+   "hcb_size": 4618610,
+   "instructions": 1135159,
+   "loads": [
+    {
+     "helper": "0x0003716a",
+     "name": "title_bg3",
+     "pc": "0x0006f468",
+     "slot": 258
+    },
+    {
+     "helper": "0x0003716a",
+     "name": "title_bg2",
+     "pc": "0x0006f612",
+     "slot": 258
+    },
+    {
+     "helper": "0x0003716a",
+     "name": "title_bg1",
+     "pc": "0x0006f795",
+     "slot": 258
+    },
+    {
+     "helper": "0x0003716a",
+     "name": "title_logo4",
+     "pc": "0x0006f948",
+     "slot": 262
+    },
+    {
+     "helper": "0x0003716a",
+     "name": "title_logo3",
+     "pc": "0x0006f977",
+     "slot": 261
+    },
+    {
+     "helper": "0x0003716a",
+     "name": "title_logo2",
+     "pc": "0x0006f9a0",
+     "slot": 260
+    },
+    {
+     "helper": "0x0003716a",
+     "name": "title_logo1",
+     "pc": "0x0006f9c1",
+     "slot": 259
+    },
+    {
+     "helper": "0x0003716a",
+     "name": "title_trial",
+     "pc": "0x0006f9ed",
+     "slot": 277
+    }
+   ],
+   "menu_prim_ids": [
+    266,
+    268,
+    270,
+    272,
+    274
+   ],
+   "prim_hit": [
+    {
+     "pc": "0x000702f4",
+     "prim": 266
+    },
+    {
+     "pc": "0x00070310",
+     "prim": 268
+    },
+    {
+     "pc": "0x0007032c",
+     "prim": 270
+    },
+    {
+     "pc": "0x0007036b",
+     "prim": 272
+    },
+    {
+     "pc": "0x00070387",
+     "prim": 274
+    },
+    {
+     "pc": "0x000716e1",
+     "prim": 71
+    },
+    {
+     "pc": "0x00071798",
+     "prim": 71
+    },
+    {
+     "pc": "0x000722a2",
+     "prim": 64
+    },
+    {
+     "pc": "0x000726b5",
+     "prim": 52
+    },
+    {
+     "pc": "0x000726be",
+     "prim": 55
+    },
+    {
+     "pc": "0x000726c8",
+     "prim": 58
+    },
+    {
+     "pc": "0x000726d2",
+     "prim": 61
+    },
+    {
+     "pc": "0x000726dc",
+     "prim": 64
+    },
+    {
+     "pc": "0x000726e6",
+     "prim": 67
+    },
+    {
+     "pc": "0x000726f0",
+     "prim": 70
+    },
+    {
+     "pc": "0x000726fa",
+     "prim": 73
+    },
+    {
+     "pc": "0x00072704",
+     "prim": 76
+    },
+    {
+     "pc": "0x0007270e",
+     "prim": 82
+    },
+    {
+     "pc": "0x00072718",
+     "prim": 79
+    }
+   ],
+   "prim_hit_ids": [
+    52,
+    55,
+    58,
+    61,
+    64,
+    67,
+    70,
+    71,
+    73,
+    76,
+    79,
+    82,
+    266,
+    268,
+    270,
+    272,
+    274
+   ],
+   "prim_ops_in_title_region": [
+    {
+     "args": [
+      252,
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0006f037",
+     "prim": 252
+    },
+    {
+     "args": [
+      254,
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0006f07a",
+     "prim": 254
+    },
+    {
+     "args": [
+      266,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fa97",
+     "prim": 266
+    },
+    {
+     "args": [
+      267,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fa9f",
+     "prim": 267
+    },
+    {
+     "args": [
+      268,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fac9",
+     "prim": 268
+    },
+    {
+     "args": [
+      269,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fad1",
+     "prim": 269
+    },
+    {
+     "args": [
+      270,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fb0b",
+     "prim": 270
+    },
+    {
+     "args": [
+      271,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fb13",
+     "prim": 271
+    },
+    {
+     "args": [
+      272,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fb3d",
+     "prim": 272
+    },
+    {
+     "args": [
+      273,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fb45",
+     "prim": 273
+    },
+    {
+     "args": [
+      274,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fb6f",
+     "prim": 274
+    },
+    {
+     "args": [
+      275,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x0006fb77",
+     "prim": 275
+    },
+    {
+     "args": [
+      280,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x000709e8",
+     "prim": 280
+    },
+    {
+     "args": [
+      281,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x000709f0",
+     "prim": 281
+    },
+    {
+     "args": [
+      282,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x000709f8",
+     "prim": 282
+    },
+    {
+     "args": [
+      283,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070a00",
+     "prim": 283
+    },
+    {
+     "args": [
+      284,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070a08",
+     "prim": 284
+    },
+    {
+     "args": [
+      280,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070a45",
+     "prim": 280
+    },
+    {
+     "args": [
+      281,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070ac5",
+     "prim": 281
+    },
+    {
+     "args": [
+      282,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070b45",
+     "prim": 282
+    },
+    {
+     "args": [
+      283,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070bc5",
+     "prim": 283
+    },
+    {
+     "args": [
+      284,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070c45",
+     "prim": 284
+    },
+    {
+     "args": [
+      280,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070d0f",
+     "prim": 280
+    },
+    {
+     "args": [
+      281,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070d17",
+     "prim": 281
+    },
+    {
+     "args": [
+      282,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070d1f",
+     "prim": 282
+    },
+    {
+     "args": [
+      283,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070d27",
+     "prim": 283
+    },
+    {
+     "args": [
+      284,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00070d2f",
+     "prim": 284
+    },
+    {
+     "args": [
+      450,
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x00071086",
+     "prim": 450
+    },
+    {
+     "args": [
+      92,
+      1591,
+      1062
+     ],
+     "cmd": 88,
+     "name": "PrimSetUV",
+     "pc": "0x000723a9",
+     "prim": 92
+    },
+    {
+     "args": [
+      92,
+      0,
+      6
+     ],
+     "cmd": 89,
+     "name": "PrimSetWH",
+     "pc": "0x000723b2",
+     "prim": 92
+    },
+    {
+     "args": [
+      92,
+      1591,
+      1062
+     ],
+     "cmd": 88,
+     "name": "PrimSetUV",
+     "pc": "0x000723c2",
+     "prim": 92
+    },
+    {
+     "args": [
+      92,
+      0,
+      6
+     ],
+     "cmd": 89,
+     "name": "PrimSetWH",
+     "pc": "0x000723cb",
+     "prim": 92
+    },
+    {
+     "args": [
+      250,
+      600
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x00075f5f",
+     "prim": 250
+    },
+    {
+     "args": [
+      272,
+      1100
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x00075f87",
+     "prim": 272
+    }
+   ],
+   "title_inputs": [
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006f2a4"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006f2ab"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006f2d3"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006f2da"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006f398"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006f39f"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fdca"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fdd1"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fdf1"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fdf8"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fe1e"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fe25"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fe96"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fe9d"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fec2"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006fec9"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006ffe0"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006ffe7"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00070033"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0007003a"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00070085"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0007008c"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000700d7"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000700de"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00070129"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00070130"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000701c6"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000701cd"
+    },
+    {
+     "cmd": 29,
+     "name": "InputGetCursX",
+     "pc": "0x00070289"
+    },
+    {
+     "cmd": 30,
+     "name": "InputGetCursY",
+     "pc": "0x00070292"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000702b3"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x000702b9"
+    },
+    {
+     "cmd": 29,
+     "name": "InputGetCursX",
+     "pc": "0x000702c1"
+    },
+    {
+     "cmd": 30,
+     "name": "InputGetCursY",
+     "pc": "0x000702c8"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000702f4"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00070310"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0007032c"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0007036b"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00070387"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000712f7"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000712fe"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00071306"
+    },
+    {
+     "cmd": 29,
+     "name": "InputGetCursX",
+     "pc": "0x00071435"
+    },
+    {
+     "cmd": 30,
+     "name": "InputGetCursY",
+     "pc": "0x0007143c"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00071443"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00071449"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000716e1"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00071798"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00071a62"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00071a69"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00071cf6"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00071cfd"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00071d89"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00071d90"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00071e26"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00071e2d"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00071eac"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00071eb3"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00071ed2"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00072027"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0007202e"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00072131"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00072138"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x000721eb"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000721f2"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000722a2"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00072415"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00072567"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0007266c"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000726b5"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000726be"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000726c8"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000726d2"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000726dc"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000726e6"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000726f0"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000726fa"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00072704"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0007270e"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00072718"
+    },
+    {
+     "cmd": 29,
+     "name": "InputGetCursX",
+     "pc": "0x000727d8"
+    },
+    {
+     "cmd": 30,
+     "name": "InputGetCursY",
+     "pc": "0x000727e0"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00072867"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00072878"
+    }
+   ],
+   "title_region": [
+    "0x0006f000",
+    "0x00076000"
+   ],
+   "title_strings": [
+    {
+     "name": "title_bg3",
+     "pc": "0x0006f459"
+    },
+    {
+     "name": "title_bg2",
+     "pc": "0x0006f603"
+    },
+    {
+     "name": "title_bg1",
+     "pc": "0x0006f786"
+    },
+    {
+     "name": "title_frame",
+     "pc": "0x0006f79a"
+    },
+    {
+     "name": "title_frame2",
+     "pc": "0x0006f7aa"
+    },
+    {
+     "name": "title_logo1",
+     "pc": "0x0006f7bb"
+    },
+    {
+     "name": "title_copyright",
+     "pc": "0x0006f7cb"
+    },
+    {
+     "name": "title_start",
+     "pc": "0x0006f7df"
+    },
+    {
+     "name": "title_start2",
+     "pc": "0x0006f7ef"
+    },
+    {
+     "name": "title_continue",
+     "pc": "0x0006f800"
+    },
+    {
+     "name": "title_continue2",
+     "pc": "0x0006f813"
+    },
+    {
+     "name": "title_album",
+     "pc": "0x0006f827"
+    },
+    {
+     "name": "title_album2",
+     "pc": "0x0006f837"
+    },
+    {
+     "name": "title_option",
+     "pc": "0x0006f848"
+    },
+    {
+     "name": "title_option2",
+     "pc": "0x0006f859"
+    },
+    {
+     "name": "title_end",
+     "pc": "0x0006f86b"
+    },
+    {
+     "name": "title_end2",
+     "pc": "0x0006f879"
+    },
+    {
+     "name": "title_start_ray",
+     "pc": "0x0006f888"
+    },
+    {
+     "name": "title_continue_ray",
+     "pc": "0x0006f89c"
+    },
+    {
+     "name": "title_album_ray",
+     "pc": "0x0006f8b3"
+    },
+    {
+     "name": "title_option_ray",
+     "pc": "0x0006f8c7"
+    },
+    {
+     "name": "title_end_ray",
+     "pc": "0x0006f8dc"
+    },
+    {
+     "name": "title_logo4",
+     "pc": "0x0006f937"
+    },
+    {
+     "name": "title_logo3",
+     "pc": "0x0006f966"
+    },
+    {
+     "name": "title_logo2",
+     "pc": "0x0006f98f"
+    },
+    {
+     "name": "title_logo1",
+     "pc": "0x0006f9b0"
+    },
+    {
+     "name": "title_trial",
+     "pc": "0x0006f9dc"
+    }
+   ]
+  },
+  "iroseka": {
+   "families": {
+    "title_album": [
+     "title_album",
+     "title_album1",
+     "title_album2",
+     "title_album3",
+     "title_album4",
+     "title_album5"
+    ],
+    "title_continue": [
+     "title_continue",
+     "title_continue1",
+     "title_continue2",
+     "title_continue3",
+     "title_continue4",
+     "title_continue5"
+    ],
+    "title_copyright": [
+     "title_copyright"
+    ],
+    "title_end": [
+     "title_end",
+     "title_end1",
+     "title_end2",
+     "title_end3",
+     "title_end4",
+     "title_end5"
+    ],
+    "title_frame": [
+     "title_frame",
+     "title_frame2"
+    ],
+    "title_logo": [
+     "title_logo1"
+    ],
+    "title_option": [
+     "title_option",
+     "title_option1",
+     "title_option2",
+     "title_option3",
+     "title_option4",
+     "title_option5"
+    ],
+    "title_start": [
+     "title_start",
+     "title_start1",
+     "title_start2",
+     "title_start3",
+     "title_start4",
+     "title_start5"
+    ],
+    "title_trial": [
+     "title_trial"
+    ]
+   },
+   "hcb_sha256": "8c362ff7178628bef90f0d7bf35a48be5ee22f9f762d4c76e86799f6f063c0ff",
+   "hcb_size": 4275282,
+   "instructions": 948219,
+   "loads": [
+    {
+     "helper": "0x0002354b",
+     "name": "title_bg1_A",
+     "pc": "0x0005853f",
+     "slot": 258
+    },
+    {
+     "helper": "0x0002354b",
+     "name": "title_bg1_B",
+     "pc": "0x00058558",
+     "slot": 259
+    },
+    {
+     "helper": "0x0002354b",
+     "name": "title_bg1_C",
+     "pc": "0x00058571",
+     "slot": 260
+    },
+    {
+     "helper": "0x0002354b",
+     "name": "title_bg1_D",
+     "pc": "0x0005858a",
+     "slot": 261
+    },
+    {
+     "helper": "0x0002354b",
+     "name": "title_trial",
+     "pc": "0x00058b9e",
+     "slot": 277
+    }
+   ],
+   "menu_prim_ids": [
+    1501,
+    1508,
+    1515,
+    1522,
+    1529
+   ],
+   "prim_hit": [
+    {
+     "pc": "0x0005979e",
+     "prim": 1501
+    },
+    {
+     "pc": "0x000597b7",
+     "prim": 1508
+    },
+    {
+     "pc": "0x000597d0",
+     "prim": 1515
+    },
+    {
+     "pc": "0x0005980e",
+     "prim": 1522
+    },
+    {
+     "pc": "0x00059827",
+     "prim": 1529
+    },
+    {
+     "pc": "0x00059f24",
+     "prim": 1501
+    },
+    {
+     "pc": "0x00059f3a",
+     "prim": 1508
+    },
+    {
+     "pc": "0x00059f50",
+     "prim": 1515
+    },
+    {
+     "pc": "0x00059f66",
+     "prim": 1522
+    },
+    {
+     "pc": "0x00059f7c",
+     "prim": 1529
+    },
+    {
+     "pc": "0x0005ad51",
+     "prim": 71
+    },
+    {
+     "pc": "0x0005ae08",
+     "prim": 71
+    },
+    {
+     "pc": "0x0005bb29",
+     "prim": 64
+    },
+    {
+     "pc": "0x0005bf32",
+     "prim": 52
+    },
+    {
+     "pc": "0x0005bf3b",
+     "prim": 55
+    },
+    {
+     "pc": "0x0005bf45",
+     "prim": 58
+    },
+    {
+     "pc": "0x0005bf4f",
+     "prim": 61
+    },
+    {
+     "pc": "0x0005bf59",
+     "prim": 64
+    },
+    {
+     "pc": "0x0005bf63",
+     "prim": 67
+    },
+    {
+     "pc": "0x0005bf6d",
+     "prim": 70
+    },
+    {
+     "pc": "0x0005bf77",
+     "prim": 73
+    },
+    {
+     "pc": "0x0005bf81",
+     "prim": 76
+    },
+    {
+     "pc": "0x0005bf8b",
+     "prim": 82
+    },
+    {
+     "pc": "0x0005bf95",
+     "prim": 79
+    }
+   ],
+   "prim_hit_ids": [
+    52,
+    55,
+    58,
+    61,
+    64,
+    67,
+    70,
+    71,
+    73,
+    76,
+    79,
+    82,
+    1501,
+    1508,
+    1515,
+    1522,
+    1529
+   ],
+   "prim_ops_in_title_region": [
+    {
+     "args": [
+      252,
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x000580dc",
+     "prim": 252
+    },
+    {
+     "args": [
+      254,
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x00058126",
+     "prim": 254
+    },
+    {
+     "args": [
+      258,
+      1000
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x00058602",
+     "prim": 258
+    },
+    {
+     "args": [
+      259,
+      900
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x00058627",
+     "prim": 259
+    },
+    {
+     "args": [
+      260,
+      850
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0005864c",
+     "prim": 260
+    },
+    {
+     "args": [
+      261,
+      800
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x00058671",
+     "prim": 261
+    },
+    {
+     "args": [
+      1501,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058c19",
+     "prim": 1501
+    },
+    {
+     "args": [
+      1500,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058c29",
+     "prim": 1500
+    },
+    {
+     "args": [
+      1508,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058c8c",
+     "prim": 1508
+    },
+    {
+     "args": [
+      1507,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058c9c",
+     "prim": 1507
+    },
+    {
+     "args": [
+      1515,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058cff",
+     "prim": 1515
+    },
+    {
+     "args": [
+      1514,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058d0f",
+     "prim": 1514
+    },
+    {
+     "args": [
+      1522,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058d72",
+     "prim": 1522
+    },
+    {
+     "args": [
+      1521,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058d82",
+     "prim": 1521
+    },
+    {
+     "args": [
+      1529,
+      1
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058e04",
+     "prim": 1529
+    },
+    {
+     "args": [
+      1528,
+      0
+     ],
+     "cmd": 79,
+     "name": "PrimSetDraw",
+     "pc": "0x00058e14",
+     "prim": 1528
+    },
+    {
+     "args": [
+      92,
+      1153,
+      1047
+     ],
+     "cmd": 88,
+     "name": "PrimSetUV",
+     "pc": "0x0005bc30",
+     "prim": 92
+    },
+    {
+     "args": [
+      92,
+      0,
+      33
+     ],
+     "cmd": 89,
+     "name": "PrimSetWH",
+     "pc": "0x0005bc39",
+     "prim": 92
+    },
+    {
+     "args": [
+      92,
+      1153,
+      1047
+     ],
+     "cmd": 88,
+     "name": "PrimSetUV",
+     "pc": "0x0005bc49",
+     "prim": 92
+    },
+    {
+     "args": [
+      92,
+      0,
+      33
+     ],
+     "cmd": 89,
+     "name": "PrimSetWH",
+     "pc": "0x0005bc52",
+     "prim": 92
+    },
+    {
+     "args": [
+      250,
+      600
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0005f682",
+     "prim": 250
+    },
+    {
+     "args": [
+      272,
+      400
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0005f6c1",
+     "prim": 272
+    },
+    {
+     "args": [
+      273,
+      200
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0005f700",
+     "prim": 273
+    },
+    {
+     "args": [
+      252,
+      0,
+      2
+     ],
+     "cmd": 90,
+     "name": "PrimSetXY",
+     "pc": "0x0005fb39",
+     "prim": 252
+    },
+    {
+     "args": [
+      250,
+      600
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0006142e",
+     "prim": 250
+    },
+    {
+     "args": [
+      272,
+      400
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x0006146d",
+     "prim": 272
+    },
+    {
+     "args": [
+      273,
+      200
+     ],
+     "cmd": 91,
+     "name": "PrimSetZ",
+     "pc": "0x000614ac",
+     "prim": 273
+    },
+    {
+     "args": [
+      1252,
+      0,
+      2
+     ],
+     "cmd": 90,
+     "name": "PrimSetXY",
+     "pc": "0x00061760",
+     "prim": 1252
+    },
+    {
+     "args": [
+      252,
+      0,
+      2
+     ],
+     "cmd": 90,
+     "name": "PrimSetXY",
+     "pc": "0x00061997",
+     "prim": 252
+    }
+   ],
+   "title_inputs": [
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005835a"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00058361"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00058389"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00058390"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005844e"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00058455"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059221"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059228"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059248"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005924f"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059275"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005927c"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000592ed"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000592f4"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059319"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059320"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059423"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005942a"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059476"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005947d"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000594c8"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000594cf"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005951a"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059521"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059591"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059598"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00059653"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005965a"
+    },
+    {
+     "cmd": 29,
+     "name": "InputGetCursX",
+     "pc": "0x0005973b"
+    },
+    {
+     "cmd": 30,
+     "name": "InputGetCursY",
+     "pc": "0x00059741"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005975b"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x00059761"
+    },
+    {
+     "cmd": 29,
+     "name": "InputGetCursX",
+     "pc": "0x00059769"
+    },
+    {
+     "cmd": 30,
+     "name": "InputGetCursY",
+     "pc": "0x00059770"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005979e"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000597b7"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x000597d0"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005980e"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00059827"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00059f24"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00059f3a"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00059f50"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00059f66"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x00059f7c"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005a7ee"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005a7f5"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005a7fd"
+    },
+    {
+     "cmd": 29,
+     "name": "InputGetCursX",
+     "pc": "0x0005ab0e"
+    },
+    {
+     "cmd": 30,
+     "name": "InputGetCursY",
+     "pc": "0x0005ab15"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005ab1c"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005ab22"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005ad51"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005ae08"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005b0d2"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005b0d9"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005b57d"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005b584"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005b610"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005b617"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005b6ad"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005b6b4"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005b733"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005b73a"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005b759"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005b8ae"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005b8b5"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005b9b8"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005b9bf"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005ba72"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005ba79"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bb29"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005bc9c"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005bdee"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005bee9"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf32"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf3b"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf45"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf4f"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf59"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf63"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf6d"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf77"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf81"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf8b"
+    },
+    {
+     "cmd": 76,
+     "name": "PrimHit",
+     "pc": "0x0005bf95"
+    },
+    {
+     "cmd": 29,
+     "name": "InputGetCursX",
+     "pc": "0x0005c055"
+    },
+    {
+     "cmd": 30,
+     "name": "InputGetCursY",
+     "pc": "0x0005c05d"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005c0f1"
+    },
+    {
+     "cmd": 34,
+     "name": "InputGetState",
+     "pc": "0x0005c102"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005fdf6"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0005ff72"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000600de"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006026a"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000603d6"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00060562"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000606ce"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006085a"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000609c6"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00060b52"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00060cbe"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00060e4a"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00060fb6"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006113c"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00061d65"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00061fe0"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00062253"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000624de"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00062751"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000629dc"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00062c4f"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00062eda"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006314d"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000633d8"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x0006364b"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x000638d6"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00063b49"
+    },
+    {
+     "cmd": 31,
+     "name": "InputGetDown",
+     "pc": "0x00063dd8"
+    }
+   ],
+   "title_region": [
+    "0x00058000",
+    "0x00064000"
+   ],
+   "title_strings": [
+    {
+     "name": "title_bg1_A",
+     "pc": "0x0005852e"
+    },
+    {
+     "name": "title_bg1_B",
+     "pc": "0x00058547"
+    },
+    {
+     "name": "title_bg1_C",
+     "pc": "0x00058560"
+    },
+    {
+     "name": "title_bg1_D",
+     "pc": "0x00058579"
+    },
+    {
+     "name": "title_frame",
+     "pc": "0x0005869a"
+    },
+    {
+     "name": "title_frame2",
+     "pc": "0x000586aa"
+    },
+    {
+     "name": "title_logo1",
+     "pc": "0x000586bb"
+    },
+    {
+     "name": "title_copyright",
+     "pc": "0x000586cb"
+    },
+    {
+     "name": "title_start",
+     "pc": "0x000586df"
+    },
+    {
+     "name": "title_start1",
+     "pc": "0x000586ef"
+    },
+    {
+     "name": "title_start2",
+     "pc": "0x00058700"
+    },
+    {
+     "name": "title_start3",
+     "pc": "0x00058711"
+    },
+    {
+     "name": "title_start4",
+     "pc": "0x00058722"
+    },
+    {
+     "name": "title_start5",
+     "pc": "0x00058733"
+    },
+    {
+     "name": "title_continue",
+     "pc": "0x00058744"
+    },
+    {
+     "name": "title_continue1",
+     "pc": "0x00058757"
+    },
+    {
+     "name": "title_continue2",
+     "pc": "0x0005876b"
+    },
+    {
+     "name": "title_continue3",
+     "pc": "0x0005877f"
+    },
+    {
+     "name": "title_continue4",
+     "pc": "0x00058793"
+    },
+    {
+     "name": "title_continue5",
+     "pc": "0x000587a7"
+    },
+    {
+     "name": "title_album",
+     "pc": "0x000587cb"
+    },
+    {
+     "name": "title_album1",
+     "pc": "0x000587db"
+    },
+    {
+     "name": "title_album2",
+     "pc": "0x000587ec"
+    },
+    {
+     "name": "title_album3",
+     "pc": "0x000587fd"
+    },
+    {
+     "name": "title_album4",
+     "pc": "0x0005880e"
+    },
+    {
+     "name": "title_album5",
+     "pc": "0x0005881f"
+    },
+    {
+     "name": "title_option",
+     "pc": "0x00058830"
+    },
+    {
+     "name": "title_option1",
+     "pc": "0x00058841"
+    },
+    {
+     "name": "title_option2",
+     "pc": "0x00058853"
+    },
+    {
+     "name": "title_option3",
+     "pc": "0x00058865"
+    },
+    {
+     "name": "title_option4",
+     "pc": "0x00058877"
+    },
+    {
+     "name": "title_option5",
+     "pc": "0x00058889"
+    },
+    {
+     "name": "title_end",
+     "pc": "0x0005889b"
+    },
+    {
+     "name": "title_end1",
+     "pc": "0x000588a9"
+    },
+    {
+     "name": "title_end2",
+     "pc": "0x000588b8"
+    },
+    {
+     "name": "title_end3",
+     "pc": "0x000588c7"
+    },
+    {
+     "name": "title_end4",
+     "pc": "0x000588d6"
+    },
+    {
+     "name": "title_end5",
+     "pc": "0x000588e5"
+    },
+    {
+     "name": "title_trial",
+     "pc": "0x00058b8d"
+    }
+   ]
+  }
+ },
+ "note": "标题画面的脚本侧事实（素材名/槽位/图元号/命中命令）；由 scripts/extract-title-scene.py 生成，不含游戏数据本体"
+}
