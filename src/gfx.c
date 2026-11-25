@@ -3841,6 +3841,56 @@ int gfx_draw_image_alpha(Gfx *g, int slot, int x, int y, int alpha)
     return 1;
 }
 
+int gfx_draw_image_xform(Gfx *g, int slot, int x, int y, int scale_x1000,
+                         int scale_y1000, int alpha)
+{
+    const uint8_t *compo = NULL;
+    int cw = 0;
+    int ch = 0;
+    int w;
+    int h;
+    uint8_t *img;
+    GfxPrim tmp;
+    double sx;
+    double sy;
+
+    if (g == NULL || alpha <= 0) {
+        return 0;
+    }
+    if (scale_x1000 == 1000 && scale_y1000 == 1000) {
+        return gfx_draw_image_alpha(g, slot, x, y, alpha);
+    }
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0) {
+        return 0;
+    }
+    if (compo == NULL || cw <= 0 || ch <= 0) {
+        return 0;
+    }
+    sx = (double)scale_x1000 / 1000.0;
+    sy = (double)scale_y1000 / 1000.0;
+    if (sx <= 0.0) {
+        sx = 1.0;
+    }
+    if (sy <= 0.0) {
+        sy = 1.0;
+    }
+    w = py_round((double)cw * sx);
+    h = py_round((double)ch * sy);
+    if (w <= 0 || h <= 0) {
+        return 0;
+    }
+    img = resize_rgba(compo, cw, ch, w, h);
+    if (img == NULL) {
+        return 0;
+    }
+    memset(&tmp, 0, sizeof tmp);
+    tmp.alpha = (unsigned char)clampi(alpha, 0, 255);
+    blit_sprite(g, x, y, w, h, img, 0, &tmp);
+    free(img);
+    g->stats.sprites += 1;
+    return 1;
+}
+
 void gfx_fill_canvas(Gfx *g, int r, int gr, int b, int alpha)
 {
     int n;

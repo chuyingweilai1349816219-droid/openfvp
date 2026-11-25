@@ -51,6 +51,29 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 新增（标题进场动画：参数来自脚本，时间轴复用 motion）
+
+- **把标题进场动画实现出来：logo alpha 0→255 + 缩放 10.0→1.0，1400 ms，mode 3**
+  - 参数全部来自脚本常量（`ref/title-scene.json` 的 `layer_motion`：图元
+    255/256/257 的 `MotionAlpha(0,255,1400)` + `MotionMoveS2(10000,1000,10000,1000,1400,3)`），
+    冻结进新头文件 `src/titleanim.h`（每个宏的注释里带 hcb 的 pc）
+  - 新增 `gfx_draw_image_xform()`（缩放 + alpha 直贴，左上锚；scale=1000 时内部
+    转调 `gfx_draw_image_alpha`，**字节等价**）；时间轴复用 `src/motion.c`
+    （mode 1..5 缓动曲线有静态分析依据）
+  - win32 外壳：`--title-anim` 打开、`--opening` 时自动打开；帧循环里推进补间，
+    logo 用 xform 画，补间结束后回到静态绘制。**默认关闭**（冻结基线不变）
+  - 新单测 `tests/test_gfx_xform.c`（32 项，进 `make check` 与 `run_all`）：
+    identity xform 与静态绘制逐字节相同、50%/200% 缩放的包围盒、
+    alpha 钳位、t=0/700/1400 的补间取值（mode 3 缓出 → 191.25 / 3250）、
+    **终端画布与静态绘制逐字节相同**
+  - 新门禁 `tests/verify_title_anim.py`（进 `run_all`，55 → 57 步）：
+    从 `ref/title-scene.json` 读脚本参数，逐项对比 `src/titleanim.h` 的宏；
+    断言 `main_win32.c` 用了这些宏且默认关闭；断言背景四层 258..261 的
+    `MotionMoveS2` 是 7 ms（"离开标题"的缩小，不是进场）
+  - **一处更正**：冻结基线里 255/256/257 只有 `MotionMoveRStop`、没有
+    `MotionMoveR` 起点 ⇒ 进场动画**不含旋转**，`docs/title-menu.md` §16 那一行作废
+  - 文档：`docs/title-menu.md` 新增 §19（参数表、实现位置、验证、明确的未做项）
+
 ### 结构分析（D3D9 设备创建参数：后台缓冲格式/交换方式/行为标志）
 
 - **把 `CreateDevice` 的 `D3DPRESENT_PARAMETERS` 从 exe 里抄出来，回答"后台缓冲有没有 alpha"**

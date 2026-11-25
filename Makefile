@@ -314,6 +314,22 @@ clean-gfx-motion:
 .PHONY: test_gfx_motion clean-gfx-motion
 
 # ---------------------------------------------------------------------------
+# 标题进场动画的底层（缩放直贴 + 脚本补间收敛到静态绘制）
+#   make test_gfx_xform
+# ---------------------------------------------------------------------------
+GFX_XFORM_TEST = bin/test_gfx_xform$(EXE)
+
+test_gfx_xform: $(GFX_XFORM_TEST)
+
+$(GFX_XFORM_TEST): tests/test_gfx_xform.c src/gfx.h src/motion.h src/titleanim.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_gfx_xform.c $(GFX_OBJ) $(LDFLAGS) -lm
+
+clean-gfx-xform:
+	-rm -f $(GFX_XFORM_TEST)
+
+.PHONY: test_gfx_xform clean-gfx-xform
+
+# ---------------------------------------------------------------------------
 # 定时器语义（TimerSet/TimerGet/TimerSuspend）
 #   make test_timer
 # ---------------------------------------------------------------------------
@@ -619,6 +635,7 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
+             $(GFX_XFORM_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
              $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST) $(TITLEMENU_DRAW_TEST) \

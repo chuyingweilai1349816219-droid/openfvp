@@ -45,6 +45,8 @@
 #include "../../openseq.h"
 #include "../../savelist.h"
 #include "../../gamemenu.h"
+#include "../../motion.h"
+#include "../../titleanim.h"
 
 #define FVP_WIN32_VERSION "0.1"
 #define FVP_CANVAS_W 1920
@@ -129,6 +131,9 @@ typedef struct Options {
     int load_slot; /* --load-slot N：启动就进"部分恢复"视图（截图/门禁用） */
     int preview_slot; /* --preview-slot N：存档列表里预选第 N 号槽并显示预览 */
     int opening;    /* --opening：启动先跑开场序列（logo 淡入→白场→标题） */
+    /* --title-anim：标题进场动画（logo alpha 0..255 / 缩放 10000..1000，
+     * 参数来自脚本；--opening 时自动打开）。默认关 → 冻结基线不变。 */
+    int title_anim;
     double shot_at_ms; /* --shot-at N：跑到 N 毫秒时存一张截图（0 = 不存） */
     int title_no_bg; /* --title-no-bg：标题菜单不铺背景（几何测量用） */
     int title_hover_seed; /* --title-hover N：启动就把第 N 项设为 hover（截图/门禁用，-1 = 不动） */
@@ -523,6 +528,7 @@ static void defaults(Options *o)
     o->debug_save_request = -1;
     o->title_no_bg = 0;
     o->opening = 0;
+    o->title_anim = -1; /* -1 = 未指定，见 main 里的 --opening 联动 */
     o->preview_slot = -1;
     o->load_slot = -1;
     o->menu_at = -1;
@@ -725,6 +731,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->preview_slot = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--opening") == 0) {
             o->opening = 1;
+        } else if (wcscmp(a, L"--title-anim") == 0) {
+            o->title_anim = 1;
         } else if (wcscmp(a, L"--shot-at") == 0 && i + 1 < argc) {
             o->shot_at_ms = wcstod(argv[++i], NULL);
         } else if (wcscmp(a, L"--title-no-bg") == 0) {
@@ -1653,6 +1661,47 @@ static const FvpSndBridge *g_gmenu_bridge;
 static int title_logo_on;
 static int title_ovl_loaded;
 static int title_copy_on;
+/* 标题进场动画的状态（--title-anim / --opening）。时间轴复用 src/motion.c：
+ * 参数全是脚本里的常量（src/titleanim.h），表达式与缓动曲线都有单测。 */
+static FvpMotion title_motion;
+static int title_motion_inited;
+static int title_anim_active;
+static int title_anim_started;
+static int title_anim_alpha_id;
+static int title_anim_scale_id;
+
+/* 按脚本参数建两条补间：MotionAlpha(0→255, 1400) + MotionMoveS2(10000→1000,
+ * 1400, mode 3)，都作用在 logo 图元上。 */
+static void title_anim_start(void)
+{
+    if (!title_motion_inited) {
+        fvp_motion_init(&title_motion);
+        title_motion_inited = 1;
+    }
+    fvp_motion_clear(&title_motion);
+    title_anim_alpha_id = fvp_motion_add(
+        &title_motion, FVP_TITLEANIM_LOGO_SLOT, FVP_TWEEN_ALPHA,
+        (double)FVP_TITLEANIM_ALPHA_FROM, 0.0, (double)FVP_TITLEANIM_ALPHA_TO,
+        0.0, (double)FVP_TITLEANIM_DUR_MS, FVP_TITLEANIM_EASE_MODE, 0);
+    title_anim_scale_id = fvp_motion_add(
+        &title_motion, FVP_TITLEANIM_LOGO_SLOT, FVP_TWEEN_SCALE,
+        (double)FVP_TITLEANIM_SCALE_FROM, (double)FVP_TITLEANIM_SCALE_FROM,
+        (double)FVP_TITLEANIM_SCALE_TO, (double)FVP_TITLEANIM_SCALE_TO,
+        (double)FVP_TITLEANIM_DUR_MS, FVP_TITLEANIM_EASE_MODE, 0);
+    title_anim_active = 1;
+}
+
+static void title_anim_advance(double dt_ms)
+{
+    if (!title_anim_active) {
+        return;
+    }
+    fvp_motion_advance(&title_motion, dt_ms);
+    if (fvp_motion_active_count(&title_motion) == 0) {
+        title_anim_active = 0;
+    }
+}
+
 /* --title-no-bg：只画菜单、不铺背景（几何测量/门禁用：背景的亮部会污染
  * 墨迹检测）。 */
 static int title_bg_disabled;
@@ -1840,7 +1889,22 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
         int ly = 0;
 
         (void)gfx_image_offset(gfx, TITLE_LOGO_SLOT, &lx, &ly);
-        (void)gfx_draw_image_at(gfx, TITLE_LOGO_SLOT, lx, ly);
+        if (title_anim_active) {
+            /* 进场动画：alpha / 缩放都来自脚本补间（src/titleanim.h）。
+             * 动画期间用缩放直贴，结束时补间给的就是 alpha=255、scale=1000，
+             * 画出来与静态绘制逐字节相同（tests/test_gfx_xform.c 断言）。 */
+            double av = (double)FVP_TITLEANIM_ALPHA_TO;
+            double sx = (double)FVP_TITLEANIM_SCALE_TO;
+            double sy = (double)FVP_TITLEANIM_SCALE_TO;
+
+            (void)fvp_motion_value(&title_motion, title_anim_alpha_id, &av, NULL);
+            (void)fvp_motion_value(&title_motion, title_anim_scale_id, &sx, &sy);
+            (void)gfx_draw_image_xform(gfx, TITLE_LOGO_SLOT, lx, ly,
+                                       (int)(sx + 0.5), (int)(sy + 0.5),
+                                       (int)(av + 0.5));
+        } else {
+            (void)gfx_draw_image_at(gfx, TITLE_LOGO_SLOT, lx, ly);
+        }
     }
     if (title_copy_on) {
         int cx = 0;
@@ -2456,6 +2520,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
     }
 
+    /* --opening 打开标题时顺带跑脚本里的进场动画（--title-anim 显式指定优先）。 */
+    if (opts.title_anim < 0) {
+        opts.title_anim = opts.opening ? 1 : 0;
+    }
     /* 开场序列（--opening）：logo 淡入 → 停留 → 淡出 → 白场 → 标题。
      * 这里只置标志，标题资源的加载仍在上面按 title_active 做；
      * 开场期间不画标题菜单（见帧循环里的 !opening_active 判断）。 */
@@ -3515,6 +3583,20 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                      * 这里只记录菜单开始显示的时刻。 */
                     title_shown_at = now;
                 }
+                if (opts.title_anim && !title_anim_started) {
+                    title_anim_start();
+                    title_anim_started = 1;
+                    fvp_logf("title: entrance animation started "
+                             "(logo alpha %d->%d / scale %d->%d over %d ms, "
+                             "mode %d)",
+                             FVP_TITLEANIM_ALPHA_FROM, FVP_TITLEANIM_ALPHA_TO,
+                             FVP_TITLEANIM_SCALE_FROM,
+                             FVP_TITLEANIM_SCALE_TO, FVP_TITLEANIM_DUR_MS,
+                             FVP_TITLEANIM_EASE_MODE);
+                }
+                if (title_anim_active) {
+                    title_anim_advance(frame_dt * 1000.0);
+                }
                 if (opening_active) {
                     /* 开场序列自己画（见下面的 opening 块），这里不画菜单 */
                 } else if (load_view_active) {
@@ -3568,6 +3650,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     title_draw_overlay(gfx, &title, title_profile,
                                        title_hover);
                 }
+            } else {
+                title_anim_started = 0;
+                title_anim_active = 0;
             }
             if (gmenu.active) {
                 draw_game_menu(gfx, &gmenu);

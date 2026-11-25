@@ -344,6 +344,12 @@ int gfx_image_size(const Gfx *g, int slot, int *w, int *h);
 
 /* 同 gfx_draw_image_at，但整张图乘一个 0..255 的 alpha（开场 logo 淡入用）。 */
 int gfx_draw_image_alpha(Gfx *g, int slot, int x, int y, int alpha);
+/* 缩放 + alpha 直贴（标题进场动画用）。scale 是 per-mille（1000 = 1.0），
+ * 锚点是**左上角**——与 render_sprite() 里 GFX_MODE_UI 的缩放一致，原版
+ * MotionMoveS2 的缩放也是左上锚。scale 都为 1000 时与 gfx_draw_image_alpha
+ * 字节等价（内部直接转调）。参数来自脚本，见 src/titleanim.h。 */
+int gfx_draw_image_xform(Gfx *g, int slot, int x, int y, int scale_x1000,
+                         int scale_y1000, int alpha);
 
 /* 用 (r,gr,b,alpha) 铺满整张画布（开场白场用）。 */
 void gfx_fill_canvas(Gfx *g, int r, int gr, int b, int alpha);

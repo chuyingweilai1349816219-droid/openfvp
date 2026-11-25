@@ -404,6 +404,19 @@ def build_steps(args):
                                'right edge ~1769, pitch 100, ink height 40..56, '
                                'hit test matches layout'))
 
+    # 4i11. 标题进场动画的底层：缩放直贴 + 脚本补间收敛到静态绘制
+    test_gfx_xform = tools.get('test_gfx_xform')
+    if not test_gfx_xform or not os.path.isfile(test_gfx_xform):
+        steps.append(Step('test_gfx_xform', None, 0,
+                          skip_reason='bin/test_gfx_xform.exe missing '
+                                      '(run: make test_gfx_xform)'))
+    else:
+        steps.append(Step('test_gfx_xform', [test_gfx_xform], 120,
+                          note='title entrance animation primitives: identity '
+                               'xform == static draw byte for byte, script '
+                               'tweens (alpha 0..255 / scale 10000..1000, 1400 '
+                               'ms, mode 3) converge to the static frame'))
+
     # 4i12. 原版 GDI 绘制协议（cp932 + GGO_BITMAP 1bpp）——Windows 专属
     test_gdi_ggo = tools.get('test_gdi_ggo')
     if not test_gdi_ggo or not os.path.isfile(test_gdi_ggo):
@@ -598,6 +611,22 @@ def build_steps(args):
                       note='D3D9 device creation read out of the exe: windowed '
                            'BackBufferFormat=D3DFMT_UNKNOWN + COPY + Windowed, '
                            'fullscreen A8R8G8B8, HAL + software vertex processing'))
+
+    # 6.4967 标题进场动画的参数必须等于脚本常量（纯 JSON/源码检查，无依赖）
+    vta = os.path.join(HERE, 'verify_title_anim.py')
+    steps.append(Step('verify_title_anim.py', [PY, '-X', 'utf8', vta], 300,
+                      skip_reason=None,
+                      note='title entrance animation params == the script '
+                           'constants (logo alpha 0->255 / scale 10000->1000, '
+                           '1400 ms, mode 3), animation off by default'))
+
+    # 6.4968 标题进场动画的端到端验证（真的启动外壳跑标题；缺游戏数据时 SKIP）
+    vtar = os.path.join(HERE, 'verify_title_anim_render.py')
+    steps.append(Step('verify_title_anim_render.py', [PY, '-X', 'utf8', vtar], 900,
+                      skip_reason=None,
+                      note='title entrance animation end to end: mid-animation '
+                           'frame differs (mean_abs 14.15), frame after 1400 ms '
+                           'is byte identical to the no-animation frame'))
 
     # 6.497 标题背景合成模型（18 个候选里 measured+over 最好；需 Pillow+numpy）
     vbb = os.path.join(HERE, 'verify_title_bg_blend.py')
