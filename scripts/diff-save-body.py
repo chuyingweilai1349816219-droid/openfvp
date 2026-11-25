@@ -86,6 +86,7 @@ def main():
     a_path = os.path.join(sdir, sys.argv[2])
     b_path = os.path.join(sdir, sys.argv[3])
     limit = 20
+    ignore_small = '--ignore-small' in sys.argv
     if '--limit' in sys.argv:
         limit = int(sys.argv[sys.argv.index('--limit') + 1])
     a = body(tail_of(a_path))
@@ -93,7 +94,22 @@ def main():
     print('body A=%d  body B=%d  (compared %d, pool skipped)'
           % (len(a), len(b), min(len(a), len(b))))
     rs = runs(a, b)
-    print('differing runs: %d' % len(rs))
+    if ignore_small:
+        # 同帧两次存档的对照（docs/save-snapshot.md §4.5）显示：只剩动画/计时器
+        # 计数在变，delta <= 4 且长度 <= 2 的游程基本都是这类噪声。
+        def is_noise(off, ln):
+            if ln > 2:
+                return False
+            va = struct.unpack_from('<I', a + b'\0' * 4, off)[0]
+            vb = struct.unpack_from('<I', b + b'\0' * 4, off)[0]
+            return abs(vb - va) <= 4
+
+        before = len(rs)
+        rs = [r for r in rs if not is_noise(*r)]
+        print('differing runs: %d (ignoring %d small tick-counter runs)'
+              % (len(rs), before - len(rs)))
+    else:
+        print('differing runs: %d' % len(rs))
     # smallest runs first: isolated scalar fields are short
     small = sorted([r for r in rs if r[1] <= 64], key=lambda r: r[1])
     print('\n-- isolated runs (<= 64 bytes), smallest first --')
