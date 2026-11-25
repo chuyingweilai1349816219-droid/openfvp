@@ -10,8 +10,10 @@
     缩放 10→1 / 1400 ms 属于其中的 p1..p3（hcb 0x58217..0x582EC）；
     这套参数现在冻结在 `ref/opening-scene.json` + `src/openinganim.h`，门禁是
     `tests/verify_opening_anim.py`（本文件不再重复断言开场）；
-  * **标题画面**是 265 `title_logo1`（0x58B72 加载）+ 262..264 与菜单项，
-    进场动画是 `MotionAlpha(0, 255, <local5>)`（hcb 0x59349..0x595C1）；
+  * **标题画面**是 265 `title_logo1`（0x58B72 加载）+ 262..264 与菜单项；
+    进场是**逐元素错开**的时间轴（hcb 0x5933E..0x59650），现在冻结在
+    `ref/title-enter.json` + `src/titleenter.h`，门禁是
+    `tests/verify_title_enter.py`（本文件不再重复断言进场）；
     背景四层同时做 25 秒的极慢缩放（hcb 0x59143..，时长 local7=25000）。
 
 本门禁断言：
@@ -19,11 +21,10 @@
   1. `ref/title-scene.json` 里：标题 262..265 的淡入条目（0→255，时长是栈局部
      变量 5/7，说明"时长由运行期设置"）；背景 258 的 MotionMoveS2 = 1300→900
      （时长栈局部 7）；
-  2. `src/titleanim.h` 的宏与上面逐项一致（500 / 25000 / 1300→900 …）；
-     开场常量**不再**定义在这里（已搬到 `src/openinganim.h`）；
-  3. `main_win32.c` **只对标题做 alpha 淡入**（用 `gfx_draw_image_alpha`），
-     不再把缩放动画挂到标题 logo 上（`gfx_draw_image_xform` 不应出现在标题绘制里），
-     默认 title_fade = 255（冻结基线不变），`--title-anim`/`--opening` 才打开。
+  2. `src/titleanim.h` 不再有"统一 500 ms 淡入"常量，只剩背景 25000 ms
+     与进场逐元素常量（FVP_TITLEENTER_*）；开场常量在 `src/openinganim.h`；
+  3. `main_win32.c` 用逐元素 alpha 画标题（默认静态 = 255，`--title-anim`/
+     `--opening` 才打开），没有把缩放动画挂到标题 logo 上。
 
 缺基线时 SKIP 并返回 0。
 
@@ -132,16 +133,8 @@ def main():
         check(e['args'][5] == 7,
               '时长参数是栈局部 7（实际 %r）' % (e['args'][5],))
 
-    print('== 4. src/titleanim.h 的宏与脚本一致 ==')
+    print('== 4. src/titleanim.h：背景常量在、统一 500 ms 淡入已删除 ==')
     m = macros(HEADER)
-    check(m.get('FVP_TITLEANIM_FADE_FROM') == 0 and
-          m.get('FVP_TITLEANIM_FADE_TO') == 255,
-          '标题淡入 0→255（实际 %r/%r）'
-          % (m.get('FVP_TITLEANIM_FADE_FROM'), m.get('FVP_TITLEANIM_FADE_TO')))
-    check(m.get('FVP_TITLEANIM_FADE_MS') == 500,
-          '标题淡入时长 = 500 ms（**待复核**：脚本按 global236 分支重设 local5，'
-          '第一次进场是 2000/3000 ms，见 src/titleanim.h 文件头，实际 %r）'
-          % (m.get('FVP_TITLEANIM_FADE_MS'),))
     check(m.get('FVP_TITLEANIM_BG_SCALE_FROM') == 1300 and
           m.get('FVP_TITLEANIM_BG_SCALE_TO') == 900,
           '背景缩放 1300→900（实际 %r/%r）'
@@ -152,20 +145,25 @@ def main():
           % (m.get('FVP_TITLEANIM_BG_MS'),))
     check(not [k for k in m if k.startswith('FVP_OPENANIM_')],
           'titleanim.h 里没有开场常量（开场由 openinganim.h 负责）')
+    check(not [k for k in m if k.startswith('FVP_TITLEANIM_FADE_')],
+          '统一 500 ms 淡入常量已删除（逐元素时间轴在 FVP_TITLEENTER_*，'
+          '由 tests/verify_title_enter.py 门禁）')
+    check(m.get('FVP_TITLEENTER_TOTAL_MS') == 4000,
+          '标题进场总时长 = 4000 ms（脚本 logo 2000+2000）')
 
-    print('== 5. main_win32.c：标题只做 alpha 淡入，不再用缩放 ==')
+    print('== 5. main_win32.c：标题用逐元素进场，默认静态 ==')
     src = io.open(MAIN, encoding='utf-8').read()
-    check('FVP_TITLEANIM_FADE_MS' in src, '引用 FVP_TITLEANIM_FADE_MS')
+    check('FVP_TITLEENTER_LOGO_MS' in src, '引用 FVP_TITLEENTER_LOGO_MS')
     check('gfx_draw_image_alpha(' in src,
           '标题用 gfx_draw_image_alpha 做淡入')
     check('gfx_draw_image_xform(' not in src,
           '标题绘制不再调用 gfx_draw_image_xform（缩放动画不属于标题）')
-    check(re.search(r'static int title_fade = 255', src) is not None,
-          '默认 title_fade = 255（冻结基线不变）')
+    check('title_enter_reset' in src,
+          '默认/结束时复位成静态画面（冻结基线不变）')
     check(re.search(r'opts\.title_anim\s*=\s*opts\.opening\s*\?\s*1\s*:\s*0', src)
           is not None,
           '只有 --opening（或显式 --title-anim）才打开动画')
-    check('fade-in started' in src, '日志写明这是淡入')
+    check('script entrance started' in src, '日志写明这是脚本进场')
     check('0x58B72' in io.open(HEADER, encoding='utf-8').read() or
           '0x58b72' in io.open(HEADER, encoding='utf-8').read(),
           '头文件注明了标题 logo（265）的加载点 0x58B72')
@@ -173,8 +171,8 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 标题 = alpha 淡入（262..265/菜单；500 ms 待复核，见 src/titleanim.h 文件头），背景 = 25000 ms 慢缩放；'
-          '缩放 10→1/1400 ms 属于开场 FAVORITE logo 的 p1..p3')
+    print('\nOK: 标题场景事实 + 背景 25000 ms 常量；标题进场是逐元素脚本时间轴'
+          '（见 tests/verify_title_enter.py）')
     return 0
 
 

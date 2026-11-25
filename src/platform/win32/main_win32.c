@@ -46,6 +46,7 @@
 #include "../../savelist.h"
 #include "../../gamemenu.h"
 #include "../../titleanim.h"
+#include "../../titleenter.h"
 
 #define FVP_WIN32_VERSION "0.1"
 #define FVP_CANVAS_W 1920
@@ -1660,44 +1661,87 @@ static const FvpSndBridge *g_gmenu_bridge;
 static int title_logo_on;
 static int title_ovl_loaded;
 static int title_copy_on;
-/* 标题画面进场：**淡入**（脚本 hcb 0x59349..0x595C1：
- * MotionAlpha(262/263/264/265 与菜单项, 0, 255, 500)）。
- * 默认 title_fade = 255，绘制与原来逐字节相同；--title-anim / --opening 时
- * 从 0 线性升到 255（500 ms），只影响 logo / 版权行 / 菜单这些会被脚本淡入的元素，
- * 背景与叠加层不参与（脚本也没给它们 alpha 动画）。 */
-static int title_fade = 255;
-static double title_anim_started_at;
-static int title_anim_active;
-static int title_anim_started;
+/* 标题画面进场：**逐元素错开**（脚本 hcb 0x5933E..0x5961A，见
+ * src/titleanim.h / src/titleenter.h）：
+ *
+ *   t=2000  logo(265)      alpha 0→255 / 2000 ms
+ *   t=2400  菜单 1501       900 ms + 纵向 +23 px → 0
+ *   t=2440..2560 菜单 1508/1515/1522/1529  820 ms + 纵向 +23 px → 0
+ *   t=2560  版权行(278)    820 ms + 横向 +30 px → 0
+ *   t=4000  整段结束
+ *
+ * 默认（--title-anim 关闭）alpha 全 255、偏移 0 ⇒ 绘制与静态画面**逐字节相同**；
+ * --title-anim / --opening 打开后按上面这条脚本时间轴走。
+ * 背景与叠加层不参与（脚本给它们的是 25 s 缩放/旋转，尚未实现）。 */
+static int title_logo_alpha = 255;
+static int title_copy_alpha = 255;
+static int title_copy_dx;
+static int title_menu_alpha[FVP_TITLE_ITEMS] = {255, 255, 255, 255, 255};
+static int title_menu_dy[FVP_TITLE_ITEMS];
+static FvpTitleEnter title_enter;
+static double title_enter_t0;
+static int title_enter_active;
+static int title_enter_started;
 
-/* 用**墙钟时间**推进淡入（而不是累加 frame_dt）：标题第一次绘制要现场加载
- * 一整套贴图，那一帧的 dt 可能是几百毫秒，累加会让 500 ms 的淡入在一帧内跳完
- * （实测过：截图里标题直接是全不透明）。 */
-static void title_anim_start(double now_s)
+/* 把逐元素状态复位成"静态画面"（全部 255 / 偏移 0）。 */
+static void title_enter_reset(void)
 {
-    title_anim_started_at = now_s;
-    title_fade = FVP_TITLEANIM_FADE_FROM;
-    title_anim_active = 1;
+    int i;
+
+    title_logo_alpha = 255;
+    title_copy_alpha = 255;
+    title_copy_dx = 0;
+    for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+        title_menu_alpha[i] = 255;
+        title_menu_dy[i] = 0;
+    }
 }
 
-static void title_anim_advance(double now_s)
+/* 用**墙钟时间**推进（而不是累加 frame_dt）：标题第一次绘制要现场加载一整套
+ * 贴图，那一帧的 dt 可能是几百毫秒，累加会把整段进场在一帧里跳完。 */
+static void title_enter_start(double now_s)
 {
-    double p;
-    double elapsed_ms = (now_s - title_anim_started_at) * 1000.0;
+    fvp_titleenter_init(&title_enter);
+    title_enter_t0 = now_s;
+    title_enter_active = 1;
+    title_enter_reset();
+    title_logo_alpha = 0;
+    title_copy_alpha = 0;
+    {
+        int i;
 
-    if (!title_anim_active) {
+        for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+            title_menu_alpha[i] = 0;
+        }
+    }
+}
+
+static void title_enter_advance(double now_s)
+{
+    int elapsed_ms;
+    int i;
+
+    if (!title_enter_active) {
         return;
     }
-    if (elapsed_ms >= (double)FVP_TITLEANIM_FADE_MS) {
-        title_fade = FVP_TITLEANIM_FADE_TO;
-        title_anim_active = 0;
-        return;
+    elapsed_ms = (int)((now_s - title_enter_t0) * 1000.0 + 0.5);
+    fvp_titleenter_set_elapsed(&title_enter, elapsed_ms);
+    title_logo_alpha = fvp_titleenter_alpha(&title_enter,
+                                            FVP_TITLEENTER_PART_LOGO);
+    title_copy_alpha = fvp_titleenter_alpha(&title_enter,
+                                            FVP_TITLEENTER_PART_COPY);
+    fvp_titleenter_offset(&title_enter, FVP_TITLEENTER_PART_COPY,
+                          &title_copy_dx, NULL);
+    for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
+        title_menu_alpha[i] = fvp_titleenter_alpha(
+            &title_enter, FVP_TITLEENTER_PART_MENU0 + i);
+        fvp_titleenter_offset(&title_enter, FVP_TITLEENTER_PART_MENU0 + i,
+                              NULL, &title_menu_dy[i]);
     }
-    p = elapsed_ms / (double)FVP_TITLEANIM_FADE_MS;
-    title_fade = (int)((double)FVP_TITLEANIM_FADE_FROM +
-                       ((double)FVP_TITLEANIM_FADE_TO -
-                        (double)FVP_TITLEANIM_FADE_FROM) * p +
-                       0.5);
+    if (fvp_titleenter_done(&title_enter)) {
+        title_enter_reset();
+        title_enter_active = 0;
+    }
 }
 
 /* --title-no-bg：只画菜单、不铺背景（几何测量/门禁用：背景的亮部会污染
@@ -1882,36 +1926,42 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
             title_draw_bg(gfx, prof);
         }
     }
-    if (title_logo_on) {
+    if (title_logo_on && title_logo_alpha > 0) {
         int lx = 0;
         int ly = 0;
 
         (void)gfx_image_offset(gfx, TITLE_LOGO_SLOT, &lx, &ly);
-        if (title_fade >= 255) {
+        if (title_logo_alpha >= 255) {
             (void)gfx_draw_image_at(gfx, TITLE_LOGO_SLOT, lx, ly);
         } else {
             (void)gfx_draw_image_alpha(gfx, TITLE_LOGO_SLOT, lx, ly,
-                                       title_fade);
+                                       title_logo_alpha);
         }
     }
-    if (title_copy_on) {
+    if (title_copy_on && title_copy_alpha > 0) {
         int cx = 0;
         int cy = 0;
 
         (void)gfx_image_offset(gfx, TITLE_COPY_SLOT, &cx, &cy);
-        if (title_fade >= 255) {
+        cx += title_copy_dx;
+        if (title_copy_alpha >= 255) {
             (void)gfx_draw_image_at(gfx, TITLE_COPY_SLOT, cx, cy);
         } else {
             (void)gfx_draw_image_alpha(gfx, TITLE_COPY_SLOT, cx, cy,
-                                       title_fade);
+                                       title_copy_alpha);
         }
     }
     if (title_textures_on) {
         for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
             int ix = 0;
             int iy = 0;
+            int ia = title_menu_alpha[i];
+            int idy = title_menu_dy[i];
 
             if (prof == NULL || !prof->items[i].asset[0]) {
+                continue;
+            }
+            if (ia <= 0) {
                 continue;
             }
             /* 素材头里自带摆放坐标（原版就是这么放的）→ 优先用它；
@@ -1922,6 +1972,7 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
                     continue;
                 }
             }
+            iy += idy;
             if (i == hover) {
                 int gw = 0;
                 int gh = 0;
@@ -1935,14 +1986,14 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
                                         prof->items[i].ink_y0)) /
                                      2;
 
-                    if (title_fade >= 255) {
+                    if (ia >= 255) {
                         (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + 8 + i,
                                                 (prof->client_w - gw) / 2,
                                                 gy);
                     } else {
                         (void)gfx_draw_image_alpha(
                             gfx, TITLE_SLOT_BASE + 8 + i,
-                            (prof->client_w - gw) / 2, gy, title_fade);
+                            (prof->client_w - gw) / 2, gy, ia);
                     }
                 }
             }
@@ -1960,19 +2011,20 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
 
                     (void)gfx_image_offset(gfx, TITLE_HOVER_SLOT_BASE + i, &hx,
                                            &hy);
-                    if (title_fade >= 255) {
+                    hy += idy;
+                    if (ia >= 255) {
                         (void)gfx_draw_image_at(gfx, TITLE_HOVER_SLOT_BASE + i,
                                                 hx, hy);
                     } else {
                         (void)gfx_draw_image_alpha(gfx,
                                                    TITLE_HOVER_SLOT_BASE + i,
-                                                   hx, hy, title_fade);
+                                                   hx, hy, ia);
                     }
-                } else if (title_fade >= 255) {
+                } else if (ia >= 255) {
                     (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + i, ix, iy);
                 } else {
                     (void)gfx_draw_image_alpha(gfx, TITLE_SLOT_BASE + i, ix, iy,
-                                               title_fade);
+                                               ia);
                 }
             }
         }
@@ -1981,6 +2033,8 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
     for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
         int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
         int hovered = (i == hover);
+        int ia = title_menu_alpha[i];
+        int idy = title_menu_dy[i];
         int px;
         const char *label;
         int r = hovered ? 255 : 235;
@@ -2051,12 +2105,15 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
                     dx = (x0 + x1) / 2 - tw / 2;
                 }
             }
+            if (ia <= 0) {
+                continue;
+            }
             if (title_ui_font != NULL) {
                 (void)gfx_draw_text_line_font(gfx, title_ui_font, label, dx,
-                                              y0, px, r, gr, b, title_fade);
+                                              y0 + idy, px, r, gr, b, ia);
             } else {
-                (void)gfx_draw_text_line(gfx, label, dx, y0, px, r, gr, b,
-                                         title_fade);
+                (void)gfx_draw_text_line(gfx, label, dx, y0 + idy, px, r, gr,
+                                         b, ia);
             }
         }
     }
@@ -3607,25 +3664,29 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             double r0 = now_sec();
             gfx_render(gfx);
             /* 标题菜单是引擎侧 UI 覆盖层，必须在 render 之后画。
-             * 开场序列期间不画标题（脚本是等开场函数返回后才做标题的 500 ms
-             * 淡入，所以 title_anim 也不能在开场期间启动）。 */
+             * 开场序列期间不画标题（脚本是等开场函数返回后才排标题的逐元素进场，
+             * 见 src/titleenter.h，所以 title_anim 也不能在开场期间启动）。 */
             if (title_active && !opening_active) {
                 if (title_shown_at == 0.0) {
                     /* 几何/可用性已在启动时按 profile 设好；
                      * 这里只记录菜单开始显示的时刻。 */
                     title_shown_at = now;
                 }
-                if (opts.title_anim && !title_anim_started) {
-                    title_anim_start(now);
-                    title_anim_started = 1;
-                    fvp_logf("title: fade-in started "
-                             "(logo/copyright/menu alpha %d->%d over %d ms; "
-                             "script MotionAlpha on 265/264/263/262)",
-                             FVP_TITLEANIM_FADE_FROM, FVP_TITLEANIM_FADE_TO,
-                             FVP_TITLEANIM_FADE_MS);
+                if (opts.title_anim && !title_enter_started) {
+                    title_enter_start(now);
+                    title_enter_started = 1;
+                    fvp_logf("title: script entrance started (logo 0->255 "
+                             "over %d ms from %d ms; menu %d items staggered "
+                             "by %d ms; copyright from %d ms; total %d ms)",
+                             FVP_TITLEENTER_LOGO_MS,
+                             FVP_TITLEENTER_LOGO_START_MS,
+                             FVP_TITLEENTER_MENU_COUNT,
+                             FVP_TITLEENTER_MENU_STEP_MS,
+                             FVP_TITLEENTER_COPY_START_MS,
+                             FVP_TITLEENTER_TOTAL_MS);
                 }
-                if (title_anim_active) {
-                    title_anim_advance(now);
+                if (title_enter_active) {
+                    title_enter_advance(now);
                 }
                 if (load_view_active) {
                     /* 部分恢复：整屏背景图 + 存档记的那句台词 + 明确标注 */
@@ -3679,8 +3740,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                                        title_hover);
                 }
             } else {
-                title_anim_started = 0;
-                title_anim_active = 0;
+                title_enter_started = 0;
+                title_enter_active = 0;
+                title_enter_reset();
             }
             if (gmenu.active) {
                 draw_game_menu(gfx, &gmenu);
@@ -3706,11 +3768,30 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                  * 后才排，hcb 0x5933E 起），所以这里强制 title_fade=0：
                  * 只画背景/叠加层，不画 logo/版权/菜单。 */
                 if (title_active) {
-                    int saved_fade = title_fade;
+                    int saved_logo = title_logo_alpha;
+                    int saved_copy = title_copy_alpha;
+                    int saved_dx = title_copy_dx;
+                    int saved_menu[FVP_TITLE_ITEMS];
+                    int saved_dy[FVP_TITLE_ITEMS];
+                    int k;
 
-                    title_fade = 0;
+                    for (k = 0; k < FVP_TITLE_ITEMS; ++k) {
+                        saved_menu[k] = title_menu_alpha[k];
+                        saved_dy[k] = title_menu_dy[k];
+                        title_menu_alpha[k] = 0;
+                        title_menu_dy[k] = 0;
+                    }
+                    title_logo_alpha = 0;
+                    title_copy_alpha = 0;
+                    title_copy_dx = 0;
                     title_draw_overlay(gfx, &title, title_profile, title_hover);
-                    title_fade = saved_fade;
+                    title_logo_alpha = saved_logo;
+                    title_copy_alpha = saved_copy;
+                    title_copy_dx = saved_dx;
+                    for (k = 0; k < FVP_TITLE_ITEMS; ++k) {
+                        title_menu_alpha[k] = saved_menu[k];
+                        title_menu_dy[k] = saved_dy[k];
+                    }
                 }
                 for (i = 0; i < fvp_openseq_layer_count(); ++i) {
                     FvpOpenLayerState st;

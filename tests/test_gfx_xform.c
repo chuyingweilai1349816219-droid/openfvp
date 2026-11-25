@@ -4,7 +4,7 @@
  *
  * 为什么有这个测试：开场 FAVORITE logo 的缩放/旋转/位移参数是从**脚本**里读出来的
  * （`src/openinganim.h` 的 FVP_OPEN_VIEW_*，出处 `ref/opening-scene.json`）。
- * 标题画面本身的进场是 **alpha 淡入 500 ms**（`FVP_TITLEANIM_FADE_*`），不用缩放。
+ * 标题画面本身的进场是**逐元素 alpha 淡入**（`FVP_TITLEENTER_*`，见 tests/test_titleenter.c），不用缩放。
  * 这里验证：
  *
  *   1. `gfx_draw_image_xform()` 在 scale=1000 / alpha=255 时与静态绘制
@@ -13,7 +13,7 @@
  *   3. 用脚本里的参数建两条补间（alpha 0→255、scale 10000→1000，1400 ms，mode 3），
  *      验证 t=0 / t=700 / t=1400 的取值符合 mode 3 的缓出曲线，并且
  *      **t>=1400 后画出的画布与静态绘制逐字节相同**（这条补间属于**开场**
- *      FAVORITE logo 的 p1..p3 层；标题画面的进场是 500 ms 线性淡入，见下）；
+ *      FAVORITE logo 的 p1..p3 层；标题画面的进场是逐元素时间轴（见下）；
  *   4. `gfx_draw_image_op_xform()` 的 OP（脚本 PrimSetOP）轴心语义：
  *      identity 时 OP 抵消、OP=左上角时与 xform 逐字节相同、OP=中心时围绕中心
  *      缩放/旋转（0.5 倍 20x15、90° 后宽高互换、180° 位置尺寸不变）。
@@ -314,13 +314,12 @@ int main(void)
               FVP_OPEN_VIEW_SCALE_TO == 1000 &&
               FVP_OPEN_VIEW_MS == 1400,
           "开场 p1..p3 的缩放常量 = 10000→1000 / 1400 ms（脚本 MotionMoveS2）");
-    CHECK(FVP_TITLEANIM_FADE_FROM == 0 && FVP_TITLEANIM_FADE_TO == 255 &&
-              FVP_TITLEANIM_FADE_MS == 500,
-          "标题进场 = 线性淡入 0→255 / 500 ms（脚本 MotionAlpha）");
+    CHECK(FVP_TITLEENTER_LOGO_START_MS == 2000 &&
+              FVP_TITLEENTER_LOGO_MS == 2000 &&
+              FVP_TITLEENTER_TOTAL_MS == 4000,
+          "标题进场 = 逐元素脚本时间轴（logo 2000 ms 起、2000 ms、总计 4000）");
     fvp_motion_init(&m);
-    alpha_id = fvp_motion_add(&m, 255, FVP_TWEEN_ALPHA,
-                              FVP_TITLEANIM_FADE_FROM, 0.0,
-                              FVP_TITLEANIM_FADE_TO, 0.0,
+    alpha_id = fvp_motion_add(&m, 255, FVP_TWEEN_ALPHA, 0.0, 0.0, 255.0, 0.0,
                               FVP_OPEN_VIEW_MS, 3, 0);
     scale_id = fvp_motion_add(&m, 255, FVP_TWEEN_SCALE,
                               FVP_OPEN_VIEW_SCALE_FROM,

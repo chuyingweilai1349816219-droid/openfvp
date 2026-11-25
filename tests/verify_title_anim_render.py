@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""标题进场动画的**端到端**门禁：动画真的跑、跑完真的与静态帧逐字节相同。
+"""标题进场（逐元素脚本时间轴）的**端到端**门禁。
 
-单元测试（`tests/test_gfx_xform.c`）证明了"xform 在 scale=1000 时与静态绘制字节等价"，
-门禁 `tests/verify_title_anim.py` 证明了"C 里的参数 == 脚本常量"。这里把**外壳**也焊上：
-真的启动 `bin/fvp.exe` 跑标题，抓三张图对比：
+单元测试 `tests/test_titleenter.c` 证明时间轴数学；门禁
+`tests/verify_title_enter.py` 证明 C 里的常量 == 脚本；这里把外壳焊上：
 
-  A. `--title-anim`，在 300 ms 抓图（500 ms 淡入进行到约 1/5）
-  B. `--run-seconds 3`                 不开动画（静态，基线口径）
-  C. `--title-anim --run-seconds 3`     动画跑完
+  A. `--title-anim --shot-at 2600`  进场中（logo 半透明 + 菜单逐项开始）
+  D. `--title-anim --shot-at 1500`  进场早期（logo 还没开始 = 只有标题背景）
+  B. 不开动画的静态标题（基线口径）
+  C. `--title-anim` 跑到 4600 ms   进场结束（4000 ms 后）
 
 断言：
-  1. **A != B**：淡入确实在画面上生效（logo/菜单变暗）；
-  2. **C == B 逐字节相同**：补间结束时 alpha=255 / scale=1000，画出来与不做动画
-     完全一样 —— 这是"默认关 + 动画终点等于静态"两条性质合起来的证明，
-     也是冻结基线（`verify_vs_original`）不会被动画影响的前提；
-  3. 日志：A/C 有 "entrance animation started"，B 没有。
+  1. **A != B**：逐元素淡入确实在画面上生效；
+  2. **D 与静态的差 > A 与静态的差**：早期只有背景，logo/菜单/版权行都还看不见，
+     越到后面越接近静态 —— 这是"错开进场"的端到端证据；
+  3. **C == B 逐字节相同**：4000 ms 后逐元素 alpha 全 255、偏移全 0，与静态一致；
+  4. 日志：A/D/C 都有 `script entrance started`，B 没有。
 
-缺 `bin/fvp.exe` 或游戏目录时 SKIP 并返回 0（和 `verify_vs_original` 一致）。
+缺 `bin/fvp.exe` 或游戏目录时 SKIP 并返回 0（和 verify_opening_render.py 一致）。
 
 用法：python tests/verify_title_anim_render.py
 """
@@ -54,10 +54,9 @@ def run_shell(game_dir, script, shot, log, extra, seconds):
             '--run-seconds', '%g' % seconds, '--screenshot', shot, '--log', log]
     args += extra
     try:
-        rc = subprocess.run(args, timeout=300).returncode
+        return subprocess.run(args, timeout=300).returncode
     except subprocess.TimeoutExpired:
         return 1
-    return rc
 
 
 def diff(a, b):
@@ -99,16 +98,16 @@ def main():
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
 
-    shots = {k: os.path.join(OUT, 'titleanim-%s.bmp' % k)
-             for k in ('mid', 'off', 'done')}
-    logs = {k: os.path.join(OUT, 'titleanim-%s.log' % k)
-            for k in ('mid', 'off', 'done')}
+    shots = {k: os.path.join(OUT, 'titleenter-%s.bmp' % k)
+             for k in ('mid', 'early', 'off', 'done')}
+    logs = {k: os.path.join(OUT, 'titleenter-%s.log' % k)
+            for k in ('mid', 'early', 'off', 'done')}
 
-    # mid 用 --shot-at 抓淡入中途那一帧（退出时的截图不会再覆盖它）
     plan = [
-        ('mid', ['--title-anim', '--shot-at', '300'], 0.75),
+        ('mid', ['--title-anim', '--shot-at', '2600'], 3.2),
+        ('early', ['--title-anim', '--shot-at', '1500'], 2.1),
         ('off', [], 1.6),
-        ('done', ['--title-anim'], 1.6),
+        ('done', ['--title-anim', '--shot-at', '4600'], 5.2),
     ]
     for key, extra, seconds in plan:
         for p in (shots[key], logs[key]):
@@ -123,37 +122,45 @@ def main():
         return 1
 
     mid = bmp_pixels(shots['mid'])
+    early = bmp_pixels(shots['early'])
     off = bmp_pixels(shots['off'])
     done = bmp_pixels(shots['done'])
-    check(mid is not None and off is not None and done is not None,
-          '三张 BMP 都读得出来')
+    check(all(x is not None for x in (mid, early, off, done)),
+          '四张 BMP 都读得出来')
 
-    print('== 1. 动画中途 vs 不开动画：画面必须明显不同 ==')
+    print('== 1. 进场中 vs 不开动画：画面必须明显不同 ==')
     m_ab, p_ab = diff(mid, off)
     print('  mean_abs=%.3f  changed pixels=%.2f%%' % (m_ab, p_ab))
-    check(m_ab > 0.5, '淡入中途的 mean_abs > 0.5（实际 %.3f）' % m_ab)
+    check(m_ab > 0.5, '进场中的 mean_abs > 0.5（实际 %.3f）' % m_ab)
     check(p_ab > 1.0, '差异像素占比 > 1%%（实际 %.2f%%）' % p_ab)
 
-    print('== 2. 淡入跑完 vs 不开动画：必须逐字节相同 ==')
+    print('== 2. 早期 vs 进场中：早期更接近"只有背景" ==')
+    e_off, ep_off = diff(early, off)
+    print('  early vs static: mean_abs=%.3f' % e_off)
+    check(e_off > m_ab,
+          '早期与静态的差 > 进场中与静态的差（%.3f > %.3f，错开进场生效）'
+          % (e_off, m_ab))
+
+    print('== 3. 进场跑完 vs 不开动画：必须逐字节相同 ==')
     m_cb, p_cb = diff(done, off)
     print('  mean_abs=%.6f  changed pixels=%.4f%%' % (m_cb, p_cb))
-    check(m_cb == 0.0, '动画终点的 mean_abs == 0（实际 %.6f）' % m_cb)
-    check(p_cb == 0.0, '动画终点没有一个差异像素（实际 %.4f%%）' % p_cb)
+    check(m_cb == 0.0, '进场终点的 mean_abs == 0（实际 %.6f）' % m_cb)
+    check(p_cb == 0.0, '进场终点没有一个差异像素（实际 %.4f%%）' % p_cb)
 
-    print('== 3. 日志：只有开动画的两次打出 "fade-in started" ==')
-    for key in ('mid', 'off', 'done'):
+    print('== 4. 日志：只有开动画的几次打出 "script entrance started" ==')
+    for key in ('mid', 'early', 'off', 'done'):
         text = read_log(logs[key])
-        got = 'fade-in started' in text
+        got = 'script entrance started' in text
         if key == 'off':
-            check(not got, 'off 那次没有动画日志')
+            check(not got, 'off 那次没有进场日志')
         else:
-            check(got, '%s 那次有动画日志' % key)
+            check(got, '%s 那次有脚本进场日志' % key)
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 进场动画在画面上生效（mean_abs %.2f），且跑完后与静态帧逐字节相同'
-          % m_ab)
+    print('\nOK: 逐元素进场在画面上生效（mean_abs %.2f），早期只有背景，'
+          '4000 ms 后与静态帧逐字节相同' % m_ab)
     return 0
 
 

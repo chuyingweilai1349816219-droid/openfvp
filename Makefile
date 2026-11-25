@@ -114,6 +114,7 @@ WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
                $(WIN32_DIR)/win32_gdi_text.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
               src/titlemenu.c src/savelist.c src/savetail.c src/openseq.c \
+              src/titleenter.c \
               src/gamemenu.c \
                src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c \
                src/timer.c src/history.c
@@ -194,6 +195,23 @@ $(SAVE_TEST): tests/test_save.c src/save.c src/save.h | bin
 SAVELIST_TEST = bin/test_savelist$(EXE)
 
 test_savelist: $(SAVELIST_TEST)
+
+# ---------------------------------------------------------------------------
+# 标题进场逐元素时间轴（脚本 0x5933E..0x5961A：logo 2000ms、菜单错开 40ms、版权行）
+#   make test_titleenter
+# ---------------------------------------------------------------------------
+TITLEENTER_TEST = bin/test_titleenter$(EXE)
+
+test_titleenter: $(TITLEENTER_TEST)
+
+$(TITLEENTER_TEST): tests/test_titleenter.c src/titleenter.c src/titleenter.h \
+                    src/titleanim.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_titleenter.c src/titleenter.c $(LDFLAGS)
+
+clean-titleenter:
+	-rm -f $(TITLEENTER_TEST)
+
+.PHONY: test_titleenter clean-titleenter
 
 # ---------------------------------------------------------------------------
 # 开场 FAVORITE logo 序列（脚本时间轴：淡入 1200/1400 → 淡出 2500/3500 → 100 收尾）
@@ -641,7 +659,8 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
              $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST) $(TITLEMENU_DRAW_TEST) \
-             $(SAVELIST_TEST) $(OPENSEQ_TEST) $(SND_FADE_TEST) $(PLATFORM_TEST) $(GAMEMENU_TEST) $(SND_GAIN_TEST)
+             $(SAVELIST_TEST) $(OPENSEQ_TEST) $(SND_FADE_TEST) $(PLATFORM_TEST) $(GAMEMENU_TEST) $(SND_GAIN_TEST) \
+             $(TITLEENTER_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \

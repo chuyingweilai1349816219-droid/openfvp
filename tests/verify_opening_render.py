@@ -10,17 +10,20 @@
   C. `--opening --shot-at 4800`   开场结束（6 层 + 100 ms 收尾后进标题）
   D. 不开 `--opening` 的静态标题（基线口径）
 
+注：开场 3800 ms 结束后标题还有 4000 ms 的逐元素进场（脚本 0x5933E..），
+所以 C 要等到 ~8.2 s 才等于静态帧。
+
 断言：
   1. **A 是白底**（近白像素 > 90%）：开场从白场开始；
   2. **A != B**：白底淡出确实发生了（脚本 MotionAlpha(250, keep, 0, 3500)）；
   3. **B 已经能看见标题背景**（蓝分量明显高于红）：脚本先建标题场景
      （hcb 0x590CC call 0x584D8）再跑开场（0x591EC），白底淡出露出的是标题背景，
      不是黑屏。这也是旧实现（白屏→标题遮罩）丢掉的事实；
-  4. **C == D 逐字节相同**：开场结束后画面 == 静态标题帧 —— 说明 3800 ms 后
-     6 层全部归零、标题停在终态，冻结的标题基线不受开场影响；
+  4. **C == D 逐字节相同**：开场 3800 ms + 标题进场 4000 ms 之后画面 ==
+     静态标题帧 —— 说明开场六层全部归零、标题进场也归位，冻结基线不受影响；
   5. 日志：A/B 打印 `6/6 layers loaded` 且带 `opening t=`；C 打印
      `opening: finished in ... 6 layers`；开场结束**之后**才出现
-     `title: fade-in started`（脚本是开场函数返回后才排标题的淡入）。
+     `title: script entrance started`（脚本是开场函数返回后才排标题进场）。
 
 缺 `bin/fvp.exe` 或游戏目录时 SKIP 并返回 0（和 verify_title_anim_render.py 一致）。
 
@@ -131,7 +134,7 @@ def main():
     plan = [
         ('early', ['--opening', '--shot-at', '250'], 0.9),
         ('fade', ['--opening', '--shot-at', '2900'], 3.4),
-        ('done', ['--opening', '--shot-at', '4800'], 5.4),
+        ('done', ['--opening', '--shot-at', '8200'], 8.8),
         ('static', ['--shot-at', '1600'], 2.2),
     ]
     for key, extra, seconds in plan:
@@ -208,9 +211,9 @@ def main():
     check(td is None, 'done 那次开场已经结束（日志里没有 opening t=）')
     done_log = read_log(logs['done'])
     i_fin = done_log.find('opening: finished in')
-    i_fade = done_log.find('title: fade-in started')
+    i_fade = done_log.find('title: script entrance started')
     check(i_fin >= 0 and i_fade > i_fin,
-          '标题淡入在开场结束之后才开始（finished@%d < fade-in@%d）'
+          '标题逐元素进场在开场结束之后才开始（finished@%d < entrance@%d）'
           % (i_fin, i_fade))
 
     if fails:

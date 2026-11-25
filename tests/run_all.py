@@ -451,6 +451,17 @@ def build_steps(args):
                                'alpha monotonic/bounded, clamping'))
 
     # 4j. motion wired into gfx (disabled by default -> old frames unaffected)
+    test_titleenter = tools['test_titleenter']
+    if not os.path.isfile(test_titleenter):
+        steps.append(Step('test_titleenter', None, 0,
+                          skip_reason='bin/test_titleenter.exe missing '
+                                      '(run: make test_titleenter)'))
+    else:
+        steps.append(Step('test_titleenter', [test_titleenter], 120,
+                          note='title entrance per-element timeline (logo '
+                               '2000/2000, menu 2400+40i, copyright 2560/820, '
+                               'total 4000 ms)'))
+
     test_gfx_motion = tools['test_gfx_motion']
     if not os.path.isfile(test_gfx_motion):
         steps.append(Step('test_gfx_motion', None, 0,
@@ -653,6 +664,14 @@ def build_steps(args):
                       note='title entrance animation end to end: mid-animation '
                            'frame differs (mean_abs 14.15), frame after 1400 ms '
                            'is byte identical to the no-animation frame'))
+
+    # 6.49685 标题进场逐元素时间轴 == 脚本常量（纯 JSON/源码检查，无依赖）
+    vte = os.path.join(HERE, 'verify_title_enter.py')
+    steps.append(Step('verify_title_enter.py', [PY, '-X', 'utf8', vte], 300,
+                      skip_reason=None,
+                      note='title entrance timeline == script constants '
+                           '(logo 2000/2000, menu 2400+40i/900/820, '
+                           'copyright 2560/820, total 4000 ms)'))
 
     # 6.4969 开场 FAVORITE logo 的时间轴 == 脚本常量（纯 JSON/源码检查，无依赖）
     voa = os.path.join(HERE, 'verify_opening_anim.py')

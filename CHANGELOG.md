@@ -51,6 +51,33 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 实现/结构分析（标题进场不是统一淡入：逐元素错开，500 ms 那个值是错的）
+
+- **上一轮冻结的 `FVP_TITLEANIM_FADE_MS = 500` 作废。** 那个 500 来自 hcb 0x59120
+  的 `local5`，但同一函数的标题进场在此之前已被 **0x592C7** 重设为
+  `local5 = 2000 / local7 = 3000`；菜单项在 0x593B7/0x593D9 分支是 `900 / 820`。
+- **进场块 0x5933E..0x59650 整段解出**（新增 `scripts/extract-title-enter.py` +
+  基线 `ref/title-enter.json`）：
+  - logo(265)：**2000 ms 起、2000 ms** 淡入（0→255）
+  - 菜单 1501：2400 ms 起、**900 ms**，纵向 **+23 px→0**；
+    1508/1515/1522/1529：2440/2480/2520/2560 起（+40 ms 步进）、各 **820 ms**，同样 +23→0
+  - 版权行(278)：2560 ms 起、**820 ms**，横向 **+30 px→0**
+  - 装饰层 264（1000/2000）、263（2000/2000 + 纵向 −47）、262（2000/**3000**）：
+    本站尚未绘制（`title_frame`/`title_frame2` 在全脚本里找不到 `GraphLoad` 调用点），
+    只冻结参数
+  - 总时长 **4000 ms**（logo 最后结束）；逻辑像素按 float32 因子 1.875/1.6875 换成 HD
+- **实现**：新增 `src/titleenter.c/.h`（纯时间轴数学，3496 项单测）；`main_win32.c`
+  把统一的 `title_fade` 换成逐元素 alpha/偏移；默认全 255 / 零偏移 ⇒ 静态画面
+  逐字节不变；`--title-anim` / `--opening` 才打开。
+- **不实现但记录**：1522/1529 的 `global3` 分支第二条 `MotionMove`（终点 −81 px）
+  记在基线的 `move_alternatives`，不静默丢掉。
+- **门禁**：新增 `tests/test_titleenter.c`（3496 项）、`tests/verify_title_enter.py`
+  （重新提取 == 基线 + C 常量 + 外壳用法）；重写 `tests/verify_title_anim_render.py`
+  （进场中 mean_abs 5.05、早期只有背景、4000 ms 后与静态帧**逐字节 0 差**）；
+  `verify_title_anim.py` 去掉 500 ms 断言、保留场景事实与背景常量。
+- **验收**：`make check` PASS（31 组）；`run_all.py` 65 步（新增 2 步）；
+  `compare.py --run` 仍 6496 B / `7F9837FF…`；`verify_gfx` 仍 293 px / PSNR 49.94；`check-docs` PASS（33 篇）。
+
 ### 实现/结构分析（开场 FAVORITE logo：从抓帧拟合换成脚本时间轴，六层全画）
 
 - **`--opening` 的时间轴不再是"近似值"，全部从 hcb 开场函数读出来**

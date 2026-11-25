@@ -208,9 +208,11 @@ def main():
           'main_win32.c 用 OP 轴心的 gfx_draw_image_op_xform()')
     check('fvp_openseq_set_elapsed' in main_c,
           'main_win32.c 用墙钟推进（fvp_openseq_set_elapsed）')
-    check(re.search(r'title_fade = 0;\s*\n\s*title_draw_overlay', main_c)
-          is not None,
-          '开场期间强制 title_fade=0 画标题背景（脚本先建标题场景再跑开场）')
+    check(re.search(r'title_logo_alpha = 0;\s*\n\s*title_copy_alpha = 0;',
+                    main_c) is not None and
+          'title_draw_overlay' in main_c,
+          '开场期间把标题元素 alpha 压成 0、只画标题背景'
+          '（脚本先建标题场景再跑开场）')
     check('fvp_openseq_veil_alpha' not in main_c,
           '旧的白色遮罩（veil）已删除（白底 250 自己就是那个遮罩）')
     check('fvp_openseq_layer_count' in main_c,
