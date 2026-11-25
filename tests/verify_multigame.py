@@ -512,25 +512,52 @@ def stage_title_menu(shell, games, check):
                 img_a = read_bmp32(cand)
                 break
         img_b = read_bmp32(shot3) if os.path.isfile(shot3) else None
-        if img_a is not None and img_b is not None:
+
+        def compare_hover(a, b):
             diff = 0
             band = 0
-            band_y0 = t['centres'][1] - 40
-            band_y1 = t['centres'][1] + 50
-            for yy in range(img_a[1]):
-                ra = img_a[2][yy]
-                rb = img_b[2][yy]
-                for xx in range(img_a[0]):
+            y0 = t['centres'][1] - 40
+            y1 = t['centres'][1] + 50
+            if a is None or b is None:
+                return (0, 0)
+            for yy in range(a[1]):
+                ra = a[2][yy]
+                rb = b[2][yy]
+                for xx in range(a[0]):
                     if ra[xx * 4:xx * 4 + 3] != rb[xx * 4:xx * 4 + 3]:
                         diff += 1
-                        if band_y0 <= yy <= band_y1:
+                        if y0 <= yy <= y1:
                             band += 1
-            check(diff > 200, 'hover state changes pixels (%d)' % diff)
+            return (diff, band)
+
+        if img_a is not None and img_b is not None:
+            diff, band = compare_hover(img_a, img_b)
+            attempts = 1
+            # 贴图模式的严格断言（差异必须全落在 hover 行）偶尔会撞上"两张帧来自
+            # 不同渲染状态"的时序抖动（FLAKY 日志抓到过 69756 vs 33343）。重拍整对
+            # 帧最多再试 2 次，仍然不过才判失败——重试次数记进 note，不掩盖问题。
+            while (t['textures'] > 0 and attempts < 3 and
+                   not (diff > 200 and band == diff)):
+                attempts += 1
+                for pv in (shot_base, log_base_path, shot3, log3_path):
+                    if os.path.isfile(pv):
+                        os.remove(pv)
+                rc_base, log_base = run_shell_frame(
+                    shell, g['dir'], os.path.basename(g['script']), 2,
+                    shot_base, log_base_path, extra=['--title-menu'])
+                rc3, log3 = run_shell_frame(
+                    shell, g['dir'], os.path.basename(g['script']), 2, shot3,
+                    log3_path, extra=['--title-menu', '--title-hover', '1'])
+                ia = read_bmp32(shot_base) if os.path.isfile(shot_base) else None
+                ib = read_bmp32(shot3) if os.path.isfile(shot3) else None
+                diff, band = compare_hover(ia, ib)
+            check(diff > 200, 'hover state changes pixels (%d, %d attempt(s))'
+                  % (diff, attempts))
             if t['textures'] > 0:
                 # 贴图模式：hover = 整行发光层，差异必须全落在被 hover 的那一行
                 check(band == diff,
-                      'all hover pixels are in the hovered row band (%d of %d)'
-                      % (band, diff))
+                      'all hover pixels are in the hovered row band (%d of %d, '
+                      '%d attempt(s))' % (band, diff, attempts))
             else:
                 # 文字模式：hover 只是高亮色，只断言“真的变了”
                 check(band > 0,

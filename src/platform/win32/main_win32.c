@@ -44,6 +44,7 @@
 #include "../../titlemenu.h"
 #include "../../openseq.h"
 #include "../../savelist.h"
+#include "../../gamemenu.h"
 
 #define FVP_WIN32_VERSION "0.1"
 #define FVP_CANVAS_W 1920
@@ -118,6 +119,7 @@ typedef struct Options {
     wchar_t title_font[PATH_CAP]; /* --title-font：标题菜单专用字库 */
     int pick_seed;  /* --pick N：启动就把第 N 项当作已选中（门禁/截图用） */
     int title_fade_ms; /* 点 New Game 后的白场过渡时长（0 = 直接进，默认 800） */
+    int menu_at; /* --menu-at N：第 N 毫秒自动打开游戏内菜单（截图/门禁用） */
     int load_slot; /* --load-slot N：启动就进"部分恢复"视图（截图/门禁用） */
     int preview_slot; /* --preview-slot N：存档列表里预选第 N 号槽并显示预览 */
     int opening;    /* --opening：启动先跑开场序列（logo 淡入→白场→标题） */
@@ -517,6 +519,7 @@ static void defaults(Options *o)
     o->opening = 0;
     o->preview_slot = -1;
     o->load_slot = -1;
+    o->menu_at = -1;
     o->pick_seed = -1;
     o->title_fade_ms = 800;
     o->title_font[0] = L'\0';
@@ -685,6 +688,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--title-font") == 0 &&
                    i + 1 < argc) {
             wcsncpy(o->title_font, argv[++i], PATH_CAP - 1);
+        } else if (wcscmp(a, L"--menu-at") == 0 && i + 1 < argc) {
+            o->menu_at = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--load-slot") == 0 && i + 1 < argc) {
             o->load_slot = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--no-input") == 0) {
@@ -1665,6 +1670,47 @@ static int title_measure(void *ctx, const char *utf8, int px, int *width)
  *
  * 有 profile 时按**该作品实测的墨迹矩形**画（右对齐 or 居中、行距/字号都按实测），
  * 没有 profile 时退回通用的右对齐布局。 */
+/* 游戏内菜单（引擎侧 UI）：压暗背景 + 居中列出各项 + hover 高亮。
+ * 文字复用标题菜单的字库（--title-font），没有就用默认位图字体。 */
+static void draw_game_menu(Gfx *gfx, const FvpGameMenu *m)
+{
+    int i;
+    int px = 44;
+
+    if (gfx == NULL || m == NULL || !m->active) {
+        return;
+    }
+    (void)gfx_fill_canvas(gfx, 0, 0, 0, 140);
+    for (i = 0; i < m->count; ++i) {
+        int y = fvp_gamemenu_item_y(m, i);
+        int r = 235, g = 235, b = 240;
+        int w;
+
+        if (!m->items[i].enabled) {
+            r = 120;
+            g = 120;
+            b = 130;
+        } else if (i == m->hover) {
+            r = 255;
+            g = 232;
+            b = 140;
+        }
+        w = (title_ui_font != NULL)
+                ? gfx_text_width_font(gfx, title_ui_font, m->items[i].label, px)
+                : gfx_text_width(gfx, m->items[i].label, px);
+        if (title_ui_font != NULL) {
+            (void)gfx_draw_text_line_font(gfx, title_ui_font, m->items[i].label,
+                                          m->x + (m->width - w) / 2, y, px, r,
+                                          g, b, 255);
+        } else {
+            (void)gfx_draw_text_line(gfx, m->items[i].label,
+                                     m->x + (m->width - w) / 2, y, px, r, g,
+                                     b, 255);
+        }
+    }
+    (void)gfx_draw_text_line(gfx, "ESC: close", 56, 40, 32, 220, 220, 230, 255);
+}
+
 static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
                                const FvpTitleProfile *prof, int hover)
 {
@@ -2180,6 +2226,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int shot_taken = 0;
     int save_preview_ok = 0;
     int load_view_active = 0;      /* 部分恢复视图（仅画面+文本） */
+    FvpGameMenu gmenu;             /* 游戏内菜单（引擎侧 UI） */
+    int menu_auto_armed = 0;
+    double menu_t0 = 0.0;
     int load_view_slot = -1;
     char load_view_graph[64];
     char load_view_line[512];
@@ -2425,6 +2474,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         if (opts.title_save_list && save_list.count > 0) {
             save_list_active = 1;
         }
+    }
+    {
+        static const char *const game_menu_labels[] = {
+            "SAVE", "LOAD", "OPTION", "TITLE", "QUIT"
+        };
+
+        fvp_gamemenu_init(&gmenu, game_menu_labels, 5, 300, 64);
+        fvp_gamemenu_layout(&gmenu, 1920, 240, 40);
     }
     fvp_logf("game dir: %s", w2u(game_dir, u8, sizeof(u8)));
     fvp_logf("script:   %s", w2u(script_path, u8, sizeof(u8)));
@@ -2711,6 +2768,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     steps_at_report = vm.steps;
 
     t_start = now_sec();
+    menu_t0 = t_start; /* --menu-at 的计时基准：外壳主循环起点 */
     while (!win.quit) {
         FvpWin32Input *in = &win.input;
         double now;
@@ -2795,7 +2853,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
 
         /* ---------------- input -> VM ---------------- */
-        in->capture_nav = title_active ? 1 : 0;
+        /* 菜单/标题都要吃 ESC：capture_nav 常开，ESC 不再直接退出窗口。
+         * 游戏中按 ESC 打开游戏内菜单（原版的右键菜单等价物）。 */
+        in->capture_nav = 1;
         if (opts.no_input) {
             /* 门禁/截图：把真实输入抹掉，画面只由程序状态决定 */
             in->mouse_pressed = 0;
@@ -2977,6 +3037,63 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 }
             }
             click_edges = 0;
+        }
+        /* ---- 游戏内菜单（引擎侧 UI）：ESC 开关，方向键/回车/点击操作 ---- */
+        if (!title_active && gfx != NULL) {
+            if (opts.menu_at >= 0 && !menu_auto_armed &&
+                (now - menu_t0) * 1000.0 >= (double)opts.menu_at) {
+                menu_auto_armed = 1;
+                fvp_gamemenu_open(&gmenu);
+                fvp_logf("menu: auto-opened at %.0f ms (%d item(s))",
+                         (now - menu_t0) * 1000.0, gmenu.count);
+            }
+            if (in->nav & FVP_NAV_ESC) {
+                in->nav &= ~FVP_NAV_ESC;
+                if (gmenu.active) {
+                    fvp_gamemenu_close(&gmenu);
+                    fvp_logf("menu: closed");
+                } else {
+                    fvp_gamemenu_open(&gmenu);
+                    fvp_logf("menu: opened with %d item(s)", gmenu.count);
+                }
+            }
+            if (gmenu.active) {
+                if (in->nav & FVP_NAV_DOWN) {
+                    in->nav &= ~FVP_NAV_DOWN;
+                    (void)fvp_gamemenu_nav(&gmenu, 1);
+                    fvp_logf("menu: hover -> %d", gmenu.hover);
+                }
+                if (in->nav & FVP_NAV_UP) {
+                    in->nav &= ~FVP_NAV_UP;
+                    (void)fvp_gamemenu_nav(&gmenu, -1);
+                    fvp_logf("menu: hover -> %d", gmenu.hover);
+                }
+                fvp_gamemenu_move(&gmenu, vm.cx, vm.cy);
+                if ((in->nav & FVP_NAV_ENTER) || click_edges > 0) {
+                    int pick = (in->nav & FVP_NAV_ENTER)
+                                   ? fvp_gamemenu_activate(&gmenu)
+                                   : fvp_gamemenu_click(&gmenu, vm.cx, vm.cy);
+
+                    in->nav &= ~FVP_NAV_ENTER;
+                    click_edges = 0;
+                    if (pick >= 0) {
+                        fvp_logf("menu: picked item %d ('%s')", pick,
+                                 gmenu.items[pick].label);
+                        if (pick == 4) {
+                            win.quit = 1;
+                        } else if (pick == 3) {
+                            fvp_gamemenu_close(&gmenu);
+                            title_active = 1;
+                            save_list_active = 0;
+                            fvp_logf("menu: TITLE -> title screen");
+                        } else {
+                            fvp_logf("menu: item %d is a stub for now "
+                                     "(in-game save/load/option UI pending)",
+                                     pick);
+                        }
+                    }
+                }
+            }
         }
         if (!title_active) {
             in->nav = 0; /* 菜单不在时导航键没有消费者 */
@@ -3167,6 +3284,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     title_draw_overlay(gfx, &title, title_profile,
                                        title_hover);
                 }
+            }
+            if (gmenu.active) {
+                draw_game_menu(gfx, &gmenu);
             }
             canvas = gfx_canvas(gfx, &cw, &ch);
             render_ms = (now_sec() - r0) * 1000.0;
@@ -3521,6 +3641,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
         canvas = gfx_canvas(gfx, &cw, &ch);
         /* --shot-at 已经存过中间态时，结尾不要再覆盖同一路径 */
+        if (gmenu.active && gfx != NULL) {
+            draw_game_menu(gfx, &gmenu);
+        }
         if (canvas != NULL && opts.screenshot[0] != L'\0' && !shot_taken) {
             write_bmp32(opts.screenshot, canvas, cw, ch);
         }

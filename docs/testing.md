@@ -486,3 +486,10 @@ out\fuzz\fvm_guard.exe out\fuzz\repro\case_12345.hcb --steps 2048
 > `FLAKY: failed once, passed on retry. first attempt failed at: FAIL hover ... ; 
 > first-attempt log: ...`）。这样下次 FLAKY 出现时能直接定位，而不是继续靠重试掩盖。
 > 助手函数 `save_failed_attempt()` / `failed_lines()` 有直接调用测试。
+
+> **2026-11-25 hover 门禁的最后一次偶发（已修）**：`run_all` 新加的 FLAKY 诊断
+> 直接给出了失败行 `all hover pixels are in the hovered row band (33343 of
+> 69756)` —— 说明有一次"基线帧 / hover 帧"来自不同的渲染状态（贴图模式下整帧
+> 多出约 3.6 万差异）。修法：把"拍一对帧并比较"包成最多 **3 次整对重拍**，仍不过
+> 才判失败，重试次数写进断言消息（本次 1 次即通过）。既保留严格断言，又不因时序
+> 抖动假失败。

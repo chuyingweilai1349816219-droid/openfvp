@@ -519,6 +519,12 @@ def build_steps(args):
                       'gcc unavailable: in-process harness cannot be built',
                       note='>= 20,000 mutations + fvm.exe E2E'))
 
+    # 6.5 游戏内菜单（引擎侧 UI，--menu-at 打开）
+    vg = os.path.join(HERE, 'verify_gamemenu.py')
+    steps.append(Step('verify_gamemenu.py', [PY, vg], 900,
+                      skip_reason=None,
+                      note='in-game menu overlay: opens, 5 items, ink present'))
+
     # 6.6 headless 外壳（不依赖 Win32 窗口/D3D）
     vh = os.path.join(HERE, 'verify_headless.py')
     steps.append(Step('verify_headless.py', [PY, vh], 1800,

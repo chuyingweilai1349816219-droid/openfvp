@@ -53,6 +53,20 @@
 
 ### 新增
 
+- **② 游戏内菜单（引擎侧 UI）：`src/gamemenu.c` + 50 项单测 + 门禁**
+  - 原版没有画菜单的脚本命令（只有 MenuMessSkip / TitleMenu），游戏内菜单由 exe 自己画，
+    所以这里与标题菜单一样归外壳实现
+  - 纯逻辑 `src/gamemenu.{h,c}`：布局/命中/键盘导航（跳过不可用项、循环）/激活/记录
+  - `tests/test_gamemenu.c` **50 项**：坐标边界、跳过不可用、循环、打开时 hover、
+    关闭后不响应、NULL 与上限安全；已加入 make check（单测数 27 → 28）
+  - 外壳：游戏中 ESC 开关菜单，↑/↓ 或鼠标选行，Enter/左键确认；画法=压暗背景+居中
+    5 项+hover 高亮，复用标题字库；TITLE 回标题、QUIT 退出，SAVE/LOAD/OPTION 明确记 stub
+  - `--menu-at N` 截图/门禁钩子；门禁 `tests/verify_gamemenu.py`（run_all 41 → 42 步）：
+    日志时间基准 407 ms vs 请求 400 ms、截图 1920×1080×32、菜单区墨迹 446 采样
+  - 行为变化：ESC 不再直接退出窗口（capture_nav 常开），已在 docs/win32-shell.md 写明
+
+### 新增（跨平台）
+
 - **无窗口（headless）外壳 `make headless`：核心 + 渲染层不依赖 Win32**
   - 新增 `src/platform/portable/main_headless.c`：只用 `platform.h` 的四个系统能力，
     加载 hcb → VM → 挂 `src/gfx.c` 离屏渲染 → 跑 N 步 → 写 24 位 BMP + 文本行
