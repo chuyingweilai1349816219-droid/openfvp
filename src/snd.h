@@ -29,6 +29,15 @@ int snd_play_file(Snd *s, int ch, const char *path, int loop, float vol);
 void snd_stop(Snd *s, int ch);
 void snd_stop_all(Snd *s);
 void snd_set_vol(Snd *s, int ch, float vol);
+/* 线性淡入淡出：在 ms 毫秒内把通道的**有效增益**从当前值线性过渡到 target。
+ * target == 0 且淡出完成时通道自动停止（原版切场景是淡出淡入，不是硬切）。 */
+void snd_fade(Snd *s, int ch, float target, int ms);
+/* 当前有效增益（0..1+）；没有淡变时等于 snd_set_vol 设的值。 */
+float snd_channel_gain(Snd *s, int ch);
+/* 测试/流式播放用的直通入口：拷一份交错立体声 PCM 到通道。 */
+int snd_play_pcm(Snd *s, int ch, const int16_t *stereo, int frames, int loop,
+                 float vol);
+
 int snd_is_playing(Snd *s, int ch);
 /* 该通道当前（重采样后）的总帧数与播放位置 */
 int snd_channel_frames(Snd *s, int ch);

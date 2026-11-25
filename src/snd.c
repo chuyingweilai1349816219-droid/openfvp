@@ -18,7 +18,11 @@ typedef struct {
     int frames;        /* 帧数（每声道采样数） */
     int pos;           /* 当前帧 */
     int loop;
-    float vol;
+    float vol;        /* 目标音量（snd_set_vol / 播放时给的值） */
+    float gain;       /* 当前生效增益（淡变时在 vol 之间过渡） */
+    float gain_step;  /* 每个采样帧的增益增量；0 = 不淡变 */
+    float gain_left;  /* 还剩多少帧到达目标 */
+    int fade_to_zero; /* 淡出到 0 时结束后自动停止 */
     int active;
 } Chan;
 
@@ -82,6 +86,10 @@ static int chan_assign(Snd *s, int ch, int16_t *pcm, int frames, int loop, float
     s->ch[ch].pos = 0;
     s->ch[ch].loop = loop;
     s->ch[ch].vol = vol;
+    s->ch[ch].gain = vol;
+    s->ch[ch].gain_step = 0.0f;
+    s->ch[ch].gain_left = 0.0f;
+    s->ch[ch].fade_to_zero = 0;
     s->ch[ch].active = 1;
     return 0;
 }
@@ -270,6 +278,47 @@ void snd_set_vol(Snd *s, int ch, float vol)
 {
     if (!s || ch < 0 || ch >= SND_CH_COUNT) return;
     s->ch[ch].vol = vol;
+    s->ch[ch].gain = vol;
+    s->ch[ch].gain_step = 0.0f;
+    s->ch[ch].gain_left = 0.0f;
+    s->ch[ch].fade_to_zero = 0;
+}
+
+void snd_fade(Snd *s, int ch, float target, int ms)
+{
+    float frames;
+
+    if (!s || ch < 0 || ch >= SND_CH_COUNT) return;
+    frames = (float)ms * (float)s->rate / 1000.0f;
+    s->ch[ch].vol = target;
+    if (frames <= 0.0f) {
+        s->ch[ch].gain = target;
+        s->ch[ch].gain_step = 0.0f;
+        s->ch[ch].gain_left = 0.0f;
+        s->ch[ch].fade_to_zero = (target <= 0.0f);
+        return;
+    }
+    s->ch[ch].gain_step = (target - s->ch[ch].gain) / frames;
+    s->ch[ch].gain_left = frames;
+    s->ch[ch].fade_to_zero = (target <= 0.0f);
+}
+
+float snd_channel_gain(Snd *s, int ch)
+{
+    if (!s || ch < 0 || ch >= SND_CH_COUNT) return 0.0f;
+    return s->ch[ch].gain;
+}
+
+int snd_play_pcm(Snd *s, int ch, const int16_t *stereo, int frames, int loop,
+                 float vol)
+{
+    int16_t *copy;
+
+    if (!s || !stereo || frames <= 0) return -1;
+    copy = (int16_t *)malloc((size_t)frames * 2 * sizeof(int16_t));
+    if (!copy) return -1;
+    memcpy(copy, stereo, (size_t)frames * 2 * sizeof(int16_t));
+    return chan_assign(s, ch, copy, frames, loop, vol);
 }
 
 int snd_is_playing(Snd *s, int ch)
@@ -309,8 +358,20 @@ void snd_mix(Snd *s, int16_t *out, int frames)
                     break;
                 }
             }
-            l = (int)(ch->pcm[(size_t)ch->pos * 2] * ch->vol);
-            r = (int)(ch->pcm[(size_t)ch->pos * 2 + 1] * ch->vol);
+            if (ch->gain_left > 0.0f) {
+                ch->gain += ch->gain_step;
+                ch->gain_left -= 1.0f;
+                if (ch->gain_left <= 0.0f) {
+                    ch->gain = ch->vol;
+                    ch->gain_step = 0.0f;
+                    if (ch->fade_to_zero) {
+                        ch->active = 0;
+                        break;
+                    }
+                }
+            }
+            l = (int)(ch->pcm[(size_t)ch->pos * 2] * ch->gain);
+            r = (int)(ch->pcm[(size_t)ch->pos * 2 + 1] * ch->gain);
             l += out[i * 2];
             r += out[i * 2 + 1];
             if (l > 32767) l = 32767;
