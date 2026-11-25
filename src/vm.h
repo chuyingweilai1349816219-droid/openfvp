@@ -546,6 +546,9 @@ typedef struct FvpVM {
 void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet);
 void fvp_vm_free(FvpVM *vm);
 void fvp_vm_start(FvpVM *vm);
+/* 从指定 pc 起跑（不经过 main_start）。用于验证"存档里的脚本位置候选"：
+ * 没有对应的栈/全局变量时只能做冒烟测试，不代表真读档。 */
+void fvp_vm_start_at(FvpVM *vm, unsigned int pc);
 uint64_t fvp_vm_run(FvpVM *vm, uint64_t max_steps);
 
 /* 打开卡死侦测：连续 n 步没有 syscall 就停下（n == 0 关闭，默认关闭）。

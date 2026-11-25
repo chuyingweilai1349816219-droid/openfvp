@@ -1963,6 +1963,19 @@ void fvp_vm_start(FvpVM *vm)
     vm->cur = t;
 }
 
+void fvp_vm_start_at(FvpVM *vm, unsigned int pc)
+{
+    FvpThread *t;
+
+    if (vm == NULL || vm->hcb == NULL) {
+        return;
+    }
+    t = fvp_thread_new(pc, "main");
+    t->id = vm->thread_ids++;
+    fvp_thread_enqueue(vm, t);
+    vm->cur = t;
+}
+
 /* 时间模型：当所有线程都被定时阻塞时，把虚拟时钟推到最早的
  * 唤醒时刻并叫醒到期线程。返回 1 = 推进成功，0 = 没有可推进的目标（应结束）。 */
 static int timeline_advance(FvpVM *vm)

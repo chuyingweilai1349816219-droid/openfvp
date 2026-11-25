@@ -35,6 +35,7 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --eol crlf|lf    line endings for --text-out (default crlf)\n"
             "  --pctrace FILE   log executed pc values (debug aid)\n"
             "  --savebin FILE   seed globals from a save/save.bin\n"
+            "  --pc N           start at an explicit pc (research hook)\n"
             "  --timeline       use the virtual clock (ThreadSleep/ThreadWait wake by ms)\n"
             "  --bool-type      jmpcond 只认 type==0 为假、比较类把真假写进类型（原版语义，\n"
             "                   会改变输出；默认关，见 docs/roadmap.md 第二步）\n"
@@ -497,6 +498,7 @@ int main(int argc, char **argv)
     const char *text_out = NULL;
     const char *pctrace_path = NULL;
     const char *savebin_path = NULL;
+    long start_pc = -1;
     const char *dump_globals_path = NULL;
     uint64_t steps = 2000000u;
     uint64_t stall_after = 2000000u;
@@ -589,6 +591,12 @@ int main(int argc, char **argv)
             g_dump_savedata = 1;
         } else if (strcmp(a, "--dump-history") == 0) {
             g_dump_history = 1;
+        } else if (strcmp(a, "--pc") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "fvm: missing --pc value\n");
+                return 2;
+            }
+            start_pc = strtol(argv[++i], NULL, 0);
         } else if (strcmp(a, "--savebin") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "fvm: missing --savebin value\n");
@@ -659,6 +667,17 @@ int main(int argc, char **argv)
     vm.click_period = click;
     vm.cx = cx;
     vm.cy = cy;
+    if (start_pc >= 0) {
+        fvp_vm_set_stall_limit(&vm, stall_after);
+        fvp_vm_start_at(&vm, (unsigned int)start_pc);
+        printf("start pc -> 0x%x (explicit, not main_start)\n",
+               (unsigned)start_pc);
+        (void)fvp_vm_run(&vm, steps);
+        fvp_print_summary(&vm);
+        fvp_vm_free(&vm);
+        fvp_hcb_free(&hcb);
+        return 0;
+    }
     if (pctrace_path != NULL) {
         vm.pctrace = fopen(pctrace_path, "wb");
         if (vm.pctrace == NULL) {

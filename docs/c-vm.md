@@ -371,3 +371,8 @@ python fvp\tests\gen_tables.py "C:\Users\Mechrevo\Downloads\五彩斑斓的世�
 python fvp\ref\fvm_ref.py "C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD\iroseka.hcb" `
     --steps 900000 --click 600 --quiet --text-out out.txt
 ```
+
+> **2026-11-25 新增**：`fvm --pc N` —— 从指定指令地址起跑（研究钩子，默认不用）。
+> 配合 `src/vm.c` 新增的 `fvp_vm_start_at()`，用来验证"存档里的脚本位置候选"
+> 能否单独继续执行；实测结论见 `docs/save-snapshot.md` §4.1.4（只跳 pc 不够，
+> 还需要保存的调用栈）。
