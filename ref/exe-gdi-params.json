@@ -1,0 +1,528 @@
+{
+ "note": "从原版 exe 静态提取的绘制协议（不含游戏数据）。由 scripts/extract-exe-gdi.py 生成；tests/verify_exe_gdi_params.py 回归。",
+ "exe_sha256": "cacdbe6ba9bb90b3818e0ac748b391681d5483db406b90ea7319204e0c3ab90a",
+ "exe_size": 817664,
+ "calls": {
+  "CreateCompatibleDC": [
+   {
+    "site": "0x00441c98",
+    "func": "0x00441c80",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "ebx"
+     }
+    ]
+   }
+  ],
+  "CreateDIBSection": [
+   {
+    "site": "0x00441d07",
+    "func": "0x00441c80",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "edx"
+     },
+     {
+      "kind": "reg",
+      "value": "esi"
+     },
+     {
+      "kind": "reg",
+      "value": "ebx"
+     },
+     {
+      "kind": "reg",
+      "value": "ebp"
+     },
+     {
+      "kind": "reg",
+      "value": "ebx"
+     },
+     {
+      "kind": "reg",
+      "value": "ebx"
+     }
+    ]
+   }
+  ],
+  "CreateFontA": [
+   {
+    "site": "0x0042d24d",
+    "func": "0x0042d1f0",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "eax"
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 128
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "reg",
+      "value": "ecx"
+     }
+    ],
+    "height_window": [
+     "0x0042d217: add    %ecx,%ecx",
+     "0x0042d219: sub    0x20(%esi),%ecx",
+     "0x0042d21c: imul   $0x5f,%ecx,%ecx",
+     "0x0042d21f: imul   %ecx",
+     "0x0042d221: mov    0x8(%esi),%ecx",
+     "0x0042d224: push   %ecx",
+     "0x0042d225: push   $0x0",
+     "0x0042d227: push   $0x0",
+     "0x0042d229: push   $0x0",
+     "0x0042d22b: push   $0x0",
+     "0x0042d22d: push   $0x80",
+     "0x0042d232: push   $0x0",
+     "0x0042d234: push   $0x0",
+     "0x0042d236: push   $0x0",
+     "0x0042d238: sar    $0x5,%edx",
+     "0x0042d23b: push   $0x0",
+     "0x0042d23d: mov    %edx,%eax",
+     "0x0042d23f: push   $0x0",
+     "0x0042d241: shr    $0x1f,%eax",
+     "0x0042d244: push   $0x0",
+     "0x0042d246: add    %edx,%eax",
+     "0x0042d248: push   $0x0",
+     "0x0042d24a: neg    %eax",
+     "0x0042d24c: push   %eax"
+    ],
+    "named": {
+     "nHeight": "computed",
+     "nWidth": {
+      "kind": "imm",
+      "value": 0
+     },
+     "nEscapement": {
+      "kind": "imm",
+      "value": 0
+     },
+     "nOrientation": {
+      "kind": "imm",
+      "value": 0
+     },
+     "fnWeight": {
+      "kind": "imm",
+      "value": 0
+     },
+     "fdwItalic": {
+      "kind": "imm",
+      "value": 0
+     },
+     "fdwUnderline": {
+      "kind": "imm",
+      "value": 0
+     },
+     "fdwStrikeOut": {
+      "kind": "imm",
+      "value": 0
+     },
+     "fdwCharSet": {
+      "kind": "imm",
+      "value": 128
+     },
+     "fdwOutputPrecision": {
+      "kind": "imm",
+      "value": 0
+     },
+     "fdwClipPrecision": {
+      "kind": "imm",
+      "value": 0
+     },
+     "fdwQuality": {
+      "kind": "imm",
+      "value": 0
+     },
+     "fdwPitchAndFamily": {
+      "kind": "imm",
+      "value": 0
+     },
+     "lpszFace": {
+      "kind": "reg",
+      "value": "ecx"
+     }
+    }
+   }
+  ],
+  "DeleteObject": [
+   {
+    "site": "0x00425b01",
+    "func": "0x00425af0",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "eax"
+     }
+    ]
+   },
+   {
+    "site": "0x00425b41",
+    "func": "0x00425b30",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "eax"
+     }
+    ]
+   },
+   {
+    "site": "0x0042d1fb",
+    "func": "0x0042d1f0",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "eax"
+     }
+    ]
+   },
+   {
+    "site": "0x004431a5",
+    "func": "0x00443100",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "esi"
+     }
+    ]
+   },
+   {
+    "site": "0x00443a14",
+    "func": "0x004439f0",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "eax"
+     }
+    ]
+   }
+  ],
+  "EnumFontFamiliesExA": [
+   {
+    "site": "0x00443c0d",
+    "func": "0x00443bc0",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "esi"
+     },
+     {
+      "kind": "reg",
+      "value": "edx"
+     },
+     {
+      "kind": "imm",
+      "value": 4471584
+     },
+     {
+      "kind": "reg",
+      "value": "edi"
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     }
+    ]
+   }
+  ],
+  "GetGlyphOutlineA": [
+   {
+    "site": "0x004327cf",
+    "func": "0x00432770",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "edx"
+     },
+     {
+      "kind": "reg",
+      "value": "ecx"
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "reg",
+      "value": "eax"
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 4577528
+     }
+    ]
+   },
+   {
+    "site": "0x0043280d",
+    "func": "0x00432770",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "edx"
+     },
+     {
+      "kind": "reg",
+      "value": "eax"
+     },
+     {
+      "kind": "imm",
+      "value": 1
+     },
+     {
+      "kind": "reg",
+      "value": "ebx"
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 0
+     },
+     {
+      "kind": "imm",
+      "value": 4577528
+     }
+    ]
+   },
+   {
+    "site": "0x0043288c",
+    "func": "0x00432770",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "ecx"
+     },
+     {
+      "kind": "reg",
+      "value": "eax"
+     },
+     {
+      "kind": "imm",
+      "value": 1
+     },
+     {
+      "kind": "reg",
+      "value": "ebx"
+     },
+     {
+      "kind": "reg",
+      "value": "edi"
+     },
+     {
+      "kind": "reg",
+      "value": "eax"
+     },
+     {
+      "kind": "imm",
+      "value": 4577528
+     }
+    ]
+   }
+  ],
+  "GetOutlineTextMetricsA": [
+   {
+    "site": "0x004327eb",
+    "func": "0x00432770",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "ecx"
+     },
+     {
+      "kind": "imm",
+      "value": 212
+     },
+     {
+      "kind": "reg",
+      "value": "eax"
+     }
+    ]
+   }
+  ],
+  "GetTextMetricsA": [
+   {
+    "site": "0x004327a6",
+    "func": "0x00432770",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "edx"
+     },
+     {
+      "kind": "reg",
+      "value": "ecx"
+     }
+    ]
+   }
+  ],
+  "SelectObject": [
+   {
+    "site": "0x00432792",
+    "func": "0x00432770",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "eax"
+     },
+     {
+      "kind": "reg",
+      "value": "eax"
+     }
+    ]
+   },
+   {
+    "site": "0x0043289f",
+    "func": "0x00432770",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "eax"
+     },
+     {
+      "kind": "reg",
+      "value": "edx"
+     }
+    ]
+   },
+   {
+    "site": "0x00441d15",
+    "func": "0x00441c80",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "eax"
+     },
+     {
+      "kind": "reg",
+      "value": "eax"
+     }
+    ]
+   },
+   {
+    "site": "0x004439ff",
+    "func": "0x004439f0",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "eax"
+     },
+     {
+      "kind": "reg",
+      "value": "eax"
+     }
+    ]
+   }
+  ],
+  "SetBkMode": [
+   {
+    "site": "0x00441d33",
+    "func": "0x00441c80",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "edx"
+     },
+     {
+      "kind": "imm",
+      "value": 1
+     }
+    ]
+   }
+  ],
+  "SetTextColor": [
+   {
+    "site": "0x00441d27",
+    "func": "0x00441c80",
+    "args": [
+     {
+      "kind": "reg",
+      "value": "ecx"
+     },
+     {
+      "kind": "imm",
+      "value": 16777215
+     }
+    ]
+   }
+  ]
+ },
+ "static_data": {
+  "0x0045d8f8": {
+   "kind": "MAT2",
+   "raw": "00000100000000000000000000000100",
+   "fixed16_16": [
+    "1.0000",
+    "0.0000",
+    "0.0000",
+    "1.0000"
+   ]
+  }
+ },
+ "invariants": {
+  "charset_is_shiftjis": true,
+  "charset_value": 128,
+  "glyph_uformats": [
+   0,
+   1
+  ],
+  "glyph_sites": 3,
+  "mat2_all_same": true
+ }
+}

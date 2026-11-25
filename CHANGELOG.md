@@ -63,6 +63,26 @@
     语料位置、JSON 字段含义、刷新基线的方法
   - 这一项把"离原版一模一样多远"从感觉变成了可回归的数字
 
+### 新增（原版绘制协议静态提取）
+
+- **⑥「原版 UI 一模一样」的一半缺口不用再靠实拍：从 exe 静态提取 GDI 绘制协议**
+  - 新增 `scripts/extract-exe-gdi.py`：解析 PE 节表建立 VA→文件偏移映射，解析
+    `work/iroseka_HD.asm`，按 `work/vm_imports.json` 的 IAT 把 `call *0x45dXXX`
+    解析成导入名，再从调用点往前收 `push` 还原实参；立即数静态数据（`MAT2`）直接
+    从 exe 读
+  - 产物 `ref/exe-gdi-params.json`（只含参数，不含游戏数据）：`CreateFontA` 全 exe
+    **仅 1 个调用点**（`0x0042d24d`），`fdwCharSet = 0x80`（`SHIFTJIS_CHARSET`）、
+    宽度/倾斜/字重/质量/间距全 0、族名来自寄存器（**数据驱动，不写死在 exe 里**）；
+    `GetGlyphOutlineA` 3 个调用点只用 `GGO_METRICS(0)` 与 **`GGO_BITMAP(1)`**；
+    3 次共用 `MAT2 @ 0x0045D8F8` = 单位矩阵
+  - 关键结论：**原版文字是 1bpp 位图、不抗锯齿**；我们回退路径是
+    `TextOutW + 32bpp DIB + ANTIALIASED_QUALITY` —— 这是"像素级一致"剩余差异的
+    协议级原因（不是参数没调好）
+  - 新门禁 `tests/verify_exe_gdi_params.py`：`--check` 逐字节比对 + 关键不变量断言
+    + 打印"原版 vs 我们"对照表；接入 `run_all`（44 → 45 步），缺 exe 时 SKIP
+  - `docs/original-verification.md` 新增 §8：两类"原版事实"的区分、提取方法、
+    提取结果表、与实现的差距表、以及"⑥ 的结论修正"
+
 ### 新增（设置）
 
 - **② OPTION 面板可调主音量（可写设置的第一块）**

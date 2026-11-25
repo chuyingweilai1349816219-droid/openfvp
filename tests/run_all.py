@@ -525,6 +525,13 @@ def build_steps(args):
                       skip_reason=None,
                       note='title screen vs the original capture: mean abs diff baseline'))
 
+    # 6.45 原版 exe 的 GDI 绘制协议（静态提取；缺 exe/静态分析时自己 SKIP）
+    vgp = os.path.join(HERE, 'verify_exe_gdi_params.py')
+    steps.append(Step('verify_exe_gdi_params.py', [PY, vgp], 300,
+                      skip_reason=None,
+                      note='static extraction of the original GDI text protocol '
+                           '(charset/GGO format/MAT2) must stay byte-identical'))
+
     # 6.55 游戏内菜单的三个动作（SAVE/LOAD/OPTION）
     vma = os.path.join(HERE, 'verify_menu_actions.py')
     steps.append(Step('verify_menu_actions.py', [PY, vma], 900,

@@ -255,3 +255,98 @@ python tests/verify_vs_original.py      # 看新数值
 # 然后手改 tests/original-baseline.json 里的 mean_abs
 ```
 
+---
+
+## 8. 从 exe 静态提取绘制协议：让"要跑原版才知道"的那一半不用再跑原版（2026-11-25）
+
+### 8.1 先分清两类"原版事实"
+
+这一节是为了纠正一个**过度悲观**的结论。以前把「原版 UI 不能一模一样」当成"只能靠实拍
+帧逐步逼近"，但把"原版事实"拆开看，会发现只有一半真的需要跑原版：
+
+| 类别 | 内容 | 能不能静态拿到 | 为什么 |
+|---|---|---|---|
+| **A 类：绘制协议 / 常量** | 用哪个 GDI API、什么字符集、什么位图格式、什么质量参数、字号换算公式、单位矩阵、坐标常量、混合模式 | **能，而且是原值** | 这些是 exe 里的常量和调用约定，静态分析读到的就是原版用的值；靠截图反推反而只能得到"像不像" |
+| **B 类：最终像素** | 光栅化后的每个像素、D3D 混合后的颜色 | 不能（除 B 类可复现部分） | 取决于本机字体文件版本、GDI hinting、GPU 混合顺序，必须实拍帧 |
+
+所以「原版 UI 一模一样」的正确拆法是：**A 类缺口可以静态闭合，B 类才需要实拍**。
+
+### 8.2 做法（`scripts/extract-exe-gdi.py`）
+
+1. 解析 PE 节表，建立 `虚拟地址(VA) → 文件偏移` 映射（脚本用标准库 `struct` 手写，
+   不依赖 `pefile`）；
+2. 解析 `work/iroseka_HD.asm`（`objdump -d` 文本），把 `call *0x45dXXX` 按
+   `work/vm_imports.json` 的 IAT 表解析成导入函数名；
+3. 对关注的 GDI 函数，从调用点**往前收 `push`** 还原实参（最后一个 `push` 是第一个
+   参数；中间夹的 `sar`/`imul`/`mov` 不影响）；
+4. 参数里若是立即数形式的静态数据（如 `GetGlyphOutline` 的 `MAT2`），直接从 exe
+   对应偏移读出来。
+
+### 8.3 提取到的事实
+
+| 项 | 原版的值 | 位置 |
+|---|---|---|
+| `CreateFontA` | **全 exe 只有 1 个调用点** | `0x0042d24d`（函数 `0x0042d1f0`） |
+| `nHeight` | 运行时算出：`−( 95 × (2×(2×[+0x1C] − [+0x18]) − [+0x20]) ÷ 100 )`；`0x5f` 是 ×95，`0x51EB851F + sar 5` 是 ÷100，最后 `neg` | `0x0042d208`–`0x0042d24c` |
+| `nWidth` / `nEscapement` / `nOrientation` | `0` / `0` / `0` | 同上 |
+| `fnWeight` / 斜体 / 下划线 / 删除线 | `0` / `0` / `0` / `0` | 同上 |
+| `fdwCharSet` | **`0x80` = `SHIFTJIS_CHARSET`** | 同上 |
+| `fdwOutputPrecision` / `ClipPrecision` / `Quality` / `PitchAndFamily` | 全 `0` | 同上 |
+| `lpszFace` | **来自寄存器**（对象 `+0x08`）→ 字体族名是**数据驱动**（脚本的 `TextFontName` / 引擎字体表），**没有写死在 exe 里** | 同上 |
+| `GetGlyphOutlineA` | 3 个调用点：1 个 `uFormat=0`（`GGO_METRICS`，只取进位）+ 2 个 `uFormat=1`（**`GGO_BITMAP`，1bpp 位图**） | `0x004327cf` / `0x0043280d` / `0x0043288c`（函数 `0x00432770`） |
+| `MAT2` | 3 次调用共用同一个指针 `0x0045D8F8`，内容 = **单位矩阵**（16.16 定点 `0x00010000, 0, 0, 0x00010000`） | 静态数据 |
+| `GetOutlineTextMetricsA` | 1 个调用点，`cbData = 0xD4`（= `sizeof(OUTLINETEXTMETRIC)`） | `0x004327eb` |
+| `EnumFontFamiliesExA` | 1 个调用点，回调 `0x00443B20`（引擎建字体表，供 `TextFontName` 按名查） | `0x00443c0d` |
+| `SetTextColor` / `SetBkMode` | 只在另一条路径（`0x00441c80`）出现：白色 `0x00FFFFFF` + `TRANSPARENT(1)` | — |
+
+两条结论值得单独说：
+
+- **原版文字是 1bpp 位图，不是灰度抗锯齿**。`GGO_BITMAP` 每个像素只有 0/1，所以
+  原版的字形边缘是"硬"的；任何用 `TextOut` + 抗锯齿画出来的字，与它的边缘必然
+  不同——这不是参数没调好，是**协议不同**。
+- **字体族名不在 exe 里**。这解释了我们之前"标题菜单字体只能靠相关度猜"的困境：
+  exe 只负责用 `SHIFTJIS_CHARSET` 建字体，族名由数据/设置传进来。所以字体这一项
+  要查的是游戏数据与设置，不是 exe。
+
+### 8.4 与本仓库实现的差距（这就是"像素级一致"的剩余主因）
+
+| 项 | 原版 | 本仓库外壳（`src/platform/win32/win32_gdi_text.c`） | 后果 |
+|---|---|---|---|
+| 字符集 | `SHIFTJIS_CHARSET`(0x80) | `DEFAULT_CHARSET` | 同一族名解析到的字形表可能不同 |
+| 取字形方式 | `GetGlyphOutlineA` + `GGO_BITMAP` | `TextOutW` + 32bpp DIB，读 B 通道当覆盖率 | 边缘：硬二值 vs 灰度 |
+| 质量参数 | `0`（不指定） | `ANTIALIASED_QUALITY` | 灰度差再加一层 |
+| 字体族 | 数据驱动（脚本/设置） | 固定 `Microsoft YaHei`（仅缺字回退用） | 回退字与正文用的字不是同一族 |
+
+另外，正文用的位图图集（`bin/gfx-font-*.bin`，由 `scripts/make-font-atlas.py` 从
+TrueType 光栅化生成）与 GDI 在同字号下的 hinting **也不完全相同**，这是正文
+字形差异的另一半来源。
+
+> 下一轮的实现项：把缺字回退路径改成与原版同一协议（`SHIFTJIS_CHARSET` +
+> `GetGlyphOutlineA/GGO_BITMAP` + 单位 `MAT2`），并给它单独的门禁与开关，
+> 不动冻结基线（图集路径不变）。
+
+### 8.5 冻结与门禁
+
+```
+python tests/verify_exe_gdi_params.py
+```
+
+- 第 1 步：调 `scripts/extract-exe-gdi.py --check`，要求重新提取的结果与
+  `ref/exe-gdi-params.json` **逐字节一致**（提取逻辑漂移立刻红）；
+- 第 2 步：断言关键不变量——`charset == 0x80`、`GetGlyphOutlineA` 调用点 3 个、
+  `uFormat ∈ {0,1}`、三次共用同一 `MAT2`、`MAT2` 是单位矩阵、
+  `CreateFontA` 的 10 个"应为 0"的实参确实为 0、`lpszFace` 来自寄存器；
+- 第 3 步：打印"原版协议 vs 我们"的对照表（只报告不断言，避免把未实现的当成已实现）；
+- 已接入 `tests/run_all.py`（44 → 45 步）；缺原版 exe 或静态分析时打印 **SKIP**
+  并返回 0，与 `verify_vs_original.py` 同口径；
+- **入库的只有参数**（`ref/exe-gdi-params.json`），不含任何游戏数据。
+
+### 8.6 这一节改变了什么
+
+- **修正**：⑥「原版 UI 一模一样」不再整体归为"必须跑原版"。其中 A 类（字符集、
+  位图格式、质量参数、字号公式、矩阵、坐标常量）**已经可以静态提取，并已冻结成基线**；
+- **仍需实拍**的只剩：最终像素比对（B 类）、影片解码后的画面、以及"这台机器装的
+  是哪个版本的字体文件"这种环境事实；
+- 这是"用结构分析解决第六点"的正路：**先提取协议，再让实现照协议跑**，而不是拿截图
+  反复猜参数。
+
