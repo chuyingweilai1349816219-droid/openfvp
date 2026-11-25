@@ -1746,6 +1746,71 @@ static void blit_sprite(Gfx *g, int x, int y, int rw, int rh,
     }
 }
 
+/* 与 blit_sprite 相同，但把**额外的整体 alpha** 乘进覆盖度。
+ *
+ * 为什么单独一个函数：`blit_sprite()` 历史上**忽略 p->alpha**（只用源像素的 s[3]），
+ * 已验收的帧（verify_gfx 的 528000 步画面）就是按这个行为冻结的 —— 直接改它会
+ * 让 PSNR 从 49.94 掉到 35 左右。所以保持 blit_sprite 原样，让
+ * gfx_draw_image_alpha() / gfx_draw_image_xform() 走这条 alpha 感知的路径。 */
+static void blit_sprite_alpha(Gfx *g, int x, int y, int rw, int rh,
+                              const uint8_t *src, int additive, int alpha)
+{
+    int x0 = x < 0 ? 0 : x;
+    int y0 = y < 0 ? 0 : y;
+    int x1 = x + rw;
+    int y1 = y + rh;
+    int yy;
+    int dst_opaque;
+    GfxPrim tmp;
+
+    if (alpha >= 255) {
+        memset(&tmp, 0, sizeof tmp);
+        tmp.alpha = 255;
+        blit_sprite(g, x, y, rw, rh, src, additive, &tmp);
+        return;
+    }
+    if (alpha <= 0) {
+        return;
+    }
+    if (x1 > g->w) {
+        x1 = g->w;
+    }
+    if (y1 > g->h) {
+        y1 = g->h;
+    }
+    if (x1 <= x0 || y1 <= y0) {
+        return;
+    }
+    dst_opaque = ((g->bg >> 24) & 0xFFu) == 255u;
+    for (yy = y0; yy < y1; yy++) {
+        const uint8_t *s = src + ((size_t)(yy - y) * (size_t)rw +
+                                 (size_t)(x0 - x)) * 4u;
+        uint8_t *d = g->canvas + ((size_t)yy * (size_t)g->w + (size_t)x0) * 4u;
+        int xx;
+
+        for (xx = x0; xx < x1; xx++, s += 4, d += 4) {
+            int sa = (int)((s[3] * alpha + 127) / 255);
+
+            if (additive) {
+                int c;
+
+                for (c = 0; c < 3; c++) {
+                    int add = (int)((double)s[c] * ((double)sa / 255.0));
+                    int v = d[c] + add;
+
+                    d[c] = (uint8_t)(v > 255 ? 255 : v);
+                }
+                d[3] = 255;
+            } else if (dst_opaque) {
+                over_px_opaque(d, s[0], s[1], s[2], sa);
+            } else {
+                over_px(d, s[0], s[1], s[2], sa);
+            }
+        }
+        g->stats.pixels += (long long)(x1 - x0);
+    }
+}
+
 /* ----------------------------------------------------------------------- */
 /* draw list                                                               */
 /* ----------------------------------------------------------------------- */
@@ -3823,7 +3888,6 @@ int gfx_draw_image_alpha(Gfx *g, int slot, int x, int y, int alpha)
     const uint8_t *compo = NULL;
     int cw = 0;
     int ch = 0;
-    GfxPrim tmp;
 
     if (g == NULL || alpha <= 0) {
         return 0;
@@ -3834,9 +3898,7 @@ int gfx_draw_image_alpha(Gfx *g, int slot, int x, int y, int alpha)
     if (compo == NULL || cw <= 0 || ch <= 0) {
         return 0;
     }
-    memset(&tmp, 0, sizeof tmp);
-    tmp.alpha = (unsigned char)clampi(alpha, 0, 255);
-    blit_sprite(g, x, y, cw, ch, compo, 0, &tmp);
+    blit_sprite_alpha(g, x, y, cw, ch, compo, 0, clampi(alpha, 0, 255));
     g->stats.sprites += 1;
     return 1;
 }
@@ -3850,7 +3912,6 @@ int gfx_draw_image_xform(Gfx *g, int slot, int x, int y, int scale_x1000,
     int w;
     int h;
     uint8_t *img;
-    GfxPrim tmp;
     double sx;
     double sy;
 
@@ -3883,9 +3944,7 @@ int gfx_draw_image_xform(Gfx *g, int slot, int x, int y, int scale_x1000,
     if (img == NULL) {
         return 0;
     }
-    memset(&tmp, 0, sizeof tmp);
-    tmp.alpha = (unsigned char)clampi(alpha, 0, 255);
-    blit_sprite(g, x, y, w, h, img, 0, &tmp);
+    blit_sprite_alpha(g, x, y, w, h, img, 0, clampi(alpha, 0, 255));
     free(img);
     g->stats.sprites += 1;
     return 1;

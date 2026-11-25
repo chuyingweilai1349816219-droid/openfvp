@@ -26,7 +26,15 @@ int main(void)
     /* 1. 默认值。 */
     fvp_textattr_reset(a, FVP_TEXT_WINDOWS);
     CHECK(a[0].r == 255 && a[0].g == 255 && a[0].b == 255, "default colour");
-    CHECK(a[0].w == 12 && a[0].h == 12, "default size %dx%d", a[0].w, a[0].h);
+    /* 默认值来自 exe 文本窗口构造函数 0x430EA0（ref/exe-text-defaults.json）：
+     * +0x592=16（宽）、+0x594=12（高）、+0x590/-0x593 = -2（字体号）。 */
+    CHECK(a[0].w == 16 && a[0].h == 12, "default size %dx%d", a[0].w, a[0].h);
+    CHECK(a[0].font_id == -2 && a[0].font_id2 == -2,
+          "default font ids %d/%d (exe: 0xFFFE / 0xFE = -2)", a[0].font_id,
+          a[0].font_id2);
+    CHECK(a[0].space_x == 0 && a[0].space_y == 0 && a[0].shadow_dist == 0 &&
+              a[0].skip_mode == 0,
+          "default spacing/shadow/skip = 0");
     CHECK(a[0].speed_ms == 0, "default speed %d", a[0].speed_ms);
     CHECK(fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS) == 0,
           "fresh count=%d", fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS));

@@ -104,8 +104,10 @@ def extract(path, argc_table, region):
                 for k in range(e['argc'], 0, -1):
                     a = code.instr[order[i - k]][2]
                     vals.append(a[0] if a else None)
-                # 只收标题图层/logo 图元的动画（250..261），其余区域的不进基线
-                if vals and isinstance(vals[0], int) and 250 <= vals[0] <= 261:
+                # 收标题画面/开场用到的图元动画（250..280）：开场 FAVORITE logo
+                # （250/252/254/255/256/257）、标题背景（258..261）、标题
+                # frame/logo（262..265）与体验版标记（277）。
+                if vals and isinstance(vals[0], int) and 250 <= vals[0] <= 280:
                     motion.append({'cmd': cid, 'name': nm, 'prim': vals[0],
                                    'args': vals, 'pc': '0x%08x' % pc})
         if name == 'syscall' and args and args[0] == 91 and i >= 2:

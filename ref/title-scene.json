@@ -419,6 +419,15 @@
     },
     {
      "args": [
+      279
+     ],
+     "cmd": 46,
+     "name": "MotionAnimStop",
+     "pc": "0x0006fb8a",
+     "prim": 279
+    },
+    {
+     "args": [
       258,
       2000,
       1000,
@@ -432,6 +441,15 @@
      "name": "MotionMoveS2",
      "pc": "0x0006fd87",
      "prim": 258
+    },
+    {
+     "args": [
+      262
+     ],
+     "cmd": 44,
+     "name": "MotionAlphaTest",
+     "pc": "0x0006fe8b",
+     "prim": 262
     },
     {
      "args": [
@@ -463,6 +481,150 @@
     },
     {
      "args": [
+      276,
+      null,
+      255,
+      5,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006ff43",
+     "prim": 276
+    },
+    {
+     "args": [
+      265,
+      null,
+      255,
+      5,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006ff51",
+     "prim": 265
+    },
+    {
+     "args": [
+      277,
+      0,
+      255,
+      1800,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006ffbe",
+     "prim": 277
+    },
+    {
+     "args": [
+      266,
+      0,
+      255,
+      5,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070011",
+     "prim": 266
+    },
+    {
+     "args": [
+      268,
+      0,
+      255,
+      7,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070063",
+     "prim": 268
+    },
+    {
+     "args": [
+      270,
+      0,
+      255,
+      7,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000700b5",
+     "prim": 270
+    },
+    {
+     "args": [
+      272,
+      0,
+      255,
+      7,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070107",
+     "prim": 272
+    },
+    {
+     "args": [
+      274,
+      0,
+      255,
+      7,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070159",
+     "prim": 274
+    },
+    {
+     "args": [
+      278,
+      0,
+      255,
+      7,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0007017c",
+     "prim": 278
+    },
+    {
+     "args": [
+      278
+     ],
+     "cmd": 44,
+     "name": "MotionAlphaTest",
+     "pc": "0x000701b6",
+     "prim": 278
+    },
+    {
+     "args": [
+      262
+     ],
+     "cmd": 56,
+     "name": "MotionMoveS2Test",
+     "pc": "0x000701f5",
+     "prim": 262
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 43,
@@ -490,12 +652,208 @@
     },
     {
      "args": [
+      280,
+      255,
+      0,
+      1000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070d66",
+     "prim": 280
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 43,
      "name": "MotionAlphaStop",
      "pc": "0x00070ead",
      "prim": 261
+    },
+    {
+     "args": [
+      266,
+      255,
+      0,
+      1200,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070ec7",
+     "prim": 266
+    },
+    {
+     "args": [
+      267,
+      255,
+      0,
+      1200,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070ed7",
+     "prim": 267
+    },
+    {
+     "args": [
+      268,
+      255,
+      0,
+      1300,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070ee7",
+     "prim": 268
+    },
+    {
+     "args": [
+      269,
+      255,
+      0,
+      1300,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070ef7",
+     "prim": 269
+    },
+    {
+     "args": [
+      270,
+      255,
+      0,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070f07",
+     "prim": 270
+    },
+    {
+     "args": [
+      271,
+      255,
+      0,
+      1400,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070f17",
+     "prim": 271
+    },
+    {
+     "args": [
+      272,
+      255,
+      0,
+      1500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070f27",
+     "prim": 272
+    },
+    {
+     "args": [
+      273,
+      255,
+      0,
+      1500,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070f37",
+     "prim": 273
+    },
+    {
+     "args": [
+      274,
+      255,
+      0,
+      1600,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070f47",
+     "prim": 274
+    },
+    {
+     "args": [
+      275,
+      255,
+      0,
+      1600,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070f57",
+     "prim": 275
+    },
+    {
+     "args": [
+      278,
+      255,
+      0,
+      1200,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070f67",
+     "prim": 278
+    },
+    {
+     "args": [
+      277,
+      255,
+      0,
+      1200,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070f77",
+     "prim": 277
+    },
+    {
+     "args": [
+      276,
+      255,
+      0,
+      1200,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070f87",
+     "prim": 276
     },
     {
      "args": [
@@ -538,6 +896,20 @@
      "name": "MotionAlpha",
      "pc": "0x00070fb1",
      "prim": 261
+    },
+    {
+     "args": [
+      262,
+      null,
+      0,
+      6000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00070fbf",
+     "prim": 262
     }
    ],
    "layer_z": [
@@ -2243,6 +2615,181 @@
     },
     {
      "args": [
+      265
+     ],
+     "cmd": 44,
+     "name": "MotionAlphaTest",
+     "pc": "0x000592e2",
+     "prim": 265
+    },
+    {
+     "args": [
+      264,
+      null,
+      255,
+      5,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00059349",
+     "prim": 264
+    },
+    {
+     "args": [
+      265,
+      0,
+      255,
+      5,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00059361",
+     "prim": 265
+    },
+    {
+     "args": [
+      263,
+      0,
+      255,
+      5,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00059370",
+     "prim": 263
+    },
+    {
+     "args": [
+      262,
+      0,
+      255,
+      7,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00059394",
+     "prim": 262
+    },
+    {
+     "args": [
+      277,
+      0,
+      255,
+      1800,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00059401",
+     "prim": 277
+    },
+    {
+     "args": [
+      278,
+      0,
+      255,
+      7,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00059609",
+     "prim": 278
+    },
+    {
+     "args": [
+      278
+     ],
+     "cmd": 44,
+     "name": "MotionAlphaTest",
+     "pc": "0x00059643",
+     "prim": 278
+    },
+    {
+     "args": [
+      265
+     ],
+     "cmd": 56,
+     "name": "MotionMoveS2Test",
+     "pc": "0x00059682",
+     "prim": 265
+    },
+    {
+     "args": [
+      264
+     ],
+     "cmd": 43,
+     "name": "MotionAlphaStop",
+     "pc": "0x00059e4b",
+     "prim": 264
+    },
+    {
+     "args": [
+      264
+     ],
+     "cmd": 43,
+     "name": "MotionAlphaStop",
+     "pc": "0x00059ec3",
+     "prim": 264
+    },
+    {
+     "args": [
+      264
+     ],
+     "cmd": 43,
+     "name": "MotionAlphaStop",
+     "pc": "0x00059f04",
+     "prim": 264
+    },
+    {
+     "args": [
+      264
+     ],
+     "cmd": 43,
+     "name": "MotionAlphaStop",
+     "pc": "0x0005a513",
+     "prim": 264
+    },
+    {
+     "args": [
+      278,
+      255,
+      0,
+      1200,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0005a70d",
+     "prim": 278
+    },
+    {
+     "args": [
+      276,
+      255,
+      0,
+      1200,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0005a71d",
+     "prim": 276
+    },
+    {
+     "args": [
       250,
       null,
       1000,
@@ -2254,6 +2801,62 @@
      "name": "MotionMoveZ",
      "pc": "0x0005fc76",
      "prim": 250
+    },
+    {
+     "args": [
+      272,
+      null,
+      1000,
+      100000,
+      3,
+      null
+     ],
+     "cmd": 57,
+     "name": "MotionMoveZ",
+     "pc": "0x0005fc88",
+     "prim": 272
+    },
+    {
+     "args": [
+      272,
+      600,
+      0,
+      100000,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0005fc9b",
+     "prim": 272
+    },
+    {
+     "args": [
+      273,
+      null,
+      1000,
+      100000,
+      3,
+      null
+     ],
+     "cmd": 57,
+     "name": "MotionMoveZ",
+     "pc": "0x0005fcad",
+     "prim": 273
+    },
+    {
+     "args": [
+      273,
+      2000,
+      0,
+      100000,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0005fcc0",
+     "prim": 273
     },
     {
      "args": [
@@ -2307,6 +2910,50 @@
     },
     {
      "args": [
+      265,
+      0,
+      200,
+      4000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0005ff37",
+     "prim": 265
+    },
+    {
+     "args": [
+      265,
+      null,
+      900,
+      null,
+      900,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x0005ff4b",
+     "prim": 265
+    },
+    {
+     "args": [
+      265,
+      200,
+      0,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0005ff5c",
+     "prim": 265
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -2329,6 +2976,22 @@
      "name": "MotionMove",
      "pc": "0x0005ffac",
      "prim": 251
+    },
+    {
+     "args": [
+      265,
+      null,
+      500,
+      null,
+      500,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x000600b7",
+     "prim": 265
     },
     {
      "args": [
@@ -2357,6 +3020,64 @@
     },
     {
      "args": [
+      265,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006021f",
+     "prim": 265
+    },
+    {
+     "args": [
+      266,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006022f",
+     "prim": 266
+    },
+    {
+     "args": [
+      266,
+      null,
+      900,
+      null,
+      900,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00060243",
+     "prim": 266
+    },
+    {
+     "args": [
+      266,
+      200,
+      0,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x00060254",
+     "prim": 266
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -2379,6 +3100,22 @@
      "name": "MotionMove",
      "pc": "0x000602a4",
      "prim": 251
+    },
+    {
+     "args": [
+      266,
+      null,
+      500,
+      null,
+      500,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x000603af",
+     "prim": 266
     },
     {
      "args": [
@@ -2407,6 +3144,64 @@
     },
     {
      "args": [
+      266,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00060517",
+     "prim": 266
+    },
+    {
+     "args": [
+      267,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00060527",
+     "prim": 267
+    },
+    {
+     "args": [
+      267,
+      null,
+      900,
+      null,
+      900,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x0006053b",
+     "prim": 267
+    },
+    {
+     "args": [
+      267,
+      200,
+      0,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0006054c",
+     "prim": 267
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -2429,6 +3224,22 @@
      "name": "MotionMove",
      "pc": "0x0006059c",
      "prim": 251
+    },
+    {
+     "args": [
+      267,
+      null,
+      500,
+      null,
+      500,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x000606a7",
+     "prim": 267
     },
     {
      "args": [
@@ -2457,6 +3268,64 @@
     },
     {
      "args": [
+      267,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006080f",
+     "prim": 267
+    },
+    {
+     "args": [
+      268,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006081f",
+     "prim": 268
+    },
+    {
+     "args": [
+      268,
+      null,
+      900,
+      null,
+      900,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00060833",
+     "prim": 268
+    },
+    {
+     "args": [
+      268,
+      200,
+      0,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x00060844",
+     "prim": 268
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -2479,6 +3348,22 @@
      "name": "MotionMove",
      "pc": "0x00060894",
      "prim": 251
+    },
+    {
+     "args": [
+      268,
+      null,
+      500,
+      null,
+      500,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x0006099f",
+     "prim": 268
     },
     {
      "args": [
@@ -2507,6 +3392,64 @@
     },
     {
      "args": [
+      268,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00060b07",
+     "prim": 268
+    },
+    {
+     "args": [
+      269,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00060b17",
+     "prim": 269
+    },
+    {
+     "args": [
+      269,
+      null,
+      900,
+      null,
+      900,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00060b2b",
+     "prim": 269
+    },
+    {
+     "args": [
+      269,
+      200,
+      0,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x00060b3c",
+     "prim": 269
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -2529,6 +3472,22 @@
      "name": "MotionMove",
      "pc": "0x00060b8c",
      "prim": 251
+    },
+    {
+     "args": [
+      269,
+      null,
+      500,
+      null,
+      500,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00060c97",
+     "prim": 269
     },
     {
      "args": [
@@ -2557,6 +3516,64 @@
     },
     {
      "args": [
+      269,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00060dff",
+     "prim": 269
+    },
+    {
+     "args": [
+      270,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00060e0f",
+     "prim": 270
+    },
+    {
+     "args": [
+      270,
+      null,
+      900,
+      null,
+      900,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00060e23",
+     "prim": 270
+    },
+    {
+     "args": [
+      270,
+      200,
+      0,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x00060e34",
+     "prim": 270
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -2579,6 +3596,22 @@
      "name": "MotionMove",
      "pc": "0x00060e84",
      "prim": 251
+    },
+    {
+     "args": [
+      270,
+      null,
+      500,
+      null,
+      500,
+      22600,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00060f8f",
+     "prim": 270
     },
     {
      "args": [
@@ -2607,6 +3640,64 @@
     },
     {
      "args": [
+      270,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000610ed",
+     "prim": 270
+    },
+    {
+     "args": [
+      271,
+      0,
+      200,
+      4000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000610fd",
+     "prim": 271
+    },
+    {
+     "args": [
+      271,
+      null,
+      900,
+      null,
+      900,
+      35000,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00061113",
+     "prim": 271
+    },
+    {
+     "args": [
+      271,
+      250,
+      0,
+      35000,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x00061126",
+     "prim": 271
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -2622,6 +3713,24 @@
      "name": "MotionMoveStop",
      "pc": "0x000611d1",
      "prim": 250
+    },
+    {
+     "args": [
+      272
+     ],
+     "cmd": 49,
+     "name": "MotionMoveStop",
+     "pc": "0x000611d7",
+     "prim": 272
+    },
+    {
+     "args": [
+      273
+     ],
+     "cmd": 49,
+     "name": "MotionMoveStop",
+     "pc": "0x000611dd",
+     "prim": 273
     },
     {
      "args": [
@@ -2724,6 +3833,69 @@
     },
     {
      "args": [
+      265
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00061225",
+     "prim": 265
+    },
+    {
+     "args": [
+      266
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x0006122b",
+     "prim": 266
+    },
+    {
+     "args": [
+      267
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00061231",
+     "prim": 267
+    },
+    {
+     "args": [
+      268
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00061237",
+     "prim": 268
+    },
+    {
+     "args": [
+      269
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x0006123d",
+     "prim": 269
+    },
+    {
+     "args": [
+      270
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00061243",
+     "prim": 270
+    },
+    {
+     "args": [
+      271
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00061249",
+     "prim": 271
+    },
+    {
+     "args": [
       250,
       null,
       1000,
@@ -2735,6 +3907,62 @@
      "name": "MotionMoveZ",
      "pc": "0x00061ae6",
      "prim": 250
+    },
+    {
+     "args": [
+      272,
+      null,
+      1000,
+      100000,
+      3,
+      null
+     ],
+     "cmd": 57,
+     "name": "MotionMoveZ",
+     "pc": "0x00061af8",
+     "prim": 272
+    },
+    {
+     "args": [
+      272,
+      600,
+      0,
+      100000,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x00061b0b",
+     "prim": 272
+    },
+    {
+     "args": [
+      273,
+      null,
+      1000,
+      100000,
+      3,
+      null
+     ],
+     "cmd": 57,
+     "name": "MotionMoveZ",
+     "pc": "0x00061b1d",
+     "prim": 273
+    },
+    {
+     "args": [
+      273,
+      2000,
+      0,
+      100000,
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x00061b30",
+     "prim": 273
     },
     {
      "args": [
@@ -2788,6 +4016,50 @@
     },
     {
      "args": [
+      265,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00061fa5",
+     "prim": 265
+    },
+    {
+     "args": [
+      265,
+      null,
+      800,
+      null,
+      800,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00061fb9",
+     "prim": 265
+    },
+    {
+     "args": [
+      265,
+      300,
+      0,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x00061fca",
+     "prim": 265
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -2835,6 +4107,64 @@
      "name": "MotionMove",
      "pc": "0x0006228d",
      "prim": 251
+    },
+    {
+     "args": [
+      265,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00062493",
+     "prim": 265
+    },
+    {
+     "args": [
+      266,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000624a3",
+     "prim": 266
+    },
+    {
+     "args": [
+      266,
+      null,
+      800,
+      null,
+      800,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x000624b7",
+     "prim": 266
+    },
+    {
+     "args": [
+      266,
+      300,
+      0,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x000624c8",
+     "prim": 266
     },
     {
      "args": [
@@ -2888,6 +4218,64 @@
     },
     {
      "args": [
+      266,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00062991",
+     "prim": 266
+    },
+    {
+     "args": [
+      267,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x000629a1",
+     "prim": 267
+    },
+    {
+     "args": [
+      267,
+      null,
+      800,
+      null,
+      800,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x000629b5",
+     "prim": 267
+    },
+    {
+     "args": [
+      267,
+      300,
+      0,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x000629c6",
+     "prim": 267
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -2935,6 +4323,64 @@
      "name": "MotionMove",
      "pc": "0x00062c89",
      "prim": 251
+    },
+    {
+     "args": [
+      267,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00062e8f",
+     "prim": 267
+    },
+    {
+     "args": [
+      268,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00062e9f",
+     "prim": 268
+    },
+    {
+     "args": [
+      268,
+      null,
+      800,
+      null,
+      800,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00062eb3",
+     "prim": 268
+    },
+    {
+     "args": [
+      268,
+      300,
+      0,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x00062ec4",
+     "prim": 268
     },
     {
      "args": [
@@ -2988,6 +4434,64 @@
     },
     {
      "args": [
+      268,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006338d",
+     "prim": 268
+    },
+    {
+     "args": [
+      269,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006339d",
+     "prim": 269
+    },
+    {
+     "args": [
+      269,
+      null,
+      800,
+      null,
+      800,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x000633b1",
+     "prim": 269
+    },
+    {
+     "args": [
+      269,
+      300,
+      0,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x000633c2",
+     "prim": 269
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -3035,6 +4539,64 @@
      "name": "MotionMove",
      "pc": "0x00063685",
      "prim": 251
+    },
+    {
+     "args": [
+      269,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006388b",
+     "prim": 269
+    },
+    {
+     "args": [
+      270,
+      0,
+      200,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x0006389b",
+     "prim": 270
+    },
+    {
+     "args": [
+      270,
+      null,
+      800,
+      null,
+      800,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x000638af",
+     "prim": 270
+    },
+    {
+     "args": [
+      270,
+      300,
+      0,
+      19550,
+      1,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x000638c0",
+     "prim": 270
     },
     {
      "args": [
@@ -3088,6 +4650,34 @@
     },
     {
      "args": [
+      270,
+      200,
+      0,
+      2000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00063d7f",
+     "prim": 270
+    },
+    {
+     "args": [
+      271,
+      0,
+      200,
+      4000,
+      null,
+      null
+     ],
+     "cmd": 42,
+     "name": "MotionAlpha",
+     "pc": "0x00063d8f",
+     "prim": 271
+    },
+    {
+     "args": [
       261
      ],
      "cmd": 50,
@@ -3103,6 +4693,24 @@
      "name": "MotionMoveStop",
      "pc": "0x00063e6d",
      "prim": 250
+    },
+    {
+     "args": [
+      272
+     ],
+     "cmd": 49,
+     "name": "MotionMoveStop",
+     "pc": "0x00063e73",
+     "prim": 272
+    },
+    {
+     "args": [
+      273
+     ],
+     "cmd": 49,
+     "name": "MotionMoveStop",
+     "pc": "0x00063e79",
+     "prim": 273
     },
     {
      "args": [
@@ -3202,6 +4810,69 @@
      "name": "MotionMoveStop",
      "pc": "0x00063ebb",
      "prim": 261
+    },
+    {
+     "args": [
+      265
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00063f03",
+     "prim": 265
+    },
+    {
+     "args": [
+      266
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00063f09",
+     "prim": 266
+    },
+    {
+     "args": [
+      267
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00063f0f",
+     "prim": 267
+    },
+    {
+     "args": [
+      268
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00063f15",
+     "prim": 268
+    },
+    {
+     "args": [
+      269
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00063f1b",
+     "prim": 269
+    },
+    {
+     "args": [
+      270
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00063f21",
+     "prim": 270
+    },
+    {
+     "args": [
+      271
+     ],
+     "cmd": 58,
+     "name": "MotionMoveZStop",
+     "pc": "0x00063f27",
+     "prim": 271
     }
    ],
    "layer_z": [

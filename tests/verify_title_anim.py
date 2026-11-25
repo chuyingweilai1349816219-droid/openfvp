@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""标题**进场动画**的门禁：C 里用的参数必须等于脚本里的常量。
+"""标题画面/开场动画的门禁：参数必须等于脚本里的常量，且**槽位要对**。
 
-问题：标题进场动画（logo 淡入 + 缩放）如果靠"看起来像"去调，永远调不出原版的
-数字。这些数字在 hcb 脚本里是**常量**，已经冻结进 `ref/title-scene.json` 的
-`games.iroseka.layer_motion`（由 `scripts/extract-title-scene.py` 静态提取，
-`tests/verify_title_scene.py` 保证基线 = 脚本）。
+⚠️ 2026-11-25 修正：上一版门禁把「alpha 0→255 / 1400 ms + 缩放 10000→1000」当成
+**标题 logo** 的进场动画，是错的。按 hcb 的加载顺序复核后：
 
-本门禁把两边焊起来：
+  * 250 `logo_bg` / 252 `logo_favo` / 254 `logo_favo_view` / 255..257
+    `logo_favo_view_p1..p3` 是**开场 FAVORITE logo**（hcb 0x580AA..0x581C4 加载），
+    缩放 10→1 / 1400 ms 属于其中的 p1..p3（hcb 0x58217..0x582EC）；
+  * **标题画面**是 265 `title_logo1`（0x58B72 加载）+ 262..264 与菜单项，
+    进场动画是 `MotionAlpha(0, 255, <local5=500>)`（hcb 0x59349..0x595C1）——
+    **500 ms 淡入**；背景四层同时做 25 秒的极慢缩放（hcb 0x59143..，时长 local7=25000）。
 
-  1. 从 `ref/title-scene.json` 读 logo 三块（图元 255/256/257）的
-     `MotionAlpha` 与 `MotionMoveS2`，断言三者参数**完全一致**；
-  2. 解析 `src/titleanim.h` 里的宏，断言 from / to / dur / mode 与脚本逐项相等；
-  3. 断言 `src/platform/win32/main_win32.c` 真的用了这些宏和
-     `gfx_draw_image_xform()`，且**默认关闭**（`o->title_anim = -1`，
-     只有 `--title-anim` 或 `--opening` 才打开）——默认关是冻结基线不被动的前提；
-  4. 顺带断言背景四层（258..261）的 MotionMoveS2 是 7 ms（第 131 轮结论：
-     那是"离开标题"的缩小，不是进场动画），别被误当成进场参数。
+本门禁断言：
+
+  1. `ref/title-scene.json` 里：logo_favo_view_p1..p3 的 MotionAlpha/MotionMoveS2 参数；
+     标题 262..265 的淡入条目（0→255，时长是栈局部变量 5/7，说明"时长由运行期设置"）；
+     背景 258 的 MotionMoveS2 = 1300→900（时长栈局部 7）；
+  2. `src/titleanim.h` 的宏与上面逐项一致（500 / 25000 / 10000→1000/1400 …）；
+  3. `main_win32.c` **只对标题做 alpha 淡入**（用 `gfx_draw_image_alpha`），
+     不再把缩放动画挂到标题 logo 上（`gfx_draw_image_xform` 不应出现在标题绘制里），
+     默认 title_fade = 255（冻结基线不变），`--title-anim`/`--opening` 才打开。
 
 缺基线时 SKIP 并返回 0。
 
@@ -34,8 +38,9 @@ REF = os.path.join(FVP, 'ref', 'title-scene.json')
 HEADER = os.path.join(FVP, 'src', 'titleanim.h')
 MAIN = os.path.join(FVP, 'src', 'platform', 'win32', 'main_win32.c')
 
-LOGO_PRIMS = (255, 256, 257)
-BG_PRIMS = (258, 259, 260, 261)
+OPENING_VIEW_PRIMS = (255, 256, 257)
+TITLE_FADE_PCS = {'0x00059349': 264, '0x00059361': 265, '0x00059370': 263,
+                  '0x00059394': 262}
 
 fails = []
 
@@ -50,16 +55,19 @@ def check(cond, msg):
 def macros(path):
     text = io.open(path, encoding='utf-8').read()
     out = {}
-    for m in re.finditer(r'^#define\s+(FVP_TITLEANIM_\w+)\s+'
-                         r'(-?(?:0x[0-9a-fA-F]+|\d+))\s*$', text, re.M):
+    for m in re.finditer(r'^#define\s+(FVP_\w+)\s+(-?(?:0x[0-9a-fA-F]+|\d+))\s*$',
+                         text, re.M):
         out[m.group(1)] = int(m.group(2), 0)
     return out
 
 
-def motion_of(entries, prim, name):
+def motion(entries, prim, name, pc=None):
     for e in entries:
-        if e.get('prim') == prim and e.get('name') == name:
-            return e
+        if e.get('prim') != prim or e.get('name') != name:
+            continue
+        if pc is not None and e.get('pc') != pc:
+            continue
+        return e
     return None
 
 
@@ -73,95 +81,105 @@ def main():
             return 1
 
     ref = json.load(io.open(REF, encoding='utf-8'))
-    game = (ref.get('games') or {}).get('iroseka') or {}
-    entries = game.get('layer_motion') or []
-    if not entries:
-        print('SKIP: ref/title-scene.json 里没有 layer_motion')
-        return 0
+    entries = ((ref.get('games') or {}).get('iroseka') or {}).get(
+        'layer_motion') or []
+    check(len(entries) > 0, 'layer_motion 非空（实际 %d 条）' % len(entries))
 
-    print('== 1. 脚本里 logo 三块（255/256/257）的进场参数必须一致 ==')
-    alpha = {}
-    scale = {}
-    for prim in LOGO_PRIMS:
-        a = motion_of(entries, prim, 'MotionAlpha')
-        s = motion_of(entries, prim, 'MotionMoveS2')
-        check(a is not None, '图元 %d 有 MotionAlpha' % prim)
-        check(s is not None, '图元 %d 有 MotionMoveS2' % prim)
-        if a is not None:
-            alpha[prim] = (a['args'][1], a['args'][2], a['args'][3])
-        if s is not None:
-            scale[prim] = (s['args'][1], s['args'][2], s['args'][3],
-                           s['args'][4], s['args'][5], s['args'][6])
-    check(len(set(alpha.values())) == 1,
-          '三块的 MotionAlpha 参数一致（实际 %s）' % sorted(set(alpha.values())))
-    check(len(set(scale.values())) == 1,
-          '三块的 MotionMoveS2 参数一致（实际 %s）' % sorted(set(scale.values())))
+    print('== 1. 开场 FAVORITE logo（255/256/257 = logo_favo_view_p1..p3）==')
+    for prim in OPENING_VIEW_PRIMS:
+        a = motion(entries, prim, 'MotionAlpha')
+        s = motion(entries, prim, 'MotionMoveS2')
+        check(a is not None and a['args'][1] == 0 and a['args'][2] == 255
+              and a['args'][3] == 1400,
+              '图元 %d 的 MotionAlpha = 0→255/1400 ms（实际 %r）'
+              % (prim, a['args'] if a else None))
+        check(s is not None and s['args'][1:5] == [10000, 1000, 10000, 1000]
+              and s['args'][5] == 1400 and s['args'][6] == 3,
+              '图元 %d 的 MotionMoveS2 = 10000→1000 两轴 / 1400 ms / mode 3（实际 %r）'
+              % (prim, s['args'] if s else None))
 
-    a0 = alpha.get(LOGO_PRIMS[-1])
-    s0 = scale.get(LOGO_PRIMS[-1])
-    print('== 2. 脚本参数（取自 iroseka 图元 257 的调用点）==')
-    if a0 is not None:
-        print('  MotionAlpha  : from=%r to=%r dur=%r' % a0)
-    if s0 is not None:
-        print('  MotionMoveS2 : sx %r->%r  sy %r->%r  dur=%r mode=%r' % s0)
+    print('== 2. 标题画面：262..265 是 MotionAlpha 0→255，时长来自栈局部变量 ==')
+    durations = set()
+    for pc, prim in TITLE_FADE_PCS.items():
+        e = motion(entries, prim, 'MotionAlpha', pc)
+        if e is None:
+            # pc 字符串格式可能带前导零差异
+            e = next((x for x in entries
+                      if x.get('name') == 'MotionAlpha' and x.get('prim') == prim
+                      and x.get('pc', '').lower().endswith(pc[-5:])), None)
+        check(e is not None, '图元 %d 在 %s 有 MotionAlpha' % (prim, pc))
+        if e is not None:
+            # 264 的 from 是 `pushtrue`（非 int）——按 handler 的缺省语义表示
+            # "从当前 alpha 开始"，其它三个是明确的 0。
+            check(e['args'][1] in (0, None) and e['args'][2] == 255,
+                  '图元 %d 的 MotionAlpha 是 (0 或当前值)→255（实际 %r）'
+                  % (prim, e['args']))
+            durations.add(e['args'][3])
+    check(durations <= {5, 7},
+          '标题淡入的时长参数是栈局部变量 5 或 7（说明由运行期决定，实际 %r）'
+          % sorted(x for x in durations if isinstance(x, int)))
 
+    print('== 3. 背景 258..261：MotionMoveS2 1300→900（时长栈局部 7 = 25000 ms）==')
+    e = motion(entries, 258, 'MotionMoveS2')
+    check(e is not None, '图元 258 有 MotionMoveS2')
+    if e is not None:
+        check(e['args'][1] == 1300 and e['args'][2] == 900,
+              '258 的缩放 1300→900（实际 %r）' % (e['args'],))
+        check(e['args'][5] == 7,
+              '时长参数是栈局部 7（实际 %r）' % (e['args'][5],))
+
+    print('== 4. src/titleanim.h 的宏与脚本一致 ==')
     m = macros(HEADER)
-    print('== 3. src/titleanim.h 的宏必须逐项等于脚本 ==')
-    if a0 is not None:
-        check(m.get('FVP_TITLEANIM_ALPHA_FROM') == a0[0],
-              'ALPHA_FROM == %r（实际 %r）'
-              % (a0[0], m.get('FVP_TITLEANIM_ALPHA_FROM')))
-        check(m.get('FVP_TITLEANIM_ALPHA_TO') == a0[1],
-              'ALPHA_TO == %r（实际 %r）'
-              % (a0[1], m.get('FVP_TITLEANIM_ALPHA_TO')))
-        check(m.get('FVP_TITLEANIM_DUR_MS') == a0[2],
-              'DUR_MS == %r（实际 %r）'
-              % (a0[2], m.get('FVP_TITLEANIM_DUR_MS')))
-    if s0 is not None:
-        check(m.get('FVP_TITLEANIM_SCALE_FROM') == s0[0] == s0[2],
-              'SCALE_FROM == %r（两个轴同样，实际 %r）'
-              % (s0[0], m.get('FVP_TITLEANIM_SCALE_FROM')))
-        check(m.get('FVP_TITLEANIM_SCALE_TO') == s0[1] == s0[3],
-              'SCALE_TO == %r（两个轴同样，实际 %r）'
-              % (s0[1], m.get('FVP_TITLEANIM_SCALE_TO')))
-        check(m.get('FVP_TITLEANIM_EASE_MODE') == s0[5],
-              'EASE_MODE == %r（实际 %r）' % (s0[5],
-                                              m.get('FVP_TITLEANIM_EASE_MODE')))
-    check(m.get('FVP_TITLEANIM_LOGO_SLOT') == 0x0FF1,
-          'LOGO_SLOT == 0x0FF1（实际 %r）' % m.get('FVP_TITLEANIM_LOGO_SLOT'))
+    check(m.get('FVP_TITLEANIM_FADE_FROM') == 0 and
+          m.get('FVP_TITLEANIM_FADE_TO') == 255,
+          '标题淡入 0→255（实际 %r/%r）'
+          % (m.get('FVP_TITLEANIM_FADE_FROM'), m.get('FVP_TITLEANIM_FADE_TO')))
+    check(m.get('FVP_TITLEANIM_FADE_MS') == 500,
+          '标题淡入时长 = 500 ms（脚本 local5，实际 %r）'
+          % (m.get('FVP_TITLEANIM_FADE_MS'),))
+    check(m.get('FVP_TITLEANIM_BG_SCALE_FROM') == 1300 and
+          m.get('FVP_TITLEANIM_BG_SCALE_TO') == 900,
+          '背景缩放 1300→900（实际 %r/%r）'
+          % (m.get('FVP_TITLEANIM_BG_SCALE_FROM'),
+             m.get('FVP_TITLEANIM_BG_SCALE_TO')))
+    check(m.get('FVP_TITLEANIM_BG_MS') == 25000,
+          '背景缩放时长 = 25000 ms（脚本 local7，实际 %r）'
+          % (m.get('FVP_TITLEANIM_BG_MS'),))
+    check(m.get('FVP_OPENANIM_VIEW_SCALE_FROM') == 10000 and
+          m.get('FVP_OPENANIM_VIEW_SCALE_TO') == 1000 and
+          m.get('FVP_OPENANIM_VIEW_MS') == 1400,
+          '开场 p1..p3 缩放 10000→1000 / 1400 ms（实际 %r/%r/%r）'
+          % (m.get('FVP_OPENANIM_VIEW_SCALE_FROM'),
+             m.get('FVP_OPENANIM_VIEW_SCALE_TO'),
+             m.get('FVP_OPENANIM_VIEW_MS')))
+    check(m.get('FVP_OPENANIM_LOGO_BG_MS') == 1200 and
+          m.get('FVP_OPENANIM_LOGO_FAVO_MS') == 1400,
+          '开场 logo_bg 1200 ms / logo_favo 1400 ms 淡入（实际 %r/%r）'
+          % (m.get('FVP_OPENANIM_LOGO_BG_MS'),
+             m.get('FVP_OPENANIM_LOGO_FAVO_MS')))
 
-    print('== 4. win32 外壳真的用了这些宏，且默认关闭 ==')
+    print('== 5. main_win32.c：标题只做 alpha 淡入，不再用缩放 ==')
     src = io.open(MAIN, encoding='utf-8').read()
-    for name in ('FVP_TITLEANIM_ALPHA_FROM', 'FVP_TITLEANIM_SCALE_FROM',
-                 'FVP_TITLEANIM_DUR_MS', 'FVP_TITLEANIM_EASE_MODE'):
-        check(name in src, 'main_win32.c 引用 %s' % name)
-    check('gfx_draw_image_xform(' in src,
-          'main_win32.c 用 gfx_draw_image_xform() 画动画中的 logo')
-    check('fvp_motion_add(' in src,
-          '用 src/motion.c 的补间（mode 1..5 曲线有静态分析依据）')
-    check(re.search(r'o->title_anim = -1', src) is not None,
-          '默认 title_anim = -1（未指定）')
+    check('FVP_TITLEANIM_FADE_MS' in src, '引用 FVP_TITLEANIM_FADE_MS')
+    check('gfx_draw_image_alpha(' in src,
+          '标题用 gfx_draw_image_alpha 做淡入')
+    check('gfx_draw_image_xform(' not in src,
+          '标题绘制不再调用 gfx_draw_image_xform（缩放动画不属于标题）')
+    check(re.search(r'static int title_fade = 255', src) is not None,
+          '默认 title_fade = 255（冻结基线不变）')
     check(re.search(r'opts\.title_anim\s*=\s*opts\.opening\s*\?\s*1\s*:\s*0', src)
           is not None,
           '只有 --opening（或显式 --title-anim）才打开动画')
-    check('TITLE_LOGO_SLOT 0x0FF1' in src,
-          'main_win32.c 里 logo 槽就是 0x0FF1')
-
-    print('== 5. 背景四层（258..261）不是进场动画（dur = 7 ms）==')
-    durs = []
-    for prim in BG_PRIMS:
-        s = motion_of(entries, prim, 'MotionMoveS2')
-        if s is not None:
-            durs.append((prim, s['args'][5]))
-    check(len(durs) == 4, '背景四层都有 MotionMoveS2（实际 %s）' % (durs,))
-    check(all(d == 7 for _, d in durs),
-          '四个时长都是 7 ms（"离开标题"的缩小，不是进场；实际 %s）' % (durs,))
+    check('fade-in started' in src, '日志写明这是淡入')
+    check('0x58B72' in io.open(HEADER, encoding='utf-8').read() or
+          '0x58b72' in io.open(HEADER, encoding='utf-8').read(),
+          '头文件注明了标题 logo（265）的加载点 0x58B72')
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 标题进场动画参数 = 脚本常量（alpha 0->255 / scale 10000->1000，'
-          '1400 ms，mode 3），默认关闭，动画终点与静态绘制一致')
+    print('\nOK: 标题 = 500 ms 淡入（262..265/菜单），背景 = 25000 ms 慢缩放；'
+          '缩放 10→1/1400 ms 属于开场 FAVORITE logo 的 p1..p3')
     return 0
 
 

@@ -1,0 +1,304 @@
+{
+ "clear_routine": {
+  "end": "0x430e97",
+  "resets": [
+   {
+    "field": 1420,
+    "instr": "movl   $0x0,0x58c(%esi)",
+    "pc": "0x430de1",
+    "size": 4,
+    "value": [
+     "imm",
+     0
+    ]
+   },
+   {
+    "field": 1488,
+    "instr": "movl   $0x0,0x5d0(%esi)",
+    "pc": "0x430e27",
+    "size": 4,
+    "value": [
+     "imm",
+     0
+    ]
+   },
+   {
+    "field": 1512,
+    "instr": "mov    %ax,0x5e8(%esi)",
+    "pc": "0x430e72",
+    "size": 2,
+    "value": [
+     "load",
+     1452
+    ]
+   },
+   {
+    "field": 1514,
+    "instr": "mov    %cx,0x5ea(%esi)",
+    "pc": "0x430e79",
+    "size": 2,
+    "value": [
+     "imm",
+     0
+    ]
+   },
+   {
+    "field": 1496,
+    "instr": "mov    %cl,0x5d8(%esi)",
+    "pc": "0x430e80",
+    "size": 1,
+    "value": [
+     "imm",
+     0
+    ]
+   },
+   {
+    "field": 1494,
+    "instr": "mov    %cl,0x5d6(%esi)",
+    "pc": "0x430e86",
+    "size": 1,
+    "value": [
+     "imm",
+     0
+    ]
+   },
+   {
+    "field": 1600,
+    "instr": "mov    %ecx,0x640(%esi)",
+    "pc": "0x430e8c",
+    "size": 4,
+    "value": [
+     "imm",
+     0
+    ]
+   }
+  ],
+  "start": "0x430d50"
+ },
+ "constructor": {
+  "defaults": {
+   "0x590": {
+    "instr": "mov    %ax,0x590(%esi)",
+    "kind": "imm",
+    "name": "font_id（word）",
+    "offset": 1424,
+    "pc": "0x430f3f",
+    "size": 2,
+    "value": 4294967294
+   },
+   "0x592": {
+    "instr": "movb   $0x10,0x592(%esi)",
+    "kind": "imm",
+    "name": "默认字号宽",
+    "offset": 1426,
+    "pc": "0x430f6e",
+    "size": 1,
+    "value": 16
+   },
+   "0x593": {
+    "instr": "mov    %al,0x593(%esi)",
+    "kind": "imm",
+    "name": "font_id2（byte）",
+    "offset": 1427,
+    "pc": "0x430f46",
+    "size": 1,
+    "value": 4294967294
+   },
+   "0x594": {
+    "instr": "movb   $0xc,0x594(%esi)",
+    "kind": "imm",
+    "name": "默认字号高",
+    "offset": 1428,
+    "pc": "0x430f75",
+    "size": 1,
+    "value": 12
+   },
+   "0x595": {
+    "instr": "mov    %bl,0x595(%esi)",
+    "kind": "imm",
+    "name": "（byte，构造时 0）",
+    "offset": 1429,
+    "pc": "0x430fc5",
+    "size": 1,
+    "value": 0
+   },
+   "0x596": {
+    "instr": "mov    %bl,0x596(%esi)",
+    "kind": "imm",
+    "name": "（byte，构造时 0）",
+    "offset": 1430,
+    "pc": "0x430f7c",
+    "size": 1,
+    "value": 0
+   },
+   "0x597": {
+    "instr": "mov    %bl,0x597(%esi)",
+    "kind": "imm",
+    "name": "shadow_dist",
+    "offset": 1431,
+    "pc": "0x430fdf",
+    "size": 1,
+    "value": 0
+   },
+   "0x598": {
+    "instr": "mov    %edx,0x598(%esi)",
+    "kind": "copy_field",
+    "name": "颜色来源指针",
+    "offset": 1432,
+    "pc": "0x430fae",
+    "size": 4,
+    "value": 6965536
+   },
+   "0x59c": {
+    "instr": "mov    %ecx,0x59c(%esi)",
+    "kind": "copy_field",
+    "name": "颜色来源指针",
+    "offset": 1436,
+    "pc": "0x430fbf",
+    "size": 4,
+    "value": 6965532
+   },
+   "0x5a0": {
+    "instr": "mov    %eax,0x5a0(%esi)",
+    "kind": "copy_field",
+    "name": "颜色来源指针",
+    "offset": 1440,
+    "pc": "0x430fd9",
+    "size": 4,
+    "value": 6965532
+   },
+   "0x5a4": {
+    "instr": "mov    %bl,0x5a4(%esi)",
+    "kind": "imm",
+    "name": "TextFunction arg2",
+    "offset": 1444,
+    "pc": "0x430f5c",
+    "size": 1,
+    "value": 0
+   },
+   "0x5a5": {
+    "instr": "mov    %bl,0x5a5(%esi)",
+    "kind": "imm",
+    "name": "TextFunction arg1",
+    "offset": 1445,
+    "pc": "0x430f62",
+    "size": 1,
+    "value": 0
+   },
+   "0x5a6": {
+    "instr": "mov    %bl,0x5a6(%esi)",
+    "kind": "imm",
+    "name": "TextFunction arg3",
+    "offset": 1446,
+    "pc": "0x430f68",
+    "size": 1,
+    "value": 0
+   },
+   "0x5a8": {
+    "instr": "mov    %cx,0x5a8(%esi)",
+    "kind": "imm",
+    "name": "space_x",
+    "offset": 1448,
+    "pc": "0x430f4e",
+    "size": 2,
+    "value": 0
+   },
+   "0x5aa": {
+    "instr": "mov    %dx,0x5aa(%esi)",
+    "kind": "imm",
+    "name": "space_y",
+    "offset": 1450,
+    "pc": "0x430f84",
+    "size": 2,
+    "value": 0
+   },
+   "0x5ac": {
+    "instr": "mov    %ax,0x5ac(%esi)",
+    "kind": "imm",
+    "name": "fmt_pad_b（行宽下限/初始累计宽度）",
+    "offset": 1452,
+    "pc": "0x430f8d",
+    "size": 2,
+    "value": 0
+   },
+   "0x5ae": {
+    "instr": "mov    %cx,0x5ae(%esi)",
+    "kind": "imm",
+    "name": "fmt_pad_a",
+    "offset": 1454,
+    "pc": "0x430f55",
+    "size": 2,
+    "value": 0
+   },
+   "0x5b0": {
+    "instr": "mov    %dx,0x5b0(%esi)",
+    "kind": "imm",
+    "name": "fmt_off_b",
+    "offset": 1456,
+    "pc": "0x430f94",
+    "size": 2,
+    "value": 0
+   },
+   "0x5b4": {
+    "instr": "mov    %ax,0x5b4(%esi)",
+    "kind": "imm",
+    "name": "fmt_off_a",
+    "offset": 1460,
+    "pc": "0x430f9b",
+    "size": 2,
+    "value": 0
+   },
+   "0x5d4": {
+    "instr": "movb   $0x1,0x5d4(%esi)",
+    "kind": "imm",
+    "name": "（byte，构造时 1）",
+    "offset": 1492,
+    "pc": "0x430f28",
+    "size": 1,
+    "value": 1
+   },
+   "0x5d9": {
+    "instr": "movb   $0x1,0x5d9(%esi)",
+    "kind": "imm",
+    "name": "（byte，构造时 1）",
+    "offset": 1497,
+    "pc": "0x430fe5",
+    "size": 1,
+    "value": 1
+   },
+   "0x5dc": {
+    "instr": "mov    %di,0x5dc(%esi)",
+    "kind": "copy_field",
+    "name": "窗口宽（u16）",
+    "offset": 1500,
+    "pc": "0x430ecd",
+    "size": 2,
+    "value": 20
+   },
+   "0x5de": {
+    "instr": "mov    %bp,0x5de(%esi)",
+    "kind": "copy_field",
+    "name": "窗口高（u16）",
+    "offset": 1502,
+    "pc": "0x430ed4",
+    "size": 2,
+    "value": 24
+   },
+   "0x5e0": {
+    "instr": "mov    %ebx,0x5e0(%esi)",
+    "kind": "imm",
+    "name": "speed_ms",
+    "offset": 1504,
+    "pc": "0x430f2f",
+    "size": 4,
+    "value": 0
+   }
+  },
+  "end": "0x430ff5",
+  "size_limits": [
+   1024
+  ],
+  "start": "0x430ea0"
+ },
+ "note": "从 exe 文本窗口构造函数抄出的默认值/上限/清空语义（A 类事实）；由 scripts/extract-exe-text-defaults.py 生成"
+}

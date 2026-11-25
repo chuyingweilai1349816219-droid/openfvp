@@ -1023,72 +1023,68 @@ PrimSetAlpha(prim, 255)      ⇒  prim+7 := 255
 这三样都是**"实际操作上一样"的前提**，而它们全都只存在于 exe 的 handler 里：
 抓帧看到的永远只是某个时刻的结果，拿不到"传 `true` 时哪个字段不变"。
 
-## 19. 标题进场动画：参数来自脚本，时间轴复用 motion（2026-11-25）
+## 19. 标题进场动画与开场 logo：把槽位搞对了（2026-11-25，含一次修正）
 
-§16 把标题动画的参数从脚本里读了出来，§17 用 handler 裁决了"稳态缩放 = 1.0"。
-这一轮把**进场动画本身**做出来：logo 淡入 + 从 10 倍缩到 1 倍。
+§16/§17 把标题的**动画参数**从脚本读了出来，但当时把"哪些图元是标题 logo"搞错了：
+把「alpha 0→255 / 1400 ms + 缩放 10000→1000」挂到了标题 logo 上，做成"logo 从 10 倍
+缩到 1 倍"。**用户实机查看后指出：原版标题是淡入淡出**。本轮按 hcb 的加载顺序复核，
+确认了槽位归属，并改正了实现。
 
-### 参数（全部是脚本常量，不是调出来的）
+### 槽位映射（从 hcb 的 GraphLoad 调用点逐条抄的）
 
-`ref/title-scene.json` 的 `games.iroseka.layer_motion` 里，logo 三块
-（图元 **255 / 256 / 257**，pc `0x58217..0x582ec`）的参数**完全一致**：
+| 槽 | 素材 | 用途 | 加载点 |
+|---|---|---|---|
+| 250 | `logo_bg` | 开场 FAVORITE logo 背景 | `0x580AA` |
+| 252 | `logo_favo` | 开场 FAVORITE logo 本体 | `0x580BF` |
+| 254 | `logo_favo_view` | 开场 logo 视野框 | `0x580FF` |
+| 255/256/257 | `logo_favo_view_p1/p2/p3` | 开场 logo 的三个分解层 | `0x58141/0x58177/0x581AA` |
+| 258..261 | `title_bg1_A..D` | **标题**背景四层 | `0x5853F..0x5858A` |
+| 262..264 | 标题 frame 层 | **标题**装饰层 | `0x58ED3..` |
+| 265 | `title_logo1` | **标题 logo** | `0x58B72`（local 2） |
+| 277 | `title_trial` | 体验版标记 | `0x58B9E` |
+| 278 | `title_copyright` | 版权行 | `0x58BB3`（local 3） |
+| 1501.. | `title_start..` 等 | 菜单项 | `0x58BC8` 起 |
 
-| 命令 | 实参 | 含义 |
-|---|---|---|
-| `MotionAlpha(257, 0, 255, 1400)` | from 0, to 255, dur 1400 ms | alpha 0 → 255 |
-| `MotionMoveS2(257, 10000, 1000, 10000, 1000, 1400, 3)` | 缩放入 10000→1000、出 10000→1000，dur 1400 ms，**mode 3** | 10.0 倍 → 1.0 倍 |
+### 真正的动画（脚本常量）
 
-即：**1400 ms 内 alpha 从 0 到 255、缩放从 10.0 到 1.0，缓动曲线 mode 3
-（缓出，二次）**。稳态就是 alpha=255 / scale=1000 —— 与 §17 的结论一致
-（那次"原版截图处于动画终点"的判断现在只是验证，不是依据）。
+| 阶段 | 图元 | 动画 | 出处 |
+|---|---|---|---|
+| **开场** FAVORITE logo | 255/256/257 | `MotionAlpha(0,255,1400)` + `MotionMoveS2(10000,1000,10000,1000,1400,3)` | `0x58217..0x582EC` |
+| 开场 logo 其它层 | 250 / 252 / 254 | alpha 0→255：1200 / 1400 / 1400 ms（另带 MotionMoveZ 750→1000，2D 下无视觉影响） | `0x58386 / 0x5830E / 0x58344` |
+| **标题**进场 | 262/263/264/265 + 菜单项 | `MotionAlpha(0 或当前值, 255, <local5=500>)` | `0x59349..0x595C1` |
+| 标题背景 | 258..261 | `MotionMoveS2(1300/1600/2500/4000 → 900/800/800/800, <local7=25000>, 3)` | `0x59143..0x59188` |
+| 体验版标记 | 277 | `MotionAlpha(0,255,1800)` | `0x59401` |
 
-### 实现
+也就是说：**标题画面是 500 ms 的淡入，背景同时做 25 秒的极慢缩小**（肉眼几乎只看到淡入）；
+「10 倍缩到 1 倍」是**开场 FAVORITE logo 的分解层**，与标题无关。
+
+### 实现（本轮改的）
 
 | 位置 | 内容 |
 |---|---|
-| `src/titleanim.h` | 把上表冻结成宏（`FVP_TITLEANIM_ALPHA_FROM/TO`、`SCALE_FROM/TO`、`DUR_MS`、`EASE_MODE`、`LOGO_SLOT`），每个宏的注释里带 hcb 的 pc |
-| `src/motion.c` | 时间轴与 mode 1..5 的缓动曲线**复用**已有实现（曲线语义来自静态分析，见 `docs/animation-baseline.md` §2.3） |
-| `src/gfx.c` 的 `gfx_draw_image_xform()` | 缩放 + alpha 直贴（左上锚，与原版 `PrimSetRS` 缩放的锚点一致）；scale=1000 时内部直接转调 `gfx_draw_image_alpha`，保证**字节等价** |
-| `src/platform/win32/main_win32.c` | `--title-anim` 打开（`--opening` 时自动打开）；帧循环里推进补间，logo 用 xform 画；补间结束后回到静态绘制 |
-
-**默认关闭**（`o->title_anim = -1`，只有 `--title-anim` / `--opening` 才开），
-所以 `compare.py` / `verify_gfx` 这些冻结基线不受影响。
+| `src/titleanim.h` | 两组常量分开：`FVP_TITLEANIM_FADE_*`（标题 500 ms 淡入）、`FVP_TITLEANIM_BG_*`（25000 ms 慢缩放，未实现）、`FVP_OPENANIM_*`（开场 logo 1200/1400 ms 与 p1..p3 缩放 10000→1000/1400）；每个都带 hcb 的 pc |
+| `main_win32.c` | 标题绘制改成 **alpha 淡入**：logo / 版权行 / 菜单贴图 / 菜单文字 都乘上 `title_fade`；背景与叠加层不参与（脚本也没给它们 alpha 动画）。`--title-anim` 打开、`--opening` 时自动打开，**默认 title_fade=255**（冻结基线不变） |
+| `gfx.c` | **修了一个真 bug**：`blit_sprite()` 以前完全忽略 `p->alpha`，只用了源像素自身的 alpha —— 所以 `gfx_draw_image_alpha()` 画的图根本不会变淡，淡入做出来"没效果"就是撞在这里。现在把 alpha 乘进覆盖度；`alpha==255` 时走原分支，已验收的帧逐字节不变 |
+| 淡入计时 | 用**墙钟时间**而不是累加 frame_dt：标题第一次绘制要现场加载一整套贴图，那一帧的 dt 可能是几百毫秒，累加会让 500 ms 淡入在一帧内跳完（实测踩过） |
 
 ### 验证
 
-* `tests/test_gfx_xform.c`（32 项，进 `make check` + `run_all`）：
-  - `scale=1000/alpha=255` 的 xform 与 `gfx_draw_image_at` **逐字节相同**；
-  - alpha 路径与 `gfx_draw_image_alpha` 逐字节相同；
-  - 50% 缩放画出 20x15（40x30 的素材）、200% 画出 80x60，左上角不动；
-  - alpha=0 不画、alpha=300 钳成 255、scale<=0 当 1.0；
-  - 用 `src/titleanim.h` 的参数建补间：t=0 → alpha 0 / scale 10000；
-    t=700 → alpha **191.25** / scale **3250**（mode 3 缓出 0.75 的精确值）；
-    t=1400 → alpha 255 / scale 1000；**终端画出的画布与静态绘制逐字节相同**。
-* `tests/verify_title_anim_render.py`（端到端，进 `run_all`）：真的启动
-  `bin/fvp.exe` 跑标题抓三张图——`--title-anim` 0.6 s（动画中途）与不开动画的
-  0.6/3 s 对比：中途 **mean_abs = 14.15、21.68% 的像素不同**（动画确实在画），
-  而动画跑完（3 s）那张与不开动画的**逐字节相同（mean_abs = 0.000000、0 个差异像素）**
-  ——这就是"动画终点 = 静态绘制"在**真实渲染管线**上的证据。
-* `tests/verify_title_anim.py`（门禁，进 `run_all`）：
-  - 从 `ref/title-scene.json` 读 255/256/257 的 MotionAlpha / MotionMoveS2，
-    断言三块参数一致，再逐项对比 `src/titleanim.h` 的宏；
-  - 断言 `main_win32.c` 真的用了这些宏与 `gfx_draw_image_xform()`，且默认关闭；
-  - 断言背景四层 258..261 的 MotionMoveS2 时长是 **7 ms**（"离开标题"的缩小，
-    不是进场动画），防止以后被误当成进场参数。
+* `tests/test_gfx_xform.c`（37 项）：identity xform 与静态绘制逐字节相同；50%/200% 缩放包围盒；
+  alpha=0 不画、alpha=300 钳 255；**新增回归**：alpha=128 的亮度必须约为满值的一半
+  （修 bug 之前这一项会失败）；终值画布与静态绘制逐字节相同。
+* `tests/verify_title_anim.py`：从 `ref/title-scene.json` 断言
+  - 255/256/257 是 `MotionAlpha(0,255,1400)` + `MotionMoveS2(10000,1000,…,1400,3)`（开场）；
+  - 262..265 是 alpha→255、时长是栈局部变量 5/7（运行期决定 = 500/25000）；
+  - 258 的 `MotionMoveS2` 是 1300→900、时长局部 7；
+  - `src/titleanim.h` 的宏与之一致；`main_win32.c` 只对标题做 alpha 淡入，不再调用
+    `gfx_draw_image_xform`，默认关闭。
+* `tests/verify_title_anim_render.py`（端到端）：`--shot-at 300` 抓淡入中途，
+  与静态帧相比 **mean_abs ≈ 3.3、约 10% 像素不同**；淡入跑完后与静态帧**逐字节相同**。
 
-### 一处更正：进场动画里**没有旋转**
+### 明确没做的
 
-§16 的表格里曾写 logo "`MotionMoveR(3600 → 0)`"。但冻结在
-`ref/title-scene.json` 的 `layer_motion` 里，255/256/257 只有
-**`MotionMoveRStop`**（`0x58ea5..0x58eb1`），**没有 `MotionMoveR` 起点**——
-`MotionMoveRStop` 只是清理（对应 §17 的"Stop 只取消、不回滚"）。
-所以进场动画只有 alpha + 缩放两项。§16 那一行作废（它当时是手工摘录、没进基线，
-现在有基线可查）。
-
-### 明确没做的（不要当成"已一致"）
-
-* 图元 252/254 的 `MotionMoveZ(750→1000)` + `MotionAlpha(0→255)`、250/253 的淡出链
-  —— 这些是遮罩层，和菜单绘制顺序绑在一起；要忠实实现得先把标题画面改成
-  **按图元绘制**（现在的 profile 是直接贴图）。这是下一轮的事。
-* 旋转（上面已说明：脚本里没有起点）。
-* mode 3 以外的缓动（其它 mode 在 `src/motion.c` 里已有曲线，标题脚本只用 3）。
+* 背景 25 秒慢缩放：需要先把标题背景改成"按图元缩放绘制"（现在背景是整图裁剪直贴）；
+  25 s 在 3 s 的门禁截图里几乎不可见，属下一步。
+* 开场 FAVORITE logo 的 `logo_favo_view_p1/p2/p3` 三层：我们的 `--opening` 只画了
+  `logo_bg` + `logo_favo`（槽 250/252），这三层还没有画，所以那条 10→1 的缩放目前
+  只是冻结的常数（`FVP_OPENANIM_VIEW_*`），没有接到画面上。

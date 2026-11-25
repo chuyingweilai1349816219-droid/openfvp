@@ -45,7 +45,6 @@
 #include "../../openseq.h"
 #include "../../savelist.h"
 #include "../../gamemenu.h"
-#include "../../motion.h"
 #include "../../titleanim.h"
 
 #define FVP_WIN32_VERSION "0.1"
@@ -1661,45 +1660,44 @@ static const FvpSndBridge *g_gmenu_bridge;
 static int title_logo_on;
 static int title_ovl_loaded;
 static int title_copy_on;
-/* 标题进场动画的状态（--title-anim / --opening）。时间轴复用 src/motion.c：
- * 参数全是脚本里的常量（src/titleanim.h），表达式与缓动曲线都有单测。 */
-static FvpMotion title_motion;
-static int title_motion_inited;
+/* 标题画面进场：**淡入**（脚本 hcb 0x59349..0x595C1：
+ * MotionAlpha(262/263/264/265 与菜单项, 0, 255, 500)）。
+ * 默认 title_fade = 255，绘制与原来逐字节相同；--title-anim / --opening 时
+ * 从 0 线性升到 255（500 ms），只影响 logo / 版权行 / 菜单这些会被脚本淡入的元素，
+ * 背景与叠加层不参与（脚本也没给它们 alpha 动画）。 */
+static int title_fade = 255;
+static double title_anim_started_at;
 static int title_anim_active;
 static int title_anim_started;
-static int title_anim_alpha_id;
-static int title_anim_scale_id;
 
-/* 按脚本参数建两条补间：MotionAlpha(0→255, 1400) + MotionMoveS2(10000→1000,
- * 1400, mode 3)，都作用在 logo 图元上。 */
-static void title_anim_start(void)
+/* 用**墙钟时间**推进淡入（而不是累加 frame_dt）：标题第一次绘制要现场加载
+ * 一整套贴图，那一帧的 dt 可能是几百毫秒，累加会让 500 ms 的淡入在一帧内跳完
+ * （实测过：截图里标题直接是全不透明）。 */
+static void title_anim_start(double now_s)
 {
-    if (!title_motion_inited) {
-        fvp_motion_init(&title_motion);
-        title_motion_inited = 1;
-    }
-    fvp_motion_clear(&title_motion);
-    title_anim_alpha_id = fvp_motion_add(
-        &title_motion, FVP_TITLEANIM_LOGO_SLOT, FVP_TWEEN_ALPHA,
-        (double)FVP_TITLEANIM_ALPHA_FROM, 0.0, (double)FVP_TITLEANIM_ALPHA_TO,
-        0.0, (double)FVP_TITLEANIM_DUR_MS, FVP_TITLEANIM_EASE_MODE, 0);
-    title_anim_scale_id = fvp_motion_add(
-        &title_motion, FVP_TITLEANIM_LOGO_SLOT, FVP_TWEEN_SCALE,
-        (double)FVP_TITLEANIM_SCALE_FROM, (double)FVP_TITLEANIM_SCALE_FROM,
-        (double)FVP_TITLEANIM_SCALE_TO, (double)FVP_TITLEANIM_SCALE_TO,
-        (double)FVP_TITLEANIM_DUR_MS, FVP_TITLEANIM_EASE_MODE, 0);
+    title_anim_started_at = now_s;
+    title_fade = FVP_TITLEANIM_FADE_FROM;
     title_anim_active = 1;
 }
 
-static void title_anim_advance(double dt_ms)
+static void title_anim_advance(double now_s)
 {
+    double p;
+    double elapsed_ms = (now_s - title_anim_started_at) * 1000.0;
+
     if (!title_anim_active) {
         return;
     }
-    fvp_motion_advance(&title_motion, dt_ms);
-    if (fvp_motion_active_count(&title_motion) == 0) {
+    if (elapsed_ms >= (double)FVP_TITLEANIM_FADE_MS) {
+        title_fade = FVP_TITLEANIM_FADE_TO;
         title_anim_active = 0;
+        return;
     }
+    p = elapsed_ms / (double)FVP_TITLEANIM_FADE_MS;
+    title_fade = (int)((double)FVP_TITLEANIM_FADE_FROM +
+                       ((double)FVP_TITLEANIM_FADE_TO -
+                        (double)FVP_TITLEANIM_FADE_FROM) * p +
+                       0.5);
 }
 
 /* --title-no-bg：只画菜单、不铺背景（几何测量/门禁用：背景的亮部会污染
@@ -1889,21 +1887,11 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
         int ly = 0;
 
         (void)gfx_image_offset(gfx, TITLE_LOGO_SLOT, &lx, &ly);
-        if (title_anim_active) {
-            /* 进场动画：alpha / 缩放都来自脚本补间（src/titleanim.h）。
-             * 动画期间用缩放直贴，结束时补间给的就是 alpha=255、scale=1000，
-             * 画出来与静态绘制逐字节相同（tests/test_gfx_xform.c 断言）。 */
-            double av = (double)FVP_TITLEANIM_ALPHA_TO;
-            double sx = (double)FVP_TITLEANIM_SCALE_TO;
-            double sy = (double)FVP_TITLEANIM_SCALE_TO;
-
-            (void)fvp_motion_value(&title_motion, title_anim_alpha_id, &av, NULL);
-            (void)fvp_motion_value(&title_motion, title_anim_scale_id, &sx, &sy);
-            (void)gfx_draw_image_xform(gfx, TITLE_LOGO_SLOT, lx, ly,
-                                       (int)(sx + 0.5), (int)(sy + 0.5),
-                                       (int)(av + 0.5));
-        } else {
+        if (title_fade >= 255) {
             (void)gfx_draw_image_at(gfx, TITLE_LOGO_SLOT, lx, ly);
+        } else {
+            (void)gfx_draw_image_alpha(gfx, TITLE_LOGO_SLOT, lx, ly,
+                                       title_fade);
         }
     }
     if (title_copy_on) {
@@ -1911,7 +1899,12 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
         int cy = 0;
 
         (void)gfx_image_offset(gfx, TITLE_COPY_SLOT, &cx, &cy);
-        (void)gfx_draw_image_at(gfx, TITLE_COPY_SLOT, cx, cy);
+        if (title_fade >= 255) {
+            (void)gfx_draw_image_at(gfx, TITLE_COPY_SLOT, cx, cy);
+        } else {
+            (void)gfx_draw_image_alpha(gfx, TITLE_COPY_SLOT, cx, cy,
+                                       title_fade);
+        }
     }
     if (title_textures_on) {
         for (i = 0; i < FVP_TITLE_ITEMS; ++i) {
@@ -1942,9 +1935,15 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
                                         prof->items[i].ink_y0)) /
                                      2;
 
-                    (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + 8 + i,
-                                            (prof->client_w - gw) / 2,
-                                            gy);
+                    if (title_fade >= 255) {
+                        (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + 8 + i,
+                                                (prof->client_w - gw) / 2,
+                                                gy);
+                    } else {
+                        (void)gfx_draw_image_alpha(
+                            gfx, TITLE_SLOT_BASE + 8 + i,
+                            (prof->client_w - gw) / 2, gy, title_fade);
+                    }
                 }
             }
             /* hover 时换画高亮态贴图（素材头自带坐标，和常态同一左上角）。 */
@@ -1961,10 +1960,19 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
 
                     (void)gfx_image_offset(gfx, TITLE_HOVER_SLOT_BASE + i, &hx,
                                            &hy);
-                    (void)gfx_draw_image_at(gfx, TITLE_HOVER_SLOT_BASE + i, hx,
-                                            hy);
-                } else {
+                    if (title_fade >= 255) {
+                        (void)gfx_draw_image_at(gfx, TITLE_HOVER_SLOT_BASE + i,
+                                                hx, hy);
+                    } else {
+                        (void)gfx_draw_image_alpha(gfx,
+                                                   TITLE_HOVER_SLOT_BASE + i,
+                                                   hx, hy, title_fade);
+                    }
+                } else if (title_fade >= 255) {
                     (void)gfx_draw_image_at(gfx, TITLE_SLOT_BASE + i, ix, iy);
+                } else {
+                    (void)gfx_draw_image_alpha(gfx, TITLE_SLOT_BASE + i, ix, iy,
+                                               title_fade);
                 }
             }
         }
@@ -2045,10 +2053,10 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
             }
             if (title_ui_font != NULL) {
                 (void)gfx_draw_text_line_font(gfx, title_ui_font, label, dx,
-                                              y0, px, r, gr, b, 255);
+                                              y0, px, r, gr, b, title_fade);
             } else {
                 (void)gfx_draw_text_line(gfx, label, dx, y0, px, r, gr, b,
-                                         255);
+                                         title_fade);
             }
         }
     }
@@ -3584,18 +3592,16 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     title_shown_at = now;
                 }
                 if (opts.title_anim && !title_anim_started) {
-                    title_anim_start();
+                    title_anim_start(now);
                     title_anim_started = 1;
-                    fvp_logf("title: entrance animation started "
-                             "(logo alpha %d->%d / scale %d->%d over %d ms, "
-                             "mode %d)",
-                             FVP_TITLEANIM_ALPHA_FROM, FVP_TITLEANIM_ALPHA_TO,
-                             FVP_TITLEANIM_SCALE_FROM,
-                             FVP_TITLEANIM_SCALE_TO, FVP_TITLEANIM_DUR_MS,
-                             FVP_TITLEANIM_EASE_MODE);
+                    fvp_logf("title: fade-in started "
+                             "(logo/copyright/menu alpha %d->%d over %d ms; "
+                             "script MotionAlpha on 265/264/263/262)",
+                             FVP_TITLEANIM_FADE_FROM, FVP_TITLEANIM_FADE_TO,
+                             FVP_TITLEANIM_FADE_MS);
                 }
                 if (title_anim_active) {
-                    title_anim_advance(frame_dt * 1000.0);
+                    title_anim_advance(now);
                 }
                 if (opening_active) {
                     /* 开场序列自己画（见下面的 opening 块），这里不画菜单 */

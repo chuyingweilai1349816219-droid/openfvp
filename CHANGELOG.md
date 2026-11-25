@@ -51,6 +51,48 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 修正（标题进场动画挂错了图元：标题是 500 ms 淡入，不是 10 倍缩放）
+
+- **用户实机查看后指出「原版标题是淡入淡出」——按 hcb 加载顺序复核，确认之前挂错了图元**
+  - 槽位归属（从 GraphLoad 调用点逐条抄）：**250/252/254/255/256/257 = 开场 FAVORITE
+    logo**（`logo_bg` / `logo_favo` / `logo_favo_view` / `logo_favo_view_p1..p3`）；
+    **265 = `title_logo1`（标题 logo，0x58B72）**；258..261 标题背景；278 版权行
+  - 真正的动画：开场 255/256/257 = `MotionAlpha(0,255,1400)` +
+    `MotionMoveS2(10000,1000,…,1400,3)`（**这不是标题**）；标题 262..265 与菜单项 =
+    `MotionAlpha(→255, <local5=500>)` = **500 ms 淡入**；背景 258..261 =
+    `MotionMoveS2(1300/1600/2500/4000 → 900/800/800/800, <local7=25000>)` = 25 s 极慢缩小
+  - `src/titleanim.h` 拆成三组常量（标题淡入 / 背景慢缩放 / 开场 logo），每个带 hcb pc
+  - `main_win32.c`：标题绘制改为 **alpha 淡入**（logo / 版权行 / 菜单贴图 / 菜单文字），
+    默认 `title_fade=255` → 冻结基线不变；`--title-anim`/`--opening` 才打开；
+    计时改用**墙钟时间**（首帧加载贴图可能几百毫秒，累加 frame_dt 会把淡入一帧跳完）
+  - **修了一个真 bug**：`src/gfx.c` 的 `blit_sprite()` 一直忽略 `p->alpha`，只用了源像素
+    自身 alpha ⇒ `gfx_draw_image_alpha()` 画的图根本不会变淡（淡入"没效果"的根因）。
+    修法是新增 `blit_sprite_alpha()` 给 `gfx_draw_image_alpha()`/`gfx_draw_image_xform()`
+    专用，**不动** `blit_sprite()` —— 后者是场景渲染（528000 步画面）的基线行为，
+    直接改会让 verify_gfx 的 PSNR 从 49.94 掉到 35 左右（实测踩过并回退）
+  - 测试/门禁更新：`tests/test_gfx_xform.c`（37 项，含 alpha=128 亮度≈一半的回归）；
+    `tests/verify_title_anim.py` 重写（槽位映射 + 500/25000/1200/1400/10000→1000 常量
+    + 标题不再用 xform）；`tests/verify_title_anim_render.py` 用 `--shot-at 300`
+    抓淡入中途（mean_abs 2.59、9.2% 像素不同），跑完与静态帧逐字节相同
+  - 文档：`docs/title-menu.md` §19 整节重写（槽位表、动画表、实现、验证、未做项）
+
+### 结构分析（文本窗口默认值：字号 16x12、字体号 -2/-2，来自 exe 构造函数）
+
+- **文本窗口的默认值从 exe 构造函数 0x430EA0 抄出来，并改正我们实现的偏差**
+  - 新增 `scripts/extract-exe-text-defaults.py` + 基线 `ref/exe-text-defaults.json` +
+    门禁 `tests/verify_exe_text_defaults.py`（`run_all` 60 → 61 步）
+  - 抄出来的默认值：字号 **+0x592=16 / +0x594=12**、字体号 **+0x590=0xFFFE /
+    +0x593=0xFE（word/byte 都是 -2）**、间距/排版/开关/阴影/速度全 0、
+    `+0x5D4=1`、`+0x5D9=1`；尺寸上限 **0x400=1024**；
+    清空例程里 **+0x5E8 := +0x5AC**（行宽累计从初始宽度/下限起算）
+  - **改正偏差**：`src/textattr.c` 原来写 12×12、字体号 0（照文档抄的），
+    与 exe 不一致 → 改成 **16×12、-2/-2**；`src/textattr.h` 注释同步
+  - `tests/test_textattr.c` 增加默认值断言（默认 16×12、-2/-2、间距/阴影/skip 全 0），
+    单测 97 项全过
+  - 门禁第 5 节把 `src/textattr.c` 里 `fvp_textattr_reset()` 的每个默认值与
+    exe 常量逐项对比 —— 以后谁改默认值都会被抓住
+  - 文档：`docs/02-text-format.md` 新增"文本窗口的默认值"一节
+
 ### 结构分析（文本样式字段的读点地图 + 行宽下限语义）
 
 - **扫出文本样式字段的全部读/写/读改写点，回答"渲染侧怎么用"**

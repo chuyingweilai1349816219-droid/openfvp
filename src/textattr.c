@@ -25,15 +25,20 @@ void fvp_textattr_reset(FvpTextAttr *attrs, int count)
         attrs[i].r = 255;
         attrs[i].g = 255;
         attrs[i].b = 255;
-        attrs[i].w = 12;
+        /* 默认字号：exe 文本窗口构造函数 0x430EA0 写 +0x592=0x10(16)、
+         * +0x594=0x0C(12)（ref/exe-text-defaults.json）。之前这里写的是 12x12，
+         * 与原版不一致，已按静态分析改正。 */
+        attrs[i].w = 16;
         attrs[i].h = 12;
         attrs[i].speed_ms = 0;
         attrs[i].shadow_dist = 0;
         attrs[i].space_x = 0;
         attrs[i].space_y = 0;
         attrs[i].skip_mode = 0;
-        attrs[i].font_id = 0;
-        attrs[i].font_id2 = 0;
+        /* 默认字体号：构造函数写 +0x590=0xFFFE（word，-2）、+0x593=0xFE
+         * （byte，-2）——**不是 0**。0 是"第 0 个字体"，-2 才是"未指定"。 */
+        attrs[i].font_id = -2;
+        attrs[i].font_id2 = -2;
         attrs[i].fmt_pad_a = 0;
         attrs[i].fmt_pad_b = 0;
         attrs[i].fmt_off_a = 0;

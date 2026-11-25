@@ -2,16 +2,18 @@
  *
  *   bin/test_gfx_xform.exe
  *
- * 为什么有这个测试：标题进场动画的参数是从**脚本**里读出来的（`src/titleanim.h`，
- * 出处 `ref/title-scene.json`），时间轴复用已经单测过的 `src/motion.c`
- * （mode 1..5 的缓动曲线来自静态分析）。这里把两件事焊在一起验证：
+ * 为什么有这个测试：开场 FAVORITE logo 的缩放参数是从**脚本**里读出来的
+ * （`src/titleanim.h` 的 FVP_OPENANIM_VIEW_*，出处 `ref/title-scene.json`）。
+ * 标题画面本身的进场是 **alpha 淡入 500 ms**（`FVP_TITLEANIM_FADE_*`），不用缩放。
+ * 这里验证：
  *
  *   1. `gfx_draw_image_xform()` 在 scale=1000 / alpha=255 时与静态绘制
  *      **字节等价** —— 所以动画结束后标题与不做动画完全一样（冻结基线不受影响）；
  *   2. scale / alpha 真的生效（画出包围盒 = round(w*scale)，alpha=0 不画）；
  *   3. 用脚本里的参数建两条补间（alpha 0→255、scale 10000→1000，1400 ms，mode 3），
  *      验证 t=0 / t=700 / t=1400 的取值符合 mode 3 的缓出曲线，并且
- *      **t>=1400 后画出的画布与静态绘制逐字节相同**。
+ *      **t>=1400 后画出的画布与静态绘制逐字节相同**（这条补间属于**开场**
+ *      FAVORITE logo 的 p1..p3 层；标题画面的进场是 500 ms 线性淡入，见下）。
  */
 #include <math.h>
 #include <stdio.h>
@@ -218,6 +220,50 @@ int main(void)
           len) == 0, "identity xform 的 alpha 路径与 gfx_draw_image_alpha 等价");
     free(other);
 
+    printf("== 2b. alpha 真的变淡（回归：blit_sprite 曾经忽略 p->alpha）==\n");
+    {
+        long lum_full = 0;
+        long lum_half = 0;
+        int yy;
+        int xx;
+
+        clear_canvas(g);
+        (void)gfx_draw_image_alpha(g, 1, 10, 10, 255);
+        {
+            const uint8_t *c = canvas_of(g, &w, &h);
+
+            for (yy = 10; yy < 10 + IMG_H; ++yy) {
+                for (xx = 10; xx < 10 + IMG_W; ++xx) {
+                    const uint8_t *q =
+                        c + ((size_t)yy * (size_t)w + (size_t)xx) * 4u;
+
+                    lum_full += (long)q[0] + (long)q[1] + (long)q[2];
+                }
+            }
+        }
+        clear_canvas(g);
+        (void)gfx_draw_image_alpha(g, 1, 10, 10, 128);
+        {
+            const uint8_t *c = canvas_of(g, &w, &h);
+
+            for (yy = 10; yy < 10 + IMG_H; ++yy) {
+                for (xx = 10; xx < 10 + IMG_W; ++xx) {
+                    const uint8_t *q =
+                        c + ((size_t)yy * (size_t)w + (size_t)xx) * 4u;
+
+                    lum_half += (long)q[0] + (long)q[1] + (long)q[2];
+                }
+            }
+        }
+        CHECK(lum_half > 0, "alpha=128 仍然画出来（亮度 %ld）", lum_half);
+        CHECK(lum_half < lum_full,
+              "alpha=128 比 alpha=255 暗（%ld < %ld）", lum_half, lum_full);
+        /* 128/255 的一半左右：允许 ±25% 的容差（底色是纯黑，线性混合） */
+        CHECK(lum_half > lum_full * 35 / 100 && lum_half < lum_full * 65 / 100,
+              "alpha=128 的亮度约为满值的一半（%ld vs %ld）", lum_half,
+              lum_full);
+    }
+
     printf("== 3. 缩放真的生效（包围盒 = round(w*scale)）==\n");
     clear_canvas(g);
     (void)gfx_draw_image_xform(g, 1, 10, 10, 500, 500, 255);
@@ -259,17 +305,25 @@ int main(void)
           bx1 - bx0 + 1);
     free(base);
 
-    printf("== 5. 脚本参数 + motion：t=0 / 700 / 1400 的取值 ==\n");
+    printf("== 5. 脚本参数 + motion：t=0 / 700 / 1400 的取值（开场 FAVORITE logo）==\n");
+    CHECK(FVP_OPENANIM_VIEW_SCALE_FROM == 10000 &&
+              FVP_OPENANIM_VIEW_SCALE_TO == 1000 &&
+              FVP_OPENANIM_VIEW_MS == 1400,
+          "开场 p1..p3 的缩放常量 = 10000→1000 / 1400 ms（脚本 MotionMoveS2）");
+    CHECK(FVP_TITLEANIM_FADE_FROM == 0 && FVP_TITLEANIM_FADE_TO == 255 &&
+              FVP_TITLEANIM_FADE_MS == 500,
+          "标题进场 = 线性淡入 0→255 / 500 ms（脚本 MotionAlpha）");
     fvp_motion_init(&m);
-    alpha_id = fvp_motion_add(&m, FVP_TITLEANIM_LOGO_SLOT, FVP_TWEEN_ALPHA,
-                              FVP_TITLEANIM_ALPHA_FROM, 0.0,
-                              FVP_TITLEANIM_ALPHA_TO, 0.0,
-                              FVP_TITLEANIM_DUR_MS, FVP_TITLEANIM_EASE_MODE, 0);
-    scale_id = fvp_motion_add(&m, FVP_TITLEANIM_LOGO_SLOT, FVP_TWEEN_SCALE,
-                              FVP_TITLEANIM_SCALE_FROM,
-                              FVP_TITLEANIM_SCALE_FROM,
-                              FVP_TITLEANIM_SCALE_TO, FVP_TITLEANIM_SCALE_TO,
-                              FVP_TITLEANIM_DUR_MS, FVP_TITLEANIM_EASE_MODE, 0);
+    alpha_id = fvp_motion_add(&m, 255, FVP_TWEEN_ALPHA,
+                              FVP_TITLEANIM_FADE_FROM, 0.0,
+                              FVP_TITLEANIM_FADE_TO, 0.0,
+                              FVP_OPENANIM_VIEW_MS, 3, 0);
+    scale_id = fvp_motion_add(&m, 255, FVP_TWEEN_SCALE,
+                              FVP_OPENANIM_VIEW_SCALE_FROM,
+                              FVP_OPENANIM_VIEW_SCALE_FROM,
+                              FVP_OPENANIM_VIEW_SCALE_TO,
+                              FVP_OPENANIM_VIEW_SCALE_TO,
+                              FVP_OPENANIM_VIEW_MS, 3, 0);
     CHECK(alpha_id > 0 && scale_id > 0, "两条补间都建起来了");
     CHECK(fvp_motion_active_count(&m) == 2, "两条补间都在跑");
     CHECK(fvp_motion_value(&m, alpha_id, &av, NULL) == 1 && av == 0.0,

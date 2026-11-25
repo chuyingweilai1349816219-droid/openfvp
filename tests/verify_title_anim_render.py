@@ -6,12 +6,12 @@
 门禁 `tests/verify_title_anim.py` 证明了"C 里的参数 == 脚本常量"。这里把**外壳**也焊上：
 真的启动 `bin/fvp.exe` 跑标题，抓三张图对比：
 
-  A. `--title-anim --run-seconds 0.6`  动画中途（logo alpha 0 附近、10 倍缩放）
+  A. `--title-anim`，在 300 ms 抓图（500 ms 淡入进行到约 1/5）
   B. `--run-seconds 3`                 不开动画（静态，基线口径）
   C. `--title-anim --run-seconds 3`     动画跑完
 
 断言：
-  1. **A != B**：动画确实在画面上生效（mean_abs 明显 > 0，且差异像素占比够大）；
+  1. **A != B**：淡入确实在画面上生效（logo/菜单变暗）；
   2. **C == B 逐字节相同**：补间结束时 alpha=255 / scale=1000，画出来与不做动画
      完全一样 —— 这是"默认关 + 动画终点等于静态"两条性质合起来的证明，
      也是冻结基线（`verify_vs_original`）不会被动画影响的前提；
@@ -104,10 +104,11 @@ def main():
     logs = {k: os.path.join(OUT, 'titleanim-%s.log' % k)
             for k in ('mid', 'off', 'done')}
 
+    # mid 用 --shot-at 抓淡入中途那一帧（退出时的截图不会再覆盖它）
     plan = [
-        ('mid', ['--title-anim'], 0.6),
-        ('off', [], 3.0),
-        ('done', ['--title-anim'], 3.0),
+        ('mid', ['--title-anim', '--shot-at', '300'], 0.75),
+        ('off', [], 1.6),
+        ('done', ['--title-anim'], 1.6),
     ]
     for key, extra, seconds in plan:
         for p in (shots[key], logs[key]):
@@ -130,19 +131,19 @@ def main():
     print('== 1. 动画中途 vs 不开动画：画面必须明显不同 ==')
     m_ab, p_ab = diff(mid, off)
     print('  mean_abs=%.3f  changed pixels=%.2f%%' % (m_ab, p_ab))
-    check(m_ab > 2.0, '动画中途的 mean_abs > 2.0（实际 %.3f）' % m_ab)
-    check(p_ab > 5.0, '差异像素占比 > 5%%（实际 %.2f%%）' % p_ab)
+    check(m_ab > 0.5, '淡入中途的 mean_abs > 0.5（实际 %.3f）' % m_ab)
+    check(p_ab > 1.0, '差异像素占比 > 1%%（实际 %.2f%%）' % p_ab)
 
-    print('== 2. 动画跑完 vs 不开动画：必须逐字节相同 ==')
+    print('== 2. 淡入跑完 vs 不开动画：必须逐字节相同 ==')
     m_cb, p_cb = diff(done, off)
     print('  mean_abs=%.6f  changed pixels=%.4f%%' % (m_cb, p_cb))
     check(m_cb == 0.0, '动画终点的 mean_abs == 0（实际 %.6f）' % m_cb)
     check(p_cb == 0.0, '动画终点没有一个差异像素（实际 %.4f%%）' % p_cb)
 
-    print('== 3. 日志：只有开动画的两次打出 "entrance animation started" ==')
+    print('== 3. 日志：只有开动画的两次打出 "fade-in started" ==')
     for key in ('mid', 'off', 'done'):
         text = read_log(logs[key])
-        got = 'entrance animation started' in text
+        got = 'fade-in started' in text
         if key == 'off':
             check(not got, 'off 那次没有动画日志')
         else:

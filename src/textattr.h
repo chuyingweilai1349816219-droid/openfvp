@@ -106,7 +106,9 @@ typedef struct FvpTextAttr {
     unsigned int set_mask;
 } FvpTextAttr;
 
-/* 全部 32 个窗口重置成引擎默认值（白字、12x12、速度 0 表示不等待）。 */
+/* 全部 32 个窗口重置成引擎默认值：白字、字号 16x12、字体号 -2/-2、
+ * 速度 0（不等待）。这些默认值来自 exe 文本窗口构造函数 0x430EA0，
+ * 基线见 ref/exe-text-defaults.json（门禁 tests/verify_exe_text_defaults.py）。 */
 void fvp_textattr_reset(FvpTextAttr *attrs, int count);
 
 /* setter 返回 1 表示已生效，0 表示参数被拒（窗口号越界 / NULL / 整条命令被忽略）。
