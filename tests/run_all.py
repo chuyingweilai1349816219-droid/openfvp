@@ -701,6 +701,17 @@ def build_steps(args):
                            'frame consumer 0x43F876 -> 0x43EE90 -> thread+0xFD9 '
                            'restart; script sites 9/3/7 for both games'))
 
+    # 6.4968635 存档槽序列化顺序（0x43DE90 的 31 段写入顺序 + 6 份存档校验）
+    vss = os.path.join(HERE, 'verify_exe_save_serialize.py')
+    steps.append(Step('verify_exe_save_serialize.py', [PY, '-X', 'utf8', vss],
+                      300, skip_reason=None,
+                      note='slot serializer frozen: 31 segments (5 header + 26 '
+                           'tail) of 0x43DE90, sources/sizes/asm evidence in '
+                           'ref/exe-save-serialize.json; data side validated on '
+                           '6 real saves (32 coroutine snapshots at tail+0, '
+                           '128-slot string table ends at tail+0x16608, '
+                           'tail+0x18 = 02, last two bytes 01 01)'))
+
     # 6.496864 脚本全局开关（global3 体验版布局 / global236/232 跳过动画）
     vg = os.path.join(HERE, 'verify_script_globals.py')
     steps.append(Step('verify_script_globals.py', [PY, '-X', 'utf8', vg], 300,
