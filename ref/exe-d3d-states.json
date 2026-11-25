@@ -1,0 +1,575 @@
+{
+ "asm": "work/iroseka_HD.asm",
+ "blend_model": {
+  "alpha_blend_enable": [
+   1
+  ],
+  "blend_modes": [
+   {
+    "dest": "INVSRCALPHA",
+    "formula": "dst = src.rgb*src.a + dst.rgb*(1-src.a)",
+    "name": "straight-alpha over",
+    "src": "SRCALPHA"
+   },
+   {
+    "dest": "ONE",
+    "formula": "dst = src.rgb*src.a + dst.rgb",
+    "name": "additive (alpha-add)",
+    "src": "SRCALPHA"
+   },
+   {
+    "dest": "ZERO",
+    "formula": "dst = src.rgb",
+    "name": "overwrite (no blend)",
+    "src": "ONE"
+   }
+  ],
+  "blendop": null,
+  "conclusion": "原版一共出现 3 种混合配置：straight-alpha over、additive (alpha-add)、overwrite (no blend)；BLENDOP 从未设置（D3D9 默认 ADD）",
+  "coverage": {
+   "resolved_sites": 31,
+   "unresolved": [
+    {
+     "immediates": 1,
+     "pc": "0x00425501",
+     "text": "call   *%eax"
+    },
+    {
+     "immediates": 0,
+     "pc": "0x0042ab0d",
+     "text": "call   *%edx"
+    },
+    {
+     "immediates": 0,
+     "pc": "0x0042b5d1",
+     "text": "call   *%edx"
+    },
+    {
+     "immediates": 0,
+     "pc": "0x0042bd24",
+     "text": "call   *%edx"
+    },
+    {
+     "immediates": 0,
+     "pc": "0x0042c3aa",
+     "text": "call   *%edx"
+    }
+   ],
+   "unresolved_sites": 5
+  },
+  "destblend": [
+   "ZERO",
+   "ONE",
+   "INVSRCALPHA"
+  ],
+  "srcblend": [
+   "ONE",
+   "SRCALPHA"
+  ]
+ },
+ "call_sites": [
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00424e5a",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    6
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00424e6c",
+   "state": 19,
+   "state_name": "SRCBLEND",
+   "values": [
+    5
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042504e",
+   "state": 19,
+   "state_name": "SRCBLEND",
+   "values": [
+    5
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425060",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    6
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425329",
+   "state": 15,
+   "state_name": "ALPHATESTENABLE",
+   "values": [
+    1
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042533e",
+   "state": 24,
+   "state_name": "ALPHAREF",
+   "values": [
+    255
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425350",
+   "state": 25,
+   "state_name": "ALPHAFUNC",
+   "values": [
+    7
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425362",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    6
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425374",
+   "state": 19,
+   "state_name": "SRCBLEND",
+   "values": [
+    5
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x004253b2",
+   "state": 15,
+   "state_name": "ALPHATESTENABLE",
+   "values": [
+    0
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425513",
+   "state": 19,
+   "state_name": "SRCBLEND",
+   "values": [
+    5
+   ]
+  },
+  {
+   "conditional": true,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425534",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    2,
+    6
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425693",
+   "state": 7,
+   "state_name": "ZENABLE",
+   "values": [
+    0
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x004256a8",
+   "state": 137,
+   "state_name": "LIGHTING",
+   "values": [
+    0
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x004256ba",
+   "state": 27,
+   "state_name": "ALPHABLENDENABLE",
+   "values": [
+    1
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x004256cc",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    6
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x004256de",
+   "state": 19,
+   "state_name": "SRCBLEND",
+   "values": [
+    5
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x004256f0",
+   "state": 22,
+   "state_name": "CULLMODE",
+   "values": [
+    1
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425702",
+   "state": 26,
+   "state_name": "DITHERENABLE",
+   "values": [
+    0
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x00425717",
+   "state": 141,
+   "state_name": "COLORVERTEX",
+   "values": [
+    1
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042572c",
+   "state": 145,
+   "state_name": "DIFFUSEMATERIALSOURCE",
+   "values": [
+    1
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042a428",
+   "state": 19,
+   "state_name": "SRCBLEND",
+   "values": [
+    2
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042a43a",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    1
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042ab1f",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    6
+   ]
+  },
+  {
+   "conditional": true,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042b5f2",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    2,
+    6
+   ]
+  },
+  {
+   "conditional": true,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042bd46",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    2,
+    6
+   ]
+  },
+  {
+   "conditional": true,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042c3cc",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    2,
+    6
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042c5df",
+   "state": 19,
+   "state_name": "SRCBLEND",
+   "values": [
+    2
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042c5f1",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    1
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042e0d6",
+   "state": 19,
+   "state_name": "SRCBLEND",
+   "values": [
+    2
+   ]
+  },
+  {
+   "conditional": false,
+   "obj": "0xe4(%cx)",
+   "pc": "0x0042e0e8",
+   "state": 20,
+   "state_name": "DESTBLEND",
+   "values": [
+    1
+   ]
+  }
+ ],
+ "mov_0xe4_sites": 36,
+ "note": "从 exe 静态分析抄出的 D3D9 渲染状态常量（A 类事实）；由 scripts/extract-exe-d3d-states.py 生成。state/value 枚举名来自 D3D9 SDK 公开常量，不是游戏数据。",
+ "render_states": {
+  "ALPHABLENDENABLE": {
+   "name": "ALPHABLENDENABLE",
+   "sites": [
+    "0x004256ba"
+   ],
+   "state": 27,
+   "value_names": [
+    "TRUE"
+   ],
+   "values": [
+    1
+   ]
+  },
+  "ALPHAFUNC": {
+   "name": "ALPHAFUNC",
+   "sites": [
+    "0x00425350"
+   ],
+   "state": 25,
+   "value_names": [
+    "GREATEREQUAL"
+   ],
+   "values": [
+    7
+   ]
+  },
+  "ALPHAREF": {
+   "name": "ALPHAREF",
+   "sites": [
+    "0x0042533e"
+   ],
+   "state": 24,
+   "value_names": [
+    null
+   ],
+   "values": [
+    255
+   ]
+  },
+  "ALPHATESTENABLE": {
+   "name": "ALPHATESTENABLE",
+   "sites": [
+    "0x00425329",
+    "0x004253b2"
+   ],
+   "state": 15,
+   "value_names": [
+    "FALSE",
+    "TRUE"
+   ],
+   "values": [
+    0,
+    1
+   ]
+  },
+  "COLORVERTEX": {
+   "name": "COLORVERTEX",
+   "sites": [
+    "0x00425717"
+   ],
+   "state": 141,
+   "value_names": [
+    "TRUE"
+   ],
+   "values": [
+    1
+   ]
+  },
+  "CULLMODE": {
+   "name": "CULLMODE",
+   "sites": [
+    "0x004256f0"
+   ],
+   "state": 22,
+   "value_names": [
+    "NONE"
+   ],
+   "values": [
+    1
+   ]
+  },
+  "DESTBLEND": {
+   "name": "DESTBLEND",
+   "sites": [
+    "0x00424e5a",
+    "0x00425060",
+    "0x00425362",
+    "0x00425534",
+    "0x004256cc",
+    "0x0042a43a",
+    "0x0042ab1f",
+    "0x0042b5f2",
+    "0x0042bd46",
+    "0x0042c3cc",
+    "0x0042c5f1",
+    "0x0042e0e8"
+   ],
+   "state": 20,
+   "value_names": [
+    "ZERO",
+    "ONE",
+    "INVSRCALPHA"
+   ],
+   "values": [
+    1,
+    2,
+    6
+   ]
+  },
+  "DIFFUSEMATERIALSOURCE": {
+   "name": "DIFFUSEMATERIALSOURCE",
+   "sites": [
+    "0x0042572c"
+   ],
+   "state": 145,
+   "value_names": [
+    "COLOR1"
+   ],
+   "values": [
+    1
+   ]
+  },
+  "DITHERENABLE": {
+   "name": "DITHERENABLE",
+   "sites": [
+    "0x00425702"
+   ],
+   "state": 26,
+   "value_names": [
+    "FALSE"
+   ],
+   "values": [
+    0
+   ]
+  },
+  "LIGHTING": {
+   "name": "LIGHTING",
+   "sites": [
+    "0x004256a8"
+   ],
+   "state": 137,
+   "value_names": [
+    "FALSE"
+   ],
+   "values": [
+    0
+   ]
+  },
+  "SRCBLEND": {
+   "name": "SRCBLEND",
+   "sites": [
+    "0x00424e6c",
+    "0x0042504e",
+    "0x00425374",
+    "0x00425513",
+    "0x004256de",
+    "0x0042a428",
+    "0x0042c5df",
+    "0x0042e0d6"
+   ],
+   "state": 19,
+   "value_names": [
+    "ONE",
+    "SRCALPHA"
+   ],
+   "values": [
+    2,
+    5
+   ]
+  },
+  "ZENABLE": {
+   "name": "ZENABLE",
+   "sites": [
+    "0x00425693"
+   ],
+   "state": 7,
+   "value_names": [
+    "FALSE"
+   ],
+   "values": [
+    0
+   ]
+  }
+ },
+ "set_render_state_calls": 31,
+ "vtable_offset": "0xe4"
+}

@@ -83,7 +83,9 @@ typedef enum GfxPrimField {
     GFX_F_TYPE = 0, /* 0=none 1=group 2=tile 4=sprite 5=text            */
     GFX_F_DRAW,     /* 0 = hide this prim and its whole subtree          */
     GFX_F_ALPHA,    /* 0..255                                            */
-    GFX_F_BLEND,    /* 0 = normal, 1 = additive approximation            */
+    GFX_F_BLEND,    /* 0 = over (SRCALPHA/INVSRCALPHA), 1 = additive      */
+                    /* (SRCALPHA/ONE) -- both read out of the exe's      */
+                    /* SetRenderState constants, see docs/c-gfx.md       */
     GFX_F_Z,        /* 100..10000, recorded but not used for sorting     */
     GFX_F_X,
     GFX_F_Y,

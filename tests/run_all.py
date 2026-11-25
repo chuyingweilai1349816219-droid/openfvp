@@ -583,6 +583,14 @@ def build_steps(args):
                            'MotionMoveS2 = 8 args (scale 100..10000, dur 1..300000, '
                            'mode 1..5), Stop only cancels; PrimSetRS angle unit 3600'))
 
+    # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
+    vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
+    steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,
+                      skip_reason=None,
+                      note='D3D9 render states from the exe: SRCBLEND=SRCALPHA, '
+                           'DESTBLEND=INVSRCALPHA (or ONE when the prim+8 byte is 1), '
+                           'ALPHABLENDENABLE=TRUE, BLENDOP never set (=ADD)'))
+
     # 6.497 标题背景合成模型（18 个候选里 measured+over 最好；需 Pillow+numpy）
     vbb = os.path.join(HERE, 'verify_title_bg_blend.py')
     steps.append(Step('verify_title_bg_blend.py', [PY, '-X', 'utf8', vbb], 900,

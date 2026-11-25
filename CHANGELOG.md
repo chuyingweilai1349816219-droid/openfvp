@@ -51,6 +51,30 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 结构分析（D3D9 `SetRenderState` 常量：混合模型从"拟合"升级为"抄出来的"）
+
+- **从 exe 的 `SetRenderState` 调用点抄出 D3D9 渲染状态常量，冻结成基线并加门禁**
+  - 新增 `scripts/extract-exe-d3d-states.py` + 基线 `ref/exe-d3d-states.json` +
+    门禁 `tests/verify_exe_d3d_states.py`（`run_all` 53 → 54 步）：按 COM vtable 调用
+    形态（`mov (%eax),%ecx; mov 0xe4(%ecx),%edx; push value; push state; push this;
+    call *%edx`）还原 (state, value)；值来自分支的调用点收多个候选值并标 `conditional`
+  - 覆盖率是硬的：asm 里 `mov 0xe4(...)` 共 **36 处**，解析出 **31 处**，
+    另 **5 处**实参来自寄存器/更远分支 → 记进 `unresolved_sites`，不做推测
+  - 抄出来的硬事实：`ALPHABLENDENABLE` 只设为 **TRUE**；`SRCBLEND` 只出现
+    `SRCALPHA`(5) / `ONE`(2)；`DESTBLEND` 只出现 `INVSRCALPHA`(6) / `ONE`(2) /
+    `ZERO`(1)；**`BLENDOP` 从未设置（D3D9 默认 ADD）**；`ZENABLE=FALSE`、
+    `CULLMODE=NONE`、`LIGHTING=FALSE`、`COLORVERTEX=TRUE`、
+    `DIFFUSEMATERIALSOURCE=COLOR1`、`ALPHAREF=255`、`ALPHAFUNC=GREATEREQUAL`
+  - **三种混合配置**：straight-alpha over（`SRCALPHA`/`INVSRCALPHA`）、
+    additive（`SRCALPHA`/`ONE`）、overwrite（`ONE`/`ZERO`，只用于 `Clear` 之前的覆盖写）
+  - **交叉验证**：4 个调用点的 `DESTBLEND` 由同一模式字节在 `{INVSRCALPHA, ONE}`
+    之间选，而 `PrimSetBlend`(78) 的 handler 只接受 **0..1** 并写 **prim+8** ——
+    两边同域一一对应：`prim+8=0` → over、`1` → 加色。所以加色是原版**真实使用**的，
+    我们的 `GFX_F_BLEND` 语义正确（注释同步改正为"over / additive"）
+  - 意义：第 15 轮"54 候选拟合出直通 alpha over"的结论现在有结构分析依据，抓帧降级为验证；
+    同时确认**不需要实现** `BLENDOP` 的 SUBTRACT/MIN/MAX（exe 从不设置）
+  - 文档：`docs/c-gfx.md` 新增"D3D9 混合状态"一节；`docs/title-menu.md` §15 加交叉引用
+
 ### 结构分析（PrimSet* 的字段偏移、脏标记与"非 int = 保持原值"缺省规则）
 
 - **把 `PrimSetXY/WH/OP/Blend/Alpha` 的实参语义从 handler 里抄出来，并改正上一轮一处误读**

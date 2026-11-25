@@ -883,7 +883,10 @@ Z 之后紧跟着的就是 OP/RS，alpha 可能在别处或用默认 255），�
 三条结论：
 
 1. **我们渲染器的做法（顺序 A→C→D→B + 直通 alpha over）在 18 个候选里就是最优**——
-   这一步有原版帧作证，不再是"试出来的"；
+   这一步有原版帧作证，不再是"试出来的"；**2026-11-25 起这一条有了更强的依据**：
+   `ref/exe-d3d-states.json` 从 exe 的 `SetRenderState` 调用点抄出了
+   `SRCBLEND=SRCALPHA` / `DESTBLEND=INVSRCALPHA` / `ALPHABLENDENABLE=TRUE` /
+   `BLENDOP` 从未设置（默认 ADD），见 `docs/c-gfx.md` 的"D3D9 混合状态"一节。
 2. 按 Z 的两种自然顺序都更差（12.26 / 13.63），进一步说明 §13 里"Z 顺序不是主因"的判断；
 3. **背景区域仍有 11.56 的平均差**，而合成模型已被排除 → 剩下的差异只可能来自
    **动态量**：脚本在标题初始化里确实调了 `MotionAlpha`(42)、`MotionMoveR`(51)、

@@ -645,3 +645,94 @@ python fvp\tests\vm_compare.py --frame fvp\out\c\vm-frame.png
 二值掩码、`gmCellIncX` 的 N 倍进位、cp932 之外的字符返回 0、默认族名与可换可复位、
 NULL/越界安全。实测抗锯齿路径「日」@32 有 **54 / 1224 ≈ 4.4%** 的像素是中间值——
 这些像素在原版协议里**根本不会出现**，这就是"协议差"的量化形式。
+
+## 原版的 D3D9 混合状态：从 exe 抄出的 `SetRenderState` 常量（2026-11-25）
+
+第 15 轮的"背景四层怎么合成"是用**拟合**回答的：把 54 个候选（顺序 × 混合 × 底色 ×
+缩放）在原版帧上各比一遍，取误差最小的"直通 alpha over"。按项目方法论（先结构分析、
+抓帧只做验证），这个结论应该有 exe 里的依据。本轮补上：
+`scripts/extract-exe-d3d-states.py` → 基线 `ref/exe-d3d-states.json` → 门禁
+`tests/verify_exe_d3d_states.py`（`run_all` 53 → 54 步）。
+
+### 方法：D3D9 是 COM，状态走 vtable
+
+`SetRenderState` 在设备 vtable 上，调用形态固定：
+
+```asm
+mov  0x8(%esi),%eax      ; eax = 设备对象（HGraph 的成员 +8）
+mov  (%eax),%ecx         ; ecx = vtable
+mov  0xe4(%ecx),%edx     ; edx = vtable[0xE4/4]
+push $value              ; 第 3 个实参（__stdcall 右到左）
+push $state              ; 第 2 个实参
+push %eax                ; 第 1 个实参 = this
+call *%edx
+```
+
+脚本就按这个形态扫：`call *%reg` → 往前找加载同一寄存器的 `mov 0xOFF(...),%reg`
+（得到 vtable 偏移 0xE4）→ 再往回收立即数 `push $imm`（依次是 value、state）。
+**值可能来自分支**（同一个调用点有两个 `push`，例如模式字节 0 走 `INVSRCALPHA`、
+1 走 `ONE`），这种站点收多个候选值并标 `conditional`，不假装只有一个值。
+
+覆盖率是硬的：asm 里 `mov 0xe4(...)` 一共 **36 处**，本脚本解析出 (state, value) 的
+**31 处**，剩下 **5 处**实参来自寄存器或更远的分支（`0x00425501`、`0x0042ab0d`、
+`0x0042b5d1`、`0x0042bd24`、`0x0042c3aa`），记进 `unresolved_sites`，不推测。
+
+### 抄出来的状态
+
+| 状态 | 值（D3D 枚举名） | 说明 |
+|---|---|---|
+| `ALPHABLENDENABLE`(27) | `TRUE` | 混合打开（全 exe 只设过一次 TRUE） |
+| `SRCBLEND`(19) | `SRCALPHA`(5)、`ONE`(2) | 主路径恒为 `SRCALPHA` |
+| `DESTBLEND`(20) | `INVSRCALPHA`(6)、`ONE`(2)、`ZERO`(1) | 6 = over，2 = 加色，1 = 覆盖 |
+| `BLENDOP`(171) | **从未设置** | ⇒ D3D9 默认 `ADD`（不需要 SUBTRACT/MIN/MAX） |
+| `ALPHATESTENABLE`(15) / `ALPHAREF`(24) / `ALPHAFUNC`(25) | TRUE→FALSE / 255 / `GREATEREQUAL` | 一次性开 alpha test、改完关掉 |
+| `ZENABLE`(7) | `FALSE` | 2D，无深度测试 |
+| `CULLMODE`(22) | `NONE` | 双面都画 |
+| `LIGHTING`(137) | `FALSE` | 不做光照 |
+| `COLORVERTEX`(141) / `DIFFUSEMATERIALSOURCE`(145) | TRUE / `COLOR1` | 用顶点色（我们渲染器的 per-prim 颜色） |
+| `DITHERENABLE`(26) | `FALSE` | 无抖动 |
+
+### 三种混合配置
+
+| 配置 | SRCBLEND | DESTBLEND | 公式 | 出现位置 |
+|---|---|---|---|---|
+| **straight-alpha over** | `SRCALPHA` | `INVSRCALPHA` | `dst = src.rgb*src.a + dst.rgb*(1-src.a)` | 主路径（5 个固定调用点 + 4 个条件调用点的默认分支） |
+| **additive（alpha 加色）** | `SRCALPHA` | `ONE` | `dst = src.rgb*src.a + dst.rgb` | 4 个条件调用点（模式字节 = 1） |
+| **overwrite（不混合）** | `ONE` | `ZERO` | `dst = src.rgb` | 只出现在 `Clear` 之前的覆盖写（2 处） |
+
+### 交叉验证：这个"模式字节"就是 prim+8
+
+条件调用点的形态是（`0x00425534` 一处为例）：
+
+```asm
+425515  mov  0x8(%edi),%al      ; 模式字节
+425518  test %al,%al
+42551a  jne  0x425520
+42551c  push $0x6               ; 0 → DESTBLEND = INVSRCALPHA
+42551e  jmp  0x425526
+425520  cmp  $0x1,%al
+425522  jne  0x425536           ; 其它值 → 干脆不设 dest blend
+425524  push $0x2               ; 1 → DESTBLEND = ONE
+```
+
+而第 133 轮从 `PrimSetBlend`(78) 的 handler 抄出来的事实是：它**只接受 0..1**、
+直接写 **prim+8**。两边是同一个域，含义一一对应：
+
+```text
+prim+8 = 0  →  SRCALPHA / INVSRCALPHA  →  over
+prim+8 = 1  →  SRCALPHA / ONE          →  加色
+```
+
+所以引擎里的"混合字节"不是近似，就是 D3D9 的 `DESTBLEND` 选择器；我们的
+`GFX_F_BLEND`（`src/gfx.h`：0 = normal、1 = 加色）在语义上与原版一致，
+**加色模式是原版真实用到的（4 处调用点）**，不是我们为了效果自己加的。
+
+### 结论
+
+1. **"直通 alpha over" 现在有结构分析依据**：`SRCBLEND=SRCALPHA` + `DESTBLEND=INVSRCALPHA`
+   + `ALPHABLENDENABLE=TRUE` + `BLENDOP` 默认 `ADD`。第 15 轮的 54 候选拟合结论与此
+   一致，但它现在只算**验证**，不是依据。
+2. **不需要实现 `BLENDOP` 的其它取值**（SUBTRACT/MIN/MAX）：exe 从不设置。
+3. **加色混合要按原版实现**（`SRCALPHA`/`ONE`），而不是"加色近似"；它在原版里由
+   prim+8 的 1 触发。
+4. 覆盖写（`ONE`/`ZERO`）只服务于 `Clear` 那条路径，渲染图元时不会用到。
