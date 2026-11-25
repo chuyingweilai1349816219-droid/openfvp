@@ -162,6 +162,108 @@ def hexva(v):
     return "0x%08x" % v
 
 
+def va2off(sections, va):
+    for s in sections:
+        if s["va"] <= va < s["va"] + max(s["vsize"], s["raw_size"]):
+            return s["off"] + (va - s["va"])
+    return None
+
+
+def cstr_at(sections, data, va, cap=64):
+    """读 VA 处 NUL 结尾的字符串原始字节（找不到返回 None）。"""
+    off = va2off(sections, va)
+    if off is None:
+        return None
+    end = data.find(b"\x00", off, off + cap)
+    if end < 0 or end == off:
+        return None
+    return data[off:end]
+
+
+def find_name_tables(sections, data, min_entries=2):
+    """找形如 [ptr_to_cp932_str, ...] 的连续指针表（至少 min_entries 项）。
+
+    为什么要这样找：字体族名不是写死在代码里的，而是通过"指针表 → ShiftJIS
+    字符串"注册的。只扫字符串会漏掉"这些名字是一张表"这个结构事实。
+    """
+    # .rdata/.data 的 VA 区间：字符串和指针表都在这里
+    ranges = [(s["off"], s["off"] + s["raw_size"], s["va"]) for s in sections]
+    if not ranges:
+        return []
+    lo = min(r[2] for r in ranges)
+    hi = max(r[2] + r[1] - r[0] for r in ranges)
+
+    def plausible(va):
+        raw = cstr_at(sections, data, va)
+        if raw is None or len(raw) < 2:
+            return None
+        if not any(b >= 0x80 for b in raw):
+            return None  # 纯 ASCII（月份名/时区名等）不是 ShiftJIS 字体名
+        try:
+            name = raw.decode("cp932")
+        except Exception:
+            return None
+        # 字体名：只允许可见字符，不含控制字符
+        if any(ord(c) < 0x20 for c in name):
+            return None
+        # 首字符规则：ASCII 字母数字 / 全角字母数字 / 片假名。
+        # 这条规则用来挡住"恰好也能解成 cp932 的普通二进制指针"（实测会多出
+        # 一个以汉字开头的假条目）。
+        c0 = name[0]
+        ok0 = (
+            ("0" <= c0 <= "9")
+            or ("A" <= c0 <= "Z")
+            or ("a" <= c0 <= "z")
+            or ("\uff10" <= c0 <= "\uff19")
+            or ("\uff21" <= c0 <= "\uff3a")
+            or ("\uff41" <= c0 <= "\uff5a")
+            or ("\u30a0" <= c0 <= "\u30ff")
+        )
+        if not ok0:
+            return None
+        return name, raw
+
+    # 在 .data 段里扫 4 字节对齐的指针序列
+    out = []
+    for s in sections:
+        if s["name"] != ".data":
+            continue
+        off = s["off"]
+        end = s["off"] + s["raw_size"] - 4
+        i = off
+        while i <= end:
+            va, = struct.unpack_from("<I", data, i)
+            if not (lo <= va < hi) or plausible(va) is None:
+                i += 4
+                continue
+            entries = []
+            j = i
+            while j <= end:
+                v, = struct.unpack_from("<I", data, j)
+                got = plausible(v) if lo <= v < hi else None
+                if got is None:
+                    break
+                entries.append(
+                    {
+                        "string_va": hexva(v),
+                        "name": got[0],
+                        "cp932_hex": got[1].hex(),
+                    }
+                )
+                j += 4
+            if len(entries) >= min_entries:
+                out.append(
+                    {
+                        "table_va": hexva(s["va"] + (i - s["off"])),
+                        "entries": entries,
+                    }
+                )
+                i = j
+            else:
+                i += 4
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--exe", default=os.environ.get("FVP_EXE", DEFAULT_EXE))
@@ -256,6 +358,14 @@ def main(argv=None):
         }
         print("\nMAT2 @ %s = %s (raw %s)" % (hexva(ptr), result["static_data"][hexva(ptr)]["fixed16_16"], raw.hex()))
 
+    # 3.5) 内置字体注册表：找"连续的 u32 指针 → cp932 字符串"的表
+    tables = find_name_tables(sections, data)
+    result["font_registry"] = tables
+    for t in tables:
+        print("\n字体名表 @ %s（%d 项）" % (t["table_va"], len(t["entries"])))
+        for e in t["entries"]:
+            print("  %s  %r  (cp932 %s)" % (e["string_va"], e["name"], e["cp932_hex"]))
+
     # 4) 不变量（写进 JSON，门禁直接读，避免门禁里再算一遍）
     invariants = {}
     if cf:
@@ -289,6 +399,10 @@ def main(argv=None):
     invariants["glyph_uformats"] = sorted(set(fmts))
     invariants["glyph_sites"] = len(gg)
     invariants["mat2_all_same"] = len(mat2_ptrs) == 1
+    invariants["font_registry_tables"] = len(tables)
+    invariants["font_names"] = sorted(
+        {e["name"] for t in tables for e in t["entries"]}
+    )
     result["invariants"] = invariants
 
     print("\n不变量: %s" % json.dumps(invariants, ensure_ascii=False, sort_keys=True))

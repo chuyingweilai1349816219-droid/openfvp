@@ -642,7 +642,11 @@ MotionPause 目前只记录（我们的补间按 `prim_id` 组织，暂停位还
 | 116 | TextFontName | 1 | 要求 idx 在 `0..count-1`，取表里的名字（字符串句柄）；越界返回空串 | 返回注册的名字 |
 | 117 | TextFontSet | 1 | 要求 idx 在 **-5 .. count-1**（`-5` 是原版下界，大概是内置字体的负号区间），然后切换当前字体 | 记录 `cur_font` |
 
-**名字从哪来**：原版的名字来自 exe 的字体注册表（我们没有那份表）。本站改成
+**名字从哪来**：原版的名字来自 exe 的字体注册表——**这份表已经找到了**（2026-11-25
+静态提取）：`.data` 里两份相同的 4 项指针表（`0x0047F07C` / `0x0047F0D0`），指向
+ShiftJIS 编码的 `ＭＳ ゴシック` / `ＭＳ 明朝` / `ＭＳ Ｐゴシック` / `ＭＳ Ｐ明朝`，
+与 `TextFontCount` 的量级吻合；提取脚本与基线见 `scripts/extract-exe-gdi.py`、
+`ref/exe-gdi-params.json`、`docs/original-verification.md` §8.3。本站改成
 「由外壳把**实际加载的位图字集**注册进来」：外壳加载完 `gfx-font-<size>.bin` 之后
 调用 `fvp_vm_font_register("gfx-font-<size>")`，所以运行时 `TextFontCount` 返回
 真实字集数（`fvm` 不注册 → 0 条，这是预期行为）。汇总里多一行 `fonts N name(s),

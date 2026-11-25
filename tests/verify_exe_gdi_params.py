@@ -98,6 +98,21 @@ def main():
                                        '0.0000', '1.0000'],
               'MAT2 是单位矩阵（实际 %r）' % (mats[0]['fixed16_16'],))
 
+    print('== 2.5 内置字体注册表（ShiftJIS 字体名表） ==')
+    names = inv.get('font_names') or []
+    want = ['ＭＳ ゴシック', 'ＭＳ 明朝', 'ＭＳ Ｐゴシック', 'ＭＳ Ｐ明朝']
+    check(names == sorted(want),
+          '字体名表恰好是 4 个 ShiftJIS 族名（实际 %r）' % (names,))
+    check(inv.get('font_registry_tables') == 2,
+          'exe 里有 2 份相同的字体名指针表（实际 %r）'
+          % (inv.get('font_registry_tables'),))
+    tabs = ref.get('font_registry') or []
+    check(len(tabs) == 2, 'font_registry 记录了 2 张表（实际 %d）' % len(tabs))
+    for t in tabs:
+        stub = [e['name'] for e in t['entries']]
+        check(stub == want, '表 %s 的 4 项顺序固定（实际 %r）'
+              % (t['table_va'], stub))
+
     print('== 3. CreateFontA 的 14 个实参 ==')
     cf = (ref.get('calls') or {}).get('CreateFontA') or []
     check(len(cf) == 1, 'CreateFontA 调用点只有 1 个（实际 %d）' % len(cf))

@@ -515,6 +515,58 @@
    ]
   }
  },
+ "font_registry": [
+  {
+   "table_va": "0x0047f07c",
+   "entries": [
+    {
+     "string_va": "0x0045d5ac",
+     "name": "ＭＳ ゴシック",
+     "cp932_hex": "826c827220835383568362834e"
+    },
+    {
+     "string_va": "0x0045d5bc",
+     "name": "ＭＳ 明朝",
+     "cp932_hex": "826c82722096be92a9"
+    },
+    {
+     "string_va": "0x0045d5c8",
+     "name": "ＭＳ Ｐゴシック",
+     "cp932_hex": "826c827220826f835383568362834e"
+    },
+    {
+     "string_va": "0x0045d5d8",
+     "name": "ＭＳ Ｐ明朝",
+     "cp932_hex": "826c827220826f96be92a9"
+    }
+   ]
+  },
+  {
+   "table_va": "0x0047f0d0",
+   "entries": [
+    {
+     "string_va": "0x0045d5ac",
+     "name": "ＭＳ ゴシック",
+     "cp932_hex": "826c827220835383568362834e"
+    },
+    {
+     "string_va": "0x0045d5bc",
+     "name": "ＭＳ 明朝",
+     "cp932_hex": "826c82722096be92a9"
+    },
+    {
+     "string_va": "0x0045d5c8",
+     "name": "ＭＳ Ｐゴシック",
+     "cp932_hex": "826c827220826f835383568362834e"
+    },
+    {
+     "string_va": "0x0045d5d8",
+     "name": "ＭＳ Ｐ明朝",
+     "cp932_hex": "826c827220826f96be92a9"
+    }
+   ]
+  }
+ ],
  "invariants": {
   "charset_is_shiftjis": true,
   "charset_value": 128,
@@ -523,6 +575,13 @@
    1
   ],
   "glyph_sites": 3,
-  "mat2_all_same": true
+  "mat2_all_same": true,
+  "font_registry_tables": 2,
+  "font_names": [
+   "ＭＳ ゴシック",
+   "ＭＳ 明朝",
+   "ＭＳ Ｐゴシック",
+   "ＭＳ Ｐ明朝"
+  ]
  }
 }
