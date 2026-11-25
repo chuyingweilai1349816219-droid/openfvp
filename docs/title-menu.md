@@ -413,6 +413,35 @@ iroseka 的菜单是深蓝衬线字。用 `scripts/identify-title-font.py` 把�
 给标题菜单文本一条"指定字体"的通路，然后把我们渲染的 "New Game" 与原版做同样的
 相关比对，作为字体还原的验收指标。
 
+### 4.12 标题菜单接上专用字库（Palatino Bold 61）：相关度 0.27 → 0.73
+
+按 §4.11 的结论生成了专用字库并接上：
+
+1. **生成**（Pillow，用系统字体；图集不入库，属构建产物）：
+   ```
+   set FVP_FONT_TTF=C:\Windows\Fonts\palab.ttf
+   python scripts/make-font-atlas.py --hcb <iroseka.hcb> --hcb <Hoshimemo_HD.hcb> \
+       --size 61 --out bin        # → bin/gfx-font-61.bin（2764 字形）
+   ```
+   `tests/gfx_dump.py` 的 TTF 选择新增 `FVP_FONT_TTF` 环境变量覆盖（默认不变，
+   所以冻结基线 `compare.py`/`verify_gfx` 完全不受影响）；
+2. **接线**：`gfx` 新增 `gfx_draw_text_line_font()` / `gfx_text_width_font()`
+   （指定字体绘制，脚本正文仍用按字号挑的位图图集）；外壳新增 `--title-font <图集>`，
+   标题菜单的文字项用它画（字号取图集自带 61，不缩放）；
+3. **验收**（同一把尺子：与原版 "New Game" 墨迹框做归一化相关）：
+
+| 渲染方式 | 墨迹框 | 相关度 |
+|---|---|---|
+| 内建位图字体（之前） | 219×43 | **0.266** |
+| **Palatino Bold 61 图集** | 311×44 | **0.726** |
+| 原版（参考） | 309×42 | — |
+
+墨迹宽度从 219 → 311（原版 309），相关度 **0.27 → 0.73**。剩下的差距主要来自：
+我们仍然带 1 px 描边（原版是柔和阴影，阴影参数未测），以及抗锯齿阈值差异。
+
+复现：`python scripts/identify-title-font.py --check-frame out/iro-serif.bmp`
+（`--check-frame` 会把我们自己渲染的那一帧与原版做同样的相关比对）。
+
 ### 4.1 还差什么
 
 1. **主标题背景：两作都已接上**（见 §4.7）——

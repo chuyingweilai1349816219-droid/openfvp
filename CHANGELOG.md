@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **标题菜单接上专用字库（Palatino Bold 61）：相关度 0.27 → 0.73**
+  - `tests/gfx_dump.py` 的 TTF 选择新增 `FVP_FONT_TTF` 覆盖（默认不变，
+    冻结基线不受影响），用 `make-font-atlas.py --size 61` 生成专用图集
+  - `gfx` 新增 `gfx_draw_text_line_font()` / `gfx_text_width_font()`：
+    指定字体绘制；外壳新增 `--title-font <图集>`，标题菜单文字用它画
+  - 验收（与原版 "New Game" 墨迹框做归一化相关）：内建位图字体 **0.266**
+    （墨迹 219×43）→ Palatino Bold 61 图集 **0.726**（墨迹 311×44，原版 309×42）
+  - `scripts/identify-title-font.py` 新增 `--check-frame`：对我们自己的渲染帧
+    跑同一套相关比对，作为字体还原的验收指标
+  - 图集是构建产物（`bin/` 已 ignore），文档给出复现命令与系统字体依赖
+  - 剩余差距：我们仍带 1 px 描边（原版是柔和阴影，参数未测）+ 抗锯齿阈值
+
 - **量出了标题菜单的字体：Palatino Linotype Bold ≈61 px（两条独立证据）**
   - 新增 `scripts/identify-title-font.py`：把 11 个本机候选字体渲染成 "New Game"，
     质心对齐 + ±8 px 平移搜索后与原版标题帧的墨迹框做归一化相关

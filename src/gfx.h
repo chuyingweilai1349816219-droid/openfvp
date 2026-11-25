@@ -390,6 +390,15 @@ const GfxTextLayout *gfx_text_get_layout(Gfx *g, int layer);
 /* GFXF atlas written by fvp/tests/gfx_dump.py (see docs/c-gfx.md).  A
  * built-in 8x16 ASCII font is always available as a fallback. */
 typedef struct GfxFont GfxFont;
+
+/* 同 gfx_draw_text_line，但**指定字体**（标题菜单用专用字库时用这个）。
+ * 字体自带字号与 px 不同会等比缩放；配套宽度用 gfx_text_width_font。 */
+int gfx_draw_text_line_font(Gfx *g, const GfxFont *font, const char *utf8,
+                            int x, int y, int px, int r, int gr, int b,
+                            int alpha);
+int gfx_text_width_font(const Gfx *g, const GfxFont *font, const char *utf8,
+                        int px);
+
 GfxFont *gfx_font_load(const char *path);
 void gfx_font_free(GfxFont *f);
 int gfx_font_pixel_size(const GfxFont *f);

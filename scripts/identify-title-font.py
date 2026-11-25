@@ -81,12 +81,59 @@ def match(ref, path, label, size, search=8):
     return best
 
 
+def check_frame(args, ref, crop):
+    """Correlate the ink of our own rendered frame with the original crop."""
+    mine = Image.open(args.check_frame).convert('RGB')
+    box = (INK[0] - 24, INK[2] - 24, INK[1] + 24, INK[3] + 24)
+    sub = mine.crop(box)
+    arr = np.asarray(sub, dtype=np.int32)
+    if args.check_bg == 'dark':
+        # 深蓝字在黑底上：取“蓝通道明显偏高”的像素作为墨迹（比亮度阈值更能排除抗锯齿边缘）
+        b = arr[:, :, 2]
+        r = arr[:, :, 0]
+        m = ((b > 60) & (b > r + 40)).astype(np.float64)
+    else:
+        lum = np.asarray(sub.convert('L'), dtype=np.float64)
+        m = (lum < 110).astype(np.float64)  # dark ink on a bright background
+    ys, xs = np.nonzero(m)
+    oy, ox = np.nonzero(ref)
+    if len(xs) == 0:
+        print('check-frame: no ink found in %s' % args.check_frame)
+        return 1
+    print('candidate ink: %d px, box %dx%d'
+          % (len(xs), int(xs.max() - xs.min()) + 1, int(ys.max() - ys.min()) + 1))
+    print('reference ink: %d px, box %dx%d'
+          % (int(ref.sum()), int(ox.max() - ox.min()) + 1,
+             int(oy.max() - oy.min()) + 1))
+    best = (-1.0, 0, 0)
+    dy0 = int(round(oy.mean() - ys.mean()))
+    dx0 = int(round(ox.mean() - xs.mean()))
+    for dy in range(dy0 - 8, dy0 + 9):
+        for dx in range(dx0 - 8, dx0 + 9):
+            m2 = np.zeros_like(m)
+            ys2 = ys + dy
+            xs2 = xs + dx
+            ok = ((ys2 >= 0) & (ys2 < m2.shape[0]) & (xs2 >= 0) &
+                  (xs2 < m2.shape[1]))
+            m2[ys2[ok], xs2[ok]] = 1.0
+            score = float((norm(m2) * norm(ref)).sum())
+            if score > best[0]:
+                best = (score, dx, dy)
+    print('correlation with the original: %.3f (shift %+d,%+d)'
+          % (best[0], best[1], best[2]))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--frame', default=os.path.join(
         FVP, 'out', 'orig-title', 'orig-title-005.png'))
     ap.add_argument('--font-dir', default=r'C:\Windows\Fonts')
     ap.add_argument('--sizes', default='50:62')
+    ap.add_argument('--check-frame', default=None,
+                    help='用这个帧（我们自己渲染的）与原版做墨迹相关比对')
+    ap.add_argument('--check-bg', choices=('dark', 'bright'), default='dark',
+                    help='待测帧的背景：dark = 黑底深蓝字')
     args = ap.parse_args()
 
     if not os.path.isfile(args.frame):
@@ -102,6 +149,9 @@ def main():
         np.float64)
     print('reference: %d ink px in a %dx%d box' % (int(ref.sum()),
                                                    crop.size[0], crop.size[1]))
+
+    if args.check_frame:
+        return check_frame(args, ref, crop)
 
     results = []
     for fname, name in CANDIDATES:

@@ -3826,8 +3826,10 @@ int gfx_draw_image_at(Gfx *g, int slot, int x, int y)
  * 字号不同就用 draw_glyph_scaled() 等比放大（内建 8x16 → 56 px 时一个字 28 px
  * 宽、56 px 高，墨迹高约 42，正好对上原版实测的 40..42）。
  * 描边固定 1 px 白色，与正文层一致；供标题菜单之类的引擎侧 UI 使用。 */
-int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
-                       int gr, int b, int alpha)
+/* 实际绘制：force != NULL 时用指定字体，否则按 px 挑图集。 */
+static int draw_line_font(Gfx *g, const GfxFont *force, const char *utf8,
+                          int x, int y, int px, int r, int gr, int b,
+                          int alpha)
 {
     GfxFont *base;
     GfxFont scaled;
@@ -3839,7 +3841,7 @@ int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
     if (g == NULL || utf8 == NULL || px <= 0) {
         return 0;
     }
-    base = pick_font(g, px);
+    base = (force != NULL) ? (GfxFont *)force : pick_font(g, px);
     if (base == NULL || base->size <= 0) {
         return 0;
     }
@@ -3864,6 +3866,51 @@ int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
         }
     }
     return pen - x;
+}
+
+int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
+                       int gr, int b, int alpha)
+{
+    return draw_line_font(g, NULL, utf8, x, y, px, r, gr, b, alpha);
+}
+
+int gfx_draw_text_line_font(Gfx *g, const GfxFont *font, const char *utf8,
+                            int x, int y, int px, int r, int gr, int b,
+                            int alpha)
+{
+    return draw_line_font(g, font, utf8, x, y, px, r, gr, b, alpha);
+}
+
+int gfx_text_width_font(const Gfx *g, const GfxFont *font, const char *utf8,
+                        int px)
+{
+    const GfxFont *base;
+    double sc;
+
+    if (g == NULL || font == NULL || utf8 == NULL || px <= 0) {
+        return 0;
+    }
+    base = font;
+    if (base->size <= 0) {
+        return 0;
+    }
+    sc = (double)px / (double)base->size;
+    if (sc == 1.0) {
+        return text_width((Gfx *)g, (GfxFont *)base, utf8);
+    }
+    {
+        const char *p = utf8;
+        int cp;
+        int w = 0;
+
+        while ((cp = utf8_next(&p)) >= 0) {
+            int gi = font_find(base, (uint32_t)cp);
+
+            w += (gi >= 0) ? (int)((double)base->adv[gi] * sc + 0.5)
+                           : (int)(8.0 * sc + 0.5);
+        }
+        return w;
+    }
 }
 
 void gfx_text_append(Gfx *g, int layer, const char *utf8)

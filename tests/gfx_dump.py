@@ -79,7 +79,8 @@ def _font_path():
 
 def _truetype(size):
     from PIL import ImageFont
-    return ImageFont.truetype(_font_path(), size)
+    return ImageFont.truetype(os.environ.get('FVP_FONT_TTF') or _font_path(),
+                              size)
 
 
 def write_font(path, size, chars):

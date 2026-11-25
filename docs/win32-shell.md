@@ -78,6 +78,8 @@ fvp.exe --game <游戏目录> [选项]
 | `--save-template <槽文件>` | 写档模板：SaveWrite 请求用它当底，替换时间戳/字符串/缩略图后写 `<game_dir>\save\sNNN.bin` |
 | `--debug-save-request N` | 调试钩子：发一个 `SaveWrite(N)` 请求，验证"请求 → 外壳写档"链路 |
 | `--debug-load-request N` | 调试钩子：发一个 `Load(N)` 请求（目前只记日志，快照恢复未实现） |
+| `--title-font <图集>` | 标题菜单文字用的字库（如 Palatino Bold 61 的
+  `bin/gfx-font-61.bin`）；不传则用内建位图字体 |
 | `--preview-slot N` | 存档列表预选第 N 号槽并显示预览（槽尾记的背景图 + 台词） |
 | `--no-input` | 忽略真实鼠标/键盘事件：门禁/截图只由程序状态决定（消除偶发） |
 | `--opening` | 启动先跑开场序列（白底 → FAVORITE logo 淡入淡出 → 标题从白色淡入，5.4 s） |

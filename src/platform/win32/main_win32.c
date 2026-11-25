@@ -114,6 +114,7 @@ typedef struct Options {
     /* 调试钩子：脚本自己调 SaveWrite/Load 之前先手动造一个请求，用来端到端
      * 验证"请求 -> 外壳执行"这条链路（-1 = 不发）。 */
     int no_input; /* --no-input：忽略真实鼠标/键盘事件（门禁截图要确定性） */
+    wchar_t title_font[PATH_CAP]; /* --title-font：标题菜单专用字库 */
     int preview_slot; /* --preview-slot N：存档列表里预选第 N 号槽并显示预览 */
     int opening;    /* --opening：启动先跑开场序列（logo 淡入→白场→标题） */
     double shot_at_ms; /* --shot-at N：跑到 N 毫秒时存一张截图（0 = 不存） */
@@ -511,6 +512,7 @@ static void defaults(Options *o)
     o->title_no_bg = 0;
     o->opening = 0;
     o->preview_slot = -1;
+    o->title_font[0] = L'\0';
     o->no_input = 0;
     o->shot_at_ms = 0.0;
     o->title_hover_seed = -1;
@@ -669,6 +671,9 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--save-preview-every") == 0) {
             NEED_VALUE();
             o->save_preview_every = wcstod(v, NULL);
+        } else if (wcscmp(a, L"--title-font") == 0 &&
+                   i + 1 < argc) {
+            wcsncpy(o->title_font, argv[++i], PATH_CAP - 1);
         } else if (wcscmp(a, L"--no-input") == 0) {
             o->no_input = 1;
         } else if (wcscmp(a, L"--preview-slot") == 0 &&
@@ -1596,6 +1601,8 @@ static double perf_percentile(const PerfStats *p, double pct)
 static int title_textures_on;
 /* 标题画面背景是否装上（整屏图，画在菜单之前） */
 static int title_bg_on;
+/* 标题菜单专用字库（--title-font）：文字模式用它画，脚本正文仍用位图图集 */
+static const GfxFont *title_ui_font;
 static int title_logo_on;
 static int title_ovl_loaded;
 static int title_copy_on;
@@ -1788,7 +1795,16 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
             px = m->font_px;
         }
         {
-            int tw = gfx_text_width(gfx, label, px);
+            if (title_ui_font != NULL) {
+                int fs = gfx_font_pixel_size(title_ui_font);
+
+                if (fs > 0) {
+                    px = fs;
+                }
+            }
+            int tw = (title_ui_font != NULL)
+                         ? gfx_text_width_font(gfx, title_ui_font, label, px)
+                         : gfx_text_width(gfx, label, px);
             int dx = x0;
 
             /* 按 profile 的对齐方式落笔：右对齐贴到实测的墨迹右边界，
@@ -1801,7 +1817,13 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
                     dx = (x0 + x1) / 2 - tw / 2;
                 }
             }
-            (void)gfx_draw_text_line(gfx, label, dx, y0, px, r, gr, b, 255);
+            if (title_ui_font != NULL) {
+                (void)gfx_draw_text_line_font(gfx, title_ui_font, label, dx,
+                                              y0, px, r, gr, b, 255);
+            } else {
+                (void)gfx_draw_text_line(gfx, label, dx, y0, px, r, gr, b,
+                                         255);
+            }
         }
     }
     /* 版权行压在最上面（原版在屏幕底部） */
@@ -2114,6 +2136,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int save_writes = 0;
     int load_requests = 0;
     FvpOpenSeq opening;
+    GfxFont *title_font = NULL;
     int opening_active = 0;
     int opening_logo_loaded = 0;
     int shot_taken = 0;
@@ -2497,6 +2520,21 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
         nfonts_loaded = load_fonts(gfx, &opts, exe_dir, fonts);
         fvp_logf("gfx: %d font atlas(es) registered", nfonts_loaded);
+        if (opts.title_font[0] != L'\0') {
+            char tf[PATH_CAP * 3];
+
+            if (wide_to_ansi(opts.title_font, tf, sizeof(tf))) {
+                title_font = gfx_font_load(tf);
+                if (title_font != NULL) {
+                    title_ui_font = title_font;
+                    fvp_logf("title: font '%s' size=%d glyphs=%d", tf,
+                             gfx_font_pixel_size(title_font),
+                             gfx_font_glyph_count(title_font));
+                } else {
+                    fvp_logf("title: font load failed: %s", tf);
+                }
+            }
+        }
         /* 把实际加载的字集名字注册进 VM 的字体表（TextFontCount/Name/Set/Get
          * 114..117）。名字按像素尺寸给（gfx-font-32 / -34 / -56），因为外层文件
          * 就叫 gfx-font-<size>.bin；原版的字体名来自 exe 注册表，我们没有那份表。 */
