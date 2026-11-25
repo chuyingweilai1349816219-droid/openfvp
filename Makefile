@@ -32,6 +32,10 @@ OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ) \
 LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ) \
            $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ)
 
+# 无窗口（headless）外壳：核心 + 渲染层 + 便携 OS 缝，不依赖 Win32。
+HEADLESS_BIN = bin/fvp-headless$(EXE)
+HEADLESS_SRC = src/platform/portable/main_headless.c \
+               src/platform/portable/platform_portable.c
 BIN = bin/fvm$(EXE)
 LIB = bin/libfvp.a
 
@@ -51,6 +55,14 @@ lib: $(LIB)
 
 $(LIB): $(LIB_OBJ) | bin
 	$(AR) rcs $@ $(LIB_OBJ)
+
+# headless 外壳：$(LIB) + gfx 渲染层 + 便携平台缝。
+headless: $(HEADLESS_BIN)
+
+$(HEADLESS_BIN): $(HEADLESS_SRC) $(GFX_OBJ) $(LIB) src/platform/platform.h | bin
+	$(CC) $(CFLAGS) -Isrc -Isrc/platform -o $@ $(HEADLESS_SRC) $(GFX_OBJ) $(LIB) $(LDFLAGS) -lm
+
+.PHONY: headless
 
 test: bin/test_snd$(EXE)
 
@@ -77,7 +89,7 @@ src:
 	-mkdir src
 
 clean:
-	-rm -f $(OBJ) $(LIB_OBJ) $(BIN) $(LIB) bin/test_snd$(EXE) bin/test_snd_fade$(EXE) bin/test_platform$(EXE)
+	-rm -f $(OBJ) $(LIB_OBJ) $(BIN) $(LIB) $(HEADLESS_BIN) bin/test_snd$(EXE) bin/test_snd_fade$(EXE) bin/test_platform$(EXE)
 
 .PHONY: all lib test clean
 

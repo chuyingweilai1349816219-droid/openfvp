@@ -519,6 +519,12 @@ def build_steps(args):
                       'gcc unavailable: in-process harness cannot be built',
                       note='>= 20,000 mutations + fvm.exe E2E'))
 
+    # 6.6 headless 外壳（不依赖 Win32 窗口/D3D）
+    vh = os.path.join(HERE, 'verify_headless.py')
+    steps.append(Step('verify_headless.py', [PY, vh], 1800,
+                      skip_reason=None,
+                      note='portable platform seam + offscreen render, steps match fvm'))
+
     # 7. asset fuzz
     fuzz_assets = os.path.join(HERE, 'fuzz_assets.py')
     fa_argv = [PY, fuzz_assets]

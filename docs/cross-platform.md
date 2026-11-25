@@ -54,11 +54,38 @@
  └── 字体栅格化（可选，缺字回退用）
 ```
 
+## 4. 无窗口（headless）外壳：`make headless`
+
+除了 Win32 桌面外壳，现在还有一个**不依赖任何 Win32 API** 的外壳：
+
+```
+make headless                     # → bin/fvp-headless.exe
+bin/fvp-headless.exe <script.hcb> --steps 200000 \
+    --screenshot out/headless/frame.bmp --text-out out/headless/text.txt
+```
+
+- 只用 `src/platform/platform.h` 的四个系统能力（`src/platform/portable/platform_portable.c`）；
+- 加载 `.hcb` → 初始化 VM → **挂上可移植渲染层 `src/gfx.c`**（离屏 1920×1080）；
+- 跑 N 条指令后把画布写成 24 位 BMP，文本行通过 `gfx_bridge->on_text` 回调落文件；
+- 没有窗口、没有输入、没有音频——真正的桌面体验仍由 `src/platform/win32` 提供。
+
+**门禁 `tests/verify_headless.py`**（`run_all` 第 6.6 步）断言：
+
+| 检查 | 实测 |
+|---|---|
+| `make headless` 能构建 | exit 0 |
+| 步数与 `fvm` 一致 | 200000 vs 200000 |
+| 截图 1920×1080 且非全黑 | 平均亮度 34.8 |
+| 文本回调有产出 | 32 行 |
+
+它的意义不是"再做一个外壳"，而是把 **⑦ 跨平台** 从口号变成可验证的事实：核心 +
+渲染层可以在没有窗口系统的情况下跑起来，CI/无桌面环境也能做冒烟。
+
 ## 4. 现状与下一步
 
 - ✅ 最小 OS 缝有契约、有便携实现、有 16 项单测；
 - ✅ 核心库 `make lib` 不依赖 Win32；
 - 🚧 窗口/渲染/音频/字体仍只有 Win32 实现；**Android 方案**见 `docs/android-shell.md`
   （占位渲染，未接真实窗口）；
-- 🚧 CI 里还没有"无窗口 headless 构建"的步骤——便携实现已经具备条件，缺一条
-  构建目标与冒烟测试（下一步）。
+- ✅ 无窗口 headless 外壳已落地（`make headless` + `tests/verify_headless.py` 门禁）；
+  可继续把这条路径接进 CI（下一步是写 CI 配置，本仓库暂未提交 CI 文件）。

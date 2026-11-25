@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **无窗口（headless）外壳 `make headless`：核心 + 渲染层不依赖 Win32**
+  - 新增 `src/platform/portable/main_headless.c`：只用 `platform.h` 的四个系统能力，
+    加载 hcb → VM → 挂 `src/gfx.c` 离屏渲染 → 跑 N 步 → 写 24 位 BMP + 文本行
+  - Makefile 新增 `headless` 目标（`bin/fvp-headless.exe`），并纳入 `make clean`
+  - 新增门禁 `tests/verify_headless.py`（`run_all` 第 6.6 步，40 → 41 步）：
+    构建成功、步数与 `fvm` 一致（200000 vs 200000）、截图 1920×1080 且非全黑
+    （平均亮度 34.8）、文本回调 32 行
+  - 意义：把 ⑦ 从口号变成可验证事实——无窗口系统也能跑核心 + 渲染层
+  - docs/cross-platform.md 新增第 4 节说明用法与门禁数字
+
+### 新增（OS 缝）
+
 - **⑦ 跨平台：抽出最小 OS 缝 + 便携实现 + 16 项单测 + 文档**
   - 新增 `src/platform/platform.h`：四个系统能力的契约（单调时钟秒/毫秒、
     写一行 UTF-8 日志、读整个文件）
