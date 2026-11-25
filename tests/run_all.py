@@ -567,6 +567,14 @@ def build_steps(args):
                            'iroseka right edge 1785 / pitch 100, hoshimemo centre '
                            '960 / pitch 90'))
 
+    # 6.50 标题菜单状态变体（整幅不同的状态/动画帧，不是轻微高亮）
+    vtv = os.path.join(HERE, 'verify_title_variants.py')
+    steps.append(Step('verify_title_variants.py', [PY, '-X', 'utf8', vtv], 1800,
+                      skip_reason=None,
+                      note='title state variants are whole-image frames '
+                           '(iroseka 5/item, hoshimemo 1/item), so hover cannot '
+                           'be a simple variant swap'))
+
     # 6.55 游戏内菜单的三个动作（SAVE/LOAD/OPTION）
     vma = os.path.join(HERE, 'verify_menu_actions.py')
     steps.append(Step('verify_menu_actions.py', [PY, vma], 900,
