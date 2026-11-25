@@ -1,0 +1,505 @@
+{
+ "commands": {
+  "113": {
+   "arg_ranges": {
+    "0": {
+     "max": 31,
+     "min": 0
+    },
+    "1": {
+     "max": -5,
+     "min": -5
+    },
+    "2": {
+     "max": -5,
+     "min": -5
+    }
+   },
+   "arg_types": [
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    }
+   ],
+   "argc": 3,
+   "calls_or_jumps": [
+    "call 0x004247f0",
+    "call 0x00424860"
+   ],
+   "field_writes": [],
+   "globals": [
+    "0x481368"
+   ],
+   "handler": "0x0043da70",
+   "id": 113,
+   "immediate_writes": [],
+   "layer_table": {
+    "offset": 152,
+    "stride": 4
+   },
+   "name": "TextFont",
+   "reg_index": 114,
+   "register_compares": [
+    "cmp    %esi,%eax",
+    "cmp    %esi,%eax"
+   ]
+  },
+  "118": {
+   "arg_ranges": {
+    "0": {
+     "max": 31,
+     "min": 0
+    },
+    "1": {
+     "max": 32,
+     "min": -32
+    },
+    "2": {
+     "max": 32,
+     "min": -32
+    },
+    "3": {
+     "max": 64,
+     "min": 0
+    },
+    "4": {
+     "max": 64,
+     "min": 0
+    },
+    "5": {
+     "max": 16,
+     "min": -16
+    },
+    "6": {
+     "max": 16,
+     "min": -16
+    }
+   },
+   "arg_types": [
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    },
+    {
+     "arg": 3,
+     "type": 2
+    },
+    {
+     "arg": 4,
+     "type": 2
+    },
+    {
+     "arg": 5,
+     "type": 2
+    },
+    {
+     "arg": 6,
+     "type": 2
+    }
+   ],
+   "argc": 7,
+   "calls_or_jumps": [],
+   "field_writes": [
+    {
+     "arg": 1,
+     "offset": 1448,
+     "size": 2
+    },
+    {
+     "arg": 2,
+     "offset": 1450,
+     "size": 2
+    },
+    {
+     "arg": 3,
+     "offset": 1454,
+     "size": 2
+    },
+    {
+     "arg": 4,
+     "offset": 1452,
+     "size": 2
+    },
+    {
+     "arg": 4,
+     "offset": 1512,
+     "size": 2
+    },
+    {
+     "arg": 5,
+     "offset": 1460,
+     "size": 2
+    },
+    {
+     "arg": 6,
+     "offset": 1456,
+     "size": 2
+    }
+   ],
+   "globals": [
+    "0x481368"
+   ],
+   "handler": "0x0043cc10",
+   "id": 118,
+   "immediate_writes": [
+    {
+     "imm": 2,
+     "pc": "0x43cc15",
+     "reg": "bx"
+    }
+   ],
+   "layer_table": {
+    "offset": 152,
+    "stride": 4
+   },
+   "name": "TextFormat",
+   "reg_index": 119,
+   "register_compares": []
+  },
+  "119": {
+   "arg_ranges": {
+    "0": {
+     "max": 31,
+     "min": 0
+    },
+    "1": {
+     "max": 1,
+     "min": 0
+    },
+    "2": {
+     "max": 2,
+     "min": 0
+    },
+    "3": {
+     "max": 2,
+     "min": 0
+    }
+   },
+   "arg_types": [
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    },
+    {
+     "arg": 3,
+     "type": 2
+    }
+   ],
+   "argc": 4,
+   "calls_or_jumps": [],
+   "field_writes": [
+    {
+     "arg": 1,
+     "offset": 1445,
+     "size": 1
+    },
+    {
+     "arg": 2,
+     "offset": 1444,
+     "size": 1
+    },
+    {
+     "arg": 3,
+     "offset": 1446,
+     "size": 1
+    }
+   ],
+   "globals": [
+    "0x481368"
+   ],
+   "handler": "0x0043ccf0",
+   "id": 119,
+   "immediate_writes": [],
+   "layer_table": {
+    "offset": 152,
+    "stride": 4
+   },
+   "name": "TextFunction",
+   "reg_index": 120,
+   "register_compares": []
+  },
+  "120": {
+   "arg_ranges": {
+    "0": {
+     "max": 31,
+     "min": 0
+    },
+    "1": {
+     "max": 12,
+     "min": 0
+    },
+    "2": {
+     "max": 8,
+     "min": 0
+    }
+   },
+   "arg_types": [
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    }
+   ],
+   "argc": 3,
+   "calls_or_jumps": [
+    "call 0x00424850",
+    "call 0x00424880"
+   ],
+   "field_writes": [],
+   "globals": [
+    "0x481368"
+   ],
+   "handler": "0x0043c960",
+   "id": 120,
+   "immediate_writes": [],
+   "layer_table": {
+    "offset": 152,
+    "stride": 4
+   },
+   "name": "TextOutSize",
+   "reg_index": 121,
+   "register_compares": []
+  },
+  "125": {
+   "arg_ranges": {
+    "0": {
+     "max": 31,
+     "min": 0
+    },
+    "1": {
+     "max": null,
+     "min": 0
+    }
+   },
+   "arg_types": [
+    {
+     "arg": 1,
+     "type": 2
+    }
+   ],
+   "argc": 2,
+   "calls_or_jumps": [
+    "jmp 0x004248b0",
+    "jmp 0x004248b0"
+   ],
+   "field_writes": [],
+   "globals": [
+    "0x481368"
+   ],
+   "handler": "0x0043cbb0",
+   "id": 125,
+   "immediate_writes": [
+    {
+     "imm": 0,
+     "pc": "0x43cbd2",
+     "reg": "ax"
+    },
+    {
+     "imm": 0,
+     "pc": "0x43cbe1",
+     "reg": "ax"
+    },
+    {
+     "imm": 12,
+     "pc": "0x43cbf1",
+     "reg": "ax"
+    }
+   ],
+   "layer_table": {
+    "offset": 152,
+    "stride": 4
+   },
+   "name": "TextShadowDist",
+   "reg_index": 126,
+   "register_compares": []
+  },
+  "126": {
+   "arg_ranges": {
+    "0": {
+     "max": 31,
+     "min": 0
+    },
+    "1": {
+     "max": 64,
+     "min": 12
+    },
+    "2": {
+     "max": 32,
+     "min": 8
+    }
+   },
+   "arg_types": [
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    }
+   ],
+   "argc": 3,
+   "calls_or_jumps": [
+    "call 0x00424820",
+    "call 0x00424870"
+   ],
+   "field_writes": [],
+   "globals": [
+    "0x481368"
+   ],
+   "handler": "0x0043cd60",
+   "id": 126,
+   "immediate_writes": [],
+   "layer_table": {
+    "offset": 152,
+    "stride": 4
+   },
+   "name": "TextSize",
+   "reg_index": 127,
+   "register_compares": []
+  },
+  "127": {
+   "arg_ranges": {
+    "0": {
+     "max": 31,
+     "min": 0
+    },
+    "1": {
+     "max": 3,
+     "min": 0
+    }
+   },
+   "arg_types": [
+    {
+     "arg": 1,
+     "type": 2
+    }
+   ],
+   "argc": 2,
+   "calls_or_jumps": [],
+   "field_writes": [
+    {
+     "arg": 1,
+     "offset": 1495,
+     "size": 1
+    }
+   ],
+   "globals": [
+    "0x481368"
+   ],
+   "handler": "0x0043cdd0",
+   "id": 127,
+   "immediate_writes": [],
+   "layer_table": {
+    "offset": 152,
+    "stride": 4
+   },
+   "name": "TextSkip",
+   "reg_index": 128,
+   "register_compares": []
+  },
+  "128": {
+   "arg_ranges": {
+    "0": {
+     "max": 31,
+     "min": 0
+    },
+    "1": {
+     "max": 32,
+     "min": -32
+    },
+    "2": {
+     "max": 32,
+     "min": -32
+    }
+   },
+   "arg_types": [
+    {
+     "arg": 1,
+     "type": 2
+    },
+    {
+     "arg": 2,
+     "type": 2
+    }
+   ],
+   "argc": 3,
+   "calls_or_jumps": [],
+   "field_writes": [
+    {
+     "arg": 1,
+     "offset": 1448,
+     "size": 2
+    },
+    {
+     "arg": 2,
+     "offset": 1450,
+     "size": 2
+    }
+   ],
+   "globals": [
+    "0x481368"
+   ],
+   "handler": "0x0043ce10",
+   "id": 128,
+   "immediate_writes": [],
+   "layer_table": {
+    "offset": 152,
+    "stride": 4
+   },
+   "name": "TextSpace",
+   "reg_index": 129,
+   "register_compares": []
+  },
+  "129": {
+   "arg_ranges": {
+    "0": {
+     "max": 31,
+     "min": 0
+    },
+    "1": {
+     "max": 300000,
+     "min": -1
+    }
+   },
+   "arg_types": [
+    {
+     "arg": 1,
+     "type": 2
+    }
+   ],
+   "argc": 2,
+   "calls_or_jumps": [],
+   "field_writes": [],
+   "globals": [
+    "0x481368"
+   ],
+   "handler": "0x0043ce70",
+   "id": 129,
+   "immediate_writes": [],
+   "layer_table": {
+    "offset": 152,
+    "stride": 4
+   },
+   "name": "TextSpeed",
+   "reg_index": 130,
+   "register_compares": []
+  }
+ },
+ "note": "从 exe handler 静态分析抄出的文本样式命令字段/范围（A 类事实）；由 scripts/extract-exe-text-params.py 生成"
+}

@@ -51,6 +51,27 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 结构分析（文本样式命令的字段与范围：从 exe handler 抄出来）
+
+- **把 `TextFormat`(118) / `TextFunction`(119) / `TextShadowDist`(125) /
+  `TextSkip`(127) / `TextSpace`(128) / `TextFont`(113) 的字段语义从 handler 抄出来**
+  - 新增 `scripts/extract-exe-text-params.py` + 基线 `ref/exe-text-params.json` +
+    门禁 `tests/verify_exe_text_params.py`（`run_all` 58 → 59 步）：用一个小数据流
+    （类型检查 / 实参寄存器 / 字段写 / 立即数钳位 / 寄存器比较）把 handler 抄成结构化事实
+  - 共同形态：**文本层号 0..31**，样式对象 = `settings(0x481368) + 0x98 + layer*4`
+  - 抄出来的字段：`TextFormat` arg1→**+0x5A8**、arg2→**+0x5AA**、arg3→**+0x5AE**、
+    arg4→**+0x5AC**（并把 +0x5E8 抬到见过的最大值）、arg5→**+0x5B4**、
+    arg6→**+0x5B0**，范围分别是 -32..32 / 0..64 / -16..16；
+    `TextFunction` arg1→**+0x5A5**(0..1)、arg2→**+0x5A4**(0..2)、arg3→**+0x5A6**(0..2)；
+    `TextSkip` arg1→**+0x5D7**(0..3)；`TextSpace` arg1/arg2→**+0x5A8/+0x5AA**
+    （与 TextFormat 的 arg1/arg2 **是同一对字段**）
+  - 语义：**越界 = 保持原值**（逐字段跳过 `mov`），只有 `TextShadowDist` 显式钳到
+    **0..12** 再尾调方法 `0x4248B0`；`TextFont` 下限 **-5**、上限 = 字体表长度-1
+    （`cmp %esi,%eax`），分别调 `0x4247F0`/`0x424860`；`TextSize` 12..64/8..32；
+    `TextOutSize` 0..12/0..8；`TextSpeed` -1..300000
+  - 文档：`docs/02-text-format.md` 新增"文本样式命令的真实字段与范围"一节
+    （含 asm 形态、字段表、三条直接可用的语义）
+
 ### 新增（标题进场动画：参数来自脚本，时间轴复用 motion）
 
 - **把标题进场动画实现出来：logo alpha 0→255 + 缩放 10.0→1.0，1400 ms，mode 3**

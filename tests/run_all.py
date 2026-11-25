@@ -612,6 +612,15 @@ def build_steps(args):
                            'BackBufferFormat=D3DFMT_UNKNOWN + COPY + Windowed, '
                            'fullscreen A8R8G8B8, HAL + software vertex processing'))
 
+    # 6.4966b 文本样式命令的字段/范围（从 exe handler 提取；缺 work/ 时 SKIP）
+    vtp = os.path.join(HERE, 'verify_exe_text_params.py')
+    steps.append(Step('verify_exe_text_params.py', [PY, '-X', 'utf8', vtp], 600,
+                      skip_reason=None,
+                      note='text style commands read out of the exe handlers: '
+                           'layer 0..31, TextFormat/TextSpace share +0x5A8/+0x5AA, '
+                           'TextSkip +0x5D7, TextShadowDist clamped 0..12, '
+                           'TextFont -5..font_count-1'))
+
     # 6.4967 标题进场动画的参数必须等于脚本常量（纯 JSON/源码检查，无依赖）
     vta = os.path.join(HERE, 'verify_title_anim.py')
     steps.append(Step('verify_title_anim.py', [PY, '-X', 'utf8', vta], 300,
