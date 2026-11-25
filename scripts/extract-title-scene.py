@@ -74,6 +74,7 @@ def extract(path, argc_table, region):
     prim_hit = []         # {prim, pc}
     inputs = []           # {cmd, name, pc}
     prim_ops = []         # {prim, cmd, args, pc}  在标题区域内对图元的操作
+    layer_z = []          # {prim, z, pc}  PrimSetZ 的字面量实参（背景层叠放顺序）
 
     for i, pc in enumerate(order):
         op, name, args = code.instr[pc]
@@ -92,6 +93,13 @@ def extract(path, argc_table, region):
             if region[0] <= pc < region[1]:
                 inputs.append({'cmd': args[0], 'name': INPUT_CMDS[args[0]],
                                'pc': '0x%08x' % pc})
+        if name == 'syscall' and args and args[0] == 91 and i >= 2:
+            # PrimSetZ(prim, z)：两个字面量可以直接读出来，用来定背景层叠放顺序
+            a1 = code.instr[order[i - 2]][2]
+            a2 = code.instr[order[i - 1]][2]
+            if (a1 and a2 and isinstance(a1[0], int) and isinstance(a2[0], int)
+                    and region[0] <= pc < region[1]):
+                layer_z.append({'prim': a1[0], 'z': a2[0], 'pc': '0x%08x' % pc})
         if name == 'syscall' and args:
             cid = args[0]
             e = argc_table.get(cid)
@@ -131,6 +139,7 @@ def extract(path, argc_table, region):
         'prim_hit': prim_hit,
         'prim_ops_in_title_region': prim_ops,
         'prim_hit_ids': sorted({p['prim'] for p in prim_hit}),
+        'layer_z': layer_z,
     }
 
 

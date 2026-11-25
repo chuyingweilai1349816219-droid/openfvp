@@ -1765,6 +1765,46 @@ static void draw_game_menu(Gfx *gfx, const FvpGameMenu *m)
     }
 }
 
+/* 背景层：整屏大图按 (bg_src_x, bg_src_y) 裁剪到 1920x1080 */
+static void title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
+{
+    int bsw = 0;
+    int bsh = 0;
+
+    if (!title_bg_on) {
+        return;
+    }
+    if (prof != NULL && gfx_image_size(gfx, TITLE_BG_SLOT, &bsw, &bsh) &&
+        (bsw != prof->client_w || bsh != prof->client_h)) {
+        (void)gfx_draw_image_cropped(gfx, TITLE_BG_SLOT, 0, 0, prof->bg_src_x,
+                                     prof->bg_src_y, prof->client_w,
+                                     prof->client_h);
+    } else {
+        (void)gfx_draw_image_at(gfx, TITLE_BG_SLOT, 0, 0);
+    }
+}
+
+/* 背景叠加层：素材头里的坐标是"未裁剪大图"坐标系，要减掉背景裁剪起点 */
+static void title_draw_overlays(Gfx *gfx, const FvpTitleProfile *prof)
+{
+    int li;
+
+    if (title_ovl_loaded <= 0 || prof == NULL) {
+        return;
+    }
+    for (li = 0; li < prof->bg_overlay_count && li < 4; ++li) {
+        int ox = 0;
+        int oy = 0;
+
+        if (prof->bg_overlay[li][0] == '\0') {
+            continue;
+        }
+        (void)gfx_image_offset(gfx, TITLE_OVL_SLOT + li, &ox, &oy);
+        (void)gfx_draw_image_at(gfx, TITLE_OVL_SLOT + li, ox - prof->bg_src_x,
+                                oy - prof->bg_src_y);
+    }
+}
+
 static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
                                const FvpTitleProfile *prof, int hover)
 {
@@ -1781,35 +1821,18 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
     }
     /* 背景 / logo / 版权行与"菜单用贴图还是文字"无关：先铺背景和 logo，
      * 菜单项画完后再压版权行。位置都取自素材头里的 x/y。 */
-    if (title_bg_on) {
-        int bsw = 0;
-        int bsh = 0;
+    {
+        int bg_on_top = (prof != NULL) ? prof->bg_on_top : 0;
 
-        if (prof != NULL &&
-            gfx_image_size(gfx, TITLE_BG_SLOT, &bsw, &bsh) &&
-            (bsw != prof->client_w || bsh != prof->client_h)) {
-            (void)gfx_draw_image_cropped(gfx, TITLE_BG_SLOT, 0, 0,
-                                         prof->bg_src_x, prof->bg_src_y,
-                                         prof->client_w, prof->client_h);
+        /* 叠放顺序由脚本的 PrimSetZ 决定（ref/title-scene.json 的 layer_z）。
+         * 五彩斑斓 A=1000 在最上 → 先画叠加层 D→C→B，再画背景 A；
+         * 星空背景在下 → 先背景后叠加层。 */
+        if (!bg_on_top) {
+            title_draw_bg(gfx, prof);
+            title_draw_overlays(gfx, prof);
         } else {
-            (void)gfx_draw_image_at(gfx, TITLE_BG_SLOT, 0, 0);
-        }
-    }
-    /* 背景叠加层：素材头里的坐标是"未裁剪大图"坐标系，要减掉背景裁剪起点 */
-    if (title_ovl_loaded > 0 && prof != NULL) {
-        int li;
-
-        for (li = 0; li < prof->bg_overlay_count && li < 4; ++li) {
-            int ox = 0;
-            int oy = 0;
-
-            if (prof->bg_overlay[li][0] == '\0') {
-                continue;
-            }
-            (void)gfx_image_offset(gfx, TITLE_OVL_SLOT + li, &ox, &oy);
-            (void)gfx_draw_image_at(gfx, TITLE_OVL_SLOT + li,
-                                    ox - prof->bg_src_x,
-                                    oy - prof->bg_src_y);
+            title_draw_overlays(gfx, prof);
+            title_draw_bg(gfx, prof);
         }
     }
     if (title_logo_on) {

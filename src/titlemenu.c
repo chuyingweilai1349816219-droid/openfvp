@@ -72,13 +72,18 @@ const FvpTitleProfile fvp_title_profile_iroseka = {
     },
     "title_bg1_A", /* 白天背景 2400x1350：只显示中间 1920x1080 一块 */
     240, 135,      /* 中心裁剪（(2400-1920)/2, (1350-1080)/2) */
-    /* 实测（work/compose_iro_layers.py）：A 层只有云，风车/花瓣/光束在 B/C/D 里；
-     * 三种顺序的平均差相差 <0.6，这里用测到最好的 C→D→B。 */
+    /* 脚本的 PrimSetZ 是 A(258)=1000、B(259)=900、C(260)=850、D(261)=800
+     * （ref/title-scene.json 的 layer_z）。但**按 Z 排的三种顺序实测都不如现有顺序**：
+     *   A→C→D→B（本行，现有）13.13 ／ A→B→C→D 13.65 ／ D→C→B→A 14.38
+     *   （原版标题帧 mean abs diff，见 docs/title-menu.md §13）
+     * 说明 Z 顺序不是剩余误差的主因，或被引擎的 z 语义反着用。先保留实测最优的顺序，
+     * 把 Z 值冻结在基线里，等 alpha/logo 这些查清后再回来定。 */
     { "title_bg1_C", "title_bg1_D", "title_bg1_B", "" }, 3,
     /* 原版菜单是深蓝衬线字：实测暗部均值 RGB(7,26,146) */
     { 10, 30, 140 },
     "title_logo1", /* 标题 logo（位置在图片头里） */
-    ""             /* 版权行素材还没指认 */
+    "",            /* 版权行素材还没指认 */
+    0              /* bg_on_top：实测背景 A 应在最下（见 §13 的 Z 语义讨论） */
 };
 
 /* 星空的记忆 HD（hoshimemo）：**全部居中于 x=960**、行距 90、贴图 275x40 级
@@ -107,7 +112,8 @@ const FvpTitleProfile fvp_title_profile_hoshimemo = {
     { "title_frame2", "title_frame", "", "" }, 2,
     { 246, 246, 252 }, /* 星空走贴图模式，颜色只用于兜底文字 */
     "title_logo1",     /* 标题 logo：1082x418 @ (419,72) */
-    "title_copyright"  /* 版权行：445x24 @ (737,1043) */
+    "title_copyright", /* 版权行：445x24 @ (737,1043) */
+    0                  /* bg_on_top：背景在下，叠加层压在上面 */
 };
 
 static int ascii_lower(int c)

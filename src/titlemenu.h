@@ -130,6 +130,10 @@ typedef struct FvpTitleProfile {
     int menu_color[3];
     char logo_asset[FVP_TITLE_ASSET_MAX];
     char copyright_asset[FVP_TITLE_ASSET_MAX];
+    /* 背景层的叠放顺序由脚本的 PrimSetZ 决定（ref/title-scene.json 的 layer_z）：
+     * 五彩斑斓是 A=1000 > B=900 > C=850 > D=800，即 **A 在最上**，所以要先画
+     * 叠加层 D→C→B、再画 A；星空相反（背景在下），bg_on_top = 0。 */
+    int bg_on_top;
 } FvpTitleProfile;
 
 extern const FvpTitleProfile fvp_title_profile_iroseka;

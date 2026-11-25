@@ -100,6 +100,19 @@ def main():
         check(len(hits) >= 5, '%s 有 >= 5 个菜单项的 PrimHit 调用点（实际 %d）'
               % (name, len(hits)))
 
+    print('== 4. 背景层叠放顺序：来自脚本的 PrimSetZ（layer_z） ==')
+    ir = ref['games'].get('iroseka') or {}
+    zmap = {}
+    for e in (ir.get('layer_z') or []):
+        if e['prim'] in (258, 259, 260, 261):
+            zmap[e['prim']] = e['z']
+    check(zmap == {258: 1000, 259: 900, 260: 850, 261: 800},
+          '五彩斑斓背景层 Z：A(258)=1000 / B(259)=900 / C(260)=850 / D(261)=800'
+          '（实际 %s）' % zmap)
+    check(zmap and max(zmap.values()) - min(zmap.values()) == 200,
+          '四层 Z 跨度 200（实际 %s）'
+          % (max(zmap.values()) - min(zmap.values()) if zmap else None))
+
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
