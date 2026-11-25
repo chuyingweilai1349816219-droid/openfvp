@@ -1,0 +1,234 @@
+{
+ "asm": "work/iroseka_HD.asm",
+ "backbuffer_alpha": {
+  "affects_visible_output": false,
+  "conclusion": "窗口模式后台缓冲用 D3DFMT_UNKNOWN（跟随桌面格式，通常无 alpha）；全屏模式虽是 A8R8G8B8，但 Present 只取 RGB、alpha 不参与显示。所以混合公式里\"目标 alpha 怎么算\"不影响可见结果，我们渲染器把 d[3] 固定成 255 无害。",
+  "fullscreen_format": "D3DFMT_A8R8G8B8",
+  "windowed_format": "D3DFMT_UNKNOWN -> 当前显示模式（通常 X8R8G8B8，无 alpha 语义）"
+ },
+ "create_device": {
+  "adapter": 0,
+  "arg_count": 6,
+  "args": [
+   {
+    "imm": 0,
+    "pc": "0x42f212",
+    "reg": null
+   },
+   {
+    "imm": 1,
+    "pc": "0x42f210",
+    "reg": null
+   },
+   {
+    "imm": null,
+    "pc": "0x42f20f",
+    "reg": "dx"
+   },
+   {
+    "imm": 36,
+    "pc": "0x42f20d",
+    "reg": null
+   },
+   {
+    "imm": null,
+    "pc": "0x42f20c",
+    "reg": "cx"
+   },
+   {
+    "imm": null,
+    "pc": "0x42f20b",
+    "reg": "di"
+   }
+  ],
+  "behavior_flags": 36,
+  "behavior_flags_names": [
+   "D3DCREATE_MULTITHREADED",
+   "D3DCREATE_SOFTWARE_VERTEXPROCESSING"
+  ],
+  "device_type": 1,
+  "device_type_name": "HAL",
+  "pc": "0x42f218",
+  "pp_device_member": "this+0x8",
+  "present_params_lea_candidates": [
+   "0x8",
+   "0x1bc",
+   "0x14c"
+  ],
+  "present_params_reg": "cx",
+  "vtable_off": "0x40"
+ },
+ "direct3dcreate9": {
+  "call_pc": "0x42c9f4",
+  "result_member": "this+0x4",
+  "thunk": "0x44672c"
+ },
+ "note": "从 exe 静态分析抄出的 D3D9 设备创建参数与 D3DPRESENT_PARAMETERS（A 类事实）；由 scripts/extract-exe-d3d-present.py 生成。字段名/枚举名来自 D3D9 SDK 公开常量，不是游戏数据。",
+ "present_params": {
+  "fullscreen": {
+   "fields": {
+    "AutoDepthStencilFormat": {
+     "enum": "D16",
+     "offset": 40,
+     "size": 4,
+     "value": 80
+    },
+    "BackBufferCount": {
+     "offset": 12,
+     "size": 4,
+     "value": 1
+    },
+    "BackBufferFormat": {
+     "enum": "A8R8G8B8",
+     "offset": 8,
+     "size": 4,
+     "value": 21
+    },
+    "BackBufferHeight": {
+     "offset": 4,
+     "size": 4,
+     "value": "member:+0x64"
+    },
+    "BackBufferWidth": {
+     "offset": 0,
+     "size": 4,
+     "value": "member:+0x60"
+    },
+    "EnableAutoDepthStencil": {
+     "enum": "FALSE",
+     "offset": 36,
+     "size": 4,
+     "value": 0
+    },
+    "Flags": {
+     "offset": 44,
+     "size": 4,
+     "value": 0
+    },
+    "FullScreen_RefreshRateInHz": {
+     "offset": 48,
+     "size": 4,
+     "value": 0
+    },
+    "MultiSampleQuality": {
+     "offset": 20,
+     "size": 4,
+     "value": 0
+    },
+    "MultiSampleType": {
+     "offset": 16,
+     "size": 4,
+     "value": 0
+    },
+    "PresentationInterval": {
+     "enum": "DEFAULT",
+     "offset": 52,
+     "size": 4,
+     "value": 0
+    },
+    "SwapEffect": {
+     "enum": "COPY",
+     "offset": 24,
+     "size": 4,
+     "value": 3
+    },
+    "Windowed": {
+     "enum": "FALSE",
+     "offset": 32,
+     "size": 4,
+     "value": 0
+    },
+    "hDeviceWindow": {
+     "offset": 28,
+     "size": 4,
+     "value": 0
+    }
+   },
+   "memset_size": 56,
+   "struct_member": "0x1bc"
+  },
+  "sizeof_struct": 56,
+  "windowed": {
+   "fields": {
+    "AutoDepthStencilFormat": {
+     "enum": "D16",
+     "offset": 40,
+     "size": 4,
+     "value": 80
+    },
+    "BackBufferCount": {
+     "offset": 12,
+     "size": 4,
+     "value": 1
+    },
+    "BackBufferFormat": {
+     "enum": "UNKNOWN",
+     "offset": 8,
+     "size": 4,
+     "value": 0
+    },
+    "BackBufferHeight": {
+     "offset": 4,
+     "size": 4,
+     "value": 0
+    },
+    "BackBufferWidth": {
+     "offset": 0,
+     "size": 4,
+     "value": 0
+    },
+    "EnableAutoDepthStencil": {
+     "enum": "FALSE",
+     "offset": 36,
+     "size": 4,
+     "value": 0
+    },
+    "Flags": {
+     "offset": 44,
+     "size": 4,
+     "value": 0
+    },
+    "FullScreen_RefreshRateInHz": {
+     "offset": 48,
+     "size": 4,
+     "value": 0
+    },
+    "MultiSampleQuality": {
+     "offset": 20,
+     "size": 4,
+     "value": 0
+    },
+    "MultiSampleType": {
+     "offset": 16,
+     "size": 4,
+     "value": 0
+    },
+    "PresentationInterval": {
+     "enum": "DEFAULT",
+     "offset": 52,
+     "size": 4,
+     "value": 0
+    },
+    "SwapEffect": {
+     "enum": "COPY",
+     "offset": 24,
+     "size": 4,
+     "value": 3
+    },
+    "Windowed": {
+     "enum": "TRUE",
+     "offset": 32,
+     "size": 4,
+     "value": 1
+    },
+    "hDeviceWindow": {
+     "offset": 28,
+     "size": 4,
+     "value": 0
+    }
+   },
+   "memset_size": 56,
+   "struct_member": "0x14c"
+  }
+ }
+}

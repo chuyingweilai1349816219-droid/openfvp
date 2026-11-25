@@ -736,3 +736,75 @@ prim+8 = 1  →  SRCALPHA / ONE          →  加色
 3. **加色混合要按原版实现**（`SRCALPHA`/`ONE`），而不是"加色近似"；它在原版里由
    prim+8 的 1 触发。
 4. 覆盖写（`ONE`/`ZERO`）只服务于 `Clear` 那条路径，渲染图元时不会用到。
+
+## 原版的 D3D9 设备创建参数：后台缓冲到底有没有 alpha（2026-11-25）
+
+上一节把混合状态从 exe 抄出来了（`SRCALPHA`/`INVSRCALPHA`、`ALPHABLENDENABLE=TRUE`、
+`BLENDOP` 从未设置）。还剩一个真问题：**后台缓冲有没有 alpha 通道**？这决定
+"加色混合时目标 alpha 怎么算"到底会不会影响画面。答案在 `CreateDevice` 的
+`D3DPRESENT_PARAMETERS` 里，抓帧永远拿不到。
+
+`scripts/extract-exe-d3d-present.py` → 基线 `ref/exe-d3d-present.json` →
+门禁 `tests/verify_exe_d3d_present.py`（`run_all` 54 → 55 步）。
+
+### 方法
+
+1. 找 `call 0x44672c`（`d3d9.dll!Direct3DCreate9` 的 IAT thunk）→ 它所在函数就是
+   D3D 初始化；返回的 `IDirect3D9*` 存进 `this+0x4`；
+2. 同一函数里找 `push $0x38; push 0; push %ptr; call 0x447b70`（memset）——
+   **0x38 = 56 字节 = `sizeof(D3DPRESENT_PARAMETERS)`**，由此确定两套参数的成员基址
+   （窗口模式 `this+0x14c`、全屏模式 `this+0x1bc`）；
+3. 用极简寄存器跟踪（`xor %ebx,%ebx` / `mov $imm,%reg` / `mov %reg,%reg` /
+   `mov 0xNN(%reg),%reg`）把每个 `mov …,0xOFF(%esi)` 还原成 `字段 = 值`
+   （字段下标 = `OFF - 基址`）；
+4. 找 `mov 0x40(%ebx),%eax; call *%eax`（`IDirect3D9::CreateDevice`，vtable 0x40）
+   并把 7 个 push 按 `__stdcall` 顺序还原成实参。
+
+顺带一个**交叉验证**：同一个 `IDirect3D9` 对象上还出现过 0x18/0x1c/0x20 三个 vtable
+调用，实参形态分别是 `(Adapter, Format)`、`(Adapter, Format, Mode, &mode)`、
+`(Adapter, &mode)` —— 正好对上 `GetAdapterModeCount` / `EnumAdapterModes` /
+`GetAdapterDisplayMode`（第 6/7/8 号方法），0x40 = 第 16 号 = `CreateDevice`。
+这组三对一的自洽性是"vtable 偏移没读错"的直接证据。
+
+### 抄出来的参数
+
+| 字段 | 窗口模式（`this+0x14c`） | 全屏模式（`this+0x1bc`） |
+|---|---|---|
+| `BackBufferWidth/Height` | 0（之后由设置对象的 `+0x68/+0x6c` 填） | 设置对象 `+0x60/+0x64` |
+| **`BackBufferFormat`** | **`D3DFMT_UNKNOWN`(0)** | **`D3DFMT_A8R8G8B8`(21)** |
+| `BackBufferCount` | 1 | 1 |
+| `MultiSampleType/Quality` | 0 / 0 | 0 / 0 |
+| `SwapEffect` | **`COPY`(3)** | **`COPY`(3)** |
+| `hDeviceWindow` | 0 | 0 |
+| `Windowed` | **TRUE** | **FALSE** |
+| `EnableAutoDepthStencil` | FALSE | FALSE |
+| `AutoDepthStencilFormat` | D16（字段写了但没启用） | D16（同） |
+| `Flags` | 0 | 0 |
+| `FullScreen_RefreshRateInHz` | 0 | 0 |
+| `PresentationInterval` | `DEFAULT`(0) | `DEFAULT`(0) |
+
+`CreateDevice`（`0x42f218`，vtable 0x40，6 个实参）：
+
+```text
+Adapter            = 0            (D3DADAPTER_DEFAULT)
+DeviceType         = 1            (D3DDEVTYPE_HAL)
+hFocusWindow       = 来自设置对象
+BehaviorFlags      = 0x24         (MULTITHREADED | SOFTWARE_VERTEXPROCESSING)
+pPresentationParameters = this+0x14c（窗口）或 this+0x1bc（全屏，显示模式 == 2 时）
+ppDevice           = this+0x8
+```
+
+### 结论：后台缓冲的 alpha 不参与显示
+
+* **窗口模式**用 `D3DFMT_UNKNOWN` —— 设备跟随当前桌面显示模式（通常 `X8R8G8B8`），
+  没有 alpha 语义；
+* **全屏模式**虽然是 `A8R8G8B8`，但 `Present` 把后台缓冲送显示器时只取 RGB，
+  alpha 不参与显示。
+
+所以：**混合公式里"目标 alpha 怎么算"不影响可见结果**。我们的渲染器在加色路径里
+把目标 alpha 直接写 255（`src/gfx.c` 的 `blit_sprite`），与"原版后台缓冲没有 alpha
+语义"并不冲突 —— 这一条现在有结构分析依据，不是"我们没做"。
+
+顺带也解释了两件小事：`SwapEffect=COPY` + `BackBufferCount=1` 说明它是最朴素的双缓冲
+（不是 FLIP 链），`PresentationInterval=DEFAULT` 说明**没有显式开/关垂直同步**
+（窗口模式下 D3D9 默认按驱动行为，抓帧时"相位不同"、偶发撕裂就来自这里）。

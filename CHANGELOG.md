@@ -51,6 +51,28 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 结构分析（D3D9 设备创建参数：后台缓冲格式/交换方式/行为标志）
+
+- **把 `CreateDevice` 的 `D3DPRESENT_PARAMETERS` 从 exe 里抄出来，回答"后台缓冲有没有 alpha"**
+  - 新增 `scripts/extract-exe-d3d-present.py` + 基线 `ref/exe-d3d-present.json` +
+    门禁 `tests/verify_exe_d3d_present.py`（`run_all` 54 → 55 步）：从
+    `call 0x44672c`（`Direct3DCreate9`）定位初始化函数，用 `memset(.., 0x38)` 确认
+    **56 字节 = sizeof(D3DPRESENT_PARAMETERS)**，再靠极简寄存器跟踪把每个字段的写入还原
+  - 抄出来的硬事实：**窗口模式** `BackBufferFormat = D3DFMT_UNKNOWN`、`Windowed=TRUE`、
+    `SwapEffect=COPY(3)`、`BackBufferCount=1`、多重采样关、`PresentationInterval=DEFAULT`；
+    **全屏模式** `BackBufferFormat = D3DFMT_A8R8G8B8(21)`、`Windowed=FALSE`、宽高来自
+    设置对象 `+0x60/+0x64`；`CreateDevice`：`Adapter=0`、`DeviceType=HAL(1)`、
+    **`BehaviorFlags=0x24 = MULTITHREADED | SOFTWARE_VERTEXPROCESSING`**、
+    设备指针写回 `this+0x8`
+  - 交叉验证：同一个 `IDirect3D9*` 上 0x18/0x1c/0x20 三个 vtable 调用的实参形态分别
+    对上 `GetAdapterModeCount`/`EnumAdapterModes`/`GetAdapterDisplayMode`，
+    0x40 = 第 16 号 = `CreateDevice` —— 这组自洽性证明 vtable 偏移没读错
+  - **结论**：窗口模式跟随桌面格式（无 alpha 语义），全屏虽 A8R8G8B8 但 `Present` 只取
+    RGB ⇒ **混合公式里目标 alpha 不影响可见结果**，我们加色路径把 `d[3]` 写成 255 无害；
+    另外 `SwapEffect=COPY` + `BackBufferCount=1` 是最朴素双缓冲，`PresentationInterval=DEFAULT`
+    说明**没有显式开关垂直同步**（抓帧相位差异的一个来源）
+  - 文档：`docs/c-gfx.md` 新增"D3D9 设备创建参数"一节（含方法与参数表）
+
 ### 结构分析（D3D9 `SetRenderState` 常量：混合模型从"拟合"升级为"抄出来的"）
 
 - **从 exe 的 `SetRenderState` 调用点抄出 D3D9 渲染状态常量，冻结成基线并加门禁**

@@ -591,6 +591,14 @@ def build_steps(args):
                            'DESTBLEND=INVSRCALPHA (or ONE when the prim+8 byte is 1), '
                            'ALPHABLENDENABLE=TRUE, BLENDOP never set (=ADD)'))
 
+    # 6.4966 D3D9 设备创建参数 / D3DPRESENT_PARAMETERS（缺 work/ 时 SKIP）
+    vdp = os.path.join(HERE, 'verify_exe_d3d_present.py')
+    steps.append(Step('verify_exe_d3d_present.py', [PY, '-X', 'utf8', vdp], 600,
+                      skip_reason=None,
+                      note='D3D9 device creation read out of the exe: windowed '
+                           'BackBufferFormat=D3DFMT_UNKNOWN + COPY + Windowed, '
+                           'fullscreen A8R8G8B8, HAL + software vertex processing'))
+
     # 6.497 标题背景合成模型（18 个候选里 measured+over 最好；需 Pillow+numpy）
     vbb = os.path.join(HERE, 'verify_title_bg_blend.py')
     steps.append(Step('verify_title_bg_blend.py', [PY, '-X', 'utf8', vbb], 900,
