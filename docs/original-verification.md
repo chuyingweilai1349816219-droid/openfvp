@@ -327,10 +327,30 @@ python tests/verify_vs_original.py      # 看新数值
 
 | 项 | 原版 | 本仓库外壳（`src/platform/win32/win32_gdi_text.c`） | 后果 |
 |---|---|---|---|
-| 字符集 | `SHIFTJIS_CHARSET`(0x80) | `DEFAULT_CHARSET` | 同一族名解析到的字形表可能不同 |
-| 取字形方式 | `GetGlyphOutlineA` + `GGO_BITMAP` | `TextOutW` + 32bpp DIB，读 B 通道当覆盖率 | 边缘：硬二值 vs 灰度 |
-| 质量参数 | `0`（不指定） | `ANTIALIASED_QUALITY` | 灰度差再加一层 |
-| 字体族 | 数据驱动（脚本/设置） | 固定 `Microsoft YaHei`（仅缺字回退用） | 回退字与正文用的字不是同一族 |
+| 字符集 | `SHIFTJIS_CHARSET`(0x80) | **默认** `DEFAULT_CHARSET`；`--glyph-original` 时 0x80 | 同一族名解析到的字形表可能不同 |
+| 取字形方式 | `GetGlyphOutlineA` + `GGO_BITMAP` | **默认** `TextOutW` + 32bpp DIB；`--glyph-original` 时 `GGO_BITMAP` | 边缘：硬二值 vs 灰度 |
+| 质量参数 | `0`（不指定） | **默认** `ANTIALIASED_QUALITY`；`--glyph-original` 时 0 | 灰度差再加一层 |
+| 字体族 | 数据驱动（注册表 4 项） | 默认 `Microsoft YaHei`（缺字回退用）；`--glyph-face` 可换 | 回退字与正文用的字不是同一族 |
+
+**2026-11-25 更新：原版协议路径已经实现，不再是"差距"而是"开关"。**
+`win32_gdi_text_mask_original()` / `win32_gdi_text_advance_original()`
+（`--glyph-original` 挂到外壳）按 §8.3 提取到的参数实现：`CreateFontA` 用
+`SHIFTJIS_CHARSET`、字重与质量全 0、`GetGlyphOutlineA` 用 `GGO_METRICS` 取进位
+（`gmCellIncX`）、`GGO_BITMAP` 取 1bpp 位图、`MAT2` 用单位矩阵。可测的性质由
+`tests/test_gdi_ggo.c`（28 项）锁住：
+
+- 掩码**只有 0 / 255**（GGO_BITMAP 是 1bpp），而抗锯齿路径实测有中间值
+  ——「日」@32 中间值像素 **54 / 1224 ≈ 4.4%**，这 4.4% 的像素是原版协议**根本
+  不会产生**的；这就是"参数没调好"之外的真实协议差；
+- 进位来自 `gmCellIncX`，因此同一个全角字重复 N 次 = N 倍进位；
+- cp932 表示不了的字符（例如「龘」）返回 0 —— 原版是 ANSI 程序，它自己也画不出来，
+  所以汉化文本里那些 cp932 之外的简化字，**在原版里本来就不可能正常显示**；
+- 默认族名就是 exe 内置注册表第 0 项 `ＭＳ ゴシック`，可换可复位。
+
+默认仍走抗锯齿路径（汉化文本更清晰、且不动冻结基线），`--glyph-original` 用于
+"和原版对齐"的对照与门禁。真机 smoke（`--load-slot 905` 等场景）本次没有触发
+GDI 回退（`0 tofu, 0 from fallback atlas`），所以**像素差别尚未在实拍帧上量化**，
+协议本身由单测锁住——这一点照实记下，不夸大。
 
 另外，正文用的位图图集（`bin/gfx-font-*.bin`，由 `scripts/make-font-atlas.py` 从
 TrueType 光栅化生成）与 GDI 在同字号下的 hinting **也不完全相同**，这是正文
@@ -339,6 +359,9 @@ TrueType 光栅化生成）与 GDI 在同字号下的 hinting **也不完全相�
 > 下一轮的实现项：把缺字回退路径改成与原版同一协议（`SHIFTJIS_CHARSET` +
 > `GetGlyphOutlineA/GGO_BITMAP` + 单位 `MAT2`），并给它单独的门禁与开关，
 > 不动冻结基线（图集路径不变）。
+
+→ **上面这条已经做完了（2026-11-25，见本节末尾的"更新"）**：`--glyph-original`
+即原版协议路径，单测 `tests/test_gdi_ggo.c` 28 项；默认仍是抗锯齿路径。
 
 ### 8.5 冻结与门禁
 

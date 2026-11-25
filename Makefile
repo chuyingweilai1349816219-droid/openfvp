@@ -410,6 +410,27 @@ clean-glyph-fallback:
 .PHONY: test_glyph_fallback clean-glyph-fallback
 
 # ---------------------------------------------------------------------------
+# 原版 GDI 绘制协议（cp932 + GetGlyphOutlineA/GGO_BITMAP → 1bpp 掩码）
+#   make test_gdi_ggo
+# 参数依据 ref/exe-gdi-params.json（从原版 exe 静态提取，见
+# docs/original-verification.md §8）。Windows 专属（要 gdi32），所以不进
+# `make check`（CI 在 Linux 上跑）；由 tests/run_all.py 的 test_gdi_ggo 步骤跑。
+# ---------------------------------------------------------------------------
+GDI_GGO_TEST = bin/test_gdi_ggo$(EXE)
+
+test_gdi_ggo: $(GDI_GGO_TEST)
+
+$(GDI_GGO_TEST): tests/test_gdi_ggo.c src/platform/win32/win32_gdi_text.c \
+                 src/platform/win32/win32_gdi_text.h | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_gdi_ggo.c \
+	    src/platform/win32/win32_gdi_text.c -lgdi32 -luser32 $(LDFLAGS)
+
+clean-gdi-ggo:
+	-rm -f $(GDI_GGO_TEST)
+
+.PHONY: test_gdi_ggo clean-gdi-ggo
+
+# ---------------------------------------------------------------------------
 # 补间时间轴（Motion* 的数学核心，含 Motion*Stop 的撤销语义）
 #   make test_motion
 # ---------------------------------------------------------------------------

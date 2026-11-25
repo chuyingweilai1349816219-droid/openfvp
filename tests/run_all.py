@@ -404,6 +404,17 @@ def build_steps(args):
                                'right edge ~1769, pitch 100, ink height 40..56, '
                                'hit test matches layout'))
 
+    # 4i12. 原版 GDI 绘制协议（cp932 + GGO_BITMAP 1bpp）——Windows 专属
+    test_gdi_ggo = tools.get('test_gdi_ggo')
+    if not test_gdi_ggo or not os.path.isfile(test_gdi_ggo):
+        steps.append(Step('test_gdi_ggo', None, 0,
+                          skip_reason='bin/test_gdi_ggo.exe missing '
+                                      '(run: make test_gdi_ggo)'))
+    else:
+        steps.append(Step('test_gdi_ggo', [test_gdi_ggo], 120,
+                          note='original GDI protocol: binary 1bpp mask, '
+                               'gmCellIncX advances, cp932-only (ref/exe-gdi-params.json)'))
+
     # 4i11. Continue 的存档列表（时间戳/章节名/缩略图，只读）
     test_savelist = tools.get('test_savelist')
     if not test_savelist or not os.path.isfile(test_savelist):

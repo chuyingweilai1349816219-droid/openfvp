@@ -116,6 +116,10 @@ typedef struct Options {
     /* 调试钩子：脚本自己调 SaveWrite/Load 之前先手动造一个请求，用来端到端
      * 验证"请求 -> 外壳执行"这条链路（-1 = 不发）。 */
     int no_input; /* --no-input：忽略真实鼠标/键盘事件（门禁截图要确定性） */
+    /* --glyph-original：缺字回退改用**原版同协议**（cp932 + GGO_BITMAP 1bpp），
+     * 默认走抗锯齿路径（汉化文本更清晰）。协议依据见
+     * ref/exe-gdi-params.json 与 docs/original-verification.md §8。 */
+    int glyph_original;
     wchar_t title_font[PATH_CAP]; /* --title-font：标题菜单专用字库 */
     int pick_seed;  /* --pick N：启动就把第 N 项当作已选中（门禁/截图用） */
     int title_fade_ms; /* 点 New Game 后的白场过渡时长（0 = 直接进，默认 800） */
@@ -528,6 +532,7 @@ static void defaults(Options *o)
     o->title_fade_ms = 800;
     o->title_font[0] = L'\0';
     o->no_input = 0;
+    o->glyph_original = 0;
     o->shot_at_ms = 0.0;
     o->title_hover_seed = -1;
     o->debug_load_request = -1;
@@ -700,6 +705,19 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->menu_at = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--load-slot") == 0 && i + 1 < argc) {
             o->load_slot = _wtoi(argv[++i]);
+        } else if (wcscmp(a, L"--no-input") == 0) {
+            o->no_input = 1;
+        } else if (wcscmp(a, L"--glyph-original") == 0) {
+            o->glyph_original = 1;
+        } else if (wcscmp(a, L"--glyph-face") == 0 && i + 1 < argc) {
+            /* 原版族名是数据驱动的（exe 内置注册表 4 项，见 §8.3）；
+             * 这里给门禁/对照实验换族名用。 */
+            char face_utf8[128];
+
+            ++i;
+            if (wide_to_ansi(argv[i], face_utf8, sizeof face_utf8)) {
+                win32_gdi_text_set_default_face(face_utf8);
+            }
         } else if (wcscmp(a, L"--no-input") == 0) {
             o->no_input = 1;
         } else if (wcscmp(a, L"--preview-slot") == 0 &&
@@ -2671,12 +2689,27 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             }
         }
         {
-            /* 缺字回退：图集里没有的码点（汉化文本等）用 GDI 现场栅格化 */
-            static const GfxGlyphFallback gdi_fallback = {
+            /* 缺字回退：图集里没有的码点（汉化文本等）用 GDI 现场栅格化。
+             * 两条实现的路数不同（见 win32_gdi_text.h）：
+             *   默认 = 抗锯齿（TextOutW + 32bpp DIB，灰度覆盖率）
+             *   --glyph-original = 原版同协议（cp932 + GGO_BITMAP，1bpp 二值）
+             * 原版同协议的参数是从 exe 里静态提取出来的，见
+             * ref/exe-gdi-params.json 与 docs/original-verification.md §8。 */
+            static const GfxGlyphFallback gdi_antialiased = {
                 win32_gdi_text_mask, win32_gdi_text_advance
             };
+            static const GfxGlyphFallback gdi_cp932 = {
+                win32_gdi_text_mask_cp932, win32_gdi_text_advance_cp932
+            };
 
-            gfx_set_glyph_fallback(gfx, &gdi_fallback);
+            if (opts.glyph_original) {
+                gfx_set_glyph_fallback(gfx, &gdi_cp932);
+                fvp_logf("gfx: glyph fallback = original GDI protocol "
+                         "(SHIFTJIS/GGO_BITMAP, face=%s)",
+                         win32_gdi_text_default_face());
+            } else {
+                gfx_set_glyph_fallback(gfx, &gdi_antialiased);
+            }
         }
         nfonts_loaded = load_fonts(gfx, &opts, exe_dir, fonts);
         fvp_logf("gfx: %d font atlas(es) registered", nfonts_loaded);

@@ -147,6 +147,8 @@ def public_tools():
         'test_vmmisc': os.path.join(FVP, 'bin', 'test_vmmisc.exe'),
         'test_nullvalue': os.path.join(FVP, 'bin', 'test_nullvalue.exe'),
         'test_titlemenu': os.path.join(FVP, 'bin', 'test_titlemenu.exe'),
+        # 原版 GDI 绘制协议（cp932 + GGO_BITMAP）；Windows 专属，单独 make 目标
+        'test_gdi_ggo': os.path.join(FVP, 'bin', 'test_gdi_ggo.exe'),
         'test_savelist': os.path.join(FVP, 'bin', 'test_savelist.exe'),
         'test_openseq': os.path.join(FVP, 'bin', 'test_openseq.exe'),
         'test_titlemenu_draw': os.path.join(FVP, 'bin',

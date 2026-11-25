@@ -92,6 +92,29 @@
     提取结果表、与实现的差距表、以及"⑥ 的结论修正"；
     `docs/vm-commands.md` 的"我们没有那份表"同步更正
 
+### 新增（原版 GDI 协议实现）
+
+- **⑥ 的第二块：缺字回退可按原版同协议栅格化（`--glyph-original`）**
+  - `src/platform/win32/win32_gdi_text.c` 新增 `win32_gdi_text_mask_original()` /
+    `win32_gdi_text_advance_original()`：`CreateFontA` 用 `SHIFTJIS_CHARSET`、
+    字重/质量/间距全 0；`GetGlyphOutlineA` 用 `GGO_METRICS` 取进位
+    （`gmCellIncX`）、`GGO_BITMAP` 取 **1bpp 位图**；`MAT2` 用单位矩阵
+    —— 全部参数来自 `ref/exe-gdi-params.json`（从 exe 静态提取）
+  - UTF-8 → cp932（`WC_NO_BEST_FIT_CHARS`，禁止猜替代字）→ 按 DBCS 拆 `uChar`；
+    `GGO_BITMAP` 行按 4 字节对齐；成品掩码**只有 0/255**
+  - cp932 表示不了的字符返回 0：原版是 ANSI 程序，**它自己也画不出来** ——
+    汉化文本里 cp932 之外的简化字在原版里本来就不可能正常显示
+  - 外壳：`--glyph-original` 切换协议、`--glyph-face` 换族名（默认 exe 注册表第 0 项
+    `ＭＳ ゴシック`）；日志多一行 `gfx: glyph fallback = original GDI protocol (...)`
+  - 单测 `tests/test_gdi_ggo.c`（**28 项**，`make test_gdi_ggo`，接入 `run_all`
+    45 → 46 步）：二值掩码、`gmCellIncX` 的 N 倍进位、cp932 之外的字符返回 0、
+    默认族名可改可复位、NULL/越界安全
+  - 实测协议差：抗锯齿路径「日」@32 有 **54/1224 ≈ 4.4%** 的像素是中间值，
+    这些像素原版协议**根本不会产生**
+  - 默认仍是抗锯齿路径 ⇒ 冻结基线不动（图集路径不变）
+  - 诚实记录：真机 smoke（`--menu-at` / `--load-slot 905`）本次没触发 GDI 回退
+    （`0 tofu, 0 from fallback atlas`），所以"协议差在实拍帧上是多少"还没量化
+
 ### 新增（设置）
 
 - **② OPTION 面板可调主音量（可写设置的第一块）**

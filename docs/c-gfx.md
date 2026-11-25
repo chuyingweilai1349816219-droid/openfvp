@@ -606,3 +606,42 @@ python fvp\tests\vm_compare.py --frame fvp\out\c\vm-frame.png
 **已知限制**：全角空格（U+3000）走回退时，首字与空格的字距仍略有偏差（GDI 的
 空格推进与图集给的宽度不同）；要彻底一致得把回退字形**并入图集**并复用图集的
 推进表。
+
+## 与原版同协议的缺字回退：cp932 + GGO_BITMAP（2026-11-25）
+
+上面那条回退用的是**抗锯齿**路径（`TextOutW` + 32bpp DIB + `ANTIALIASED_QUALITY`），
+它好看，但不是原版的画法。`docs/original-verification.md` §8 从原版 exe 静态提取出
+真实协议（`ref/exe-gdi-params.json`）：
+
+| 参数 | 原版的值 |
+|---|---|
+| 建字体 | `CreateFontA`，`fdwCharSet=0x80`(`SHIFTJIS_CHARSET`)，字重/质量/间距全 0 |
+| 取字形 | `GetGlyphOutlineA`：`GGO_METRICS(0)` 取进位、`GGO_BITMAP(1)` 取 **1bpp 位图** |
+| 变换矩阵 | 三次调用共用一个 `MAT2` = **单位矩阵** |
+| 文本输出 API | **没有**（全 exe 无 `TextOut`/`ExtTextOut`）——字形位图由引擎自己贴 |
+
+于是 `src/platform/win32/win32_gdi_text.c` 里现在有**两条实现**：
+
+| | 默认（抗锯齿） | `--glyph-original`（原版协议） |
+|---|---|---|
+| API | `CreateFontW` + `TextOutW` → 32bpp DIB | `CreateFontA` + `GetGlyphOutlineA` |
+| 掩码取值 | 0..255 灰度 | **只有 0 / 255** |
+| 进位 | `GetTextExtentPoint32W` | `GLYPHMETRICS.gmCellIncX` |
+| 字符集 | `DEFAULT_CHARSET` | `SHIFTJIS_CHARSET` |
+| 族名 | `Microsoft YaHei` | exe 内置注册表第 0 项 `ＭＳ ゴシック`（`--glyph-face` 可换） |
+
+实现要点：
+
+1. UTF-8 → **cp932** 编码（`WC_NO_BEST_FIT_CHARS`，禁止"猜"替代字）；cp932 表示不了
+   的字符返回 0 —— 原版是 ANSI 程序，它自己也画不出来；
+2. cp932 字节串按 **DBCS** 拆成 `uChar` 序列（前导字节 `0x81..0x9F`/`0xE0..0xFC`
+   与后继字节拼成一个 `WORD`），这正是原版 `GetGlyphOutlineA` 的调用形态；
+3. `GGO_BITMAP` 的行按 **4 字节对齐**（`((gmBlackBoxX+31)/32)*4`），逐位贴到画布，
+   画布只有 0/255；
+4. 基线安全：默认仍是抗锯齿路径，`verify_gfx` / `compare.py` 的数字不受影响；
+   `--glyph-original` 只用于"和原版对齐"的对照与门禁。
+
+单测 `tests/test_gdi_ggo.c`（28 项，`make test_gdi_ggo`，走 `run_all.py`）锁住这些性质：
+二值掩码、`gmCellIncX` 的 N 倍进位、cp932 之外的字符返回 0、默认族名与可换可复位、
+NULL/越界安全。实测抗锯齿路径「日」@32 有 **54 / 1224 ≈ 4.4%** 的像素是中间值——
+这些像素在原版协议里**根本不会出现**，这就是"协议差"的量化形式。
