@@ -51,6 +51,22 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 实现（读档续玩 step-1：`--load-restart`）
+
+- 按上一轮冻结的读档复位序列落地第一版（默认关，`--load-restart` 打开）：
+  1. 读槽文件（`<game_dir>/save/sNNN.bin`，解析章节/对话行长度、缩略图尺寸、
+     尾段长度）；
+  2. 场景复位：`gfx_prim_reset`(4096) + `gfx_motion_clear` + `gfx_text_clear`(32)
+     + 清画布（对应 exe `0x438D20`）；
+  3. 重建 VM：`fvp_vm_free → fvp_vm_init → 回填 globals/globals_set/flags →
+     attach gfx/snd → fvp_vm_start`（对应 exe `0x441350` + 线程 `+0xFD9` 重跑）。
+- 门禁 `tests/verify_load_restart.py`（run_all 71→**72 步**）：槽 485 → thumb
+  200×113 / tail 584.9 KB、场景复位、`restarted at entry pc=0x22f48`、重启后脚本
+  继续跑（总 40952 步、有文本行）、结束帧非黑（mean 38.4）；另断言不开开关时仍是
+  旧行为（日志 `not implemented` / `pass --load-restart to restart`）。
+- **还没做**：槽尾"引擎快照"的逐段应用（文本窗口/图元/动画），等字段语义逆清。
+- 文档：`docs/win32-shell.md`、`docs/save-format.md`（step-1 落地说明）、status。
+
 ### 结构分析（读档链路补完：0x4344C0 = 整文件读取助手，复位序列）
 
 - 上一轮冻结了 `Load(40)/SaveWrite(96)` 的请求/消费点，这一轮把"读到之后做什么"

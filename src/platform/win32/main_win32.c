@@ -148,6 +148,8 @@ typedef struct Options {
     int title_no_bg; /* --title-no-bg：标题菜单不铺背景（几何测量用） */
     int title_hover_seed; /* --title-hover N：启动就把第 N 项设为 hover（截图/门禁用，-1 = 不动） */
     int title_no_hover; /* --title-no-hover：完全不按鼠标位置算 hover（截图门禁用） */
+    int load_restart; /* --load-restart：Load(slot) 时读槽文件 + 复位场景 + 重启脚本
+                       * （保留 globals/flags；槽尾快照段还没逆清，暂不应用） */
     int debug_save_request;
     int debug_load_request;
 } Options;
@@ -465,7 +467,8 @@ static const wchar_t *usage_text(void)
            L"  --title-menu        先显示引擎侧标题菜单（New Game/Continue/Album/Option/Exit），\n"
            L"                      选 New Game 才开始跑脚本（默认关；几何按原版实测）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
-           L"  --title-bg-anim     标题背景按脚本做缩放动画（星空 2000->1000/40 s；默认关）\n"           L"  --shot-every MS     运行中每 MS 毫秒抓一张（配 --shot-prefix；做动画 demo）\n"
+           L"  --title-bg-anim     标题背景按脚本做缩放动画（星空 2000->1000/40 s；默认关）\n"           L"  --load-restart      Load(slot) 时读槽文件 + 复位场景 + 重启脚本（保留 globals/flags）\n"
+           L"  --shot-every MS     运行中每 MS 毫秒抓一张（配 --shot-prefix；做动画 demo）\n"
            L"  --shot-prefix P     --shot-every 的文件名前缀（写 P-0000.bmp ..）\n"           L"  --shot-div N       抓帧时 box 降采样 N 倍（1..8，默认 1）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
            L"  --startup-trace FILE 把启动各阶段写进 FILE（日志打开之前也能落盘，\n"
@@ -559,6 +562,7 @@ static void defaults(Options *o)
     o->shot_prefix[0] = L'\0';
     o->title_hover_seed = -1;
     o->title_no_hover = 0;
+    o->load_restart = 0;
     o->debug_load_request = -1;
     o->motion = 0;
     o->timeline = 0;
@@ -773,6 +777,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--debug-save-request") == 0 &&
                    i + 1 < argc) {
             o->debug_save_request = _wtoi(argv[++i]);
+        } else if (wcscmp(a, L"--load-restart") == 0) {
+            o->load_restart = 1;
         } else if (wcscmp(a, L"--debug-load-request") == 0 &&
                    i + 1 < argc) {
             o->debug_load_request = _wtoi(argv[++i]);
@@ -1329,6 +1335,140 @@ static int write_bmp32_scaled(const wchar_t *path, const uint32_t *rgba, int w,
 /* ------------------------------------------------------------------ */
 /* 存档预览：用真实槽当模板，只换「时间戳 + 缩略图」写出一份新槽        */
 /* ------------------------------------------------------------------ */
+
+/* 把整个文件读进内存（读档助手用；不依赖日志/其它初始化）。 */
+static unsigned char *shell_read_file(const wchar_t *path, size_t *len_out)
+{
+    FILE *f;
+    long n;
+    unsigned char *buf;
+
+    if (len_out != NULL) {
+        *len_out = 0;
+    }
+    f = _wfopen(path, L"rb");
+    if (f == NULL) {
+        return NULL;
+    }
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
+    n = ftell(f);
+    if (n <= 0) {
+        fclose(f);
+        return NULL;
+    }
+    rewind(f);
+    buf = (unsigned char *)malloc((size_t)n);
+    if (buf == NULL) {
+        fclose(f);
+        return NULL;
+    }
+    if (fread(buf, 1, (size_t)n, f) != (size_t)n) {
+        free(buf);
+        fclose(f);
+        return NULL;
+    }
+    fclose(f);
+    if (len_out != NULL) {
+        *len_out = (size_t)n;
+    }
+    return buf;
+}
+
+/* --load-restart：读槽文件 → 复位场景（prims/motion/text）→ 重建 VM 并从入口重启，
+ * 保留调用前已灌入的全局变量与 flag。对应 exe 的读档复位序列：
+ *   0x438D20（场景/图元树复位） + 0x441350（脚本引擎复位）+ 线程 +0xFD9 重启。
+ * 槽文件里"引擎快照"各段的逐字段语义还没逆清，这一步不应用它们。 */
+static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
+                              const Options *opts, int slot)
+{
+    wchar_t path[PATH_CAP];
+    char u8[PATH_CAP * 3];
+    unsigned char *buf;
+    size_t len = 0;
+    FvpSaveSlot sd;
+    int slot_ok = 0;
+    FvpValue *gcopy = NULL;
+    unsigned char *gcset = NULL;
+    unsigned char *gflags = NULL;
+    int i;
+
+    _snwprintf(path, PATH_CAP, L"%ls\\save\\s%03d.bin", opts->game_dir, slot);
+    buf = shell_read_file(path, &len);
+    memset(&sd, 0, sizeof sd);
+    if (buf != NULL) {
+        slot_ok = fvp_save_slot_load(&sd, buf, len, 0, 0);
+        fvp_logf("load: slot %d file %s (%lu bytes) -> %s, chapter=%u B, "
+                 "line=%u B, thumb=%dx%d, tail=%.1f KB",
+                 slot, w2u(path, u8, sizeof(u8)), (unsigned long)len,
+                 slot_ok ? "parsed" : "bad slot header",
+                 sd.len[0], sd.len[2], sd.thumb_w, sd.thumb_h,
+                 (double)sd.tail_len / 1024.0);
+        if (slot_ok) {
+            fvp_save_slot_free(&sd);
+        }
+        free(buf);
+        memset(&sd, 0, sizeof sd);
+    } else {
+        fvp_logf("load: slot %d file %s cannot be read (restarting anyway)",
+                 slot, w2u(path, u8, sizeof(u8)));
+    }
+
+    /* 1. 场景复位（exe 0x438D20 + gfx 复位）：prim/motion/文本窗口全清 */
+    for (i = 0; i < GFX_PRIM_MAX; ++i) {
+        (void)gfx_prim_reset(gfx, i);
+    }
+    gfx_motion_clear(gfx);
+    for (i = 0; i < GFX_TEXT_MAX; ++i) {
+        gfx_text_clear(gfx, i);
+    }
+    (void)gfx_fill_canvas(gfx, 0, 0, 0, 255);
+
+    /* 2. 保留 globals / globals_set / flags，重建 VM（脚本引擎复位） */
+    gcopy = (FvpValue *)malloc(sizeof(FvpValue) * (size_t)FVP_GLOBAL_COUNT);
+    gcset = (unsigned char *)malloc((size_t)FVP_GLOBAL_COUNT);
+    gflags = (unsigned char *)malloc((size_t)FVP_FLAG_BYTES);
+    if (gcopy != NULL) {
+        memcpy(gcopy, vm->globals, sizeof(FvpValue) * (size_t)FVP_GLOBAL_COUNT);
+    }
+    if (gcset != NULL) {
+        memcpy(gcset, vm->globals_set, (size_t)FVP_GLOBAL_COUNT);
+    }
+    if (gflags != NULL) {
+        memcpy(gflags, vm->flags, (size_t)FVP_FLAG_BYTES);
+    }
+    fvp_vm_free(vm);
+    memset(vm, 0, sizeof *vm);
+    fvp_vm_init(vm, hcb, 1);
+    fvp_vm_set_stall_limit(vm, (uint64_t)opts->stall_after);
+    vm->timeline_on = opts->timeline;
+    vm->threads_on = opts->threads;
+    if (gcopy != NULL) {
+        memcpy(vm->globals, gcopy, sizeof(FvpValue) * (size_t)FVP_GLOBAL_COUNT);
+    }
+    if (gcset != NULL) {
+        memcpy(vm->globals_set, gcset, (size_t)FVP_GLOBAL_COUNT);
+    }
+    if (gflags != NULL) {
+        memcpy(vm->flags, gflags, (size_t)FVP_FLAG_BYTES);
+    }
+    free(gcopy);
+    free(gcset);
+    free(gflags);
+    if (gfx != NULL) {
+        fvp_vm_attach_gfx(vm, gfx);
+    }
+    if (snd != NULL) {
+        fvp_vm_attach_snd(vm, snd);
+    }
+    fvp_vm_start(vm);
+    fvp_logf("load: scene reset (prims/motion/text) + script engine restarted "
+             "at entry pc=0x%x (globals/flags kept)",
+             (unsigned)hcb->main_start);
+    return slot_ok;
+}
 
 static unsigned char *read_file_w(const wchar_t *path, size_t *len_out)
 {
@@ -4095,9 +4235,15 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 int lreq = fvp_vm_take_load_request(&vm);
 
                 if (lreq >= 0) {
-                    fvp_logf("load: slot %d requested; snapshot restore is not "
-                             "implemented yet (staying in the current scene)",
-                             lreq);
+                    if (opts.load_restart) {
+                        (void)shell_load_restart(&vm, &hcb, gfx, snd, &opts,
+                                                 lreq);
+                    } else {
+                        fvp_logf("load: slot %d requested; snapshot restore is "
+                                 "not implemented yet (staying in the current "
+                                 "scene; pass --load-restart to restart)",
+                                 lreq);
+                    }
                     load_requests += 1;
                 }
             }

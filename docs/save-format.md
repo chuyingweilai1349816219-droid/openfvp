@@ -947,3 +947,20 @@ python fvp/tools/tailstat.py <save 目录> [--thumb 200x113]
 * 顺带厘清：**槽文件装的是"引擎快照"（时间戳/字符串/缩略图/文本窗口/图元/动画等），
   `save.bin` 才是全局变量与 flag**；两者是分开的文件，`Load(slot)` 主要作用在
   引擎快照上，脚本靠启动时已灌入的 `save.bin` 全局变量选场景。
+
+### step-1 已落地：`--load-restart`（2026-11-26）
+
+按上面的复位序列做了第一版（默认关，`--load-restart` 打开）：
+
+1. 读槽文件（`fvp_save_slot_path` 拼 `<game_dir>/save/sNNN.bin`，
+   `fvp_save_slot_load` 解析章节/对话行长度、缩略图尺寸、尾段长度）；
+2. 场景复位：`gfx_prim_reset`(4096 个) + `gfx_motion_clear` + `gfx_text_clear`(32 层)
+   + 画布清黑 —— 对应 exe 的 `0x438D20` 场景/图元树复位；
+3. 重建 VM：`fvp_vm_free` → `fvp_vm_init` → 回填 globals / globals_set / flags
+   → 重新 attach gfx/snd → `fvp_vm_start` —— 对应 exe 的 `0x441350` 脚本引擎复位
+   + 线程 `+0xFD9` 从入口重跑。
+
+门禁 `tests/verify_load_restart.py`：槽 485 → 解析出 thumb 200×113 / tail 584.9 KB、
+场景复位、`restarted at entry pc=0x22f48`、重启后脚本继续跑（总 40952 步、有文本行）、
+结束帧非黑（mean 38.4）。**还没做**：槽尾引擎快照的逐段应用（文本窗口/图元/动画），
+那部分要等 §4"未解"里的字段语义逆清。

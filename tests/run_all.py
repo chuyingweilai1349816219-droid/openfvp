@@ -683,6 +683,15 @@ def build_steps(args):
                            '(iroseka 2000/2400/2560 total 4000; '
                            'hoshimemo 1000/1400/1560 total 3000)'))
 
+    # 6.496862 读档续玩 step-1（--load-restart：读槽 + 场景复位 + 脚本重启）
+    vlr = os.path.join(HERE, 'verify_load_restart.py')
+    steps.append(Step('verify_load_restart.py', [PY, '-X', 'utf8', vlr], 300,
+                      skip_reason=None,
+                      note='load restart step 1: reads slot file (thumb '
+                           '200x113), resets scene (prims/motion/text), '
+                           'restarts the script engine at entry keeping '
+                           'globals/flags; script keeps running after restart'))
+
     # 6.496863 存档/读档引擎侧流程（Load(40)/SaveWrite(96)）
     vlf = os.path.join(HERE, 'verify_exe_load_flow.py')
     steps.append(Step('verify_exe_load_flow.py', [PY, '-X', 'utf8', vlf], 300,

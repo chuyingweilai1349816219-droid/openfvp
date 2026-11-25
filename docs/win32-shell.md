@@ -93,6 +93,7 @@ fvp.exe --game <游戏目录> [选项]
 | `--title-no-hover` | 标题菜单完全不按鼠标位置算 hover（截图门禁用："静态标题帧"不再随宿主鼠标停在菜单上而变成 hover 变体） |
 | `--title-bg-anim` | 标题背景按脚本动画：**星空** 2000→1000/40000 ms（左上锚，55 fps）；**五彩斑斓** 四层 path A/B 缩放+旋转/25000 ms（1/4 分辨率合成，45-52 fps）。默认关；`--title-anim` 不会自动打开 |
 | `--title-bg-anim` | 标题背景按脚本做缩放动画：目前只实现**星空**（`MotionMoveS2 2000→1000` per-mille / **40000 ms**、左上锚、无旋转），54 fps 级（带缩放缓存）；**五彩斑斓未实现**（日志明确写 static）。默认关，`--title-anim` 不会自动打开 |
+| `--load-restart` | `Load(slot)` 时按 exe 的读档复位序列做 step-1：读槽文件（解析章节/对话行长度、缩略图、尾段长度）→ 场景复位（prim/motion/文本窗口）→ 重建 VM 并从入口重启，**保留 globals/flags**；槽尾快照里未逆清的段暂不应用。默认关（不开时行为与之前相同） |
 | `--shot-every MS` / `--shot-div N` / `--shot-prefix P` | 一次运行里每 MS 毫秒抓一张降采样 N 倍的 BMP（`P-0000.bmp`……），用来拼动画 demo/视频；不是像素基线的一部分 |
 | `--shot-at N` | 跑到 N 毫秒时存一张截图（开场/淡入的中间态；结尾不再覆盖它） |
 | `--title-menu` | 启动后先显示**引擎侧标题菜单**（`New Game/Continue/Album/Option/Exit`），点 `New Game`（或回车）才开始跑脚本，`Exit` 关窗口。默认关 —— 关时行为与之前完全一致。菜单几何按原版实测（右对齐 x=1769、行距 100、字号 56），见 [`docs/title-menu.md`](title-menu.md)。汇总多一行 `title menu enabled (profile=..., align=..., continue=..., picked ...)`；`continue=` 由 `<game_dir>\save\sNNN.bin` 的个数决定 |
