@@ -68,9 +68,10 @@
 | 命令表 argc 实测对账 | 两部作品 **825 / 865** 个可判定调用点，**82 / 83** 条命令的 argc 被证实；仅 3 条已知表达式临时值异常（两作完全相同） |
 | 抗锯齿 vs 原版协议（同字同字号） | 「日」@32：**54 / 1224 ≈ 4.4%** 的像素是原版根本不会产生的中间值 |
 | `make check` | **32 组**单测全 PASS（新增 `test_titlebg` 503 项） |
-| `tests/run_all.py` | **69 步**（本轮加 `verify_opening_anim.py` / `verify_opening_render.py` 后全 PASS；缺游戏数据时相关步 SKIP） |
+| `tests/run_all.py` | **70 步**（本轮加 `verify_opening_anim.py` / `verify_opening_render.py` 后全 PASS；缺游戏数据时相关步 SKIP） |
 | `scripts/check-docs.py` | PASS：**33 篇**文档，引用路径 0 缺失，DeepSeek 声明齐全 |
 | 健壮性 | 27,300 次 HCB 变异（0 崩溃）、339 个资产畸形用例、43 个 VM 边界用例 |
+| 脚本开关（global3 / global236 / global232） | `global3` = 体验版布局开关：两作都只有 1 个写点且写 0 ⇒ 隐藏 1521/1522/1528/1529、trial 徽标、−81 px 分支都**不可达**；`global236`（五彩）/`global232`（星空）= 跳过动画开关（写 0/1 都有，读点 25/24）。`ref/script-globals.json` + 门禁 `verify_script_globals.py` |
 | RS 分支变换 / 旋转角单位 | exe 0x42B21E：`final = T2 + S·(R·(图头−OP) + prim + accum)`，`T2 = 画面中心`；**渲染 1 角度单位 = 0.05°**（`a/3600·π`，7200 一圈；旧文档的 0.1° 已修正）。`ref/exe-rs-transform.json` + 门禁 `verify_exe_rs_transform.py` |
 | 星空标题背景缩放（已接画面） | `MotionMoveS2 2000→1000` / **40000 ms**：中途 vs 静态 mean_abs 48.09、**40 s 后与静态帧逐字节 0 差**；逐帧分数映射双线性 **52-59 fps**、相邻帧差 min 0.386/median 0.917/max 1.587；五彩斑斓（4 层 + 旋转）仍未实现 |
 | 标题背景缩放/旋转（脚本参数，未接画面） | 五彩 4 层 258..261：缩放 1300/1600/2500/4000→900/800/800/800、旋转 15/25/55/125°→0°（25000 ms、mode 3），OP=(1200,675)；星空只有 258：2000→1000、40000 ms、**不旋转**。HZC1 头无旋转信息 |
@@ -88,7 +89,7 @@ mingw32-make -f Makefile all headless check
 # 核心三道
 python tests/compare.py --run                     # 逐字节
 powershell -ExecutionPolicy Bypass -File tests/verify_gfx.ps1 -SkipDump   # 像素
-python tests/run_all.py                           # 全部 69 步
+python tests/run_all.py                           # 全部 70 步
 
 # 原版相关（缺语料/缺 exe 时自己 SKIP 并返回 0）
 python tests/verify_exe_gdi_params.py             # 从 exe 静态提取的绘制协议

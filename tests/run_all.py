@@ -683,6 +683,14 @@ def build_steps(args):
                            '(iroseka 2000/2400/2560 total 4000; '
                            'hoshimemo 1000/1400/1560 total 3000)'))
 
+    # 6.496864 脚本全局开关（global3 体验版布局 / global236/232 跳过动画）
+    vg = os.path.join(HERE, 'verify_script_globals.py')
+    steps.append(Step('verify_script_globals.py', [PY, '-X', 'utf8', vg], 300,
+                      skip_reason=None,
+                      note='script globals frozen: g3 = trial-layout switch '
+                           '(single writer = 0 in retail scripts -> branch '
+                           'unreachable), g236/g232 = skip-animation switch'))
+
     # 6.496865 RS 分支变换 + 旋转角单位（exe 静态分析 → 基线 → 源码一致）
     vrs = os.path.join(HERE, 'verify_exe_rs_transform.py')
     steps.append(Step('verify_exe_rs_transform.py',

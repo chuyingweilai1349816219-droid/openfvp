@@ -1,0 +1,381 @@
+{
+ "games": {
+  "hoshimemo": {
+   "hcb_sha256": "e23b7958f897392e3535370956b7c9a722c562f0a6d65e91d589cfdd2b741802",
+   "hcb_size": 4618610,
+   "most_written_globals": [
+    {
+     "global": 62,
+     "writes": 950
+    },
+    {
+     "global": 1464,
+     "writes": 78
+    },
+    {
+     "global": 240,
+     "writes": 77
+    },
+    {
+     "global": 912,
+     "writes": 67
+    },
+    {
+     "global": 7,
+     "writes": 66
+    },
+    {
+     "global": 1443,
+     "writes": 66
+    },
+    {
+     "global": 1438,
+     "writes": 65
+    },
+    {
+     "global": 1440,
+     "writes": 65
+    },
+    {
+     "global": 1441,
+     "writes": 65
+    },
+    {
+     "global": 1442,
+     "writes": 65
+    }
+   ],
+   "skip_animation": {
+    "first_reads": [
+     {
+      "pc": "0x00037a05",
+      "region": "other"
+     },
+     {
+      "pc": "0x0006fd2a",
+      "region": "title"
+     },
+     {
+      "pc": "0x0006fd8a",
+      "region": "title"
+     },
+     {
+      "pc": "0x0006fd9a",
+      "region": "title"
+     },
+     {
+      "pc": "0x0006fdbf",
+      "region": "title"
+     },
+     {
+      "pc": "0x0006fde6",
+      "region": "title"
+     },
+     {
+      "pc": "0x0006fe3a",
+      "region": "title"
+     },
+     {
+      "pc": "0x0006fe4d",
+      "region": "title"
+     }
+    ],
+    "global": 232,
+    "read_count": 24,
+    "reads_in_title": 23,
+    "roles": [
+     "跳过动画开关：标题进场/开场大量分支读它（==1 时直接到终态）",
+     "脚本里既有置 1 也有置 0 的写点（0,1）"
+    ],
+    "write_count": 7,
+    "writes": [
+     {
+      "pc": "0x0003706f",
+      "region": "other",
+      "value": 0,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x000375d1",
+      "region": "other",
+      "value": 1,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x00037630",
+      "region": "other",
+      "value": 1,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x0006fcf5",
+      "region": "title",
+      "value": 0,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x00070272",
+      "region": "title",
+      "value": 0,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x000707e9",
+      "region": "title",
+      "value": 0,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x0007091b",
+      "region": "title",
+      "value": 1,
+      "value_literal": "pushint8"
+     }
+    ]
+   },
+   "title_region": [
+    "0x0006f000",
+    "0x00073000"
+   ],
+   "trial_layout": {
+    "conclusion": "唯一的写入把 g3 写成 0，脚本里没有任何路径把它置 1；所以\"体验版布局\"分支在零售脚本里不可达（引擎是否从配置/存档写它未确认，原版程序里没找到写点）",
+    "first_reads": [
+     {
+      "pc": "0x00016232",
+      "region": "other"
+     },
+     {
+      "pc": "0x00016676",
+      "region": "other"
+     },
+     {
+      "pc": "0x00036ad7",
+      "region": "other"
+     },
+     {
+      "pc": "0x00036f24",
+      "region": "other"
+     },
+     {
+      "pc": "0x0006f369",
+      "region": "title"
+     },
+     {
+      "pc": "0x0006f9ce",
+      "region": "title"
+     },
+     {
+      "pc": "0x0006fadc",
+      "region": "title"
+     },
+     {
+      "pc": "0x0006fcb2",
+      "region": "title"
+     }
+    ],
+    "global": 3,
+    "read_count": 20,
+    "reads_in_title": 12,
+    "roles": [
+     "体验版/正式版布局开关：==1 时显示 title_trial(277)、菜单整体上移 48 px、1522/1529 的 MotionMove 走 −81 px 分支",
+     "零售脚本里写点唯一且值固定（0）"
+    ],
+    "write_count": 1,
+    "writes": [
+     {
+      "pc": "0x00036ad4",
+      "region": "other",
+      "value": 0,
+      "value_literal": "pushint8"
+     }
+    ]
+   }
+  },
+  "iroseka": {
+   "hcb_sha256": "8c362ff7178628bef90f0d7bf35a48be5ee22f9f762d4c76e86799f6f063c0ff",
+   "hcb_size": 4275282,
+   "most_written_globals": [
+    {
+     "global": 62,
+     "writes": 467
+    },
+    {
+     "global": 1406,
+     "writes": 87
+    },
+    {
+     "global": 244,
+     "writes": 79
+    },
+    {
+     "global": 862,
+     "writes": 75
+    },
+    {
+     "global": 1380,
+     "writes": 65
+    },
+    {
+     "global": 1382,
+     "writes": 65
+    },
+    {
+     "global": 1383,
+     "writes": 65
+    },
+    {
+     "global": 1384,
+     "writes": 65
+    },
+    {
+     "global": 1385,
+     "writes": 65
+    },
+    {
+     "global": 1381,
+     "writes": 64
+    }
+   ],
+   "skip_animation": {
+    "first_reads": [
+     {
+      "pc": "0x00023df0",
+      "region": "other"
+     },
+     {
+      "pc": "0x000590dc",
+      "region": "title"
+     },
+     {
+      "pc": "0x000591e1",
+      "region": "title"
+     },
+     {
+      "pc": "0x000591f1",
+      "region": "title"
+     },
+     {
+      "pc": "0x00059216",
+      "region": "title"
+     },
+     {
+      "pc": "0x0005923d",
+      "region": "title"
+     },
+     {
+      "pc": "0x00059291",
+      "region": "title"
+     },
+     {
+      "pc": "0x000592a4",
+      "region": "title"
+     }
+    ],
+    "global": 236,
+    "read_count": 25,
+    "reads_in_title": 23,
+    "roles": [
+     "跳过动画开关：标题进场/开场大量分支读它（==1 时直接到终态）",
+     "脚本里既有置 1 也有置 0 的写点（0,1）"
+    ],
+    "write_count": 6,
+    "writes": [
+     {
+      "pc": "0x0002342a",
+      "region": "other",
+      "value": 0,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x000239b2",
+      "region": "other",
+      "value": 1,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x000590a7",
+      "region": "title",
+      "value": 0,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x00059721",
+      "region": "title",
+      "value": 0,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x00059c83",
+      "region": "title",
+      "value": 0,
+      "value_literal": "pushint8"
+     },
+     {
+      "pc": "0x00059ecd",
+      "region": "title",
+      "value": 1,
+      "value_literal": "pushint8"
+     }
+    ]
+   },
+   "title_region": [
+    "0x00058000",
+    "0x0005b000"
+   ],
+   "trial_layout": {
+    "conclusion": "唯一的写入把 g3 写成 0，脚本里没有任何路径把它置 1；所以\"体验版布局\"分支在零售脚本里不可达（引擎是否从配置/存档写它未确认，原版程序里没找到写点）",
+    "first_reads": [
+     {
+      "pc": "0x00022f80",
+      "region": "other"
+     },
+     {
+      "pc": "0x0005841f",
+      "region": "title"
+     },
+     {
+      "pc": "0x000587bb",
+      "region": "title"
+     },
+     {
+      "pc": "0x00058b7f",
+      "region": "title"
+     },
+     {
+      "pc": "0x00058d8c",
+      "region": "title"
+     },
+     {
+      "pc": "0x00058e1e",
+      "region": "title"
+     },
+     {
+      "pc": "0x00059068",
+      "region": "title"
+     },
+     {
+      "pc": "0x0005908a",
+      "region": "title"
+     }
+    ],
+    "global": 3,
+    "read_count": 27,
+    "reads_in_title": 22,
+    "roles": [
+     "体验版/正式版布局开关：==1 时显示 title_trial(277)、菜单整体上移 48 px、1522/1529 的 MotionMove 走 −81 px 分支",
+     "零售脚本里写点唯一且值固定（0）"
+    ],
+    "write_count": 1,
+    "writes": [
+     {
+      "pc": "0x00022f7d",
+      "region": "other",
+      "value": 0,
+      "value_literal": "pushint8"
+     }
+    ]
+   }
+  }
+ },
+ "note": "标题/开场相关脚本全局变量的读写点（global3 = 体验版布局开关，global236/232 = 跳过动画开关）；由 scripts/extract-script-globals.py 生成，只含 pc 与字面量，不含游戏数据本体"
+}
