@@ -115,6 +115,8 @@ typedef struct Options {
      * 验证"请求 -> 外壳执行"这条链路（-1 = 不发）。 */
     int no_input; /* --no-input：忽略真实鼠标/键盘事件（门禁截图要确定性） */
     wchar_t title_font[PATH_CAP]; /* --title-font：标题菜单专用字库 */
+    int pick_seed;  /* --pick N：启动就把第 N 项当作已选中（门禁/截图用） */
+    int title_fade_ms; /* 点 New Game 后的白场过渡时长（0 = 直接进，默认 800） */
     int preview_slot; /* --preview-slot N：存档列表里预选第 N 号槽并显示预览 */
     int opening;    /* --opening：启动先跑开场序列（logo 淡入→白场→标题） */
     double shot_at_ms; /* --shot-at N：跑到 N 毫秒时存一张截图（0 = 不存） */
@@ -512,6 +514,8 @@ static void defaults(Options *o)
     o->title_no_bg = 0;
     o->opening = 0;
     o->preview_slot = -1;
+    o->pick_seed = -1;
+    o->title_fade_ms = 800;
     o->title_font[0] = L'\0';
     o->no_input = 0;
     o->shot_at_ms = 0.0;
@@ -671,6 +675,10 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         } else if (wcscmp(a, L"--save-preview-every") == 0) {
             NEED_VALUE();
             o->save_preview_every = wcstod(v, NULL);
+        } else if (wcscmp(a, L"--pick") == 0 && i + 1 < argc) {
+            o->pick_seed = _wtoi(argv[++i]);
+        } else if (wcscmp(a, L"--title-fade") == 0 && i + 1 < argc) {
+            o->title_fade_ms = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--title-font") == 0 &&
                    i + 1 < argc) {
             wcsncpy(o->title_font, argv[++i], PATH_CAP - 1);
@@ -2141,6 +2149,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     int opening_logo_loaded = 0;
     int shot_taken = 0;
     int save_preview_ok = 0;
+    int title_fade_active = 0;  /* New Game 后的白场过渡中 */
+    double title_fade_elapsed = 0.0;
+    int title_fade_started_vm = 0;
     char save_preview_name[64];
     double opening_ms = 0.0;
     double title_shown_at = 0.0;
@@ -2846,7 +2857,12 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                                      gfx);
                 title_hover = title.hover;
             }
-            if (click_edges > 0) {
+            if (opts.pick_seed >= 0) {
+                /* 门禁/截图：把第 N 项当成"已经点了"（只发一次） */
+                pick = opts.pick_seed;
+                opts.pick_seed = -1;
+            }
+            if (pick < 0 && click_edges > 0) {
                 if (title_profile != NULL) {
                     pick = title_hover;
                 } else {
@@ -2875,6 +2891,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     title_picked = -1;
                     fvp_logf("title: continue -> save list (%d slot(s))",
                              save_list.count);
+                } else if (opts.title_fade_ms > 0) {
+                    /* 原版点 New Game 后是白屏过渡再进 OP/正文：先淡到白，
+                     * 白场峰值处启动脚本，再淡出。 */
+                    title_fade_active = 1;
+                    title_fade_elapsed = 0.0;
+                    title_fade_started_vm = 0;
+                    fvp_logf("title: start transition (%d ms, white)",
+                             opts.title_fade_ms);
                 } else {
                     fvp_vm_start(&vm);
                     fvp_logf("vm: started at pc=0x%x (from title menu)",
@@ -3110,6 +3134,40 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                          opening_ms, title_active ? "on" : "off (script)");
             }
         }
+        /* ---- New Game 的白场过渡 ---- */
+        if (title_fade_active) {
+            double total = (double)opts.title_fade_ms;
+            double half = total / 2.0;
+            double p;
+
+            title_fade_elapsed += frame_dt * 1000.0;
+            if (!title_fade_started_vm && title_fade_elapsed >= half) {
+                title_fade_started_vm = 1;
+                fvp_vm_start(&vm);
+                fvp_logf("vm: started at pc=0x%x (white transition peak)",
+                         hcb.main_start);
+                fvp_logf("title: start transition -> vm started at %.0f ms",
+                         title_fade_elapsed);
+            }
+            p = title_fade_elapsed / half;
+            if (p > 1.0) {
+                p = (total - title_fade_elapsed) / half;
+            }
+            if (p < 0.0) {
+                p = 0.0;
+            }
+            if (p > 1.0) {
+                p = 1.0;
+            }
+            if (gfx != NULL && canvas != NULL) {
+                gfx_fill_canvas(gfx, 255, 255, 255, (int)(p * 255.0));
+            }
+            if (title_fade_elapsed >= total) {
+                title_fade_active = 0;
+                fvp_logf("title: start transition done (%.0f ms)",
+                         title_fade_elapsed);
+            }
+        }
         /* ---- 存档/读档请求（Load 40 / SaveWrite 96）----
          * VM 只记录"请求 + 槽号"，真正读写文件在这一侧做：
          *   SaveWrite → 用 --save-template 当模板 + 当前画布缩略图 + 脚本暂存的
@@ -3306,7 +3364,22 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         gfx_render(gfx);
         /* 截图也要带上引擎侧 UI 覆盖层（和屏幕上看到的一致）。 */
         if (title_active) {
-            if (save_list_active) {
+            if (title_fade_active) {
+                double half = (double)opts.title_fade_ms / 2.0;
+                double p = (half > 0.0) ? title_fade_elapsed / half : 1.0;
+
+                if (p > 1.0) {
+                    p = ((double)opts.title_fade_ms - title_fade_elapsed) /
+                        half;
+                }
+                if (p < 0.0) {
+                    p = 0.0;
+                }
+                if (p > 1.0) {
+                    p = 1.0;
+                }
+                gfx_fill_canvas(gfx, 255, 255, 255, (int)(p * 255.0));
+            } else if (save_list_active) {
                 int li;
 
                 /* 预览图与台词也要出现在截图里（和帧循环里同一套画法） */

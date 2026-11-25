@@ -442,6 +442,24 @@ iroseka 的菜单是深蓝衬线字。用 `scripts/identify-title-font.py` 把�
 复现：`python scripts/identify-title-font.py --check-frame out/iro-serif.bmp`
 （`--check-frame` 会把我们自己渲染的那一帧与原版做同样的相关比对）。
 
+### 4.13 New Game 的白场过渡（`--title-fade`，默认 800 ms）
+
+原版点 New Game 后是"白屏过渡再进正文/OP"（`docs/original-verification.md` §6）。
+现在外壳这么做：
+
+1. 选中 New Game → 白场 alpha 0→255（前半段，默认 400 ms）；
+2. **白场峰值处**才 `fvp_vm_start()`（原版也是遮住画面时才切换）；
+3. 后半段 alpha 255→0，露出脚本第一帧。
+
+实现只是一个帧内状态（`title_fade_active` + 已过毫秒），白场用 `gfx_fill_canvas()`；
+`--title-fade N` 可改时长（0 = 直接进，用于 A/B）；`--pick N` 是截图/门禁钩子，
+把第 N 项当成"已被选中"。
+
+实测（iroseka，`--pick 0 --shot-at 450/1600`）：450 ms 帧均值 **223**（接近全白）、
+1600 ms 帧均值 **0.4**（已是脚本画面）；日志给出
+`start transition -> vm started at 400 ms` / `start transition done (800 ms)`。
+门禁对这两点都有断言（白场峰值亮度 + 脚本确实在过渡中启动）。
+
 ### 4.1 还差什么
 
 1. **主标题背景：两作都已接上**（见 §4.7）——

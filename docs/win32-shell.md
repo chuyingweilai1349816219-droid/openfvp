@@ -80,6 +80,8 @@ fvp.exe --game <游戏目录> [选项]
 | `--debug-load-request N` | 调试钩子：发一个 `Load(N)` 请求（目前只记日志，快照恢复未实现） |
 | `--title-font <图集>` | 标题菜单文字用的字库（如 Palatino Bold 61 的
   `bin/gfx-font-61.bin`）；不传则用内建位图字体 |
+| `--title-fade N` | 点 New Game 后的白场过渡时长（ms，默认 800；0 = 直接进） |
+| `--pick N` | 把标题菜单第 N 项当成"已被选中"（截图/门禁用） |
 | `--preview-slot N` | 存档列表预选第 N 号槽并显示预览（槽尾记的背景图 + 台词） |
 | `--no-input` | 忽略真实鼠标/键盘事件：门禁/截图只由程序状态决定（消除偶发） |
 | `--opening` | 启动先跑开场序列（白底 → FAVORITE logo 淡入淡出 → 标题从白色淡入，5.4 s） |

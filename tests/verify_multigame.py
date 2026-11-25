@@ -573,6 +573,48 @@ def stage_opening(shell, games, check):
               'logo visible @1500 ms (%d dark samples in the logo box)'
               % shots[1500][1])
     check('opening: finished' in log, 'opening reports completion')
+
+    # New Game 的白场过渡：淡到白 → 白场峰值启动脚本 → 淡出
+    moments = [(450, 'white peak'), (1600, 'script running')]
+    means = {}
+    for ms, tag in moments:
+        shot = os.path.join(OUT_DIR, 'mg-%s-start-%d.bmp' % (name, ms))
+        log_path = os.path.join(OUT_DIR, 'mg-%s-start-%d.log' % (name, ms))
+        for p2 in (shot, log_path):
+            if os.path.isfile(p2):
+                os.remove(p2)
+        rc, lg = run_shell_frame(shell, g['dir'],
+                                 os.path.basename(g['script']), 3, shot,
+                                 log_path,
+                                 extra=['--title-menu', '--pick', '0',
+                                        '--shot-at', str(ms)])
+        check(rc == 0, 'start transition run @%d ms exit 0 (got %s)'
+              % (ms, rc))
+        img = read_bmp32(shot) if os.path.isfile(shot) else None
+        if img is not None:
+            rows = img[2]
+            total = 0
+            lum = 0
+            for yy in range(0, 1080, 16):
+                row = rows[yy]
+                for xx in range(0, 1920, 16):
+                    lum += row[xx * 4] + row[xx * 4 + 1] + row[xx * 4 + 2]
+                    total += 1
+            means[ms] = lum / (3.0 * total)
+        if ms == 450:
+            check('title: start transition (800 ms, white)' in lg,
+                  'start transition logged')
+            check(means.get(450, 0) > 200.0,
+                  'frame is near white at the peak (mean %.0f)'
+                  % means.get(450, -1))
+        else:
+            check('vm: started at pc=0x' in lg,
+                  'script started during the transition (%s)'
+                  % ('yes' if 'vm: started at pc=0x' in lg else 'no'))
+            check(means.get(1600, 999) < 60.0,
+                  'frame left the white peak and shows the script (mean %.0f)'
+                  % means.get(1600, -1))
+
     print('')
 
 
