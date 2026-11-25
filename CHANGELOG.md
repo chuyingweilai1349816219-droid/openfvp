@@ -53,6 +53,18 @@
 
 ### 新增
 
+- **⑤ 三级音量链抽成纯函数 + 40 项单测**
+  - 新增 `float fvp_snd_gain_calc(slot_vol, master_vol, type_vol, silent)`：
+    有效增益 = 槽/100 × 主/100 × 类型/100，夹到 [0,1]，silent 恒 0
+  - `syscall.c` 的 `fvp_snd_gain()` 改为"取三层当前值 → 调纯函数"，逻辑不再藏在
+    静态函数里；三层音量改动后仍会 `fvp_snd_refresh_gains()` 推到正在播放的通道
+  - 新增 `tests/test_snd_gain.c` **40 项**：默认 1.0、单层减半、三层相乘（0.125/0.1）、
+    任一层 0 → 0、静音优先、越界夹紧、两层单调性扫描、分档语义；已加入 make check
+    （单测数 28 → 29）
+  - docs/04-audio.md 新增"三级音量"一节，待办里的音量体系一项标为完成
+
+### 新增（UI）
+
 - **② 游戏内菜单（引擎侧 UI）：`src/gamemenu.c` + 50 项单测 + 门禁**
   - 原版没有画菜单的脚本命令（只有 MenuMessSkip / TitleMenu），游戏内菜单由 exe 自己画，
     所以这里与标题菜单一样归外壳实现

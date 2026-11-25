@@ -49,10 +49,22 @@ def find_make():
 MAKE = find_make()
 
 
-def run(argv, timeout=1800):
+def run(argv, timeout=1800, env=None):
     proc = subprocess.run(argv, stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT, timeout=timeout)
+                          stderr=subprocess.STDOUT, timeout=timeout,
+                          env=env)
     return proc.returncode, proc.stdout.decode('utf-8', 'replace')
+
+
+def make_env():
+    """把工具链目录放到 PATH 前面：Makefile 用 `cc`，run_all 的 PATH 里没有它。"""
+    env = os.environ.copy()
+    if _hb is not None:
+        cc = _hb.find_cc()
+        if cc:
+            bindir = os.path.dirname(cc[0])
+            env['PATH'] = bindir + os.pathsep + env.get('PATH', '')
+    return env
 
 
 def bmp_stats(path):
@@ -98,7 +110,8 @@ def main():
     if _hb is not None and _hb.find_cc() is None:
         print('verify_headless: SKIP (gcc unavailable)')
         return 0
-    rc, out = run([MAKE, '-f', os.path.join(FVP, 'Makefile'), 'headless'])
+    rc, out = run([MAKE, '-f', os.path.join(FVP, 'Makefile'), 'headless'],
+                  env=make_env())
     check(rc == 0, 'make headless exit 0 (got %s)' % rc)
     exe = os.path.join(FVP, 'bin', 'fvp-headless.exe')
     check(os.path.isfile(exe), 'bin/fvp-headless.exe exists')

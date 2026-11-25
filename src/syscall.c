@@ -764,23 +764,37 @@ static int fvp_snd_chan_effective(const FvpSndBridge *b, const FvpSndSlot *sl)
     return fvp_snd_volume_configured(b) ? sl->volume : 100;
 }
 
-static float fvp_snd_gain(const FvpSndBridge *b, const FvpSndSlot *sl)
+float fvp_snd_gain_calc(int slot_vol, int master_vol, int type_vol, int silent)
 {
     double g;
+
+    if (silent) {
+        return 0.0f;
+    }
+    g = ((double)slot_vol / 100.0) * ((double)master_vol / 100.0) *
+        ((double)type_vol / 100.0);
+    if (g < 0.0) {
+        g = 0.0;
+    }
+    if (g > 1.0) {
+        g = 1.0;
+    }
+    return (float)g;
+}
+
+static float fvp_snd_gain(const FvpSndBridge *b, const FvpSndSlot *sl)
+{
+    int type_vol;
+
     if (b == NULL || sl == NULL) {
         return 0.0f;
     }
-    g = (double)fvp_snd_chan_effective(b, sl) / 100.0;
-    g *= (double)fvp_snd_master_effective(b) / 100.0;
-    if (sl->type >= 0 && sl->type < FVP_SND_TYPES) {
-        g *= (double)fvp_snd_type_effective(b, sl->type) / 100.0;
-    }
-    if (sl->silent) {
-        g = 0.0;
-    }
-    if (g < 0.0) g = 0.0;
-    if (g > 1.0) g = 1.0;
-    return (float)g;
+    type_vol = (sl->type >= 0 && sl->type < FVP_SND_TYPES)
+                   ? fvp_snd_type_effective(b, sl->type)
+                   : 100;
+    return fvp_snd_gain_calc(fvp_snd_chan_effective(b, sl),
+                             fvp_snd_master_effective(b), type_vol,
+                             sl->silent);
 }
 
 static void fvp_snd_refresh_gains(FvpSndBridge *b)

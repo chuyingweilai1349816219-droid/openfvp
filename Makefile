@@ -74,6 +74,9 @@ bin/test_platform$(EXE): tests/test_platform.c src/platform/portable/platform_po
 	$(CC) $(CFLAGS) -o $@ tests/test_platform.c src/platform/portable/platform_portable.c $(LDFLAGS)
 bin/test_gamemenu$(EXE): tests/test_gamemenu.c src/gamemenu.c src/gamemenu.h | bin
 	$(CC) $(CFLAGS) -o $@ tests/test_gamemenu.c src/gamemenu.c $(LDFLAGS)
+bin/test_snd_gain$(EXE): tests/test_snd_gain.c src/syscall.c src/vm.h $(GFX_OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_snd_gain.c src/syscall.c src/fvp.c src/encoding.c src/hcb.c src/vm.c src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c src/timer.c src/history.c src/gamemenu.c $(LDFLAGS) -lm
+
 
 
 
@@ -92,7 +95,7 @@ src:
 	-mkdir src
 
 clean:
-	-rm -f $(OBJ) $(LIB_OBJ) $(BIN) $(LIB) $(HEADLESS_BIN) bin/test_snd$(EXE) bin/test_snd_fade$(EXE) bin/test_platform$(EXE) bin/test_gamemenu$(EXE)
+	-rm -f $(OBJ) $(LIB_OBJ) $(BIN) $(LIB) $(HEADLESS_BIN) bin/test_snd_gain$(EXE) bin/test_snd$(EXE) bin/test_snd_fade$(EXE) bin/test_platform$(EXE) bin/test_gamemenu$(EXE)
 
 .PHONY: all lib test clean
 
@@ -598,13 +601,14 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
              $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST) $(TITLEMENU_DRAW_TEST) \
-             $(SAVELIST_TEST) $(OPENSEQ_TEST) $(SND_FADE_TEST) $(PLATFORM_TEST) $(GAMEMENU_TEST)
+             $(SAVELIST_TEST) $(OPENSEQ_TEST) $(SND_FADE_TEST) $(PLATFORM_TEST) $(GAMEMENU_TEST) $(SND_GAIN_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \
 	    echo "== $$t =="; $$t; \
 	done; echo "make check: PASS"
 
+SND_GAIN_TEST = bin/test_snd_gain$(EXE)
 GAMEMENU_TEST = bin/test_gamemenu$(EXE)
 PLATFORM_TEST = bin/test_platform$(EXE)
 SND_FADE_TEST = bin/test_snd_fade$(EXE)

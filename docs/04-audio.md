@@ -87,12 +87,39 @@ int   snd_play_pcm(Snd *s, int ch, const int16_t *stereo, int frames,
 暂时看不到 `bgm crossfade` 行；要观察到它需要一段"场景切换"的脚本区间。这条如实记录，
 不假装已经验证过。
 
+## 三级音量（槽 × 主 × 类型）+ 静音（2026-11-25）
+
+命令表里的音量分三层，任意一层都能把声音压下去：
+
+| 层 | 命令 | 存哪 |
+|---|---|---|
+| 槽音量 | `SoundVol(107)` / `AudioVol(6)` | 每槽 `volume`（0..100） |
+| 主音量 | `SoundMasterVol(101)` | 桥 `master_vol` |
+| 类型音量 | `SoundTypeVol(106)` | 桥 `type_vol[10]`（BGM/语音/SE…） |
+| 通道静音 | `AudioSilentOn` / `SoundSilentOn` | 槽 `silent` |
+
+有效增益 = `槽/100 × 主/100 × 类型/100`，夹到 `[0,1]`；`silent` 恒为 0。
+这轮把这条链从 `syscall.c` 的静态函数抽成**纯函数**
+`float fvp_snd_gain_calc(slot_vol, master_vol, type_vol, silent)`，
+`fvp_snd_gain()` 只负责取三层当前值再调它。
+
+**单测 `tests/test_snd_gain.c`（40 项）**：
+
+* 默认 (100,100,100) → 1.0；单层减半 → 0.5；`50×50×50 → 0.125`、`25×80×50 → 0.1`；
+* 任一层为 0 → 0；**静音优先于任何音量**；
+* 越界夹紧：`200 → 1.0`、负数 → 0、两层越界 → 1.0；
+* 单调性：槽音量/主音量各扫 0..100，增益单调不减；
+* 分档语义：主音量影响所有类型，类型音量只影响自己那组。
+
+命令处理里三层音量改动后都会调 `fvp_snd_refresh_gains()`，把新增益推到正在播放的
+通道上（`snd_set_vol`），所以运行中改音量立即生效。
+
 ## 待办
 
 1. **流式解码**：现在是整段解码，一首 BGM 占 22 MB，语音多了会爆内存
 2. **BGM 交叉淡入淡出**：已实现（两条 BGM 通道轮换 + `snd_crossfade`），还差"真实运行里观察到一次切换"的验证样本
 3. **语音与文字同步**：`LipSync`（argc=2）在脚本里只用了 3 次，暂未处理
-4. **音量体系**：`SoundVol` / `SoundTypeVol` / `SoundMasterVol` 三级，需要接进混音
+4. ~~**音量体系**：三级音量已接进混音并有 40 项单测（见上）~~
 5. **平台输出**：Windows 用 waveOut，Android 用 AAudio（48 kHz 原生，正好）
 
 ## 与脚本命令的对应

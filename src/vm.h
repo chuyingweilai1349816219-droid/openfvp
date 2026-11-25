@@ -676,6 +676,11 @@ void fvp_vm_attach_gfx(FvpVM *vm, struct Gfx *gfx);
  * packages the bridge resolves resource names against; they are opened and
  * indexed lazily on the first play (a voice.bin index is ~22k names). */
 void fvp_vm_attach_snd(FvpVM *vm, struct Snd *snd);
+
+/* 音频三级音量（槽 × 主 × 类型）合成的有效增益，0..1；静音恒为 0。
+ * 抽成纯函数便于单测（不依赖音频设备/解码器），syscall 侧按此实现。 */
+float fvp_snd_gain_calc(int slot_vol, int master_vol, int type_vol,
+                        int silent);
 /* BGM 交叉淡入淡出时长（ms，0 = 硬切） */
 void fvp_vm_snd_set_bgm_xfade(FvpVM *vm, int ms);
 int fvp_vm_snd_add_archive(FvpVM *vm, const char *path);
