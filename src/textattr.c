@@ -38,6 +38,7 @@ void fvp_textattr_reset(FvpTextAttr *attrs, int count)
         attrs[i].fmt_pad_b = 0;
         attrs[i].fmt_off_a = 0;
         attrs[i].fmt_off_b = 0;
+        attrs[i].fmt_width_floor = 0;
         attrs[i].func_a = 0;
         attrs[i].func_b = 0;
         attrs[i].func_c = 0;
@@ -201,7 +202,13 @@ int fvp_textattr_set_format(FvpTextAttr *attrs, int count, int idx, int a,
     wrote |= set_in_range(&ta->space_y, b, FVP_TEXT_SPACE_MIN,
                           FVP_TEXT_SPACE_MAX);
     wrote |= set_in_range(&ta->fmt_pad_a, c, 0, FVP_TEXT_FMT_PAD_MAX);
-    wrote |= set_in_range(&ta->fmt_pad_b, d, 0, FVP_TEXT_FMT_PAD_MAX);
+    if (set_in_range(&ta->fmt_pad_b, d, 0, FVP_TEXT_FMT_PAD_MAX) != 0) {
+        /* tw+0x5E8：只有比当前值更大才抬（静态分析 0x43CC9B 的 `jge` 跳过写入） */
+        if (d > ta->fmt_width_floor) {
+            ta->fmt_width_floor = d;
+        }
+        wrote |= 1;
+    }
     wrote |= set_in_range(&ta->fmt_off_a, e, FVP_TEXT_FMT_OFF_MIN,
                           FVP_TEXT_FMT_OFF_MAX);
     wrote |= set_in_range(&ta->fmt_off_b, f, FVP_TEXT_FMT_OFF_MIN,

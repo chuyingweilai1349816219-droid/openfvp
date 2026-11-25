@@ -94,6 +94,11 @@ typedef struct FvpTextAttr {
     int fmt_pad_b;
     int fmt_off_a;
     int fmt_off_b;
+    /* TextFormat(118) arg4 除了写 tw+0x5AC，还会把 tw+0x5E8 **抬到不小于 arg4**
+     * （静态分析 0x43CC9B：`cmp %dx,0x5e8(%ecx)` → 只有更大才写）。
+     * tw+0x5E8 在排版侧是"累计行宽"：文本方法 0x4247C4/0x4247DA 用 `add` 往它上面
+     * 累加，换行判断 0x433006 拿它跟 tw+0x5DC 比；所以 arg4 的语义是**行宽下限**。 */
+    int fmt_width_floor;
     /* TextFunction(119)：tw+0x5A5（0..1）/ 0x5A4（0..2）/ 0x5A6（0..2）三个开关。 */
     int func_a;
     int func_b;

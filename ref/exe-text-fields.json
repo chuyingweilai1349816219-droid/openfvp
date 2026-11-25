@@ -1,0 +1,458 @@
+{
+ "fields": {
+  "0x597": {
+   "covering_reads": [],
+   "name": "TextShadowDist（0..12，经 0x4248B0 写入）",
+   "reads": [],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x4248b0",
+     "in_copy": false,
+     "in_handler": false,
+     "instr": "mov    %al,0x597(%ecx)",
+     "pc": "0x4248b4"
+    },
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %bl,0x597(%esi)",
+     "pc": "0x430fdf"
+    }
+   ]
+  },
+  "0x5a4": {
+   "covering_reads": [],
+   "name": "TextFunction arg2（0..2）",
+   "reads": [],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %bl,0x5a4(%esi)",
+     "pc": "0x430f5c"
+    },
+    {
+     "func": "0x43ccf0",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %dl,0x5a4(%ecx)",
+     "pc": "0x43cd3c"
+    }
+   ]
+  },
+  "0x5a5": {
+   "covering_reads": [],
+   "name": "TextFunction arg1（0..1）",
+   "reads": [],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %bl,0x5a5(%esi)",
+     "pc": "0x430f62"
+    },
+    {
+     "func": "0x43ccf0",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %dl,0x5a5(%ecx)",
+     "pc": "0x43cd24"
+    }
+   ]
+  },
+  "0x5a6": {
+   "covering_reads": [],
+   "name": "TextFunction arg3（0..2）",
+   "reads": [],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %bl,0x5a6(%esi)",
+     "pc": "0x430f68"
+    },
+    {
+     "func": "0x43ccf0",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %al,0x5a6(%ecx)",
+     "pc": "0x43cd56"
+    }
+   ]
+  },
+  "0x5a8": {
+   "covering_reads": [],
+   "name": "TextSpace/TextFormat arg1（-32..32）",
+   "reads": [],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %cx,0x5a8(%esi)",
+     "pc": "0x430f4e"
+    },
+    {
+     "func": "0x43cc10",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %dx,0x5a8(%ecx)",
+     "pc": "0x43cc52"
+    },
+    {
+     "func": "0x43ce10",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %dx,0x5a8(%ecx)",
+     "pc": "0x43ce45"
+    }
+   ]
+  },
+  "0x5aa": {
+   "covering_reads": [],
+   "name": "TextSpace/TextFormat arg2（-32..32）",
+   "reads": [],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %dx,0x5aa(%esi)",
+     "pc": "0x430f84"
+    },
+    {
+     "func": "0x43cc10",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %dx,0x5aa(%ecx)",
+     "pc": "0x43cc6b"
+    },
+    {
+     "func": "0x43ce10",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %ax,0x5aa(%ecx)",
+     "pc": "0x43ce62"
+    }
+   ]
+  },
+  "0x5ac": {
+   "covering_reads": [],
+   "name": "TextFormat arg4（0..64）",
+   "reads": [
+    {
+     "func": "0x430d50",
+     "instr": "mov    0x5ac(%esi),%ax",
+     "pc": "0x430e67"
+    },
+    {
+     "func": "0x433710",
+     "instr": "mov    0x5ac(%esi),%cx",
+     "pc": "0x4337a9"
+    }
+   ],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %ax,0x5ac(%esi)",
+     "pc": "0x430f8d"
+    },
+    {
+     "func": "0x43cc10",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %dx,0x5ac(%ecx)",
+     "pc": "0x43cca5"
+    }
+   ]
+  },
+  "0x5ae": {
+   "covering_reads": [
+    {
+     "covers": [
+      "0x5ac",
+      "0x5ad",
+      "0x5ae",
+      "0x5af"
+     ],
+     "instr": "mov    0x5ac(%esi),%ax",
+     "pc": "0x430e67"
+    },
+    {
+     "covers": [
+      "0x5ac",
+      "0x5ad",
+      "0x5ae",
+      "0x5af"
+     ],
+     "instr": "mov    0x5ac(%esi),%cx",
+     "pc": "0x4337a9"
+    }
+   ],
+   "name": "TextFormat arg3（0..64）",
+   "reads": [],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %cx,0x5ae(%esi)",
+     "pc": "0x430f55"
+    },
+    {
+     "func": "0x43cc10",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %dx,0x5ae(%ecx)",
+     "pc": "0x43cc83"
+    }
+   ]
+  },
+  "0x5b0": {
+   "covering_reads": [],
+   "name": "TextFormat arg6（-16..16）",
+   "reads": [],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %dx,0x5b0(%esi)",
+     "pc": "0x430f94"
+    },
+    {
+     "func": "0x43cc10",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %ax,0x5b0(%ecx)",
+     "pc": "0x43cce3"
+    }
+   ]
+  },
+  "0x5b4": {
+   "covering_reads": [],
+   "name": "TextFormat arg5（-16..16）",
+   "reads": [],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x430ea0",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %ax,0x5b4(%esi)",
+     "pc": "0x430f9b"
+    },
+    {
+     "func": "0x43cc10",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %dx,0x5b4(%ecx)",
+     "pc": "0x43ccc7"
+    }
+   ]
+  },
+  "0x5d7": {
+   "covering_reads": [
+    {
+     "covers": [
+      "0x5d4",
+      "0x5d5",
+      "0x5d6",
+      "0x5d7"
+     ],
+     "instr": "mov    0x5d4(%edi),%al",
+     "pc": "0x42d8ac"
+    },
+    {
+     "covers": [
+      "0x5d5",
+      "0x5d6",
+      "0x5d7",
+      "0x5d8"
+     ],
+     "instr": "mov    0x5d5(%edi),%dl",
+     "pc": "0x42db17"
+    },
+    {
+     "covers": [
+      "0x5d6",
+      "0x5d7",
+      "0x5d8",
+      "0x5d9"
+     ],
+     "instr": "mov    0x5d6(%edi),%cl",
+     "pc": "0x42db4a"
+    },
+    {
+     "covers": [
+      "0x5d5",
+      "0x5d6",
+      "0x5d7",
+      "0x5d8"
+     ],
+     "instr": "mov    0x5d5(%esi),%al",
+     "pc": "0x43115b"
+    }
+   ],
+   "name": "TextSkip（0..3）",
+   "reads": [
+    {
+     "func": "0x42d880",
+     "instr": "mov    0x5d7(%edi),%al",
+     "pc": "0x42db78"
+    },
+    {
+     "func": "0x431040",
+     "instr": "mov    0x5d7(%esi),%cl",
+     "pc": "0x431084"
+    }
+   ],
+   "rmw": [],
+   "writes": [
+    {
+     "func": "0x432290",
+     "in_copy": false,
+     "in_handler": false,
+     "instr": "mov    %bl,0x5d7(%esi)",
+     "pc": "0x432394"
+    },
+    {
+     "func": "0x433850",
+     "in_copy": false,
+     "in_handler": false,
+     "instr": "mov    %al,0x5d7(%edi)",
+     "pc": "0x433a70"
+    },
+    {
+     "func": "0x43cdd0",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %al,0x5d7(%ecx)",
+     "pc": "0x43ce06"
+    }
+   ]
+  },
+  "0x5e8": {
+   "covering_reads": [],
+   "name": "行宽累计（TextFormat arg4 抬下限）",
+   "reads": [
+    {
+     "func": "0x424550",
+     "instr": "movswl 0x5e8(%ecx),%ebp",
+     "pc": "0x42456f"
+    },
+    {
+     "func": "0x42d880",
+     "instr": "mov    0x5e8(%edi),%ax",
+     "pc": "0x42dca7"
+    },
+    {
+     "func": "0x432b60",
+     "instr": "movswl 0x5e8(%esi),%ecx",
+     "pc": "0x433006"
+    },
+    {
+     "func": "0x432b60",
+     "instr": "movzwl 0x5e8(%esi),%ecx",
+     "pc": "0x433029"
+    },
+    {
+     "func": "0x432b60",
+     "instr": "movswl 0x5e8(%esi),%ecx",
+     "pc": "0x433166"
+    },
+    {
+     "func": "0x432b60",
+     "instr": "movswl 0x5e8(%esi),%ecx",
+     "pc": "0x433467"
+    }
+   ],
+   "rmw": [
+    {
+     "func": "0x424550",
+     "instr": "add    %ax,0x5e8(%ecx)",
+     "pc": "0x4247c4"
+    },
+    {
+     "func": "0x4247d3",
+     "instr": "add    %ax,0x5e8(%ecx)",
+     "pc": "0x4247da"
+    }
+   ],
+   "writes": [
+    {
+     "func": "0x430d50",
+     "in_copy": true,
+     "in_handler": false,
+     "instr": "mov    %ax,0x5e8(%esi)",
+     "pc": "0x430e72"
+    },
+    {
+     "func": "0x432af0",
+     "in_copy": false,
+     "in_handler": false,
+     "instr": "mov    %cx,0x5e8(%esi)",
+     "pc": "0x432b02"
+    },
+    {
+     "func": "0x432b60",
+     "in_copy": false,
+     "in_handler": false,
+     "instr": "mov    %ax,0x5e8(%esi)",
+     "pc": "0x433048"
+    },
+    {
+     "func": "0x432b60",
+     "in_copy": false,
+     "in_handler": false,
+     "instr": "mov    %cx,0x5e8(%esi)",
+     "pc": "0x4330a8"
+    },
+    {
+     "func": "0x433710",
+     "in_copy": false,
+     "in_handler": false,
+     "instr": "mov    %cx,0x5e8(%esi)",
+     "pc": "0x4337b2"
+    },
+    {
+     "func": "0x433850",
+     "in_copy": false,
+     "in_handler": false,
+     "instr": "mov    %ax,0x5e8(%edi)",
+     "pc": "0x433ae8"
+    },
+    {
+     "func": "0x43ca40",
+     "in_copy": false,
+     "in_handler": false,
+     "instr": "mov    %si,0x5e8(%ecx)",
+     "pc": "0x43ca6d"
+    },
+    {
+     "func": "0x43cc10",
+     "in_copy": false,
+     "in_handler": true,
+     "instr": "mov    %dx,0x5e8(%ecx)",
+     "pc": "0x43ccae"
+    }
+   ]
+  }
+ },
+ "note": "文本样式字段的读/写/读改写点（A 类事实）；由 scripts/extract-exe-text-fields.py 从 exe 静态分析提取"
+}

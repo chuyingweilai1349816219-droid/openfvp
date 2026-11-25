@@ -51,6 +51,24 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 结构分析（文本样式字段的读点地图 + 行宽下限语义）
+
+- **扫出文本样式字段的全部读/写/读改写点，回答"渲染侧怎么用"**
+  - 新增 `scripts/extract-exe-text-fields.py` + 基线 `ref/exe-text-fields.json` +
+    门禁 `tests/verify_exe_text_fields.py`（`run_all` 59 → 61 步）：按指令文本分类
+    写/读/读改写，并按读宽度（1/2/4 字节）记录"被更宽读覆盖"的情况
+  - 结论 1：**九个样式字段的写点只来自样式命令 handler + 一处结构拷贝例程**
+    （0x430E00..0x431100）
+  - 结论 2：**+0x5A8/+0x5AA/+0x5B0/+0x5B4 只写不读**（连覆盖读都没有）——它们被拷贝
+    例程搬进排版对象，消费点在那边；文档写清楚，避免误判"没用"
+  - 结论 3：**+0x597（TextShadowDist 写的字节）写两次、读零次** ⇒ 我们"只记录、
+    不画阴影层"有结构分析依据，不是偷懒
+  - 结论 4：**+0x5E8 是累计行宽**（0x4247C4/0x4247DA 用 `add` 累加，0x433006 读出来
+    与 +0x5DC 比做换行）；TextFormat arg4 只把它**抬高**（下限语义）
+  - 实现：`src/textattr.c` 新增 `fmt_width_floor`（TextFormat arg4 只升不降），
+    单测 `tests/test_textattr.c` §8 锁住"只升不降 / 越界两字段都不变 / TextSpace 不碰它"
+  - 文档：`docs/02-text-format.md` 新增"渲染侧怎么用这些字段：读写点地图"一节
+
 ### 结构分析（文本样式命令的字段与范围：从 exe handler 抄出来）
 
 - **把 `TextFormat`(118) / `TextFunction`(119) / `TextShadowDist`(125) /

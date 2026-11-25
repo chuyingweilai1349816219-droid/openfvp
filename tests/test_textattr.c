@@ -203,6 +203,48 @@ int main(void)
           "reset count=%d", fvp_textattr_configured_count(a, FVP_TEXT_WINDOWS));
     CHECK(a[3].r == 255 && a[3].set_mask == 0u, "reset colour/mask");
 
+    /* 8. TextFormat(118) 的宽度下限：arg4 只会把 +0x5E8 抬高，不会降下来。
+     *    静态分析 0x43CC9B：`cmp %dx,0x5e8(%ecx)` → 只有更大才写。 */
+    fvp_textattr_reset(a, FVP_TEXT_WINDOWS);
+    CHECK(fvp_textattr_set_format(a, FVP_TEXT_WINDOWS, 2, 0, 0, 0, 30, 0, 0)
+              == 1,
+          "set_format(d=30)");
+    CHECK(a[2].fmt_pad_b == 30 && a[2].fmt_width_floor == 30,
+          "d=30 → fmt_pad_b=%d floor=%d", a[2].fmt_pad_b,
+          a[2].fmt_width_floor);
+    CHECK(fvp_textattr_set_format(a, FVP_TEXT_WINDOWS, 2, 0, 0, 0, 12, 0, 0)
+              == 1,
+          "set_format(d=12)");
+    CHECK(a[2].fmt_pad_b == 12 && a[2].fmt_width_floor == 30,
+          "d=12 只降 fmt_pad_b，floor 保持 30（实际 %d / %d）",
+          a[2].fmt_pad_b, a[2].fmt_width_floor);
+    CHECK(fvp_textattr_set_format(a, FVP_TEXT_WINDOWS, 2, 0, 0, 0, 64, 0, 0)
+              == 1,
+          "set_format(d=64)");
+    CHECK(a[2].fmt_width_floor == 64, "d=64 把 floor 抬到 64（实际 %d）",
+          a[2].fmt_width_floor);
+    /* 返回值表示"有没有字段真的写进去"：d=65 只让 d 这一个字段被拒，
+     * 其它字段仍生效，所以返回值仍是 1。 */
+    CHECK(fvp_textattr_set_format(a, FVP_TEXT_WINDOWS, 2, 0, 0, 0, 65, 0, 0)
+              == 1,
+          "d=65 只拒掉 d 这一个字段（其它字段仍生效）");
+    CHECK(a[2].fmt_pad_b == 64 && a[2].fmt_width_floor == 64,
+          "越界后两个字段都不变（实际 %d / %d）", a[2].fmt_pad_b,
+          a[2].fmt_width_floor);
+    /* TextSpace 不碰 floor（它只写 +0x5A8/+0x5AA） */
+    CHECK(fvp_textattr_set_space(a, FVP_TEXT_WINDOWS, 2, 5, -7) == 1,
+          "set_space(5,-7)");
+    CHECK(a[2].fmt_width_floor == 64, "TextSpace 不改 floor（实际 %d）",
+          a[2].fmt_width_floor);
+    CHECK(fvp_textattr_set_format(a, FVP_TEXT_WINDOWS, 3, 0, 0, 33, 0, 0, 0)
+              == 1,
+          "另一窗口 set_format(a=33)");
+    CHECK(a[3].fmt_width_floor == 0, "arg3 不写 floor（窗口 3 的 floor=%d）",
+          a[3].fmt_width_floor);
+    fvp_textattr_reset(a, FVP_TEXT_WINDOWS);
+    CHECK(a[2].fmt_width_floor == 0, "reset 后 floor 归零（实际 %d）",
+          a[2].fmt_width_floor);
+
     printf("\ntest_textattr: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

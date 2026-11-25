@@ -621,6 +621,15 @@ def build_steps(args):
                            'TextSkip +0x5D7, TextShadowDist clamped 0..12, '
                            'TextFont -5..font_count-1'))
 
+    # 6.4966c 文本样式字段的访问地图（读/写/读改写点；缺 work/ 时 SKIP）
+    vtf = os.path.join(HERE, 'verify_exe_text_fields.py')
+    steps.append(Step('verify_exe_text_fields.py', [PY, '-X', 'utf8', vtf], 600,
+                      skip_reason=None,
+                      note='text style field access map from the exe: writes only '
+                           'from the style handlers + one struct copy routine, '
+                           'TextShadowDist byte is written but never read, '
+                           '+0x5E8 is an accumulated line width'))
+
     # 6.4967 标题进场动画的参数必须等于脚本常量（纯 JSON/源码检查，无依赖）
     vta = os.path.join(HERE, 'verify_title_anim.py')
     steps.append(Step('verify_title_anim.py', [PY, '-X', 'utf8', vta], 300,
