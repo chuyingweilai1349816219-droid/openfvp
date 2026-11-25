@@ -68,12 +68,23 @@
 #define FVP_TITLEENTER_FRAME2_MS 3000
 #define FVP_TITLEENTER_SLIDE_263 47
 
-/* ---- 标题背景（hcb 0x59143..0x591D3，尚未实现）----
- * MotionMoveS2(258..261, 1300/1600/2500/4000 → 900/800/800/800, 25000, 3)
- * + MotionMoveR(258..261, 150/250/550/1250 → 0, 25000, 3)
- * —— 即 25 秒的极慢缩放 **和** 慢旋转。 */
+/* ---- 标题背景（尚未实现；参数冻结在 ref/title-bg-motion.json）----
+ * 五彩斑斓（hcb 0x59143..0x591D3）四层 258..261：
+ *   MotionMoveS2(1300/1600/2500/4000 → 900/800/800/800, 25000, 3)
+ *   + MotionMoveR(150/250/550/1250 → 0, 25000, 3)   ← 15°/25°/55°/125° → 0°
+ *   + PrimSetOP(prim, 1200, 675)（设计画布 2400×1350 中心）
+ * 星空（hcb 0x6FD87）：背景只有槽 258（1920×1080，无 OP），
+ *   MotionMoveS2(2000 → 1000, 40000, 3)，**没有 MotionMoveR（不旋转）**。
+ * 图像包（HZC1）只存像素 + w/h/x/y/fmt，不含旋转信息 —— 旋转是脚本参数。 */
 #define FVP_TITLEANIM_BG_SCALE_FROM 1300
 #define FVP_TITLEANIM_BG_SCALE_TO 900
 #define FVP_TITLEANIM_BG_MS 25000
+#define FVP_TITLEANIM_BG_ANGLE_FROM 150 /* 0.1° = 15° */
+#define FVP_TITLEANIM_BG_ANGLE_TO 0
+#define FVP_TITLEANIM_BG_OP_X 1200
+#define FVP_TITLEANIM_BG_OP_Y 675
+#define FVP_TITLEANIM_HOSHIMEMO_BG_SCALE_FROM 2000
+#define FVP_TITLEANIM_HOSHIMEMO_BG_SCALE_TO 1000
+#define FVP_TITLEANIM_HOSHIMEMO_BG_MS 40000
 
 #endif /* FVP_TITLEANIM_H */

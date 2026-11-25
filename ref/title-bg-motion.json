@@ -1,0 +1,513 @@
+{
+ "games": {
+  "hoshimemo": {
+   "assets": {
+    "title_bg1": {
+     "h": 1080,
+     "pkg": "graph.bin",
+     "w": 1920,
+     "x": 0,
+     "y": 0
+    },
+    "title_bg2": {
+     "h": 1080,
+     "pkg": "graph.bin",
+     "w": 1920,
+     "x": 0,
+     "y": 0
+    },
+    "title_bg3": {
+     "h": 1080,
+     "pkg": "graph.bin",
+     "w": 1920,
+     "x": 0,
+     "y": 0
+    }
+   },
+   "bg_slots": [
+    258
+   ],
+   "hcb_sha256": "e23b7958f897392e3535370956b7c9a722c562f0a6d65e91d589cfdd2b741802",
+   "hcb_size": 4618610,
+   "loads": [
+    {
+     "asset": "title_bg3",
+     "pc": "0x0006f468",
+     "slot": 258
+    },
+    {
+     "asset": "title_bg2",
+     "pc": "0x0006f612",
+     "slot": 258
+    },
+    {
+     "asset": "title_bg1",
+     "pc": "0x0006f795",
+     "slot": 258
+    }
+   ],
+   "motions": [
+    {
+     "args": [
+      258,
+      2000,
+      1000,
+      2000,
+      1000,
+      40000,
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x0006fd87",
+     "prim": 258
+    }
+   ],
+   "prim_ops": [],
+   "region": [
+    "0x0006f000",
+    "0x0006fe00"
+   ]
+  },
+  "iroseka": {
+   "assets": {
+    "title2_bg1_A": {
+     "h": 1350,
+     "pkg": "graph.bin",
+     "w": 2400,
+     "x": 0,
+     "y": 0
+    },
+    "title2_bg1_B": {
+     "h": 1350,
+     "pkg": "graph.bin",
+     "w": 781,
+     "x": 518,
+     "y": 0
+    },
+    "title2_bg1_C": {
+     "h": 1350,
+     "pkg": "graph.bin",
+     "w": 2400,
+     "x": 0,
+     "y": 0
+    },
+    "title2_bg1_D": {
+     "h": 1230,
+     "pkg": "graph.bin",
+     "w": 1955,
+     "x": 0,
+     "y": 111
+    },
+    "title_bg1_A": {
+     "h": 1350,
+     "pkg": "graph.bin",
+     "w": 2400,
+     "x": 0,
+     "y": 0
+    },
+    "title_bg1_B": {
+     "h": 1350,
+     "pkg": "graph.bin",
+     "w": 781,
+     "x": 518,
+     "y": 0
+    },
+    "title_bg1_C": {
+     "h": 1350,
+     "pkg": "graph.bin",
+     "w": 2400,
+     "x": 0,
+     "y": 0
+    },
+    "title_bg1_D": {
+     "h": 1230,
+     "pkg": "graph.bin",
+     "w": 1955,
+     "x": 0,
+     "y": 111
+    }
+   },
+   "bg_slots": [
+    258,
+    259,
+    260,
+    261
+   ],
+   "hcb_sha256": "8c362ff7178628bef90f0d7bf35a48be5ee22f9f762d4c76e86799f6f063c0ff",
+   "hcb_size": 4275282,
+   "loads": [
+    {
+     "asset": "title_bg1_A",
+     "pc": "0x0005853f",
+     "slot": 258
+    },
+    {
+     "asset": "title_bg1_B",
+     "pc": "0x00058558",
+     "slot": 259
+    },
+    {
+     "asset": "title_bg1_C",
+     "pc": "0x00058571",
+     "slot": 260
+    },
+    {
+     "asset": "title_bg1_D",
+     "pc": "0x0005858a",
+     "slot": 261
+    },
+    {
+     "asset": "title2_bg1_A",
+     "pc": "0x000585a9",
+     "slot": 258
+    },
+    {
+     "asset": "title2_bg1_B",
+     "pc": "0x000585c3",
+     "slot": 259
+    },
+    {
+     "asset": "title2_bg1_C",
+     "pc": "0x000585dd",
+     "slot": 260
+    },
+    {
+     "asset": "title2_bg1_D",
+     "pc": "0x000585f7",
+     "slot": 261
+    }
+   ],
+   "motions": [
+    {
+     "args": [
+      258,
+      1300,
+      900,
+      1300,
+      900,
+      25000,
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00059143",
+     "prim": 258
+    },
+    {
+     "args": [
+      259,
+      1600,
+      800,
+      1600,
+      800,
+      {
+       "candidates": [
+        {
+         "pc": "0x00059113",
+         "value": 1
+        },
+        {
+         "pc": "0x00059125",
+         "value": 25000
+        }
+       ],
+       "local": 7
+      },
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x0005915a",
+     "prim": 259
+    },
+    {
+     "args": [
+      260,
+      2500,
+      800,
+      2500,
+      800,
+      {
+       "candidates": [
+        {
+         "pc": "0x00059113",
+         "value": 1
+        },
+        {
+         "pc": "0x00059125",
+         "value": 25000
+        }
+       ],
+       "local": 7
+      },
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00059171",
+     "prim": 260
+    },
+    {
+     "args": [
+      261,
+      4000,
+      800,
+      4000,
+      800,
+      {
+       "candidates": [
+        {
+         "pc": "0x00059113",
+         "value": 1
+        },
+        {
+         "pc": "0x00059125",
+         "value": 25000
+        }
+       ],
+       "local": 7
+      },
+      3,
+      null
+     ],
+     "cmd": 54,
+     "name": "MotionMoveS2",
+     "pc": "0x00059188",
+     "prim": 261
+    },
+    {
+     "args": [
+      258,
+      150,
+      0,
+      {
+       "candidates": [
+        {
+         "pc": "0x00059113",
+         "value": 1
+        },
+        {
+         "pc": "0x00059125",
+         "value": 25000
+        }
+       ],
+       "local": 7
+      },
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x0005919a",
+     "prim": 258
+    },
+    {
+     "args": [
+      259,
+      250,
+      0,
+      {
+       "candidates": [
+        {
+         "pc": "0x00059113",
+         "value": 1
+        },
+        {
+         "pc": "0x00059125",
+         "value": 25000
+        }
+       ],
+       "local": 7
+      },
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x000591ad",
+     "prim": 259
+    },
+    {
+     "args": [
+      260,
+      550,
+      0,
+      {
+       "candidates": [
+        {
+         "pc": "0x00059113",
+         "value": 1
+        },
+        {
+         "pc": "0x00059125",
+         "value": 25000
+        }
+       ],
+       "local": 7
+      },
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x000591c0",
+     "prim": 260
+    },
+    {
+     "args": [
+      261,
+      1250,
+      0,
+      {
+       "candidates": [
+        {
+         "pc": "0x00059113",
+         "value": 1
+        },
+        {
+         "pc": "0x00059125",
+         "value": 25000
+        }
+       ],
+       "local": 7
+      },
+      3,
+      null
+     ],
+     "cmd": 51,
+     "name": "MotionMoveR",
+     "pc": "0x000591d3",
+     "prim": 261
+    }
+   ],
+   "prim_ops": [
+    {
+     "args": [
+      258,
+      1000
+     ],
+     "cmd": 91,
+     "pc": "0x00058602",
+     "prim": 258
+    },
+    {
+     "args": [
+      258,
+      1200,
+      675
+     ],
+     "cmd": 81,
+     "pc": "0x00058614",
+     "prim": 258
+    },
+    {
+     "args": [
+      258,
+      null,
+      1000
+     ],
+     "cmd": 82,
+     "pc": "0x0005861e",
+     "prim": 258
+    },
+    {
+     "args": [
+      259,
+      900
+     ],
+     "cmd": 91,
+     "pc": "0x00058627",
+     "prim": 259
+    },
+    {
+     "args": [
+      259,
+      1200,
+      675
+     ],
+     "cmd": 81,
+     "pc": "0x00058639",
+     "prim": 259
+    },
+    {
+     "args": [
+      258,
+      null,
+      1000
+     ],
+     "cmd": 82,
+     "pc": "0x00058643",
+     "prim": 258
+    },
+    {
+     "args": [
+      260,
+      850
+     ],
+     "cmd": 91,
+     "pc": "0x0005864c",
+     "prim": 260
+    },
+    {
+     "args": [
+      260,
+      1200,
+      675
+     ],
+     "cmd": 81,
+     "pc": "0x0005865e",
+     "prim": 260
+    },
+    {
+     "args": [
+      258,
+      null,
+      1000
+     ],
+     "cmd": 82,
+     "pc": "0x00058668",
+     "prim": 258
+    },
+    {
+     "args": [
+      261,
+      800
+     ],
+     "cmd": 91,
+     "pc": "0x00058671",
+     "prim": 261
+    },
+    {
+     "args": [
+      261,
+      1200,
+      675
+     ],
+     "cmd": 81,
+     "pc": "0x00058683",
+     "prim": 261
+    },
+    {
+     "args": [
+      258,
+      null,
+      1000
+     ],
+     "cmd": 82,
+     "pc": "0x0005868d",
+     "prim": 258
+    }
+   ],
+   "region": [
+    "0x00058500",
+    "0x00059200"
+   ]
+  }
+ },
+ "note": "标题背景层的缩放/旋转参数：旋转来自 HCB 的 MotionMoveR(51)，图像包（HZC1）只有 w/h/x/y/fmt，没有旋转信息；由 scripts/extract-title-bg-motion.py 生成，不含游戏数据本体"
+}

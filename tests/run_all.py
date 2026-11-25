@@ -673,6 +673,15 @@ def build_steps(args):
                            '(iroseka 2000/2400/2560 total 4000; '
                            'hoshimemo 1000/1400/1560 total 3000)'))
 
+    # 6.49688 标题背景的缩放/旋转参数（旋转在脚本里，不在图像包里）
+    vbg = os.path.join(HERE, 'verify_title_bg_motion.py')
+    steps.append(Step('verify_title_bg_motion.py', [PY, '-X', 'utf8', vbg], 300,
+                      skip_reason=None,
+                      note='title background zoom/rotation come from the HCB '
+                           'Motion commands (iroseka 15/25/55/125 deg -> 0 over '
+                           '25 s; hoshimemo zoom 2000->1000 over 40 s, no '
+                           'rotation); HZC1 headers carry no rotation'))
+
     # 6.4969 开场 FAVORITE logo 的时间轴 == 脚本常量（纯 JSON/源码检查，无依赖）
     voa = os.path.join(HERE, 'verify_opening_anim.py')
     steps.append(Step('verify_opening_anim.py', [PY, '-X', 'utf8', voa], 300,
