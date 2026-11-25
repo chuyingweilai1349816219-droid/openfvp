@@ -53,6 +53,21 @@
 
 ### 新增
 
+- **⑦ 跨平台：抽出最小 OS 缝 + 便携实现 + 16 项单测 + 文档**
+  - 新增 `src/platform/platform.h`：四个系统能力的契约（单调时钟秒/毫秒、
+    写一行 UTF-8 日志、读整个文件）
+  - 新增 `src/platform/portable/platform_portable.c`：**只用 C 标准库**的参考实现
+  - 新增 `tests/test_platform.c`（16 项）：时钟单调、日志空指针安全、文件读入的
+    长度/内容、缺失文件与三个 NULL 参数的错误路径；已加入 `make check`
+    （单测数 26 → 27）
+  - 新增 `docs/cross-platform.md`：最小缝契约、**还没抽出的部分**（窗口/渲染/
+    音频/GDI 字体回退/日志落盘）、一个平台外壳的最小构成、现状与下一步；
+    含必须的 DeepSeek 声明
+  - 顺手修掉 Makefile 里一个被合并的规则（test_snd_fade/test_platform 目标混在
+    一起导致 "overriding recipe" 警告）
+
+### 新增（音频）
+
 - **BGM 交叉淡入淡出接线（两条 BGM 通道轮换）**
   - 通道布局：`SND_CH_BGM=0`、`SND_CH_BGM_ALT=1`（淡入伙伴）、`SND_CH_VOICE=2`、
     `SND_CH_SE=3`（SE 轮转 3..7，比原来少一条）

@@ -58,6 +58,9 @@ bin/test_snd$(EXE): tests/test_snd.c src/snd.c src/snd.h | bin
 	$(CC) $(CFLAGS) -o $@ tests/test_snd.c src/snd.c $(LDFLAGS) -lm
 bin/test_snd_fade$(EXE): tests/test_snd_fade.c src/snd.c src/snd.h | bin
 	$(CC) $(CFLAGS) -o $@ tests/test_snd_fade.c src/snd.c $(LDFLAGS) -lm
+bin/test_platform$(EXE): tests/test_platform.c src/platform/portable/platform_portable.c src/platform/platform.h | bin
+	$(CC) $(CFLAGS) -o $@ tests/test_platform.c src/platform/portable/platform_portable.c $(LDFLAGS)
+
 
 
 src/%.o: src/%.c $(HEADERS) | src
@@ -74,7 +77,7 @@ src:
 	-mkdir src
 
 clean:
-	-rm -f $(OBJ) $(LIB_OBJ) $(BIN) $(LIB) bin/test_snd$(EXE) bin/test_snd_fade$(EXE)
+	-rm -f $(OBJ) $(LIB_OBJ) $(BIN) $(LIB) bin/test_snd$(EXE) bin/test_snd_fade$(EXE) bin/test_platform$(EXE)
 
 .PHONY: all lib test clean
 
@@ -579,12 +582,13 @@ UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \
              $(GAIJI_TEST) $(GAIJI_RENDER_TEST) $(TEXTPRIMS_TEST) \
              $(VMMISC_TEST) $(NULLVALUE_TEST) $(TITLEMENU_TEST) $(TITLEMENU_DRAW_TEST) \
-             $(SAVELIST_TEST) $(OPENSEQ_TEST) $(SND_FADE_TEST)
+             $(SAVELIST_TEST) $(OPENSEQ_TEST) $(SND_FADE_TEST) $(PLATFORM_TEST)
 
 check: $(UNIT_TESTS)
 	@set -e; for t in $(UNIT_TESTS); do \
 	    echo "== $$t =="; $$t; \
 	done; echo "make check: PASS"
 
+PLATFORM_TEST = bin/test_platform$(EXE)
 SND_FADE_TEST = bin/test_snd_fade$(EXE)
 .PHONY: check
