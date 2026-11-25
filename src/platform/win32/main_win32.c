@@ -3121,7 +3121,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     }
                     (void)gfx_draw_text_line(
                         gfx, "[PARTIAL RESTORE] visual + text only", 56, 40,
-                        28, 255, 210, 120, 255);
+                        32, 255, 210, 120, 255);
                 } else if (save_list_active) {
                     int li;
 
@@ -3469,7 +3469,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 }
                 (void)gfx_draw_text_line(gfx,
                                          "[PARTIAL RESTORE] visual + text only",
-                                         56, 40, 28, 255, 210, 120, 255);
+                                         56, 40, 32, 255, 210, 120, 255);
             } else if (save_list_active) {
                 int li;
 
