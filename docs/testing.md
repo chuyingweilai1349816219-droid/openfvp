@@ -464,3 +464,9 @@ out\fuzz\fvm_guard.exe out\fuzz\repro\case_12345.hcb --steps 2048
 - 如果引擎代码在验收之后还有改动（本仓库当前有并行开发），请重跑
   `python tests/run_all.py`；文档中的统计数字只对这一份快照负责。
   固定种子 `20261123` 保证同一份源码 + 同一份输入下用例集完全可复现。
+
+> **2026-11-25 复核 `verify_multigame` 的 FLAKY**：`run_all.py` 曾把这一步标成
+> "failed once, passed on retry"。随后单独连跑 **3 次全部通过（0 FAIL）**，
+> `--steps 300000`、每次约 80 秒。结论：**未复现**，更像是机器负载高时的时序抖动
+> （外壳截图/窗口初始化都在固定秒数后取帧）。若再次出现，优先怀疑"截图早于首帧"，
+> 可用 `--no-input`（已在所有门禁跑法里默认带上）与增大 `--run-seconds` 复核。

@@ -53,6 +53,12 @@
 
 ### 新增
 
+- **`verify_multigame` FLAKY 复核：连跑 3 次全绿，未复现**
+  - `run_all` 曾把该步标成 "failed once, passed on retry"；随后单独连跑 3 次
+    （`--steps 300000`，每次约 80 s）全部 0 FAIL
+  - 判断为高负载下的时序抖动（截图/窗口初始化按固定秒数取帧），不是断言错误；
+    已把判断依据与复现方法写进 `docs/testing.md`
+
 - **存档列表 → "部分恢复"视图（Load 的诚实中间态）**
   - 列表里按 Enter/点行：整屏铺开该槽记录的背景图 + 画出台词 + 左上角常驻
     `[PARTIAL RESTORE] visual + text only`；日志写 `load: partial restore slot=N`
