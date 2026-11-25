@@ -1,5 +1,248 @@
 {
  "games": {
+  "hoshimemo": {
+   "elements": {
+    "259": {
+     "alpha": {
+      "duration_ms": 2000,
+      "from": 0,
+      "pc": "0x0006ff17",
+      "start_ms": 1000,
+      "to": 255
+     },
+     "drawn_by_engine": false,
+     "move": {
+      "duration_ms": 2000,
+      "from_dx": null,
+      "from_dy": 50,
+      "mode": 3,
+      "pc": "0x0006ff29",
+      "start_ms": 1000,
+      "to_dx": 0,
+      "to_dy": 0
+     },
+     "name": "title_frame_a"
+    },
+    "260": {
+     "alpha": {
+      "duration_ms": 2000,
+      "from": 0,
+      "pc": "0x0006fef3",
+      "start_ms": 1000,
+      "to": 255
+     },
+     "drawn_by_engine": false,
+     "move": {
+      "duration_ms": 2000,
+      "from_dx": null,
+      "from_dy": -50,
+      "mode": 3,
+      "pc": "0x0006ff06",
+      "start_ms": 1000,
+      "to_dx": 0,
+      "to_dy": 0
+     },
+     "name": "title_frame_b"
+    },
+    "265": {
+     "alpha": {
+      "duration_ms": 2000,
+      "from": null,
+      "pc": "0x0006ff51",
+      "start_ms": 1000,
+      "to": 255
+     },
+     "drawn_by_engine": true,
+     "name": "logo"
+    },
+    "266": {
+     "alpha": {
+      "duration_ms": 900,
+      "from": 0,
+      "pc": "0x00070011",
+      "start_ms": 1400,
+      "to": 255
+     },
+     "drawn_by_engine": true,
+     "move": {
+      "duration_ms": 900,
+      "from_dx": null,
+      "from_dy": 50,
+      "mode": 3,
+      "pc": "0x00070023",
+      "start_ms": 1400,
+      "to_dx": 0,
+      "to_dy": 0
+     },
+     "name": "menu1"
+    },
+    "268": {
+     "alpha": {
+      "duration_ms": 820,
+      "from": 0,
+      "pc": "0x00070063",
+      "start_ms": 1440,
+      "to": 255
+     },
+     "drawn_by_engine": true,
+     "move": {
+      "duration_ms": 820,
+      "from_dx": null,
+      "from_dy": 50,
+      "mode": 3,
+      "pc": "0x00070075",
+      "start_ms": 1440,
+      "to_dx": 0,
+      "to_dy": 0
+     },
+     "name": "menu2"
+    },
+    "270": {
+     "alpha": {
+      "duration_ms": 820,
+      "from": 0,
+      "pc": "0x000700b5",
+      "start_ms": 1480,
+      "to": 255
+     },
+     "drawn_by_engine": true,
+     "move": {
+      "duration_ms": 820,
+      "from_dx": null,
+      "from_dy": 50,
+      "mode": 3,
+      "pc": "0x000700c7",
+      "start_ms": 1480,
+      "to_dx": 0,
+      "to_dy": 0
+     },
+     "name": "menu3"
+    },
+    "272": {
+     "alpha": {
+      "duration_ms": 820,
+      "from": 0,
+      "pc": "0x00070107",
+      "start_ms": 1520,
+      "to": 255
+     },
+     "drawn_by_engine": true,
+     "move": {
+      "duration_ms": 820,
+      "from_dx": null,
+      "from_dy": 50,
+      "mode": 3,
+      "pc": "0x00070119",
+      "start_ms": 1520,
+      "to_dx": 0,
+      "to_dy": 0
+     },
+     "name": "menu4"
+    },
+    "274": {
+     "alpha": {
+      "duration_ms": 820,
+      "from": 0,
+      "pc": "0x00070159",
+      "start_ms": 1560,
+      "to": 255
+     },
+     "drawn_by_engine": true,
+     "move": {
+      "duration_ms": 820,
+      "from_dx": null,
+      "from_dy": 50,
+      "mode": 3,
+      "pc": "0x0007016b",
+      "start_ms": 1560,
+      "to_dx": 0,
+      "to_dy": 0
+     },
+     "name": "menu5"
+    },
+    "276": {
+     "alpha": {
+      "duration_ms": 2000,
+      "from": null,
+      "pc": "0x0006ff43",
+      "start_ms": 1000,
+      "to": 255
+     },
+     "drawn_by_engine": true,
+     "name": "logo_glow"
+    },
+    "278": {
+     "alpha": {
+      "duration_ms": 820,
+      "from": 0,
+      "pc": "0x0007017c",
+      "start_ms": 1560,
+      "to": 255
+     },
+     "drawn_by_engine": true,
+     "move": {
+      "duration_ms": 900,
+      "from_dx": 76,
+      "from_dy": null,
+      "mode": 3,
+      "pc": "0x0007018d",
+      "start_ms": 1560,
+      "to_dx": 0,
+      "to_dy": null
+     },
+     "name": "copyright"
+    }
+   },
+   "entrance_end": "0x000701e2",
+   "entrance_start": "0x0006fede",
+   "hcb_sha256": "e23b7958f897392e3535370956b7c9a722c562f0a6d65e91d589cfdd2b741802",
+   "hcb_size": 4618610,
+   "logical_to_hd": {
+    "fx": 2.4000000953674316,
+    "fy": 1.7999999523162842,
+    "note": "原版 Variant 的 float 是 float32（flds/fstps）"
+   },
+   "total_ms": 3000,
+   "total_ms_drawn": 3000,
+   "waits": [
+    {
+     "at_ms": 0,
+     "kind": "wait",
+     "ms": 1000,
+     "pc": "0x0006fee2"
+    },
+    {
+     "at_ms": 1000,
+     "kind": "wait",
+     "ms": 400,
+     "pc": "0x00070000"
+    },
+    {
+     "at_ms": 1400,
+     "kind": "wait",
+     "ms": 40,
+     "pc": "0x00070052"
+    },
+    {
+     "at_ms": 1440,
+     "kind": "wait",
+     "ms": 40,
+     "pc": "0x000700a4"
+    },
+    {
+     "at_ms": 1480,
+     "kind": "wait",
+     "ms": 40,
+     "pc": "0x000700f6"
+    },
+    {
+     "at_ms": 1520,
+     "kind": "wait",
+     "ms": 40,
+     "pc": "0x00070148"
+    }
+   ]
+  },
   "iroseka": {
    "elements": {
     "1501": {
@@ -264,5 +507,5 @@
    ]
   }
  },
- "note": "标题进场逐元素时间轴（脚本 0x5933E..0x5961A）；由 scripts/extract-title-enter.py 生成，不含游戏数据本体"
+ "note": "标题进场逐元素时间轴（五彩斑斓 0x5933E..0x59650，星空 0x6FEDE..0x701E2）；由 scripts/extract-title-enter.py 生成，不含游戏数据本体"
 }

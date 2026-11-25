@@ -148,8 +148,9 @@ def main():
     check(not [k for k in m if k.startswith('FVP_TITLEANIM_FADE_')],
           '统一 500 ms 淡入常量已删除（逐元素时间轴在 FVP_TITLEENTER_*，'
           '由 tests/verify_title_enter.py 门禁）')
-    check(m.get('FVP_TITLEENTER_TOTAL_MS') == 4000,
-          '标题进场总时长 = 4000 ms（脚本 logo 2000+2000）')
+    check(m.get('FVP_TITLEENTER_IROSEKA_TOTAL_MS') == 4000 and
+          m.get('FVP_TITLEENTER_HOSHIMEMO_TOTAL_MS') == 3000,
+          '标题进场总时长 = 五彩 4000 / 星空 3000 ms（两作进场起点不同）')
 
     print('== 5. main_win32.c：标题用逐元素进场，默认静态 ==')
     src = io.open(MAIN, encoding='utf-8').read()

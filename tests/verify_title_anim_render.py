@@ -34,8 +34,21 @@ from verify_vs_original import bmp_pixels  # noqa: E402
 EXE = os.path.join(FVP, 'bin', 'fvp.exe')
 OUT = os.path.join(FVP, 'out', 'c')
 FONT = os.path.join(FVP, 'bin', 'gfx-font-61.bin')
+# 每部作品的抓图时刻（外壳用墙钟；进场从标题显示时刻起算，误差 ~0.2 s）：
+#   mid   = 进场中（logo 半透明 + 菜单开始错开）
+#   early = 进场早期（只有标题背景）
+#   done  = 进场结束之后（五彩 4000 ms / 星空 3000 ms + 余量）
 GAMES = {
-    'iroseka': (r'C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD', 'iroseka.hcb'),
+    'iroseka': {
+        'dir': r'C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD',
+        'script': 'iroseka.hcb',
+        'mid': 2600, 'early': 1500, 'done': 4600, 'run': 5.2,
+    },
+    'hoshimemo': {
+        'dir': r'C:\Users\Mechrevo\Downloads\hoshimemo_installed',
+        'script': 'Hoshimemo_HD.hcb',
+        'mid': 2000, 'early': 800, 'done': 3800, 'run': 4.4,
+    },
 }
 
 fails = []
@@ -87,80 +100,93 @@ def read_log(path):
         return ''
 
 
-def main():
-    game = GAMES['iroseka']
-    if not os.path.isfile(EXE):
-        print('SKIP: bin/fvp.exe 不存在（未构建 win32 外壳）')
-        return 0
-    if not os.path.isdir(game[0]):
-        print('SKIP: 缺游戏目录 %s' % game[0])
-        return 0
-    if not os.path.isdir(OUT):
-        os.makedirs(OUT)
-
-    shots = {k: os.path.join(OUT, 'titleenter-%s.bmp' % k)
+def check_game(name, g):
+    shots = {k: os.path.join(OUT, 'titleenter-%s-%s.bmp' % (name, k))
              for k in ('mid', 'early', 'off', 'done')}
-    logs = {k: os.path.join(OUT, 'titleenter-%s.log' % k)
+    logs = {k: os.path.join(OUT, 'titleenter-%s-%s.log' % (name, k))
             for k in ('mid', 'early', 'off', 'done')}
-
     plan = [
-        ('mid', ['--title-anim', '--shot-at', '2600'], 3.2),
-        ('early', ['--title-anim', '--shot-at', '1500'], 2.1),
+        ('mid', ['--title-anim', '--shot-at', str(g['mid'])], g['run'] * 0.6),
+        ('early', ['--title-anim', '--shot-at', str(g['early'])],
+         g['early'] / 1000.0 + 0.8),
         ('off', [], 1.6),
-        ('done', ['--title-anim', '--shot-at', '4600'], 5.2),
+        ('done', ['--title-anim', '--shot-at', str(g['done'])], g['run']),
     ]
+    print('==== %s ==' % name)
     for key, extra, seconds in plan:
-        for p in (shots[key], logs[key]):
-            if os.path.isfile(p):
-                os.remove(p)
-        rc = run_shell(game[0], game[1], shots[key], logs[key], extra, seconds)
+        for pth in (shots[key], logs[key]):
+            if os.path.isfile(pth):
+                os.remove(pth)
+        rc = run_shell(g['dir'], g['script'], shots[key], logs[key], extra,
+                       seconds)
         check(rc == 0 and os.path.isfile(shots[key]),
-              '%s: 外壳退出码 0 且写出截图（rc=%s）' % (key, rc))
-
+              '%s/%s: 外壳退出码 0 且写出截图（rc=%s）' % (name, key, rc))
     if fails:
-        print('\nFAIL: 外壳没跑起来')
-        return 1
-
+        return
     mid = bmp_pixels(shots['mid'])
     early = bmp_pixels(shots['early'])
     off = bmp_pixels(shots['off'])
     done = bmp_pixels(shots['done'])
-    check(all(x is not None for x in (mid, early, off, done)),
-          '四张 BMP 都读得出来')
+    if not check(all(x is not None for x in (mid, early, off, done)),
+                 '%s: 四张 BMP 都读得出来' % name):
+        return
 
-    print('== 1. 进场中 vs 不开动画：画面必须明显不同 ==')
+    print('-- 1. 进场中 vs 不开动画 --')
     m_ab, p_ab = diff(mid, off)
-    print('  mean_abs=%.3f  changed pixels=%.2f%%' % (m_ab, p_ab))
-    check(m_ab > 0.5, '进场中的 mean_abs > 0.5（实际 %.3f）' % m_ab)
-    check(p_ab > 1.0, '差异像素占比 > 1%%（实际 %.2f%%）' % p_ab)
+    print('  %s mean_abs=%.3f changed=%.2f%%' % (name, m_ab, p_ab))
+    check(m_ab > 0.5, '%s: 进场中 mean_abs > 0.5（%.3f）' % (name, m_ab))
+    check(p_ab > 1.0, '%s: 差异像素 > 1%%（%.2f%%）' % (name, p_ab))
 
-    print('== 2. 早期 vs 进场中：早期更接近"只有背景" ==')
-    e_off, ep_off = diff(early, off)
-    print('  early vs static: mean_abs=%.3f' % e_off)
+    print('-- 2. 早期只有背景（比进场中更偏离静态）--')
+    e_off, _ = diff(early, off)
+    print('  %s early vs static mean_abs=%.3f' % (name, e_off))
     check(e_off > m_ab,
-          '早期与静态的差 > 进场中与静态的差（%.3f > %.3f，错开进场生效）'
-          % (e_off, m_ab))
+          '%s: 早期与静态的差 > 进场中与静态的差（%.3f > %.3f）'
+          % (name, e_off, m_ab))
 
-    print('== 3. 进场跑完 vs 不开动画：必须逐字节相同 ==')
+    print('-- 3. 进场跑完 == 静态帧（逐字节）--')
     m_cb, p_cb = diff(done, off)
-    print('  mean_abs=%.6f  changed pixels=%.4f%%' % (m_cb, p_cb))
-    check(m_cb == 0.0, '进场终点的 mean_abs == 0（实际 %.6f）' % m_cb)
-    check(p_cb == 0.0, '进场终点没有一个差异像素（实际 %.4f%%）' % p_cb)
+    print('  %s mean_abs=%.6f changed=%.4f%%' % (name, m_cb, p_cb))
+    check(m_cb == 0.0, '%s: 进场终点 mean_abs == 0（%.6f）' % (name, m_cb))
+    check(p_cb == 0.0, '%s: 没有差异像素（%.4f%%）' % (name, p_cb))
 
-    print('== 4. 日志：只有开动画的几次打出 "script entrance started" ==')
+    print('-- 4. 日志 --')
     for key in ('mid', 'early', 'off', 'done'):
         text = read_log(logs[key])
         got = 'script entrance started' in text
         if key == 'off':
-            check(not got, 'off 那次没有进场日志')
+            check(not got, '%s/off 没有进场日志' % name)
         else:
-            check(got, '%s 那次有脚本进场日志' % key)
+            check(got, '%s/%s 有脚本进场日志' % (name, key))
+    return m_ab
 
+
+def main():
+    if not os.path.isfile(EXE):
+        print('SKIP: bin/fvp.exe 不存在（未构建 win32 外壳）')
+        return 0
+    if not os.path.isdir(OUT):
+        os.makedirs(OUT)
+    have = []
+    for name in sorted(GAMES):
+        g = GAMES[name]
+        if not os.path.isdir(g['dir']) or \
+                not os.path.isfile(os.path.join(g['dir'], g['script'])):
+            print('SKIP %s: 缺游戏目录/脚本 %s' % (name, g['dir']))
+            continue
+        have.append(name)
+    if not have:
+        print('SKIP: 没有可用的游戏数据')
+        return 0
+    means = {}
+    for name in have:
+        check_game(name, GAMES[name])
+        means[name] = means.get(name, 0.0)
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 逐元素进场在画面上生效（mean_abs %.2f），早期只有背景，'
-          '4000 ms 后与静态帧逐字节相同' % m_ab)
+    print('\nOK: 两个作品的逐元素进场都在画面上生效、早期只有背景、'
+          '进场结束后与静态帧逐字节相同')
     return 0
 
 

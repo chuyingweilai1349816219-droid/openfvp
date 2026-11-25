@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""从脚本里静态提取**标题进场的逐元素时间轴**（不跑原版、不截图）。
+"""从脚本里静态提取**标题进场的逐元素时间轴**（两个作品，不跑原版、不截图）。
 
 背景：`src/titleanim.h` 以前把标题进场写成"统一的 500 ms 淡入"。那个 500 来自
 hcb 0x59120 的 `local5`，而那一处只被**背景动画**用到；标题对象真正的进场在
 0x592C7 被重设成 `local5=2000 / local7=3000`，菜单项是 `local5=900 / local7=820`。
-本轮把进场块 0x5933E..0x5961A 整段解出来：
+两个作品的进场块**结构相同、时间轴相同**，只有两处数据不同：
+
+  * 逻辑像素 → HD 像素的 float32 因子（五彩斑斓 1.875/1.6875，星空 2.4/1.8）；
+  * 菜单纵向初位移（14 逻辑像素 vs 28）与版权行横向初位移（16 vs 32）。
+
+时间轴（五彩斑斓 0x5933E..0x59650，星空 0x6FEDE..0x701E2）：
 
   等待 1000 ms
-  264  alpha →255 / 2000 ms                                  ← 装饰层
+  装饰层 264/260  alpha →255 / 2000 ms（星空还有 259）
   等待 1000 ms
-  265  0→255 / 2000 ms（标题 logo）
-  263  0→255 / 2000 ms + 纵向 -28 逻辑像素 → 0                ← 装饰层
-  262  0→255 / 3000 ms                                        ← 装饰层
-  菜单项（等待 400 ms 后每项 +40 ms）：
-    1501 0→255 / 900 ms + 纵向 +14 逻辑像素 → 0
-    1508/1515/1522/1529 0→255 / 820 ms + 纵向 +14 → 0
-  278  0→255 / 820 ms + 横向 +16 逻辑像素 → 0（版权行）
-  ⇒ 总时长 4000 ms（logo 最后结束）
-
-逻辑像素按本作 helper 的 float32 因子（1.875 / 1.6875）换成 HD 像素，与原版一致。
+  logo(五彩 265；星空 265 + 276)  0→255 / 2000 ms
+  装饰层（五彩 263：+纵向 −28 逻辑像素；星空 259：+28）
+  装饰层 262（五彩 3000 ms）
+  菜单（等待 400 ms 后每项 +40 ms，纵向初位移 → 0）：
+    第一项 0→255 / 900 ms；其余 820 ms
+  版权行 0→255 / 820 ms + 横向初位移 → 0
+  ⇒ 只算引擎会画的元素时总时长 4000 ms（logo 最后结束）
 
 产物 `ref/title-enter.json`（只含时长/偏移/prim id，不含游戏数据本体）。
 
@@ -39,24 +41,41 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'ref'))
 import fvm_ref  # noqa: E402
 
-# 进场块的 pc 边界（iroseka；由人工定位后写死，下面会做形状校验）
-START_PC = 0x59335
-END_PC = 0x59650  # 含 0x59643 的 MotionAlphaTest(278)
-# 装饰层（本站尚未绘制）与"要画"的元素
-FRAME_PRIMS = {262: 'title_frame_a', 263: 'title_frame_b', 264: 'title_frame_c'}
-DRAWN = {265: 'logo', 278: 'copyright',
-         1501: 'menu1', 1508: 'menu2', 1515: 'menu3', 1522: 'menu4',
-         1529: 'menu5'}
-# 逻辑像素 → HD 像素的 float32 因子（本作 helper 里的常量）
-FX_BITS = 0x3FF00000  # 1.875f
-FY_BITS = 0x3FD80000  # 1.6875f
-# local 变量的取值段：pc < 0x593D9 用 A 段，否则 B 段
-LOCAL_BLOCK_A = {5: 2000, 7: 3000}
-LOCAL_BLOCK_A_PC = 0x592C7
-LOCAL_BLOCK_B = {5: 900, 7: 820, 10: 14}
-LOCAL_BLOCK_B_PC = 0x593D9
-GAME = os.path.join(r'C:\Users\Mechrevo\Downloads', '五彩斑斓的世界HD',
-                    'iroseka.hcb')
+GAMES = {
+    'iroseka': {
+        'hcb': os.path.join(r'C:\Users\Mechrevo\Downloads', '五彩斑斓的世界HD',
+                            'iroseka.hcb'),
+        'start': 0x59335,
+        'end': 0x59650,
+        'wait': 145552,   # Wait(ms, flag)
+        'motion': 219703,  # MotionMove 的逻辑坐标包装
+        'fx': 0x3FF00000,  # 1.875f
+        'fy': 0x3FD80000,  # 1.6875f
+        'locals': [(0x592C7, {5: 2000, 7: 3000}),
+                   (0x593D9, {5: 900, 7: 820, 10: 14})],
+        'drawn': {265: 'logo', 278: 'copyright',
+                  1501: 'menu1', 1508: 'menu2', 1515: 'menu3',
+                  1522: 'menu4', 1529: 'menu5'},
+        'frames': {262: 'title_frame_a', 263: 'title_frame_b',
+                   264: 'title_frame_c'},
+    },
+    'hoshimemo': {
+        'hcb': os.path.join(r'C:\Users\Mechrevo\Downloads', 'hoshimemo_installed',
+                            'Hoshimemo_HD.hcb'),
+        'start': 0x6FEDE,
+        'end': 0x701E2,
+        'wait': 226479,
+        'motion': 306823,
+        'fx': 1075419546,  # 2.4f
+        'fy': 1072064102,  # 1.8f
+        'locals': [(0x6FE70, {5: 2000, 7: 3000}),
+                   (0x6FF96, {5: 900, 7: 820, 11: 28})],
+        'drawn': {265: 'logo', 276: 'logo_glow', 278: 'copyright',
+                  266: 'menu1', 268: 'menu2', 270: 'menu3',
+                  272: 'menu4', 274: 'menu5'},
+        'frames': {259: 'title_frame_a', 260: 'title_frame_b'},
+    },
+}
 OUT_JSON = os.path.join(ROOT, 'ref', 'title-enter.json')
 
 PURE = {
@@ -81,11 +100,7 @@ def c_trunc(v):
 
 
 def simulate(code, order, idx, locals_at):
-    """从上一个"非纯"指令之后整段模拟到 idx，返回整个值栈。
-
-    （不能只反扫 PURE：MotionAlpha 的实参中间夹着 `pushstack [5]` 这种读局部，
-    反扫会在那里停住，把 prim 漏掉。）
-    """
+    """从上一个"非纯"指令之后整段模拟到 idx，返回整个值栈。"""
     boundary = {'syscall', 'call', 'jmp', 'jmpcond', 'initstack', 'ret',
                 'ret2', 'retn'}
     j = idx
@@ -156,7 +171,6 @@ def simulate(code, order, idx, locals_at):
 
 
 def args_n(code, order, idx, locals_at, n):
-    """整段模拟后取最后 n 个值（不足返回 None）。"""
     vals = simulate(code, order, idx, locals_at)
     if len(vals) < n:
         return None
@@ -168,12 +182,7 @@ def logical_to_hd(v, bits):
 
 
 def find_local_block(code, order, pc_from, expect):
-    """校验某段里的 local 赋值，返回起始 pc。
-
-    两种形态都认（hcb 里两种都有）：
-      - `pushintN k; copystack [j]`（字面量）
-      - `pushstack [base]; pushintN delta; add; copystack [j]`（base + delta）
-    """
+    """校验某段里的 local 赋值（字面量或 base±delta），返回起始 pc。"""
     literal = {}
     arith = {}
     for i, pc in enumerate(order):
@@ -206,35 +215,40 @@ def find_local_block(code, order, pc_from, expect):
     return pc_from
 
 
-def extract():
-    data = open(GAME, 'rb').read()
+def extract(name, cfg):
+    data = open(cfg['hcb'], 'rb').read()
     code = fvm_ref.Code(data, 'cp932')
     order = sorted(code.instr)
     idx = {pc: i for i, pc in enumerate(order)}
 
-    find_local_block(code, order, LOCAL_BLOCK_A_PC, LOCAL_BLOCK_A)
-    find_local_block(code, order, LOCAL_BLOCK_B_PC, LOCAL_BLOCK_B)
+    blocks = []
+    for pc_from, table in cfg['locals']:
+        find_local_block(code, order, pc_from, table)
+        blocks.append((pc_from, table))
 
     def locals_at(pc, reg):
-        table = LOCAL_BLOCK_A if pc < LOCAL_BLOCK_B_PC else LOCAL_BLOCK_B
+        table = blocks[0][1]
+        for pc_from, t in blocks:
+            if pc >= pc_from:
+                table = t
         return table.get(reg)
 
-    # 形状校验：起点是"等 1000 ms"，块里必须有 265 的淡入与 278 的测试
-    head = code.instr.get(START_PC)
+    head = code.instr.get(cfg['start'])
     if head is None or head[1] != 'pushint16' or head[2][0] != 1000:
-        raise RuntimeError('进场块起点形状变了（0x%x）' % START_PC)
-    pcs = [pc for pc in order if START_PC <= pc <= END_PC]
+        raise RuntimeError('%s 进场块起点形状变了（0x%x）'
+                           % (name, cfg['start']))
+    pcs = [pc for pc in order if cfg['start'] <= pc <= cfg['end']]
     if not pcs:
-        raise RuntimeError('进场块为空')
+        raise RuntimeError('%s 进场块为空' % name)
 
     events = []
     t = 0
-    saw_265 = False
-    saw_278 = False
+    saw_logo = False
+    saw_copy = False
     for pc in pcs:
         i = idx[pc]
         _op, nm, args = code.instr[pc]
-        if nm == 'call' and args and args[0] == 145552:
+        if nm == 'call' and args and args[0] == cfg['wait']:
             vals = args_n(code, order, i, locals_at, 2)
             ms = vals[0] if vals else 0
             if isinstance(ms, int) and ms > 0:
@@ -246,20 +260,20 @@ def extract():
             if not vals or not isinstance(vals[0], int):
                 continue
             prim = vals[0]
-            if prim not in DRAWN and prim not in FRAME_PRIMS:
+            if prim not in cfg['drawn'] and prim not in cfg['frames']:
                 continue
-            frm, to, dur = vals[1], vals[2], vals[3]
             events.append({
-                'kind': 'alpha', 'prim': prim, 'from': frm, 'to': to,
-                'duration_ms': dur, 'start_ms': t, 'at_ms': t,
+                'kind': 'alpha', 'prim': prim, 'from': vals[1], 'to': vals[2],
+                'duration_ms': vals[3], 'start_ms': t, 'at_ms': t,
                 'pc': '0x%08x' % pc})
-            saw_265 = saw_265 or prim == 265
-        elif nm == 'call' and args and args[0] == 219703:
+            saw_logo = saw_logo or cfg['drawn'].get(prim) in ('logo',
+                                                              'logo_glow')
+        elif nm == 'call' and args and args[0] == cfg['motion']:
             vals = args_n(code, order, i, locals_at, 8)
             if not vals or not isinstance(vals[0], int):
                 continue
             prim = vals[0]
-            if prim not in DRAWN and prim not in FRAME_PRIMS:
+            if prim not in cfg['drawn'] and prim not in cfg['frames']:
                 continue
             fx, fy = vals[1], vals[2]
             tx, ty = vals[3], vals[4]
@@ -267,23 +281,24 @@ def extract():
                 'kind': 'move', 'prim': prim,
                 'from_x_logical': fx, 'from_y_logical': fy,
                 'to_x_logical': tx, 'to_y_logical': ty,
-                'from_dx': (logical_to_hd(fx, FX_BITS)
+                'from_dx': (logical_to_hd(fx, cfg['fx'])
                             if isinstance(fx, int) else None),
-                'from_dy': (logical_to_hd(fy, FY_BITS)
+                'from_dy': (logical_to_hd(fy, cfg['fy'])
                             if isinstance(fy, int) else None),
-                'to_dx': (logical_to_hd(tx, FX_BITS)
+                'to_dx': (logical_to_hd(tx, cfg['fx'])
                           if isinstance(tx, int) else None),
-                'to_dy': (logical_to_hd(ty, FY_BITS)
+                'to_dy': (logical_to_hd(ty, cfg['fy'])
                           if isinstance(ty, int) else None),
                 'duration_ms': vals[5], 'mode': vals[6], 'start_ms': t,
                 'at_ms': t, 'pc': '0x%08x' % pc})
         elif nm == 'syscall' and args and args[0] == 44:
             vals = args_n(code, order, i, locals_at, 1)
             if vals and vals[0] == 278:
-                saw_278 = True
+                saw_copy = True
 
-    if not saw_265 or not saw_278:
-        raise RuntimeError('进场块里没找到 265 淡入 / 278 测试，边界可能变了')
+    if not saw_logo or not saw_copy:
+        raise RuntimeError('%s 进场块里没找到 logo 淡入 / 278 测试（边界可能变了）'
+                           % name)
 
     elements = {}
     for e in events:
@@ -299,8 +314,8 @@ def extract():
                 'to_dx': e['to_dx'], 'to_dy': e['to_dy'],
                 'start_ms': e['start_ms'], 'duration_ms': e['duration_ms'],
                 'mode': e['mode'], 'pc': e['pc']}
-            # 1522/1529 有 global3 分支的第二条 move（终点 -48 逻辑像素 = -81 px）。
-            # 本站实现"回到 0"的那条；另一条只记录，不实现。
+            # 1522/1529（五彩斑斓）有 global3 分支的第二条 move；
+            # 本站实现"回到 0"的那条，另一条只记录，不实现。
             zero = ((move['to_dx'] in (0, None)) and
                     (move['to_dy'] in (0, None)))
             if 'move' not in d:
@@ -314,7 +329,7 @@ def extract():
     total = 0
     total_drawn = 0
     for prim, d in elements.items():
-        drawn = int(prim) in DRAWN
+        drawn = int(prim) in cfg['drawn']
         for kind in ('alpha', 'move'):
             ev = d.get(kind)
             if ev is None:
@@ -325,16 +340,16 @@ def extract():
                 total_drawn = max(total_drawn, end)
 
     for prim in elements:
-        elements[prim]['name'] = DRAWN.get(int(prim)) or FRAME_PRIMS.get(
-            int(prim)) or '?'
-        elements[prim]['drawn_by_engine'] = int(prim) in DRAWN
+        elements[prim]['name'] = (cfg['drawn'].get(int(prim)) or
+                                  cfg['frames'].get(int(prim)) or '?')
+        elements[prim]['drawn_by_engine'] = int(prim) in cfg['drawn']
 
     return {
         'hcb_sha256': hashlib.sha256(data).hexdigest(),
         'hcb_size': len(data),
-        'entrance_start': '0x%08x' % START_PC,
-        'entrance_end': '0x%08x' % END_PC,
-        'logical_to_hd': {'fx': f32(FX_BITS), 'fy': f32(FY_BITS),
+        'entrance_start': '0x%08x' % cfg['start'],
+        'entrance_end': '0x%08x' % cfg['end'],
+        'logical_to_hd': {'fx': f32(cfg['fx']), 'fy': f32(cfg['fy']),
                           'note': '原版 Variant 的 float 是 float32（flds/fstps）'},
         'waits': [e for e in events if e['kind'] == 'wait'],
         'elements': elements,
@@ -345,32 +360,40 @@ def extract():
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
+    ap.add_argument('--game', default='all', choices=['all'] + sorted(GAMES))
     ap.add_argument('--check', action='store_true')
     opt = ap.parse_args(argv)
 
-    if not os.path.isfile(GAME):
-        print('SKIP: 缺 %s' % GAME)
-        return 0
     result = {
-        'note': '标题进场逐元素时间轴（脚本 0x5933E..0x5961A）；'
-                '由 scripts/extract-title-enter.py 生成，不含游戏数据本体',
-        'games': {'iroseka': extract()},
+        'note': '标题进场逐元素时间轴（五彩斑斓 0x5933E..0x59650，星空 '
+                '0x6FEDE..0x701E2）；由 scripts/extract-title-enter.py 生成，'
+                '不含游戏数据本体',
+        'games': {},
     }
-    r = result['games']['iroseka']
-    print('iroseka  %s..%s  total=%s ms  elements=%d'
-          % (r['entrance_start'], r['entrance_end'], r['total_ms'],
-             len(r['elements'])))
-    for prim in sorted(r['elements'], key=int):
-        d = r['elements'][prim]
-        a = d.get('alpha') or {}
-        m = d.get('move') or {}
-        print('  prim %-5s %-14s alpha %s..%s @%s/%s  move dx %s->%s dy %s->%s'
-              % (prim, d['name'], a.get('from'), a.get('to'),
-                 a.get('start_ms'), a.get('duration_ms'),
-                 m.get('from_dx'), m.get('to_dx'), m.get('from_dy'),
-                 m.get('to_dy')))
+    keys = sorted(GAMES) if opt.game == 'all' else [opt.game]
+    for name in keys:
+        cfg = GAMES[name]
+        if not os.path.isfile(cfg['hcb']):
+            print('SKIP: %s 不存在（%s）' % (name, cfg['hcb']))
+            return 0
+        r = extract(name, cfg)
+        result['games'][name] = r
+        print('%s  %s..%s  total=%s (drawn %s) ms  elements=%d'
+              % (name, r['entrance_start'], r['entrance_end'],
+                 r['total_ms'], r['total_ms_drawn'], len(r['elements'])))
+        for prim in sorted(r['elements'], key=int):
+            d = r['elements'][prim]
+            a = d.get('alpha') or {}
+            m = d.get('move') or {}
+            print('  prim %-5s %-14s alpha %s..%s @%s/%s  move dx %s->%s '
+                  'dy %s->%s'
+                  % (prim, d['name'], a.get('from'), a.get('to'),
+                     a.get('start_ms'), a.get('duration_ms'),
+                     m.get('from_dx'), m.get('to_dx'), m.get('from_dy'),
+                     m.get('to_dy')))
 
-    text = json.dumps(result, ensure_ascii=False, indent=1, sort_keys=True) + '\n'
+    text = json.dumps(result, ensure_ascii=False, indent=1,
+                      sort_keys=True) + '\n'
     if opt.check:
         if not os.path.isfile(OUT_JSON):
             print('FAIL: %s 不存在' % OUT_JSON)

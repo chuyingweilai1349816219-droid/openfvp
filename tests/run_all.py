@@ -669,9 +669,9 @@ def build_steps(args):
     vte = os.path.join(HERE, 'verify_title_enter.py')
     steps.append(Step('verify_title_enter.py', [PY, '-X', 'utf8', vte], 300,
                       skip_reason=None,
-                      note='title entrance timeline == script constants '
-                           '(logo 2000/2000, menu 2400+40i/900/820, '
-                           'copyright 2560/820, total 4000 ms)'))
+                      note='title entrance timeline == script constants for both games '
+                           '(iroseka 2000/2400/2560 total 4000; '
+                           'hoshimemo 1000/1400/1560 total 3000)'))
 
     # 6.4969 开场 FAVORITE logo 的时间轴 == 脚本常量（纯 JSON/源码检查，无依赖）
     voa = os.path.join(HERE, 'verify_opening_anim.py')

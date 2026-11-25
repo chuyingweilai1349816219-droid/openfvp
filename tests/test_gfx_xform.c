@@ -314,9 +314,9 @@ int main(void)
               FVP_OPEN_VIEW_SCALE_TO == 1000 &&
               FVP_OPEN_VIEW_MS == 1400,
           "开场 p1..p3 的缩放常量 = 10000→1000 / 1400 ms（脚本 MotionMoveS2）");
-    CHECK(FVP_TITLEENTER_LOGO_START_MS == 2000 &&
+    CHECK(FVP_TITLEENTER_IROSEKA_LOGO_START_MS == 2000 &&
               FVP_TITLEENTER_LOGO_MS == 2000 &&
-              FVP_TITLEENTER_TOTAL_MS == 4000,
+              FVP_TITLEENTER_IROSEKA_TOTAL_MS == 4000,
           "标题进场 = 逐元素脚本时间轴（logo 2000 ms 起、2000 ms、总计 4000）");
     fvp_motion_init(&m);
     alpha_id = fvp_motion_add(&m, 255, FVP_TWEEN_ALPHA, 0.0, 0.0, 255.0, 0.0,

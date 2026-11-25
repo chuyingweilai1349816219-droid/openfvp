@@ -51,6 +51,23 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 实现/结构分析（标题进场扩到第二部作品：星空的进入时刻比五彩早 1000 ms）
+
+- **`scripts/extract-title-enter.py` 泛化成两作品**，`ref/title-enter.json` 现在同时有
+  `iroseka` 与 `hoshimemo`（进场块 0x6FEDE..0x701E2）。两作**结构相同、参数不同**：
+  - 五彩斑斓：只等两次 1000 ms → logo 2000 ms 起；菜单 2400 起（900/820/步进 40）、
+    纵向 +23 px→0；版权行 2560 起 820 ms、横向 +30 px→0；总计 **4000 ms**
+  - 星空：只等一次 1000 ms（装饰层 259/260 与 logo 265+276 同时）→ logo 1000 ms 起；
+    菜单 1400 起（同时长），纵向 **+50 px**→0；版权行 1560 起、横向 **+76 px**→0；
+    总计 **3000 ms**
+  - 位移来自各自的 float32 因子：五彩 1.875/1.6875（14→23、16→30），星空 2.4/1.8（28→50、32→76）
+- `src/titleenter.c/.h` 改成**每作品表**（`FvpTitleEnterGame`，`fvp_titleenter_game_from_name`），
+  `main_win32.c` 按标题 profile 的 game 取时间轴（和 `--opening` 同一套识别）。
+- 测试/门禁：`tests/test_titleenter.c` 3496→**3513 项**（两作）；`verify_title_enter.py`
+  改成两作；`verify_title_anim_render.py` 扩展成两作端到端（五彩 mean_abs 5.02 / 早期 6.42，
+  星空 3.31 / 4.90，**两作进场结束后都与静态帧逐字节 0 差**）。
+- 文档：`docs/title-menu.md` §21 补星空表；`src/titleanim.h` 每作品宏。
+
 ### 实现/结构分析（标题进场不是统一淡入：逐元素错开，500 ms 那个值是错的）
 
 - **上一轮冻结的 `FVP_TITLEANIM_FADE_MS = 500` 作废。** 那个 500 来自 hcb 0x59120

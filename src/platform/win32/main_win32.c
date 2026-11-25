@@ -1679,6 +1679,7 @@ static int title_copy_dx;
 static int title_menu_alpha[FVP_TITLE_ITEMS] = {255, 255, 255, 255, 255};
 static int title_menu_dy[FVP_TITLE_ITEMS];
 static FvpTitleEnter title_enter;
+static FvpTitleEnterGame title_enter_game = FVP_TITLEENTER_GAME_IROSEKA;
 static double title_enter_t0;
 static int title_enter_active;
 static int title_enter_started;
@@ -1699,9 +1700,10 @@ static void title_enter_reset(void)
 
 /* 用**墙钟时间**推进（而不是累加 frame_dt）：标题第一次绘制要现场加载一整套
  * 贴图，那一帧的 dt 可能是几百毫秒，累加会把整段进场在一帧里跳完。 */
-static void title_enter_start(double now_s)
+static void title_enter_start(double now_s, FvpTitleEnterGame game)
 {
-    fvp_titleenter_init(&title_enter);
+    title_enter_game = game;
+    fvp_titleenter_init(&title_enter, game);
     title_enter_t0 = now_s;
     title_enter_active = 1;
     title_enter_reset();
@@ -3673,17 +3675,19 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                     title_shown_at = now;
                 }
                 if (opts.title_anim && !title_enter_started) {
-                    title_enter_start(now);
+                    FvpTitleEnterGame game = fvp_titleenter_game_from_name(
+                        title_profile != NULL ? title_profile->game : NULL);
+
+                    title_enter_start(now, game);
                     title_enter_started = 1;
-                    fvp_logf("title: script entrance started (logo 0->255 "
-                             "over %d ms from %d ms; menu %d items staggered "
-                             "by %d ms; copyright from %d ms; total %d ms)",
+                    fvp_logf("title: script entrance started (%s: logo 0->255 "
+                             "over %d ms; %d menu items staggered by %d ms; "
+                             "total %d ms)",
+                             fvp_titleenter_game_name(game),
                              FVP_TITLEENTER_LOGO_MS,
-                             FVP_TITLEENTER_LOGO_START_MS,
                              FVP_TITLEENTER_MENU_COUNT,
                              FVP_TITLEENTER_MENU_STEP_MS,
-                             FVP_TITLEENTER_COPY_START_MS,
-                             FVP_TITLEENTER_TOTAL_MS);
+                             fvp_titleenter_total_ms(&title_enter));
                 }
                 if (title_enter_active) {
                     title_enter_advance(now);
