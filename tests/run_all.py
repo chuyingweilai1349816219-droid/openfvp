@@ -698,6 +698,13 @@ def build_steps(args):
                            'character per line (70 lines not in the HCB), so that baseline '
                            'must not be re-frozen as-is'))
 
+    # 6.496495 TextBuff 尺寸上限/越界行为（从 exe 0x430EA0 抄出来；缺 work/ 时 SKIP）
+    vtb = os.path.join(HERE, 'verify_exe_textbuff.py')
+    steps.append(Step('verify_exe_textbuff.py', [PY, '-X', 'utf8', vtb], 600,
+                      skip_reason=None,
+                      note='TextBuff limit: w/h each capped at 0x400 and the over-limit '
+                           'branch THROWS (code 0x80 at 0x430FF8 -> 0x447C05 -> 0x4258F0 -> '
+                           '0x44837C) instead of silently returning'))
     # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
     vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
     steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,

@@ -5061,7 +5061,10 @@ int gfx_text_get_out_size(const Gfx *g, int layer, int *a, int *b)
  *
  * 语义照抄 handler 0x43C830 → 构造/改尺寸函数 0x430EA0：
  *   - 两个分量各自回落到 8（缺省），并各自钳到 0..0x400；
- *   - 任一分量 > 0x400 时**整条命令放弃**（连面板都不建）；
+ *   - **任一分量 > 0x400 时原版抛异常**（错误码 0x80：`0x430FF8 push $0x80` →
+ *     构造 → 格式化 → `0x44837C throw`，见 ref/exe-textbuff.json）；
+ *     本引擎没有 VM 异常语义，只能"放弃这条命令"并返回 0——这是能做到的最近似行为，
+ *     所以脚本里越界的 `TextBuff(0,1380,1024)` 在我们这里不会中断后续设置；
  *   - 面板缓冲 = w*h*4 字节（RGBA）。
  * 我们不需要真的分配 w*h*4（文本是直接画到画布上的），只把尺寸记下来：
  * 图元驱动模式下它就是换行宽度与裁剪高度。 */
@@ -5077,6 +5080,11 @@ int gfx_text_set_buff(Gfx *g, int layer, int w, int h)
         h = 8;
     }
     if (w > 0x400 || h > 0x400) {
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr,
+                    "TextBuff layer=%d w=%d h=%d over the 1024 limit: original "
+                    "throws (code 0x80), we drop the command\n", layer, w, h);
+        }
         return 0;
     }
     g->tw[layer].used = 1;

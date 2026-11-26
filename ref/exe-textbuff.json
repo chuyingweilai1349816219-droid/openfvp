@@ -1,0 +1,82 @@
+{
+ "conclusion": "w > 1024 或 h > 1024 时原版**抛异常**而不是静默放弃；本引擎（gfx_text_set_buff）在同一条件下返回 0（放弃），因为 VM 侧没有异常语义可承载。脚本的正文层调用 TextBuff(0,1380,1024) 正好越界，所以那段窗口设置在原版里会中断——不是我们引擎的 bug。",
+ "handler": "0x430ea0",
+ "instructions": [
+  {
+   "instr": "cmp    $0x400,%edi",
+   "pc": "0x430ea8"
+  },
+  {
+   "instr": "jg     0x430ff8",
+   "pc": "0x430eb0"
+  },
+  {
+   "instr": "cmp    $0x400,%ebp",
+   "pc": "0x430eba"
+  },
+  {
+   "instr": "jg     0x430ff8",
+   "pc": "0x430ec0"
+  },
+  {
+   "instr": "mov    %di,0x5dc(%esi)",
+   "pc": "0x430ecd"
+  },
+  {
+   "instr": "mov    %bp,0x5de(%esi)",
+   "pc": "0x430ed4"
+  },
+  {
+   "instr": "call   0x4289f0",
+   "pc": "0x430edb"
+  },
+  {
+   "instr": "imul   %ebp,%edi",
+   "pc": "0x430efb"
+  },
+  {
+   "instr": "mul    %edx",
+   "pc": "0x430f07"
+  },
+  {
+   "instr": "call   0x4470eb",
+   "pc": "0x430f11"
+  },
+  {
+   "instr": "mov    %eax,0x520(%esi)",
+   "pc": "0x430f22"
+  },
+  {
+   "instr": "push   $0x80",
+   "pc": "0x430ff8"
+  },
+  {
+   "instr": "call   0x447c05",
+   "pc": "0x430ffd"
+  },
+  {
+   "instr": "call   0x4258f0",
+   "pc": "0x43101b"
+  },
+  {
+   "instr": "call   0x44837c",
+   "pc": "0x431035"
+  }
+ ],
+ "limit": {
+  "check_pc": [
+   "0x430ea8",
+   "0x430eba"
+  ],
+  "h_max": 1024,
+  "on_overflow": "抛异常：错误码 0x80（0x430ff8 push $0x80），0x447C05 构造 → 0x4258F0 格式化（格式串 0x45D8C4）→ 0x44837C throw",
+  "w_max": 1024
+ },
+ "note": "从 exe 静态分析抄出的 TextBuff(110) 尺寸上限与越界行为（A 类）；由 scripts/extract-exe-textbuff.py 生成",
+ "on_ok": {
+  "buffer": "tw+0x520 = 分配(w*h*4)",
+  "panel_h": "tw+0x5de",
+  "panel_w": "tw+0x5dc",
+  "surface": "0x4289f0（建/改 surface）"
+ }
+}

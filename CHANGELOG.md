@@ -4,6 +4,21 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（十续）：TextBuff 越界是**抛异常**（code 0x80），不是我上一轮猜的"被我们丢掉"
+
+上一轮的怀疑（"我们的引擎把 1380 宽的面板丢了、原版不会"）**不成立**。读透 `0x430EA0`：
+
+- 上限检查：`0x430EA8 cmpl $0x400,w`、`0x430EBA cmpl $0x400,h`，任一越界 → `0x430FF8`；
+- `0x430FF8` 不是返回，而是构造异常并 **throw**（`push $0x80` → `0x447C05` →
+  格式串 `0x45D8C4` + `0x4258F0` → `0x44837C`）；
+- 未越界才写 `tw+0x5DC/0x5DE` 面板尺寸、建 surface、分配 `w*h*4` 到 `tw+0x520`。
+
+⇒ 原版对 `TextBuff(0,1380,1024)`（脚本正文层）**也会中断**。我们引擎同一条件返回 0
+（VM 无异常语义，最近似行为），并新增 `FVP_DEBUG_TEXT` 提示一行。
+
+新增 `scripts/extract-exe-textbuff.py` + `ref/exe-textbuff.json` +
+`tests/verify_exe_textbuff.py`（`run_all` 6.496495，15 条指令逐条校验）。
+
 ## [未发布] — 2026-11-26（九续）：用 HCB 字符串判定"冻结基线对、修正帧模型错"（不能重新冻结）
 
 上一轮留了个悬而未决的问题：要不要把 `FVP_FRAME_SLOTS=1` 切默认并重新冻结
