@@ -4,6 +4,25 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（五十四续）：合成点击改成**边沿触发**（按下 1 步 + 抬起 1 步）
+
+`src/syscall.c`：`InputGetDown(31)` 从"每 period 步里连续 2 步为按下"改成
+`steps % period == 0` 按下 1 步；`InputGetUp(35)` 从恒 0 改成"按下之后的下一步返回同一个
+位掩码"（抬起边沿）。理由：原版每帧采样的输入是边沿语义，脚本用 `syscall 31; test 位`
+与 `syscall 35` 等状态变化，而不是"按着就成立"。
+
+| 检查 | 结果 |
+|---|---|
+| 冻结像素基线 `verify_gfx -SkipDump` | **PASS，数字一字不变**（293 px / 0.0141% / PSNR 49.94 / SSIM 0.99971） |
+| `make check` | **PASS** |
+| `bin/fvp-headless.exe --steps 900000 --click 600 --text-out` | 仍然 0 行文本（`threadnext=41427 motion_active=0`） |
+
+即：边沿模型没改变 headless 的结论 —— 卡点不在"点击是边沿还是电平"。pc 直方图里
+`0x592DF..0x59309` 是 `MotionAlphaTest(265) → InputGetDown → ControlPulse → ThreadNext
+→ 回到 0x592DF`，说明脚本在**动画还在跑**时的那条轮询分支里打转；`motion_active=0`
+只在最后成立。下一步查 prim 265 那条动画**为什么一直在跑**（它的 Motion* 参数/时长，
+以及 headless 每帧 16 ms 的推进量是否与脚本期望一致），而不是继续改输入。
+
 ## [未发布] — 2026-11-26（五十三续）：两外壳的 pc 分叉点仍是 `0x58350`，但那一点**不是 bug**
 
 帧泵 + 位掩码之后重跑 headless vs fvm 的 pc 轨迹比对（各 120k 步）：
