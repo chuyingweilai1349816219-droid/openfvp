@@ -855,18 +855,24 @@ def main():
                 check(m is not None, 'screenshot log line present (%s)'
                       % ((m.group(0) if m else 'missing')))
 
-                # 再来一次短跑，开 --text-prims：文本窗口按 PrimSetText(86) 绑定的
-                # 图元位置画（原版做法），必须真的画出至少一个。
+                # 再来一次短跑：图元驱动从 2026-11-26 起就是**默认**（原版做法），
+                # 文本窗口按 PrimSetText(86) 绑定的图元位置画。这里要验证的是
+                # “这条链路真的在跑”：日志必须是 prim-driven 模式，且至少有一个
+                # 文本图元绑定。注意 bound 的图元 alpha=0 时合法地不画，所以
+                # drawn 可以是 0（旧断言“drawn>0”会误报）。
                 shot2 = os.path.join(OUT_DIR, 'mg-%s-textprims.bmp' % name)
                 log2_path = os.path.join(OUT_DIR,
                                          'mg-%s-textprims.log' % name)
                 rc2, log2 = run_shell_frame(
                     shell, g['dir'], os.path.basename(g['script']), 4, shot2,
-                    log2_path, extra=['--text-prims'])
-                check(rc2 == 0, 'shell --text-prims exit 0 (got %s)' % rc2)
+                    log2_path)
+                check(rc2 == 0, 'shell prim-driven exit 0 (got %s)' % rc2)
+                check('mode prim-driven' in log2,
+                      'shell reports prim-driven text mode (%s)'
+                      % ('ok' if 'mode prim-driven' in log2 else 'missing'))
                 m = log_match(r'^text prims\s+(\d+) drawn, (\d+) bound', log2)
-                check(m is not None and int(m.group(1)) > 0,
-                      'text prims drawn (%s)'
+                check(m is not None and int(m.group(2)) >= 1,
+                      'text prims bound (%s)'
                       % ((m.group(0) if m else 'missing')))
         print('')
 

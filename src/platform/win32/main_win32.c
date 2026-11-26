@@ -114,7 +114,8 @@ typedef struct Options {
     int verbose;
     int unknown_all; /* --unknown-all: 退出总结打印全部未实现命令 */
     int typewriter; /* --typewriter: 逐字显示（默认关，关时像素基准不变） */
-    int text_prims; /* --text-prims: 按文本图元（PrimSetText 86）定位，默认关 */
+    int text_fixed_layout; /* --text-fixed-layout：旧路径（合成框 + 版面表）；
+                            * 默认 0 = 图元驱动（原版做法，PrimSetText 86） */
     int title_menu; /* --title-menu: 先显示引擎侧标题菜单，选了 New Game 才跑脚本 */
     int title_save_list; /* --title-save-list: 直接打开 Continue 的存档列表 */
     /* 调试钩子：脚本自己调 SaveWrite/Load 之前先手动造一个请求，用来端到端
@@ -464,7 +465,9 @@ static const wchar_t *usage_text(void)
             L"  --no-threads        关闭协程槽 0..31（A/B 用；默认开启，本作脚本行为中立）\n"
             L"  --unknown-all       退出总结打印全部未实现命令（默认只打 top 12）\n"
             L"  --typewriter        逐字显示文本（按 TextSpeed，默认关；关时像素基准不变）\n"
-           L"  --text-prims        文本窗口画在 PrimSetText(86) 绑定的图元位置上（默认关）\n"
+           L"  --text-fixed-layout 旧路径：合成对话框 + 每层按版面表画文本"
+    L"（冻结像素基线用；默认关闭）\n"
+    L"  --text-prims        兼容旧参数：图元驱动已是默认行为\n"
            L"  --title-menu        先显示引擎侧标题菜单（New Game/Continue/Album/Option/Exit），\n"
            L"                      选 New Game 才开始跑脚本（默认关；几何按原版实测）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
@@ -570,7 +573,7 @@ static void defaults(Options *o)
     o->threads = 1;
     o->tex_cache_mb = 256;
     o->typewriter = 0;
-    o->text_prims = 0;
+    o->text_fixed_layout = 0;
     o->feed_text = 1;
 }
 
@@ -796,8 +799,11 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->unknown_all = 1;
         } else if (wcscmp(a, L"--typewriter") == 0) {
             o->typewriter = 1;
+        } else if (wcscmp(a, L"--text-fixed-layout") == 0) {
+            o->text_fixed_layout = 1;
         } else if (wcscmp(a, L"--text-prims") == 0) {
-            o->text_prims = 1;
+            /* 兼容旧参数：图元驱动已经是默认行为，这里接受但不改变任何东西。 */
+            o->text_fixed_layout = 0;
         } else if (wcscmp(a, L"--title-menu") == 0) {
             o->title_menu = 1;
         } else if (wcscmp(a, L"--title-save-list") == 0) {
@@ -3181,8 +3187,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         fvp_logf("gfx: texture cache cap %d MiB%s", opts.tex_cache_mb,
                  opts.tex_cache_mb == 0 ? " (unlimited)" : "");
         gfx_typewriter_set_enabled(gfx, opts.typewriter);
-    gfx_set_text_prims(gfx, opts.text_prims);
-    fvp_logf("gfx: text prims %s", opts.text_prims ? "on" : "off");
+    gfx_set_text_fixed_layout(gfx, opts.text_fixed_layout);
+    fvp_logf("gfx: text %s", opts.text_fixed_layout
+                 ? "fixed layout (legacy)" : "prim-driven (original)");
         fvp_logf("gfx: typewriter %s", opts.typewriter ? "on" : "off");
         if (title_active) {
             title_bg_disabled = opts.title_no_bg;
@@ -4590,9 +4597,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         APPEND("glyphs         %d tofu, %d from fallback atlas\n",
                gfx_stats(gfx)->tofu_glyphs,
                gfx_stats(gfx)->fallback_glyphs);
-        APPEND("text prims     %d drawn, %d bound (PrimSetText 86, --text-prims %s)\n",
+        APPEND("text prims     %d drawn, %d bound (PrimSetText 86; mode %s)\n",
                gfx_stats(gfx)->text_prims, gfx_text_prim_bindings(gfx),
-               opts.text_prims ? "on" : "off");
+               opts.text_fixed_layout ? "fixed-layout (legacy)"
+                                      : "prim-driven");
         APPEND("title menu     %s (profile=%s, align=%s, %d item(s), "
                "pitch %d, continue=%s (%d slot(s), %d readable), picked %s)\n",
                opts.title_menu ? "enabled" : "off",

@@ -233,7 +233,7 @@ const char *gfx_last_error(const Gfx *g);
 | `getchannel('A').point(v*a//255)` | `alpha_eff < 255` 分支 | 整数向下取整 |
 | `_paste_clipped()` | `blit_sprite()` + `over_px_opaque()` | 不透明目标用精确等价快速路径 |
 | `additive` 分支 | `blit_sprite(additive=1)` | 加色近似 |
-| `_draw_dialog_box()` / 人名板 | `draw_dialog_box()` / `draw_name_plate()` | 单一 overlay 语义 |
+| `_draw_dialog_box()` / 人名板 | `draw_dialog_box()` / `draw_name_plate()` | 单一 overlay 语义；**只在 `--text-fixed-layout` 旧路径里画**，默认（图元驱动）不画 |
 | `_draw_text()` | `draw_text_all()` / `draw_text_window()` | 版式常量与字号规则 1:1 |
 | `parse_ruby()` | `ruby_strip()` | `[读音|正文]`→正文 |
 | `wrap_text()` | `text_wrap()` | 逐字符换行 |

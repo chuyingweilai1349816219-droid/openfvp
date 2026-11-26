@@ -177,6 +177,13 @@ int main(void)
     }
     CHECK(gfx_add_font(g, f34) == 0, "add 34px font");
     CHECK(gfx_add_font(g, f16) == 0, "add 16px font");
+    /* 2026-11-26 起默认文本模式是“图元驱动”：层 8 是覆盖层窗口，必须有文本
+     * 图元（PrimSetText 86）才会画；本测试关心字形兜底，所以先给它绑一个。 */
+    (void)gfx_set_prim(g, 7, GFX_F_TYPE, 5);
+    (void)gfx_set_prim(g, 7, GFX_F_TW, 8);
+    (void)gfx_set_prim(g, 7, GFX_F_DRAW, 1);
+    (void)gfx_set_prim(g, 7, GFX_F_ALPHA, 255);
+    (void)gfx_set_prim(g, 7, GFX_F_PARENT, 0);
 
     /* --- 1. 目标图集里有的字：直接命中，不兜底、不豆腐块 --- */
     gfx_text_append(g, 8, "B"); /* 层 8 的排版字号 = 34 */

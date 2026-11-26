@@ -1089,6 +1089,10 @@ int main(int argc, char **argv)
            gfx_archive_host_image_count(ah));
     host = *gfx_archive_host_iface(ah);
     g = gfx_create(canvas_w, canvas_h, &host);
+    /* 这个 harness 是 verify_gfx 的“冻结像素基线”一侧：显式用旧路径
+     * （合成对话框 + 每层按版面表画）。引擎默认已经改成图元驱动（原版做法），
+     * 但基线是旧路径冻结的，所以这里必须钉住 old path，不能跟着默认走。 */
+    gfx_set_text_fixed_layout(g, 1);
     if (g == NULL) {
         fprintf(stderr, "test_gfx: gfx_create failed\n");
         return 1;

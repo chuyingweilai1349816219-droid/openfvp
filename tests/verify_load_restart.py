@@ -18,7 +18,8 @@ exe 的消费路径是 读槽文件 → 场景/图元树复位(0x438D20) → 脚
   A. `--load-restart --debug-load-request 485`：日志有槽文件解析
      （thumb=200x113、tail 长度）、复位、`restarted at entry pc=0x...`；
      重启后脚本继续跑（总步数 > 30000、至少 1 行文本）、退出码 0、
-     结束帧非黑（mean > 5）；
+     结束帧有内容（采样非零像素 > 20；旧的“平均亮度 > 5”是合成对话框的副产物，
+     2026-11-26 文本改图元驱动后不再适用）；
   B. 不带 `--load-restart`：日志明确 `not implemented` 且提示
      `pass --load-restart to restart`（行为未被悄悄改变）；
   C. 历史环回灌：槽 485 → `history: restored count=1 pos=0`；
@@ -119,13 +120,19 @@ def main():
     if px is not None:
         n = 0
         s = 0
+        ink = 0
         for row in px[::8]:
             for p in row[::8]:
                 s += p[0] + p[1] + p[2]
                 n += 1
+                if p[0] or p[1] or p[2]:
+                    ink += 1
         mean = s / (3.0 * n) if n else 0.0
-        print('  结束帧 mean=%.2f' % mean)
-        check(mean > 5.0, '结束帧非黑（mean %.2f > 5）' % mean)
+        print('  结束帧 mean=%.2f ink=%d/%d' % (mean, ink, n))
+        # 2026-11-26：默认文本渲染已改成图元驱动，引擎不再画合成对话框，
+        # 结束帧的“整体平均亮度”不再是有效判据（黑底画面 mean 会 <1）。
+        # 活性判据改成“采样里确有非零像素”（真的画了东西）。
+        check(ink > 20, '结束帧有内容（ink %d > 20）' % ink)
     else:
         check(False, '截图读不出来')
 

@@ -535,9 +535,18 @@ struct Gfx {
     FvpMotion motion; /* 动画补间表；motion_on = 0 时只走时间轴、不动图元 */
     int motion_on;
     int typewriter_on; /* 逐字显示总开关（外壳 --typewriter，默认关） */
-    /* 文本图元定位总开关（外壳 --text-prims，默认关）：打开后挂在图元上的文本窗口
-     * 画在图元的绝对位置（原版做法），没挂图元的层仍按版面表画。 */
-    int text_prims_on;
+    /* 文本渲染模式。
+     *
+     * 默认（0）= **图元驱动**，也就是原版做法：文本窗口由 `PrimSetText(86)` 建出来的
+     * type 5 文本图元承载，在 prim 树里按图元顺序、画在图元的绝对位置上；
+     * **没有图元绑定的窗口不画**，引擎也**不画**合成对话框/名牌（框与名牌是脚本自己
+     * GraphLoad 的图元）。
+     *
+     * 1 = 旧路径（外壳 `--text-fixed-layout`）：引擎画一个合成对话框，然后把 32 个
+     * 文本窗口全部按 `gfx_layout_default(layer)` 的固定版式画一遍。冻结像素基线
+     * （verify_gfx 等）就是用这条路径冻结的，所以它必须原样保留。 */
+    int text_fixed_layout;
+    unsigned char text_bound[GFX_TEXT_MAX]; /* 本帧已由图元画过的文本窗口 */
     /* 标题背景缩放缓存（gfx_draw_image_zoomed）。1920x1080 的三角形滤波缩放
      * 一次 ~80 ms，而脚本动画 40 s 内只变化 ~25‰/s；把源矩形量化到 16 px 后
      * 每 ~0.6 s 才会重算一次，其余帧直接贴缓存。 */
@@ -2044,6 +2053,11 @@ static void render_sprite(Gfx *g, GfxPrim *p, const GfxXf *xf)
 /* group tree walk (engine 0x438ab0: depth first, insertion order)         */
 /* ----------------------------------------------------------------------- */
 
+/* 文本相关：walk_tree 里要按图元顺序画文本窗口（默认模式），定义在后面。 */
+static int text_visible(const GfxTextWin *tw);
+static void draw_text_window(Gfx *g, int idx, const int *origin, int alpha);
+static void prim_abs_xy(const Gfx *g, int prim_id, int *ox, int *oy);
+
 static void walk_tree(Gfx *g, int pid, int depth, const GfxXf *parent)
 {
     GfxPrim *p;
@@ -2074,9 +2088,20 @@ static void walk_tree(Gfx *g, int pid, int depth, const GfxXf *parent)
         if (p->alpha > 0) {
             render_sprite(g, p, parent);
         }
+    } else if (p->type == 5 && !g->text_fixed_layout) {
+        /* 原版路径：文本图元在图元树里按顺序画，位置取图元（含父链）的绝对坐标，
+         * alpha 跟着图元走；这样文本可以和 CG/立绘正确前后遮挡，也能浮在 CG 上。
+         * 旧路径（text_fixed_layout）仍把全部窗口留到最后按版面表画。 */
+        int origin[2];
+
+        if (p->draw && p->alpha > 0 && p->tw >= 0 && p->tw < GFX_TEXT_MAX &&
+            text_visible(&g->tw[p->tw])) {
+            prim_abs_xy(g, pid, &origin[0], &origin[1]);
+            draw_text_window(g, p->tw, origin, p->alpha);
+            g->text_bound[p->tw] = 1u;
+            g->stats.text_prims += 1;
+        }
     }
-    /* type 5 (text) prims carry no texture; the text windows are drawn
-     * after the sprite pass, exactly like the Python renderer. */
 }
 
 static void mark_tree(Gfx *g, int pid, unsigned char *seen)
@@ -2910,7 +2935,9 @@ static void draw_text_window(Gfx *g, int idx, const int *origin,
         x = origin[0];
         y = origin[1];
     }
-    if (idx == 9) {
+    if (idx == 9 && origin == NULL) {
+        /* 旧路径的“章节标题居中 + 白色描边”是版面表的一部分（合成版式）。
+         * 图元驱动时位置由图元决定，不再套这层版式；标题样式待后续从 exe 逆。 */
         for (i = 0; i < nlines; i++) {
             int wpx = text_width(g, f, lines[i].s);
             int xc = (g->w - wpx) / 2;
@@ -2921,7 +2948,8 @@ static void draw_text_window(Gfx *g, int idx, const int *origin,
             y += size + 8;
         }
     } else {
-        if (idx == 8) {
+        if (idx == 8 && origin == NULL) {
+            /* 名牌同样是旧路径的合成版式；图元驱动时名牌应来自脚本图元。 */
             int wpx = text_width(g, f, lines[0].s);
             draw_name_plate(g, x, y, wpx, size);
         }
@@ -2985,46 +3013,54 @@ static void prim_abs_xy(const Gfx *g, int prim_id, int *ox, int *oy)
 static void draw_text_all(Gfx *g)
 {
     int i;
-    unsigned char bound[GFX_TEXT_MAX];
 
-    memset(bound, 0, sizeof bound);
+    if (!g->text_fixed_layout) {
+        /* 默认（原版）。
+         *
+         * 已绑定的窗口在图元树里画过了；这里只补画**未绑定**的窗口：
+         *   - 8（人名）/9（章节标题）是覆盖层窗口：原版只在脚本给它们建了
+         *     PrimSetText(86) 文本图元时才上屏。未绑定就不画 —— 否则就会凭空
+         *     出现一个实机看不到的「标题」/名牌（2026-11-26 用户实机反馈）。
+         *   - 其余窗口（正文 0 等）有窗口自己的版面，未绑定时按版面画。
+         * 合成对话框/名牌不画：框与名牌是脚本自己的图元。
+         */
+        for (i = 0; i < GFX_TEXT_MAX; i++) {
+            if (i == 8 || i == 9 || g->text_bound[i]) {
+                continue;
+            }
+            if (text_visible(&g->tw[i])) {
+                draw_text_window(g, i, NULL, 255);
+            }
+        }
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            for (i = 1; i < GFX_PRIM_MAX; i++) {
+                const GfxPrim *p = &g->prim[i];
+
+                if (p->type != 5 || p->tw < 0 || p->tw >= GFX_TEXT_MAX) {
+                    continue;
+                }
+                fprintf(stderr,
+                        "text prim %d: tw=%d draw=%d alpha=%d visible=%d "
+                        "lines=%d\n",
+                        i, p->tw, p->draw, p->alpha,
+                        text_visible(&g->tw[p->tw]) ? 1 : 0,
+                        g->tw[p->tw].nlines);
+            }
+            for (i = 0; i < GFX_TEXT_MAX; i++) {
+                if (text_visible(&g->tw[i])) {
+                    fprintf(stderr, "text window %d: lines=%d (unbound?)\n", i,
+                            g->tw[i].nlines);
+                }
+            }
+        }
+        return;
+    }
+    /* 旧路径（--text-fixed-layout）：合成对话框 + 全部窗口按版面表各画一遍。
+     * 冻结像素基线（verify_gfx 的 293 px 等）依赖这条路径，故原样保留。 */
     if (text_visible(&g->tw[0]) || text_visible(&g->tw[8])) {
         draw_dialog_box(g);
     }
-    /* `--text-prims`：按原版的做法，把"挂到图元上的文本窗口"画在图元的绝对位置上，
-     * 并且不再单独画一遍（否则同一层会画两次）。默认关闭 —— 冻结的像素基线用的
-     * 是"按版面表画"的老路径，开关打开只影响显式要求的运行。 */
-    if (g->text_prims_on) {
-        for (i = 1; i < GFX_PRIM_MAX; i++) {
-            const GfxPrim *p = &g->prim[i];
-            int origin[2];
-
-            if (p->type == 5 && getenv("FVP_DEBUG_TEXT") != NULL) {
-                fprintf(stderr,
-                        "text prim %d: tw=%d draw=%d alpha=%d visible=%d\n", i,
-                        p->tw, p->draw, p->alpha,
-                        (p->tw >= 0 && p->tw < GFX_TEXT_MAX)
-                            ? text_visible(&g->tw[p->tw]) : -1);
-            }
-            if (p->type != 5 || !p->draw) {
-                continue;
-            }
-            if (p->tw < 0 || p->tw >= GFX_TEXT_MAX) {
-                continue;
-            }
-            if (!text_visible(&g->tw[p->tw])) {
-                continue;
-            }
-            prim_abs_xy(g, i, &origin[0], &origin[1]);
-            draw_text_window(g, p->tw, origin, p->alpha);
-            bound[p->tw] = 1u;
-            g->stats.text_prims += 1;
-        }
-    }
     for (i = 0; i < GFX_TEXT_MAX; i++) {
-        if (bound[i]) {
-            continue;
-        }
         draw_text_window(g, i, NULL, 255);
     }
 }
@@ -3061,6 +3097,7 @@ void gfx_render(Gfx *g)
     g->stats.fallback_glyphs = 0;
     g->stats.tofu_glyphs = 0;
     g->stats.text_prims = 0;
+    memset(g->text_bound, 0, sizeof g->text_bound);
     xf_identity(&xf);
     walk_tree(g, 0, 0, &xf);
     seen = (unsigned char *)calloc(GFX_PRIM_MAX, 1);
@@ -5122,18 +5159,32 @@ size_t gfx_tex_cap_bytes(const Gfx *g)
 /* ---- 逐字显示（打字机效果）------------------------------------------ */
 
 /* 文本图元定位（原版做法）：PrimSetText(86) 把文本窗口挂到图元上，位置由图元
- * 决定。默认关 —— 冻结的像素基线用老路径；`--text-prims` 打开后按图元位置画。 */
-void gfx_set_text_prims(Gfx *g, int on)
+ * 决定。默认是**图元驱动**（原版做法）；`fixed` 打开后退回旧路径
+     * “合成对话框 + 版面表”，冻结像素基线用它。 */
+void gfx_set_text_fixed_layout(Gfx *g, int fixed)
 {
     if (g == NULL) {
         return;
     }
-    g->text_prims_on = on ? 1 : 0;
+    g->text_fixed_layout = fixed ? 1 : 0;
+}
+
+/* 兼容旧名（2026-11-26 之前）：`on` 表示“按图元定位”，也就是现在的默认行为，
+ * 因此 on=1 等价于 fixed=0、on=0 等价于 fixed=1。新代码请用
+ * gfx_set_text_fixed_layout()。 */
+void gfx_set_text_prims(Gfx *g, int on)
+{
+    gfx_set_text_fixed_layout(g, on ? 0 : 1);
 }
 
 int gfx_text_prims_enabled(const Gfx *g)
 {
-    return (g != NULL) ? g->text_prims_on : 0;
+    return (g != NULL && !g->text_fixed_layout) ? 1 : 0;
+}
+
+int gfx_text_fixed_layout(const Gfx *g)
+{
+    return (g != NULL) ? g->text_fixed_layout : 0;
 }
 
 /* 当前绑定到文本窗口的图元个数（type==5 且 tw>=0），诊断用。 */

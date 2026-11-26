@@ -74,7 +74,9 @@ fvp.exe --game <游戏目录> [选项]
 | `--save-preview-every N` | 运行中每 N 秒写一次预览，文件名追加 `.1/.2/…`（相当于「按 F5 存档」的自动化版） |
 | `--save-encoding ENC` | 存档字符串编码：`cp932` / `gbk`（默认跟随脚本编码）。同一句日文写成 `83 76 83 8d …` 或 `a5 d7 a5 ed …` |
 | `--font FILE` | 加载 GFXF 字体图集，可重复；默认自动找 exe 目录的 `gfx-font-*.bin` |
-| `--text-prims` | 文本窗口画在 `PrimSetText(86)` 绑定的**图元绝对位置**上（原版做法），不再按层号固定版式画。默认关 —— 关时与冻结像素基线一致。汇总多一行 `text prims N drawn, M bound` |
+| 默认 | 文本窗口按 `PrimSetText(86)` 绑定的**图元绝对位置**画（原版做法）；未绑定的正文窗口按自己的版面画，未绑定的 8/9（人名/标题）不画，引擎不画合成对话框 |
+| `--text-fixed-layout` | 旧路径：合成对话框 + 每层按版面表画。**冻结像素基线用这条**，不要当正确行为 |
+| `--text-prims` | 兼容旧参数：图元驱动已是默认，接受但无效果 |
 | `--save-template <槽文件>` | 写档模板：SaveWrite 请求用它当底，替换时间戳/字符串/缩略图后写 `<game_dir>\save\sNNN.bin` |
 | `--debug-save-request N` | 调试钩子：发一个 `SaveWrite(N)` 请求，验证"请求 → 外壳写档"链路 |
 | `--debug-load-request N` | 调试钩子：发一个 `Load(N)` 请求（目前只记日志，快照恢复未实现） |

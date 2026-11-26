@@ -174,9 +174,15 @@ int gfx_tex_count(const Gfx *g);
  * speed_ms == 0 表示不等待（一次显示完）。 */
 void gfx_typewriter_set_enabled(Gfx *g, int on);
 int gfx_typewriter_enabled(const Gfx *g);
-/* 文本图元定位（外壳 --text-prims，默认关）：打开后，被 PrimSetText(86) 挂到
- * 图元上的文本窗口画在**该图元的绝对位置**（父链 x/y 累加），不再单独按版面表画
- * 一遍。关闭时保持冻结基线的老路径（每层按 gfx_layout_default 画）。 */
+/* 文本渲染模式（2026-11-26 起**默认是图元驱动**，即原版做法）：
+ *   默认：文本窗口只通过 PrimSetText(86) 建的 type 5 文本图元绘制 —— 位置 = 图元
+ *         （含父链）的绝对坐标，alpha 跟图元，画在图元树顺序里；**未绑定的窗口
+ *         不画**，引擎也**不画**合成对话框/名牌（框与名牌是脚本自己的图元）。
+ *   fixed=1（外壳 --text-fixed-layout）：旧路径，引擎画合成对话框 + 32 个窗口按
+ *         gfx_layout_default 各画一遍。**冻结像素基线用它，不要把它当正确行为。** */
+void gfx_set_text_fixed_layout(Gfx *g, int fixed);
+int gfx_text_fixed_layout(const Gfx *g);
+/* 兼容旧名：gfx_set_text_prims(g, 1) == fixed 0（现在的默认），(g, 0) == fixed 1。 */
 void gfx_set_text_prims(Gfx *g, int on);
 int gfx_text_prims_enabled(const Gfx *g);
 /* 当前绑定到文本窗口的图元个数（type==5 且 tw>=0），诊断用。 */
