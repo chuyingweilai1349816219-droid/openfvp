@@ -169,6 +169,26 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
+    print('== MotionMove(48) 的实参布局 ==')
+    c48 = (ref.get('commands') or {}).get('48') or {}
+    check(c48.get('name') == 'MotionMove', '基线里有 MotionMove(48)')
+    check(c48.get('argc') == 8, 'MotionMove argc = 8（实际 %r）' % c48.get('argc'))
+    # handler 用 `cmp %cl,(%eax)` 比较类型，正则归因不到 arg 下标 -> arg 可能是 None，
+    # 所以这里只看"范围集合"里有没有那两条，位置由 arg_layout 负责。
+    spans = set((r['min'], r['max']) for r in (c48.get('arg_ranges') or []))
+    check((1, 300000) in spans, '含时长范围 1..300000（实际 %r）' % sorted(spans))
+    check((1, 5) in spans, '含缓动范围 1..5')
+    check((1, 4095) in spans, '含 id 范围 1..4095')
+    layout = {x['role'] for x in (c48.get('arg_layout') or [])}
+    for role in ('from_x', 'from_y', 'to_x', 'to_y', 'ms', 'mode', 'flag'):
+        check(role in layout, 'arg_layout 含 %s' % role)
+    src = io.open(os.path.join(FVP, 'src', 'syscall.c'), encoding='utf-8').read()
+    k = src.index('case 48:')
+    seg = src[k:k + 2200]
+    check('from_x, from_y' in seg, 'case 48 的注释/变量按 from→to 顺序')
+    check('ms >= 1 && ms <= 300000' in seg, 'case 48 校验 ms 1..300000')
+    check('mode >= 1 && mode <= 5' in seg, 'case 48 校验 mode 1..5')
+
     print('\nOK: Motion*/PrimSet* 的实参约束与 exe handler 一致（帧扫描不再是依据）')
     return 0
 

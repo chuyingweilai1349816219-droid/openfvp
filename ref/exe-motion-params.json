@@ -71,6 +71,88 @@
    "struct_field_writes": [],
    "type_gates": []
   },
+  "48": {
+   "abs_field_writes": [],
+   "arg_layout": [
+    {
+     "arg": 1,
+     "default": "当前 prim+0x14",
+     "role": "from_x"
+    },
+    {
+     "arg": 2,
+     "default": "当前 prim+0x16",
+     "role": "from_y"
+    },
+    {
+     "arg": 3,
+     "default": "当前 prim+0x14",
+     "role": "to_x"
+    },
+    {
+     "arg": 4,
+     "default": "当前 prim+0x16",
+     "role": "to_y"
+    },
+    {
+     "arg": 5,
+     "range": [
+      1,
+      300000
+     ],
+     "role": "ms"
+    },
+    {
+     "arg": 6,
+     "range": [
+      1,
+      5
+     ],
+     "role": "mode"
+    },
+    {
+     "arg": 7,
+     "role": "flag",
+     "type": "任意，type != 0 -> 1"
+    }
+   ],
+   "arg_ranges": [
+    {
+     "arg": null,
+     "max": 4095,
+     "min": 1
+    },
+    {
+     "arg": null,
+     "max": 300000,
+     "min": 1
+    },
+    {
+     "arg": null,
+     "max": 5,
+     "min": 1
+    }
+   ],
+   "arg_types": [
+    {
+     "arg": 7,
+     "type": 0
+    }
+   ],
+   "argc": 8,
+   "calls_or_jumps": [
+    "call 0x0042d560"
+   ],
+   "conditional_field_writes": [],
+   "dirty_flag_bits": [],
+   "handler": "0x0043abd0",
+   "id": 48,
+   "name": "MotionMove",
+   "reg_index": 49,
+   "split_constants": [],
+   "struct_field_writes": [],
+   "type_gates": []
+  },
   "54": {
    "abs_field_writes": [],
    "arg_ranges": [

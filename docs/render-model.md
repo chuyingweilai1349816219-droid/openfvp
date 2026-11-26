@@ -1254,6 +1254,26 @@ call   0x4387d0            ; register(entry, name)
 id、`missing_in_engine` 为空、除 `AudioLoad(0)` 外每个 id 都能在分派表里找到 handler。
 
 
+### MotionMove(48) 的实参布局（A 类：`ref/exe-motion-params.json` 的 `arg_layout`）
+
+`MotionMove` 是两部作品合计 **480 次**的命令，argc **8**。handler `0x43ABD0`：
+
+| arg | 角色 | 规则 |
+|---|---|---|
+| 0 | id | int **1..0xFFF** |
+| 1 / 2 | **from_x / from_y** | int；缺/非 int → 当前 `prim+0x14/0x16` |
+| 3 / 4 | **to_x / to_y** | int；缺/非 int → 当前 x/y |
+| 5 | ms | int **1..300000**（必须） |
+| 6 | mode | int **1..5**（必须） |
+| 7 | flag | 任意类型，`type != 0` → 1 |
+
+判据（真实调用点 `pc=0x5B304`）：压栈序列 `[405, true, true, 65016, true, 1, 1, true]`
+——from 两个都传 `true`（= 用当前位置），**to_x = 65016**（int16 即 -392），ms=1、mode=1。
+也就是"把 405 号图元横向挪到 -392"。
+
+我们原来把 arg1/arg2 当**目标**，这条调用会变成"什么都不动"——本轮按 (from,from,to,to)
+顺序修正，并补上 ms/mode 的范围校验。
+
 ### 七条 `*Test` 命令的容器表（A 类：`ref/exe-motion-tests.json`）
 
 | 命令 | handler | 容器 | 我们的接线 |

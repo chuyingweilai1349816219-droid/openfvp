@@ -4,6 +4,31 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（四十一续）：MotionMove(48) 的实参顺序修正（from,from,to,to）
+
+按使用矩阵挑出"还没有 handler 基线"的最高频命令：**`MotionMove(48)`，480 次**。
+
+handler `0x43ABD0`（argc 8）的真实布局：
+
+| arg | 角色 | 规则 |
+|---|---|---|
+| 0 | id | int 1..0xFFF |
+| 1 / 2 | **from_x / from_y** | int；缺/非 int → 当前 x/y |
+| 3 / 4 | **to_x / to_y** | int；缺/非 int → 当前 x/y |
+| 5 | ms | int **1..300000**（必须，否则整条忽略） |
+| 6 | mode | int **1..5**（必须） |
+| 7 | flag | `type != 0` → 1 |
+
+**判据**是真实调用点 `pc=0x5B304` 的压栈序列：`[405, true, true, 65016, true, 1, 1, true]`
+——from 两个都传 `true`（用当前位置），**to_x = 65016**（int16 即 -392），ms=1、mode=1。
+也就是"把 405 号图元横向挪到 -392"。
+
+**我们原来把 arg1/arg2 当目标**——按旧实现，这条调用会变成"什么都不动"。本轮按
+(from,from,to,to) 修正，并补上 ms/mode 的范围校验。
+
+`ref/exe-motion-params.json` 增加命令 48（Ranges 自动提取 + `arg_layout` 人工补位，
+因为该 handler 用 `cmp %cl,(%eax)` 比较类型，正则归因不到 arg 下标）。
+
 ## [未发布] — 2026-11-26（四十续）：七条 *Test 的容器表冻结；44/50/56 接到真实现
 
 上一轮把 `MotionMoveTest(50)` 做真了，这轮把**整个 `*Test` 家族**一次梳清：

@@ -361,50 +361,49 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             }
         }
         break;
-    case 48: /* MotionMove(id, x, y, z, ?, ms, mode, flag)：开启动画时插补间 */
-        if (getenv("FVP_DEBUG_TEXT") != NULL) {
-            fprintf(stderr,
-                    "MotionMove prim=%d x=%d y=%d z=%d ms=%d mode=%d%s steps=%llu\n", id,
-                    argc > 1 ? fvp_gfx_int(&a[1]) : -1,
-                    argc > 2 ? fvp_gfx_int(&a[2]) : -1,
-                    argc > 3 ? fvp_gfx_int(&a[3]) : -1,
-                    argc > 5 ? fvp_gfx_int(&a[5]) : -1,
-                    argc > 6 ? fvp_gfx_int(&a[6]) : -1,
-                    (gfx_motion_enabled != NULL && gfx_motion_enabled(g))
-                        ? " (tween)" : " (instant)",
-                    (unsigned long long)vm->steps);
-        }
-        if (gfx_motion_enabled != NULL && gfx_motion_enabled(g) && argc > 5 &&
-            fvp_gfx_is_int(&a[5]) && (fvp_gfx_is_int(&a[1]) ||
-                                      fvp_gfx_is_int(&a[2]))) {
-            int cx = 0;
-            int cy = 0;
-            int tx = fvp_gfx_is_int(&a[1]) ? fvp_gfx_int(&a[1]) : 0;
-            int ty = fvp_gfx_is_int(&a[2]) ? fvp_gfx_int(&a[2]) : 0;
+    case 48: /* MotionMove(id, from_x, from_y, to_x, to_y, ms, mode, flag)
+              * 原版 handler 0x43ABD0（argc 8）：
+              *   arg1/arg2 = **from**（缺/非 int → 当前 x/y）
+              *   arg3/arg4 = **to**  （缺/非 int → 当前 x/y）
+              *   arg5 ms 必须 int 1..300000、arg6 mode 必须 int 1..5，
+              *   否则整条忽略；arg7 flag = `type != 0`。 */
+        if (argc > 6 && fvp_gfx_is_int(&a[5]) && fvp_gfx_is_int(&a[6])) {
+            int ms = fvp_gfx_int(&a[5]);
+            int mode = fvp_gfx_int(&a[6]);
 
-            (void)gfx_get_prim(g, id, GFX_F_X, &cx);
-            (void)gfx_get_prim(g, id, GFX_F_Y, &cy);
-            if (!fvp_gfx_is_int(&a[1])) {
-                tx = cx;
+            if (getenv("FVP_DEBUG_TEXT") != NULL) {
+                fprintf(stderr,
+                        "MotionMove prim=%d from=(%d,%d) to=(%d,%d) ms=%d mode=%d"
+                        "%s steps=%llu\n",
+                        id, argc > 1 ? fvp_gfx_int(&a[1]) : -1,
+                        argc > 2 ? fvp_gfx_int(&a[2]) : -1,
+                        argc > 3 ? fvp_gfx_int(&a[3]) : -1,
+                        argc > 4 ? fvp_gfx_int(&a[4]) : -1, ms, mode,
+                        (gfx_motion_enabled != NULL && gfx_motion_enabled(g))
+                            ? " (tween)" : " (instant)",
+                        (unsigned long long)vm->steps);
             }
-            if (!fvp_gfx_is_int(&a[2])) {
-                ty = cy;
-            }
-            (void)gfx_motion_add(g, id, FVP_TWEEN_MOVE_XY, cx, cy, tx, ty,
-                                 fvp_gfx_int(&a[5]),
-                                 argc > 6 ? fvp_gfx_int(&a[6]) : 1);
-            if (fvp_gfx_is_int(&a[3])) {
-                (void)gfx_set_prim(g, id, GFX_F_Z, fvp_gfx_int(&a[3]));
-            }
-        } else {
-            if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-                (void)gfx_set_prim(g, id, GFX_F_X, fvp_gfx_int(&a[1]));
-            }
-            if (argc > 2 && fvp_gfx_is_int(&a[2])) {
-                (void)gfx_set_prim(g, id, GFX_F_Y, fvp_gfx_int(&a[2]));
-            }
-            if (argc > 3 && fvp_gfx_is_int(&a[3])) {
-                (void)gfx_set_prim(g, id, GFX_F_Z, fvp_gfx_int(&a[3]));
+            if (ms >= 1 && ms <= 300000 && mode >= 1 && mode <= 5) {
+                int cx = 0;
+                int cy = 0;
+                int fx;
+                int fy;
+                int tx;
+                int ty;
+
+                (void)gfx_get_prim(g, id, GFX_F_X, &cx);
+                (void)gfx_get_prim(g, id, GFX_F_Y, &cy);
+                fx = (argc > 1 && fvp_gfx_is_int(&a[1])) ? fvp_gfx_int(&a[1]) : cx;
+                fy = (argc > 2 && fvp_gfx_is_int(&a[2])) ? fvp_gfx_int(&a[2]) : cy;
+                tx = (argc > 3 && fvp_gfx_is_int(&a[3])) ? fvp_gfx_int(&a[3]) : cx;
+                ty = (argc > 4 && fvp_gfx_is_int(&a[4])) ? fvp_gfx_int(&a[4]) : cy;
+                if (gfx_motion_enabled != NULL && gfx_motion_enabled(g)) {
+                    (void)gfx_motion_add(g, id, FVP_TWEEN_MOVE_XY, fx, fy, tx,
+                                         ty, ms, mode);
+                } else {
+                    (void)gfx_set_prim(g, id, GFX_F_X, tx);
+                    (void)gfx_set_prim(g, id, GFX_F_Y, ty);
+                }
             }
         }
         break;

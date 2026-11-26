@@ -32,8 +32,23 @@ HANDLERS = os.path.join(ROOT, 'work', 'vm_id_handler.json')
 OUT_JSON = os.path.join(ROOT, 'ref', 'exe-motion-params.json')
 
 # 关注这几条：它们的语义直接决定标题/动画怎么摆
+# 有些 handler 用寄存器比较类型（`cmp %cl,(%eax)`），正则归因不到 arg 下标；
+# 这些命令的实参布局由人工按反汇编补齐，写进 ARG_LAYOUT。
+ARG_LAYOUT = {
+    48: [
+        {'arg': 1, 'role': 'from_x', 'default': '当前 prim+0x14'},
+        {'arg': 2, 'role': 'from_y', 'default': '当前 prim+0x16'},
+        {'arg': 3, 'role': 'to_x', 'default': '当前 prim+0x14'},
+        {'arg': 4, 'role': 'to_y', 'default': '当前 prim+0x16'},
+        {'arg': 5, 'role': 'ms', 'range': [1, 300000]},
+        {'arg': 6, 'role': 'mode', 'range': [1, 5]},
+        {'arg': 7, 'role': 'flag', 'type': '任意，type != 0 -> 1'},
+    ],
+}
+
 TARGETS = {
     42: 'MotionAlpha',
+    48: 'MotionMove',
     54: 'MotionMoveS2',
     55: 'MotionMoveS2Stop',
     77: 'PrimSetAlpha',
@@ -199,6 +214,8 @@ def main(argv=None):
         info.update({'id': cid, 'name': name, 'argc': e['argc'],
                      'handler': '0x%08x' % e['handler'],
                      'reg_index': e.get('reg_index')})
+        if cid in ARG_LAYOUT:
+            info['arg_layout'] = ARG_LAYOUT[cid]
         result['commands'][str(cid)] = info
         print('%3d %-16s argc=%d handler=0x%08x' % (cid, name, e['argc'],
                                                     e['handler']))
