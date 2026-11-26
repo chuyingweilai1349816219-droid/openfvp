@@ -4,6 +4,51 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（四十六续）：重建二进制后暴露的两件事（冻结基线的 194/195 边界 + headless 不出文本）
+
+上一轮结束时 `bin/*.exe` 比源码旧（fvm 是 17:35 的产物）。本轮把所有二进制重建后，
+`tests/compare.py --run` 从 PASS 变成 FAIL，`run_all` 也多出几项失败。先把事实钉住：
+
+### 1. 900k 步冻结基线：内容正确，只差"最后一行落在预算之后"
+
+| 运行 | 字节 | 行数 | 与 `ref/ref-900k.txt` 的关系 |
+|---|---|---|---|
+| `fvm --steps 900000 --click 600` | 6489 | 194 | **是冻结基线的字节前缀**（缺 `[0] 0\r\n` 共 7 字节） |
+| `fvm --steps 1000000 --click 600` | 7139 | 220 | **冻结基线是它的字节前缀**（`ref in cur` = True） |
+| `fvm --steps 1200000 --click 600` | 8203 | 273 | 同上（`startsWith` / `ref in cur` 都为 True） |
+
+即：**没有内容错误，第 195 行只是落在 900k 之后**。二分定位到改变量的是
+`3640b01`（MotionMoveTest(50) 真实现）—— 它让脚本按原版语义"等动作跑完"，
+整体推进慢了不到一行。`d1c0cff` 及更早仍是 195 行。
+
+这条要按"冻结基线 = 参考实现的输出"处理，不能拿来当"我们错了"：
+`ref/fvm_ref.py` 里七条 `*Test` 一律返回 1（"已结束"）是**近似**，
+CI 上要复现 195 行得把步数给到 1M。下一轮决定：① 用**两个实现都同意**的
+1,000,000 步新冻结一份基线（1M 步的文本基线，Python 参考与 C 引擎逐字节一致才冻结，
+文件名按同样的 ref/ref-<步数>.txt 命名规则），把 `compare.py` 的默认步数换成 1M；
+`ref/ref-900k.txt` 保持不动。
+
+### 2. `bin/fvp-headless.exe` 在 900k 步里一行文本都打不出来（根因未定）
+
+| 事实 | 证据 |
+|---|---|
+| headless `--text-out` 0 行、legacy 版面截图全黑 | `headless: text lines -> ... (0 line(s))`，BMP mean=0.0 |
+| 同一脚本 `bin/fvm.exe --click 600 --steps 900000` 有 194 行 | 上表 |
+| `TextPrint(123)` 在 headless 里**一次都没进过 syscall 分发** | 临时插桩 `syscall 123 seen` 计数 = 0 |
+| 不是"没点"：`--click 600/500/300/2000` 都 0 行 | 实测 |
+| 不是"文本回调没接"：`vm.gfx_bridge->on_text` 已赋值；`TextColor/TextSize/TextBuff/PrimSetText` 等 gfx 命令在 headless 里都有执行 | `FVP_DEBUG_TEXT` 计数 |
+
+已排除的假设：缺点击、回调未接、`*Test` 永远"还在跑"（给 `gfx_motion_test`
+加"没有动画时钟就按已结束回答"的实验改动后仍是 0 行，故已回滚、未提交）。
+下一步：给 headless 加 `--pctrace`（复用 `vm.pctrace`）并与 `fvm --pctrace` 逐行比对，
+定位两条路径第一次分叉的 pc —— 这才是"headless 不出文本"和"551 那段剧情没跑到"
+可能同源的真正入口。
+
+### 3. 教训（写进流程）
+
+"门禁全绿"必须在**重建二进制后**才算数：上一轮 `compare.py`/`run_all` 的绿色
+来自 17:35 的旧 fvm.exe，源码早已前进了若干提交。以后每轮开始先 `make` 全量重建再跑门禁。
+
 ## [未发布] — 2026-11-26（四十五续）：`pushtrue` 是 Variant type 1，不是 int 1 —— 正文位置跑到 (1,1) 的真正原因
 
 用户两次问"正文位置不对解决了吗"。这一轮把**根因**钉住并修掉了，它不是渲染问题：
