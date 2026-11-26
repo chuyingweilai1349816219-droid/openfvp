@@ -6,7 +6,7 @@
    "id": 1,
    "name": "AudioPlay",
    "name_va": "0x45e3e4",
-   "registration_pc": "0x43ed05"
+   "push_pc": "0x43f919"
   },
   {
    "argc": 1,
@@ -14,7 +14,7 @@
    "id": 2,
    "name": "AudioSilentOn",
    "name_va": "0x45e3d4",
-   "registration_pc": "0x43ed2a"
+   "push_pc": "0x43f93e"
   },
   {
    "argc": 1,
@@ -22,7 +22,7 @@
    "id": 3,
    "name": "AudioState",
    "name_va": "0x45e3c8",
-   "registration_pc": "0x43ed4f"
+   "push_pc": "0x43f963"
   },
   {
    "argc": 2,
@@ -30,7 +30,7 @@
    "id": 4,
    "name": "AudioStop",
    "name_va": "0x45e3bc",
-   "registration_pc": "0x43ed74"
+   "push_pc": "0x43f988"
   },
   {
    "argc": 2,
@@ -38,7 +38,15 @@
    "id": 5,
    "name": "AudioType",
    "name_va": "0x45e3b0",
-   "registration_pc": "0x43ed99"
+   "push_pc": "0x43f9ad"
+  },
+  {
+   "argc": 3,
+   "handler": "0x439e90",
+   "id": 6,
+   "name": "AudioVol",
+   "name_va": "0x45e3a4",
+   "push_pc": "0x43f9d2"
   },
   {
    "argc": 5,
@@ -46,7 +54,7 @@
    "id": 7,
    "name": "ColorSet",
    "name_va": "0x45e38c",
-   "registration_pc": "0x43ee07"
+   "push_pc": "0x43fa1b"
   },
   {
    "argc": 1,
@@ -54,7 +62,7 @@
    "id": 8,
    "name": "ControlMask",
    "name_va": "0x45e380",
-   "registration_pc": "0x43ee2c"
+   "push_pc": "0x43fa40"
   },
   {
    "argc": 0,
@@ -62,7 +70,7 @@
    "id": 9,
    "name": "ControlPulse",
    "name_va": "0x45e370",
-   "registration_pc": "0x43ee53"
+   "push_pc": "0x43fa64"
   },
   {
    "argc": 1,
@@ -70,7 +78,7 @@
    "id": 10,
    "name": "CursorChange",
    "name_va": "0x45e360",
-   "registration_pc": "0x43ee75"
+   "push_pc": "0x43fa89"
   },
   {
    "argc": 3,
@@ -78,7 +86,7 @@
    "id": 11,
    "name": "CursorMove",
    "name_va": "0x45e354",
-   "registration_pc": "0x43ee9c"
+   "push_pc": "0x43fab1"
   },
   {
    "argc": 1,
@@ -86,7 +94,7 @@
    "id": 12,
    "name": "CursorShow",
    "name_va": "0x45e348",
-   "registration_pc": "0x43eebf"
+   "push_pc": "0x43fad3"
   },
   {
    "argc": 2,
@@ -94,7 +102,7 @@
    "id": 13,
    "name": "Debmess",
    "name_va": "0x45e340",
-   "registration_pc": "0x43eee4"
+   "push_pc": "0x43faf8"
   },
   {
    "argc": 7,
@@ -102,7 +110,7 @@
    "id": 14,
    "name": "Dissolve",
    "name_va": "0x45e334",
-   "registration_pc": "0x43ef09"
+   "push_pc": "0x43fb1d"
   },
   {
    "argc": 1,
@@ -110,7 +118,7 @@
    "id": 15,
    "name": "DissolveWait",
    "name_va": "0x45e324",
-   "registration_pc": "0x43ef2e"
+   "push_pc": "0x43fb42"
   },
   {
    "argc": 0,
@@ -118,7 +126,7 @@
    "id": 16,
    "name": "ExitDialog",
    "name_va": "0x45e318",
-   "registration_pc": "0x43ef55"
+   "push_pc": "0x43fb66"
   },
   {
    "argc": 1,
@@ -126,7 +134,7 @@
    "id": 17,
    "name": "ExitMode",
    "name_va": "0x45e30c",
-   "registration_pc": "0x43ef77"
+   "push_pc": "0x43fb8b"
   },
   {
    "argc": 1,
@@ -134,7 +142,7 @@
    "id": 18,
    "name": "FlagGet",
    "name_va": "0x45e304",
-   "registration_pc": "0x43ef9e"
+   "push_pc": "0x43fbb3"
   },
   {
    "argc": 2,
@@ -142,7 +150,7 @@
    "id": 19,
    "name": "FlagSet",
    "name_va": "0x45e2fc",
-   "registration_pc": "0x43efc1"
+   "push_pc": "0x43fbd5"
   },
   {
    "argc": 1,
@@ -150,7 +158,7 @@
    "id": 20,
    "name": "FloatToInt",
    "name_va": "0x45e2f0",
-   "registration_pc": "0x43efe6"
+   "push_pc": "0x43fbfa"
   },
   {
    "argc": 3,
@@ -158,7 +166,7 @@
    "id": 21,
    "name": "GaijiLoad",
    "name_va": "0x45e2e4",
-   "registration_pc": "0x43f00b"
+   "push_pc": "0x43fc1f"
   },
   {
    "argc": 2,
@@ -166,7 +174,7 @@
    "id": 22,
    "name": "GraphLoad",
    "name_va": "0x45e2d8",
-   "registration_pc": "0x43f030"
+   "push_pc": "0x43fc44"
   },
   {
    "argc": 4,
@@ -174,7 +182,7 @@
    "id": 23,
    "name": "GraphRGB",
    "name_va": "0x45e2cc",
-   "registration_pc": "0x43f055"
+   "push_pc": "0x43fc69"
   },
   {
    "argc": 2,
@@ -182,7 +190,7 @@
    "id": 24,
    "name": "IntToText",
    "name_va": "0x45e2a8",
-   "registration_pc": "0x43f0c4"
+   "push_pc": "0x43fcd8"
   },
   {
    "argc": 2,
@@ -190,7 +198,15 @@
    "id": 25,
    "name": "HistoryGet",
    "name_va": "0x45e2c0",
-   "registration_pc": "0x43f07a"
+   "push_pc": "0x43fc8e"
+  },
+  {
+   "argc": 2,
+   "handler": "0x43a5e0",
+   "id": 26,
+   "name": "HistorySet",
+   "name_va": "0x45e2b4",
+   "push_pc": "0x43fcb3"
   },
   {
    "argc": 0,
@@ -198,7 +214,7 @@
    "id": 27,
    "name": "InputFlash",
    "name_va": "0x45e29c",
-   "registration_pc": "0x43f0eb"
+   "push_pc": "0x43fcfc"
   },
   {
    "argc": 0,
@@ -206,7 +222,7 @@
    "id": 28,
    "name": "InputGetCursIn",
    "name_va": "0x45e28c",
-   "registration_pc": "0x43f10f"
+   "push_pc": "0x43fd20"
   },
   {
    "argc": 0,
@@ -214,7 +230,7 @@
    "id": 29,
    "name": "InputGetCursX",
    "name_va": "0x45e27c",
-   "registration_pc": "0x43f133"
+   "push_pc": "0x43fd44"
   },
   {
    "argc": 0,
@@ -222,7 +238,7 @@
    "id": 30,
    "name": "InputGetCursY",
    "name_va": "0x45e26c",
-   "registration_pc": "0x43f157"
+   "push_pc": "0x43fd68"
   },
   {
    "argc": 0,
@@ -230,7 +246,15 @@
    "id": 31,
    "name": "InputGetDown",
    "name_va": "0x45e25c",
-   "registration_pc": "0x43f17b"
+   "push_pc": "0x43fd8c"
+  },
+  {
+   "argc": 0,
+   "handler": "0x437780",
+   "id": 32,
+   "name": "InputGetEvent",
+   "name_va": "0x45e24c",
+   "push_pc": "0x43fdb0"
   },
   {
    "argc": 0,
@@ -238,7 +262,7 @@
    "id": 33,
    "name": "InputGetRepeat",
    "name_va": "0x45e23c",
-   "registration_pc": "0x43f1c3"
+   "push_pc": "0x43fdd4"
   },
   {
    "argc": 0,
@@ -246,7 +270,7 @@
    "id": 34,
    "name": "InputGetState",
    "name_va": "0x45e22c",
-   "registration_pc": "0x43f1e7"
+   "push_pc": "0x43fdf8"
   },
   {
    "argc": 0,
@@ -254,7 +278,7 @@
    "id": 35,
    "name": "InputGetUp",
    "name_va": "0x45e220",
-   "registration_pc": "0x43f20b"
+   "push_pc": "0x43fe1c"
   },
   {
    "argc": 0,
@@ -262,7 +286,7 @@
    "id": 36,
    "name": "InputGetWheel",
    "name_va": "0x45e210",
-   "registration_pc": "0x43f22f"
+   "push_pc": "0x43fe40"
   },
   {
    "argc": 0,
@@ -270,7 +294,7 @@
    "id": 37,
    "name": "InputSetClick",
    "name_va": "0x45e200",
-   "registration_pc": "0x43f253"
+   "push_pc": "0x43fe64"
   },
   {
    "argc": 8,
@@ -278,7 +302,7 @@
    "id": 38,
    "name": "LipAnim",
    "name_va": "0x45e1f8",
-   "registration_pc": "0x43f277"
+   "push_pc": "0x43fe8c"
   },
   {
    "argc": 2,
@@ -286,7 +310,7 @@
    "id": 39,
    "name": "LipSync",
    "name_va": "0x45e1f0",
-   "registration_pc": "0x43f29a"
+   "push_pc": "0x43feae"
   },
   {
    "argc": 1,
@@ -294,7 +318,7 @@
    "id": 40,
    "name": "Load",
    "name_va": "0x45e1e8",
-   "registration_pc": "0x43f2bf"
+   "push_pc": "0x43fed3"
   },
   {
    "argc": 1,
@@ -302,7 +326,7 @@
    "id": 41,
    "name": "MenuMessSkip",
    "name_va": "0x45e1d8",
-   "registration_pc": "0x43f2e4"
+   "push_pc": "0x43fef8"
   },
   {
    "argc": 6,
@@ -310,7 +334,7 @@
    "id": 42,
    "name": "MotionAlpha",
    "name_va": "0x45e1cc",
-   "registration_pc": "0x43f309"
+   "push_pc": "0x43ff1d"
   },
   {
    "argc": 1,
@@ -318,7 +342,7 @@
    "id": 43,
    "name": "MotionAlphaStop",
    "name_va": "0x45e1bc",
-   "registration_pc": "0x43f32e"
+   "push_pc": "0x43ff42"
   },
   {
    "argc": 1,
@@ -326,7 +350,7 @@
    "id": 44,
    "name": "MotionAlphaTest",
    "name_va": "0x45e1ac",
-   "registration_pc": "0x43f353"
+   "push_pc": "0x43ff67"
   },
   {
    "argc": 4,
@@ -334,7 +358,7 @@
    "id": 45,
    "name": "MotionAnim",
    "name_va": "0x45e1a0",
-   "registration_pc": "0x43f37a"
+   "push_pc": "0x43ff8f"
   },
   {
    "argc": 1,
@@ -342,7 +366,7 @@
    "id": 46,
    "name": "MotionAnimStop",
    "name_va": "0x45e190",
-   "registration_pc": "0x43f39d"
+   "push_pc": "0x43ffb1"
   },
   {
    "argc": 1,
@@ -350,7 +374,7 @@
    "id": 47,
    "name": "MotionAnimTest",
    "name_va": "0x45e180",
-   "registration_pc": "0x43f3c2"
+   "push_pc": "0x43ffd6"
   },
   {
    "argc": 8,
@@ -358,7 +382,7 @@
    "id": 48,
    "name": "MotionMove",
    "name_va": "0x45e174",
-   "registration_pc": "0x43f3e7"
+   "push_pc": "0x43fffb"
   },
   {
    "argc": 1,
@@ -366,7 +390,7 @@
    "id": 49,
    "name": "MotionMoveStop",
    "name_va": "0x45e100",
-   "registration_pc": "0x43f4ea"
+   "push_pc": "0x4400fe"
   },
   {
    "argc": 1,
@@ -374,7 +398,7 @@
    "id": 50,
    "name": "MotionMoveTest",
    "name_va": "0x45e0f0",
-   "registration_pc": "0x43f50f"
+   "push_pc": "0x440123"
   },
   {
    "argc": 6,
@@ -382,7 +406,7 @@
    "id": 51,
    "name": "MotionMoveR",
    "name_va": "0x45e168",
-   "registration_pc": "0x43f40c"
+   "push_pc": "0x440020"
   },
   {
    "argc": 1,
@@ -390,7 +414,7 @@
    "id": 52,
    "name": "MotionMoveRStop",
    "name_va": "0x45e158",
-   "registration_pc": "0x43f431"
+   "push_pc": "0x440045"
   },
   {
    "argc": 1,
@@ -398,7 +422,15 @@
    "id": 53,
    "name": "MotionMoveRTest",
    "name_va": "0x45e148",
-   "registration_pc": "0x43f456"
+   "push_pc": "0x44006a"
+  },
+  {
+   "argc": 8,
+   "handler": "0x43af70",
+   "id": 54,
+   "name": "MotionMoveS2",
+   "name_va": "0x45e138",
+   "push_pc": "0x44008f"
   },
   {
    "argc": 1,
@@ -406,7 +438,7 @@
    "id": 55,
    "name": "MotionMoveS2Stop",
    "name_va": "0x45e124",
-   "registration_pc": "0x43f4a0"
+   "push_pc": "0x4400b4"
   },
   {
    "argc": 1,
@@ -414,7 +446,7 @@
    "id": 56,
    "name": "MotionMoveS2Test",
    "name_va": "0x45e110",
-   "registration_pc": "0x43f4c5"
+   "push_pc": "0x4400d9"
   },
   {
    "argc": 6,
@@ -422,7 +454,7 @@
    "id": 57,
    "name": "MotionMoveZ",
    "name_va": "0x45e0e4",
-   "registration_pc": "0x43f534"
+   "push_pc": "0x440148"
   },
   {
    "argc": 1,
@@ -430,7 +462,15 @@
    "id": 58,
    "name": "MotionMoveZStop",
    "name_va": "0x45e0d4",
-   "registration_pc": "0x43f559"
+   "push_pc": "0x44016d"
+  },
+  {
+   "argc": 1,
+   "handler": "0x43ae00",
+   "id": 59,
+   "name": "MotionMoveZTest",
+   "name_va": "0x45e0c4",
+   "push_pc": "0x440192"
   },
   {
    "argc": 2,
@@ -438,7 +478,7 @@
    "id": 60,
    "name": "MotionPause",
    "name_va": "0x45e0b8",
-   "registration_pc": "0x43f5a3"
+   "push_pc": "0x4401b7"
   },
   {
    "argc": 2,
@@ -446,7 +486,7 @@
    "id": 61,
    "name": "Movie",
    "name_va": "0x45e0b0",
-   "registration_pc": "0x43f5c8"
+   "push_pc": "0x4401dc"
   },
   {
    "argc": 1,
@@ -454,7 +494,7 @@
    "id": 62,
    "name": "MovieState",
    "name_va": "0x45e0a4",
-   "registration_pc": "0x43f5ed"
+   "push_pc": "0x440201"
   },
   {
    "argc": 0,
@@ -462,7 +502,7 @@
    "id": 63,
    "name": "MovieStop",
    "name_va": "0x45e098",
-   "registration_pc": "0x43f614"
+   "push_pc": "0x440225"
   },
   {
    "argc": 2,
@@ -470,7 +510,7 @@
    "id": 64,
    "name": "PartsAssign",
    "name_va": "0x45e08c",
-   "registration_pc": "0x43f636"
+   "push_pc": "0x44024a"
   },
   {
    "argc": 2,
@@ -478,7 +518,7 @@
    "id": 65,
    "name": "PartsLoad",
    "name_va": "0x45e080",
-   "registration_pc": "0x43f65d"
+   "push_pc": "0x440272"
   },
   {
    "argc": 3,
@@ -486,7 +526,7 @@
    "id": 66,
    "name": "PartsMotion",
    "name_va": "0x45e074",
-   "registration_pc": "0x43f680"
+   "push_pc": "0x440294"
   },
   {
    "argc": 2,
@@ -494,7 +534,7 @@
    "id": 67,
    "name": "PartsMotionPause",
    "name_va": "0x45e060",
-   "registration_pc": "0x43f6a5"
+   "push_pc": "0x4402b9"
   },
   {
    "argc": 1,
@@ -502,7 +542,7 @@
    "id": 68,
    "name": "PartsMotionStop",
    "name_va": "0x45e050",
-   "registration_pc": "0x43f6ca"
+   "push_pc": "0x4402de"
   },
   {
    "argc": 1,
@@ -510,7 +550,7 @@
    "id": 69,
    "name": "PartsMotionTest",
    "name_va": "0x45e040",
-   "registration_pc": "0x43f6ef"
+   "push_pc": "0x440303"
   },
   {
    "argc": 4,
@@ -518,7 +558,7 @@
    "id": 70,
    "name": "PartsRGB",
    "name_va": "0x45e034",
-   "registration_pc": "0x43f714"
+   "push_pc": "0x440328"
   },
   {
    "argc": 2,
@@ -526,7 +566,7 @@
    "id": 71,
    "name": "PartsSelect",
    "name_va": "0x45e028",
-   "registration_pc": "0x43f739"
+   "push_pc": "0x44034d"
   },
   {
    "argc": 1,
@@ -534,7 +574,7 @@
    "id": 72,
    "name": "PrimExitGroup",
    "name_va": "0x45e018",
-   "registration_pc": "0x43f760"
+   "push_pc": "0x440375"
   },
   {
    "argc": 2,
@@ -542,7 +582,7 @@
    "id": 73,
    "name": "PrimGroupIn",
    "name_va": "0x45e00c",
-   "registration_pc": "0x43f783"
+   "push_pc": "0x440397"
   },
   {
    "argc": 2,
@@ -550,7 +590,7 @@
    "id": 74,
    "name": "PrimGroupMove",
    "name_va": "0x45dffc",
-   "registration_pc": "0x43f7a8"
+   "push_pc": "0x4403bc"
   },
   {
    "argc": 1,
@@ -558,7 +598,7 @@
    "id": 75,
    "name": "PrimGroupOut",
    "name_va": "0x45dfec",
-   "registration_pc": "0x43f7cd"
+   "push_pc": "0x4403e1"
   },
   {
    "argc": 2,
@@ -566,7 +606,7 @@
    "id": 76,
    "name": "PrimHit",
    "name_va": "0x45dfe4",
-   "registration_pc": "0x43f7f2"
+   "push_pc": "0x440406"
   },
   {
    "argc": 2,
@@ -574,7 +614,7 @@
    "id": 77,
    "name": "PrimSetAlpha",
    "name_va": "0x45dfd4",
-   "registration_pc": "0x43f817"
+   "push_pc": "0x44042b"
   },
   {
    "argc": 2,
@@ -582,7 +622,15 @@
    "id": 78,
    "name": "PrimSetBlend",
    "name_va": "0x45dfc4",
-   "registration_pc": "0x43f83c"
+   "push_pc": "0x440450"
+  },
+  {
+   "argc": 2,
+   "handler": "0x4379d0",
+   "id": 79,
+   "name": "PrimSetDraw",
+   "name_va": "0x45dfb8",
+   "push_pc": "0x440475"
   },
   {
    "argc": 1,
@@ -590,7 +638,7 @@
    "id": 80,
    "name": "PrimSetNull",
    "name_va": "0x45dfac",
-   "registration_pc": "0x43f886"
+   "push_pc": "0x44049a"
   },
   {
    "argc": 3,
@@ -598,7 +646,7 @@
    "id": 81,
    "name": "PrimSetOP",
    "name_va": "0x45dfa0",
-   "registration_pc": "0x43f8ab"
+   "push_pc": "0x4404bf"
   },
   {
    "argc": 3,
@@ -606,7 +654,7 @@
    "id": 82,
    "name": "PrimSetRS",
    "name_va": "0x45df94",
-   "registration_pc": "0x43f8d0"
+   "push_pc": "0x4404e4"
   },
   {
    "argc": 4,
@@ -614,7 +662,7 @@
    "id": 83,
    "name": "PrimSetRS2",
    "name_va": "0x45df88",
-   "registration_pc": "0x43f8f5"
+   "push_pc": "0x440509"
   },
   {
    "argc": 4,
@@ -622,7 +670,7 @@
    "id": 84,
    "name": "PrimSetSnow",
    "name_va": "0x45df7c",
-   "registration_pc": "0x43f91a"
+   "push_pc": "0x44052e"
   },
   {
    "argc": 4,
@@ -630,7 +678,15 @@
    "id": 85,
    "name": "PrimSetSprt",
    "name_va": "0x45df70",
-   "registration_pc": "0x43f93f"
+   "push_pc": "0x440553"
+  },
+  {
+   "argc": 4,
+   "handler": "0x43bdc0",
+   "id": 86,
+   "name": "PrimSetText",
+   "name_va": "0x45df64",
+   "push_pc": "0x440578"
   },
   {
    "argc": 6,
@@ -638,7 +694,7 @@
    "id": 87,
    "name": "PrimSetTile",
    "name_va": "0x45df58",
-   "registration_pc": "0x43f989"
+   "push_pc": "0x44059d"
   },
   {
    "argc": 3,
@@ -646,7 +702,7 @@
    "id": 88,
    "name": "PrimSetUV",
    "name_va": "0x45df4c",
-   "registration_pc": "0x43f9ae"
+   "push_pc": "0x4405c2"
   },
   {
    "argc": 3,
@@ -654,7 +710,7 @@
    "id": 89,
    "name": "PrimSetWH",
    "name_va": "0x45df40",
-   "registration_pc": "0x43f9d3"
+   "push_pc": "0x4405e7"
   },
   {
    "argc": 3,
@@ -662,7 +718,7 @@
    "id": 90,
    "name": "PrimSetXY",
    "name_va": "0x45df34",
-   "registration_pc": "0x43f9f8"
+   "push_pc": "0x44060c"
   },
   {
    "argc": 2,
@@ -670,7 +726,7 @@
    "id": 91,
    "name": "PrimSetZ",
    "name_va": "0x45df28",
-   "registration_pc": "0x43fa1d"
+   "push_pc": "0x440631"
   },
   {
    "argc": 0,
@@ -678,7 +734,7 @@
    "id": 92,
    "name": "Rand",
    "name_va": "0x45df20",
-   "registration_pc": "0x43fa44"
+   "push_pc": "0x440658"
   },
   {
    "argc": 2,
@@ -686,7 +742,7 @@
    "id": 93,
    "name": "SaveCreate",
    "name_va": "0x45df14",
-   "registration_pc": "0x43fa66"
+   "push_pc": "0x44067a"
   },
   {
    "argc": 2,
@@ -694,7 +750,7 @@
    "id": 94,
    "name": "SaveThumbSize",
    "name_va": "0x45def8",
-   "registration_pc": "0x43fab0"
+   "push_pc": "0x4406c4"
   },
   {
    "argc": 3,
@@ -702,7 +758,7 @@
    "id": 95,
    "name": "SaveData",
    "name_va": "0x45df08",
-   "registration_pc": "0x43fa8b"
+   "push_pc": "0x44069f"
   },
   {
    "argc": 1,
@@ -710,7 +766,7 @@
    "id": 96,
    "name": "SaveWrite",
    "name_va": "0x45deec",
-   "registration_pc": "0x43fad5"
+   "push_pc": "0x4406e9"
   },
   {
    "argc": 18,
@@ -718,7 +774,7 @@
    "id": 97,
    "name": "Snow",
    "name_va": "0x45dee4",
-   "registration_pc": "0x43fafa"
+   "push_pc": "0x44070e"
   },
   {
    "argc": 2,
@@ -726,7 +782,7 @@
    "id": 98,
    "name": "SnowStart",
    "name_va": "0x45ded8",
-   "registration_pc": "0x43fb1f"
+   "push_pc": "0x440733"
   },
   {
    "argc": 2,
@@ -734,7 +790,7 @@
    "id": 99,
    "name": "SnowStop",
    "name_va": "0x45decc",
-   "registration_pc": "0x43fb46"
+   "push_pc": "0x44075b"
   },
   {
    "argc": 2,
@@ -742,7 +798,7 @@
    "id": 100,
    "name": "SoundLoad",
    "name_va": "0x45dec0",
-   "registration_pc": "0x43fb69"
+   "push_pc": "0x44077d"
   },
   {
    "argc": 1,
@@ -750,7 +806,7 @@
    "id": 101,
    "name": "SoundMasterVol",
    "name_va": "0x45deb0",
-   "registration_pc": "0x43fb8e"
+   "push_pc": "0x4407a2"
   },
   {
    "argc": 3,
@@ -758,7 +814,7 @@
    "id": 102,
    "name": "SoundPlay",
    "name_va": "0x45dea4",
-   "registration_pc": "0x43fbb3"
+   "push_pc": "0x4407c7"
   },
   {
    "argc": 1,
@@ -766,7 +822,7 @@
    "id": 103,
    "name": "SoundSilentOn",
    "name_va": "0x45de94",
-   "registration_pc": "0x43fbd8"
+   "push_pc": "0x4407ec"
   },
   {
    "argc": 2,
@@ -774,7 +830,7 @@
    "id": 104,
    "name": "SoundStop",
    "name_va": "0x45de88",
-   "registration_pc": "0x43fbfd"
+   "push_pc": "0x440811"
   },
   {
    "argc": 2,
@@ -782,7 +838,15 @@
    "id": 105,
    "name": "SoundType",
    "name_va": "0x45de7c",
-   "registration_pc": "0x43fc22"
+   "push_pc": "0x440836"
+  },
+  {
+   "argc": 2,
+   "handler": "0x43c730",
+   "id": 106,
+   "name": "SoundTypeVol",
+   "name_va": "0x45de6c",
+   "push_pc": "0x44085b"
   },
   {
    "argc": 3,
@@ -790,7 +854,7 @@
    "id": 107,
    "name": "SoundVol",
    "name_va": "0x45de60",
-   "registration_pc": "0x43fc6c"
+   "push_pc": "0x440880"
   },
   {
    "argc": 2,
@@ -798,7 +862,7 @@
    "id": 108,
    "name": "SysAtSkipName",
    "name_va": "0x45de50",
-   "registration_pc": "0x43fc91"
+   "push_pc": "0x4408a5"
   },
   {
    "argc": 1,
@@ -806,7 +870,7 @@
    "id": 109,
    "name": "SysProjFolder",
    "name_va": "0x45de40",
-   "registration_pc": "0x43fcb6"
+   "push_pc": "0x4408ca"
   },
   {
    "argc": 3,
@@ -814,7 +878,7 @@
    "id": 110,
    "name": "TextBuff",
    "name_va": "0x45de34",
-   "registration_pc": "0x43fcdb"
+   "push_pc": "0x4408ef"
   },
   {
    "argc": 1,
@@ -822,7 +886,7 @@
    "id": 111,
    "name": "TextClear",
    "name_va": "0x45de28",
-   "registration_pc": "0x43fd00"
+   "push_pc": "0x440914"
   },
   {
    "argc": 4,
@@ -830,7 +894,15 @@
    "id": 112,
    "name": "TextColor",
    "name_va": "0x45de1c",
-   "registration_pc": "0x43fd25"
+   "push_pc": "0x440939"
+  },
+  {
+   "argc": 3,
+   "handler": "0x43da70",
+   "id": 113,
+   "name": "TextFont",
+   "name_va": "0x45de10",
+   "push_pc": "0x44095e"
   },
   {
    "argc": 0,
@@ -838,7 +910,7 @@
    "id": 114,
    "name": "TextFontCount",
    "name_va": "0x45de00",
-   "registration_pc": "0x43fd71"
+   "push_pc": "0x440982"
   },
   {
    "argc": 0,
@@ -846,7 +918,7 @@
    "id": 115,
    "name": "TextFontGet",
    "name_va": "0x45ddf4",
-   "registration_pc": "0x43fd95"
+   "push_pc": "0x4409a6"
   },
   {
    "argc": 1,
@@ -854,7 +926,7 @@
    "id": 116,
    "name": "TextFontName",
    "name_va": "0x45dde4",
-   "registration_pc": "0x43fdb7"
+   "push_pc": "0x4409cb"
   },
   {
    "argc": 1,
@@ -862,7 +934,7 @@
    "id": 117,
    "name": "TextFontSet",
    "name_va": "0x45ddd8",
-   "registration_pc": "0x43fddc"
+   "push_pc": "0x4409f0"
   },
   {
    "argc": 7,
@@ -870,7 +942,7 @@
    "id": 118,
    "name": "TextFormat",
    "name_va": "0x45ddcc",
-   "registration_pc": "0x43fe01"
+   "push_pc": "0x440a15"
   },
   {
    "argc": 4,
@@ -878,7 +950,7 @@
    "id": 119,
    "name": "TextFunction",
    "name_va": "0x45ddbc",
-   "registration_pc": "0x43fe28"
+   "push_pc": "0x440a3d"
   },
   {
    "argc": 3,
@@ -886,7 +958,7 @@
    "id": 120,
    "name": "TextOutSize",
    "name_va": "0x45ddb0",
-   "registration_pc": "0x43fe4b"
+   "push_pc": "0x440a5f"
   },
   {
    "argc": 2,
@@ -894,7 +966,7 @@
    "id": 121,
    "name": "TextPause",
    "name_va": "0x45dda4",
-   "registration_pc": "0x43fe70"
+   "push_pc": "0x440a84"
   },
   {
    "argc": 3,
@@ -902,7 +974,7 @@
    "id": 122,
    "name": "TextPos",
    "name_va": "0x45dd9c",
-   "registration_pc": "0x43fe95"
+   "push_pc": "0x440aa9"
   },
   {
    "argc": 2,
@@ -910,7 +982,7 @@
    "id": 123,
    "name": "TextPrint",
    "name_va": "0x45dd90",
-   "registration_pc": "0x43feba"
+   "push_pc": "0x440ace"
   },
   {
    "argc": 0,
@@ -918,7 +990,7 @@
    "id": 124,
    "name": "TextRepaint",
    "name_va": "0x45dd84",
-   "registration_pc": "0x43fee1"
+   "push_pc": "0x440af2"
   },
   {
    "argc": 2,
@@ -926,7 +998,7 @@
    "id": 125,
    "name": "TextShadowDist",
    "name_va": "0x45dd74",
-   "registration_pc": "0x43ff03"
+   "push_pc": "0x440b17"
   },
   {
    "argc": 3,
@@ -934,7 +1006,7 @@
    "id": 126,
    "name": "TextSize",
    "name_va": "0x45dd68",
-   "registration_pc": "0x43ff2a"
+   "push_pc": "0x440b3f"
   },
   {
    "argc": 2,
@@ -942,7 +1014,7 @@
    "id": 127,
    "name": "TextSkip",
    "name_va": "0x45dd5c",
-   "registration_pc": "0x43ff4d"
+   "push_pc": "0x440b61"
   },
   {
    "argc": 3,
@@ -950,7 +1022,7 @@
    "id": 128,
    "name": "TextSpace",
    "name_va": "0x45dd50",
-   "registration_pc": "0x43ff72"
+   "push_pc": "0x440b86"
   },
   {
    "argc": 2,
@@ -958,7 +1030,7 @@
    "id": 129,
    "name": "TextSpeed",
    "name_va": "0x45dd44",
-   "registration_pc": "0x43ff97"
+   "push_pc": "0x440bab"
   },
   {
    "argc": 2,
@@ -966,7 +1038,7 @@
    "id": 130,
    "name": "TextSuspendChr",
    "name_va": "0x45dd34",
-   "registration_pc": "0x43ffbc"
+   "push_pc": "0x440bd0"
   },
   {
    "argc": 1,
@@ -974,7 +1046,7 @@
    "id": 131,
    "name": "TextTest",
    "name_va": "0x45dd28",
-   "registration_pc": "0x43ffe1"
+   "push_pc": "0x440bf5"
   },
   {
    "argc": 1,
@@ -982,7 +1054,15 @@
    "id": 132,
    "name": "ThreadExit",
    "name_va": "0x45dd1c",
-   "registration_pc": "0x440006"
+   "push_pc": "0x440c1a"
+  },
+  {
+   "argc": 0,
+   "handler": "0x437b60",
+   "id": 133,
+   "name": "ThreadNext",
+   "name_va": "0x45dd10",
+   "push_pc": "0x440c3e"
   },
   {
    "argc": 1,
@@ -990,7 +1070,7 @@
    "id": 134,
    "name": "ThreadRaise",
    "name_va": "0x45dd04",
-   "registration_pc": "0x44004f"
+   "push_pc": "0x440c63"
   },
   {
    "argc": 1,
@@ -998,7 +1078,7 @@
    "id": 135,
    "name": "ThreadSleep",
    "name_va": "0x45dcf8",
-   "registration_pc": "0x440074"
+   "push_pc": "0x440c88"
   },
   {
    "argc": 2,
@@ -1006,7 +1086,7 @@
    "id": 136,
    "name": "ThreadStart",
    "name_va": "0x45dcec",
-   "registration_pc": "0x440099"
+   "push_pc": "0x440cad"
   },
   {
    "argc": 1,
@@ -1014,7 +1094,7 @@
    "id": 137,
    "name": "ThreadWait",
    "name_va": "0x45dce0",
-   "registration_pc": "0x4400be"
+   "push_pc": "0x440cd2"
   },
   {
    "argc": 2,
@@ -1022,7 +1102,7 @@
    "id": 138,
    "name": "TimerGet",
    "name_va": "0x45dcd4",
-   "registration_pc": "0x4400e3"
+   "push_pc": "0x440cf7"
   },
   {
    "argc": 2,
@@ -1030,7 +1110,15 @@
    "id": 139,
    "name": "TimerSet",
    "name_va": "0x45dcc8",
-   "registration_pc": "0x440108"
+   "push_pc": "0x440d1c"
+  },
+  {
+   "argc": 1,
+   "handler": "0x437cb0",
+   "id": 140,
+   "name": "TimerSuspend",
+   "name_va": "0x45dcb8",
+   "push_pc": "0x440d41"
   },
   {
    "argc": 1,
@@ -1038,7 +1126,7 @@
    "id": 141,
    "name": "TitleMenu",
    "name_va": "0x45dcac",
-   "registration_pc": "0x440152"
+   "push_pc": "0x440d66"
   },
   {
    "argc": 6,
@@ -1046,7 +1134,7 @@
    "id": 142,
    "name": "V3DMotion",
    "name_va": "0x45dca0",
-   "registration_pc": "0x440177"
+   "push_pc": "0x440d8b"
   },
   {
    "argc": 1,
@@ -1054,7 +1142,7 @@
    "id": 143,
    "name": "V3DMotionPause",
    "name_va": "0x45dc90",
-   "registration_pc": "0x44019c"
+   "push_pc": "0x440db0"
   },
   {
    "argc": 0,
@@ -1062,77 +1150,42 @@
    "id": 144,
    "name": "V3DMotionStop",
    "name_va": "0x45dc80",
-   "registration_pc": "0x4401c3"
+   "push_pc": "0x440dd4"
+  },
+  {
+   "argc": 0,
+   "handler": "0x437ce0",
+   "id": 145,
+   "name": "V3DMotionTest",
+   "name_va": "0x45dc70",
+   "push_pc": "0x440df8"
+  },
+  {
+   "argc": 3,
+   "handler": "0x437d10",
+   "id": 146,
+   "name": "V3DSet",
+   "name_va": "0x45dc68",
+   "push_pc": "0x440e20"
+  },
+  {
+   "argc": 1,
+   "handler": "0x43d0d0",
+   "id": 147,
+   "name": "WindowMode",
+   "name_va": "0x45dc5c",
+   "push_pc": "0x440e42"
   }
  ],
- "joined": 133,
+ "joined": 147,
+ "method": "name-driven: 每个 push $名字串 往回找最近的 mov $handler,%ecx",
  "missing": [
   {
    "id": 0,
    "name": "AudioLoad"
-  },
-  {
-   "id": 6,
-   "name": "AudioVol"
-  },
-  {
-   "id": 26,
-   "name": "HistorySet"
-  },
-  {
-   "id": 32,
-   "name": "InputGetEvent"
-  },
-  {
-   "id": 54,
-   "name": "MotionMoveS2"
-  },
-  {
-   "id": 59,
-   "name": "MotionMoveZTest"
-  },
-  {
-   "id": 79,
-   "name": "PrimSetDraw"
-  },
-  {
-   "id": 86,
-   "name": "PrimSetText"
-  },
-  {
-   "id": 106,
-   "name": "SoundTypeVol"
-  },
-  {
-   "id": 113,
-   "name": "TextFont"
-  },
-  {
-   "id": 133,
-   "name": "ThreadNext"
-  },
-  {
-   "id": 140,
-   "name": "TimerSuspend"
-  },
-  {
-   "id": 145,
-   "name": "V3DMotionTest"
-  },
-  {
-   "id": 146,
-   "name": "V3DSet"
-  },
-  {
-   "id": 147,
-   "name": "WindowMode"
   }
  ],
- "note": "命令 id → handler 地址（A 类）：原版在 0x43E000..0x440E00 逐条注册命令（mov $handler,%ecx + push argc + push 名字 + call 0x4387d0）；名字是字典序，id 由 HCB 侧 ref/cmd_table.json 反查。由 scripts/extract-exe-cmd-dispatch.py 生成",
- "orders": 134,
- "registrar": "0x004387d0（register(entry, name)）",
- "scan_range": [
-  "0x43e000",
-  "0x440e00"
- ]
+ "note": "命令 id → handler 地址（A 类）：原版逐条注册命令（push 名字串 + 最近的 mov $handler,%ecx + push argc，然后 call 0x4387d0 register(entry, name)）；名字是字典序，id 由 HCB 侧 ref/cmd_table.json 反查。由 scripts/extract-exe-cmd-dispatch.py 生成",
+ "registered_names": 148,
+ "registrar": "0x004387d0（register(entry, name)）"
 }

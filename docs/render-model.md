@@ -1082,8 +1082,30 @@ call   0x4387d0            ; register(entry, name)
 名字在注册顺序里是**字典序**，所以命令 id 要从 HCB 侧的 `ref/cmd_table.json`
 （id → name）反查——三方连起来就是 **id / 名字 / argc / handler**。
 
-结果：**133 / 148** 条命令连上了（缺的 15 条注册形态略有不同，仍列为未知）。
-关键条目：
+第一版按"`mov $handler,%ecx` 紧跟 `mov %ecx,(%eax)`"的模式扫，只连上 133/148；
+后来改成**名字驱动**（找每个 `push $命令名串`，往回扫最近的 `mov $handler,%ecx`），
+补到 **147 / 148**（只剩 `AudioLoad` 的注册形态不同）。
+
+**prim 命令族全表**（全部来自这张表，不再是推断）：
+
+| id | 命令 | handler | 写什么 |
+|---|---|---|---|
+| 78 | `PrimSetBlend` | `0x43BA20` | `prim+0x08`（0..1） |
+| 80 | `PrimSetNull` | `0x43BA60` | `0x439BF0(id, 0)` 清成 type 0 |
+| 81 | `PrimSetOP` | `0x43BA90` | `+0x20/+0x22` |
+| 82 | `PrimSetRS` | `0x43BAF0` | `+0x24`（angle）/`+0x26,+0x28`（scale） |
+| 84 | `PrimSetSnow` | `0x43BC40` | 造 **type-7（snow）** 图元 + x/y |
+| 85 | `PrimSetSprt` | `0x43BD00` | 造 **type-4（sprite）** 图元，arg1(-2..0xFFF)→`+0x2E` |
+| 86 | `PrimSetText` | `0x43BDC0` | 造 **type-5（text）** 图元，层号 0..0x1F→`+0x32` |
+| 87 | `PrimSetTile` | `0x43BE40` | 造 **type-2（tile）** 图元，arg1(-1..0xFF)→`+0x30` |
+| 88 | `PrimSetUV` | `0x43BEF0` | `+0x1C/+0x1E`（u/v） |
+| 89 | `PrimSetWH` | `0x43BF50` | `+0x18/+0x1A` |
+| 90 | `PrimSetXY` | `0x43BFA0` | `+0x14/+0x16` |
+
+⇒ **图元类型码有了名字**：2 = tile、4 = sprite、5 = text、7 = snow（我们原来的注释只有
+1/2/4/5，现已补 7）。
+
+关键条目（其它）：
 
 | id | 命令 | handler |
 |---|---|---|

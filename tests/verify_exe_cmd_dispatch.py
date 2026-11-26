@@ -46,12 +46,24 @@ def main():
     cmds = {c['id']: c for c in ref.get('commands') or []}
 
     print('== 2. 覆盖率 ==')
-    check(ref.get('joined', 0) >= 130, '至少 130 条命令连上 id（实际 %d）'
+    check(ref.get('joined', 0) >= 147, '至少 147 条命令连上 id（实际 %d）'
           % ref.get('joined', 0))
-    check(len(ref.get('missing') or []) <= 20, '未连上的 <= 20（实际 %d）'
+    check(len(ref.get('missing') or []) <= 1, '未连上的 <= 1（实际 %d）'
           % len(ref.get('missing') or []))
-    for cid in (78, 81, 89, 90, 110, 141):
+    for cid in (78, 81, 86, 89, 90, 110, 113, 141):
         check(cid in cmds, '含命令 %d（%s）' % (cid, cmds.get(cid, {}).get('name')))
+    # prim 命令族：名字与 handler 一一对应
+    family = {78: ('PrimSetBlend', '0x43ba20'), 80: ('PrimSetNull', '0x43ba60'),
+              81: ('PrimSetOP', '0x43ba90'), 82: ('PrimSetRS', '0x43baf0'),
+              84: ('PrimSetSnow', '0x43bc40'), 85: ('PrimSetSprt', '0x43bd00'),
+              86: ('PrimSetText', '0x43bdc0'), 87: ('PrimSetTile', '0x43be40'),
+              88: ('PrimSetUV', '0x43bef0'), 89: ('PrimSetWH', '0x43bf50'),
+              90: ('PrimSetXY', '0x43bfa0')}
+    for cid, (name, h) in family.items():
+        got = cmds.get(cid) or {}
+        check(got.get('name') == name and got.get('handler') == h,
+              'cmd %d = %s → %s（实际 %s → %s）'
+              % (cid, name, h, got.get('name'), got.get('handler')))
     for c in cmds.values():
         h = int(c['handler'], 16)
         check(0x401000 <= h < 0x492000, 'cmd %d 的 handler 在 .text 里（%s）'

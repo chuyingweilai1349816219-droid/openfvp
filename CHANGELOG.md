@@ -4,6 +4,33 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（三十一续）：命令表补全到 147/148；prim 命令族与图元类型码全部对上名字
+
+上一版的扫描只连上 133/148（那 15 条的注册代码里，编译器在
+`mov $handler,%ecx` 与 `mov %ecx,(%eax)` 之间插了 `xor`/`sub $0x10,%esp`）。
+本轮改成**名字驱动**：找每个 `push $命令名串`，往回扫最近的 `mov $handler,%ecx`
+——**147 / 148** 连上（只剩 `AudioLoad`，形态仍不同）。
+
+于是 prim 命令族拿到正确名字，也顺带纠正了早先按"造 type-N 图元"描述的 handler：
+
+| id | 命令 | handler | 说明 |
+|---|---|---|---|
+| 78 | `PrimSetBlend` | `0x43BA20` | `prim+0x08`（0..1） |
+| 80 | `PrimSetNull` | `0x43BA60` | 清成 type 0 |
+| 81 | `PrimSetOP` | `0x43BA90` | `+0x20/+0x22` |
+| 82 | `PrimSetRS` | `0x43BAF0` | angle/scale |
+| 84 | `PrimSetSnow` | `0x43BC40` | **type-7 = snow** |
+| 85 | `PrimSetSprt` | `0x43BD00` | **type-4 = sprite**，arg1 -2..0xFFF → `+0x2E` |
+| 86 | `PrimSetText` | `0x43BDC0` | **type-5 = text**，层号 0..0x1F → `+0x32` |
+| 87 | `PrimSetTile` | `0x43BE40` | **type-2 = tile**，arg1 -1..0xFF → `+0x30` |
+| 88 | `PrimSetUV` | `0x43BEF0` | `+0x1C/+0x1E` |
+| 89 | `PrimSetWH` | `0x43BF50` | `+0x18/+0x1A` |
+| 90 | `PrimSetXY` | `0x43BFA0` | `+0x14/+0x16` |
+
+`src/gfx.h` 的类型注释也补上 **7 = snow**（依据这张表）。门禁：
+`verify_exe_cmd_dispatch.py` 加了 prim 命令族 11 条逐一断言；`verify_exe_prim_setters_args.py`
+的 confirmed_id 扩到 8 个 handler。
+
 ## [未发布] — 2026-11-26（三十续）：PrimSetBlend(78) 读完，用户第一优先待办 ① 的四个 setter 全齐
 
 命令 id→handler 表拿到手之后，最后一块 `PrimSetBlend(78)` 也能直接定位了：

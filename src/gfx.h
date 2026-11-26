@@ -80,7 +80,8 @@ typedef struct GfxHost {
 /* ---- primitive fields ------------------------------------------------ */
 
 typedef enum GfxPrimField {
-    GFX_F_TYPE = 0, /* 0=none 1=group 2=tile 4=sprite 5=text            */
+    GFX_F_TYPE = 0, /* 0=none 1=group 2=tile 4=sprite 5=text 7=snow
+                  * （类型名来自 ref/exe-cmd-dispatch.json：cmd 87 PrimSetTile / 85 PrimSetSprt / 86 PrimSetText / 84 PrimSetSnow） */
     GFX_F_DRAW,     /* 0 = hide this prim and its whole subtree          */
     GFX_F_ALPHA,    /* 0..255                                            */
     GFX_F_BLEND,    /* 0 = over (SRCALPHA/INVSRCALPHA), 1 = additive      */

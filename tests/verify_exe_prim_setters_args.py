@@ -84,7 +84,9 @@ def main():
           '0x43BA20（PrimSetBlend）写 prim+0x08')
     check('0..1' in ' '.join(bl.get('rules') or []), 'blend 范围 0..1')
     check(bl.get('confirmed_id') == 78, 'PrimSetBlend 的 id = 78（已证实）')
-    for addr, cid in (('0x43ba90', 81), ('0x43bf50', 89), ('0x43bfa0', 90)):
+    for addr, cid in (('0x43ba90', 81), ('0x43bf50', 89), ('0x43bfa0', 90),
+                      ('0x43bc40', 84), ('0x43bd00', 85), ('0x43bdc0', 86),
+                      ('0x43be40', 87), ('0x43bef0', 88)):
         check((by.get(addr) or {}).get('confirmed_id') == cid,
               '%s 的 id = %d（已证实）' % (addr, cid))
     check(bool(ref.get('unknown')), 'unknown 里保留未解项')
