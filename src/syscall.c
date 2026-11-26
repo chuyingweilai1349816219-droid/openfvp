@@ -1542,7 +1542,10 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     /* Rendering commands: forward to the attached gfx context, if any.
      * gfx_set_prim is the weak-symbol probe (all renderer symbols are weak,
      * and no context exists in binaries that do not link src/gfx.c). */
-    if (vm->gfx_bridge != NULL && gfx_set_prim != NULL) {
+    /* 诊断开关 FVP_NO_GFX=1：即使挂了 gfx 也跳过渲染命令的转发（脚本走向按"无渲染器"
+     * 处理），用来回答"是不是 gfx 分支改变了脚本走向"这类问题（CHANGELOG 六十八续）。 */
+    if (vm->gfx_bridge != NULL && gfx_set_prim != NULL &&
+        getenv("FVP_NO_GFX") == NULL) {
         int rargc = fvp_gfx_argc(cid, argc);
         if (rargc > (int)FVP_MAX_ARGC) {
             rargc = (int)FVP_MAX_ARGC;
@@ -1581,6 +1584,13 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     }
 
     switch (cid) {
+    /* 诊断开关 FVP_TEST_ALWAYS_DONE=1：把所有 *Test 的返回值强行当成 1（"已结束"，
+     * 与 ref/fvm_ref.py 的近似一致），用来判断"真实容器查询"是不是脚本走向不同的
+     * 原因（CHANGELOG 六十九续）。 */
+    if (getenv("FVP_TEST_ALWAYS_DONE") != NULL && fvp_sys_is_test(cid)) {
+        t->temp = fvp_make_int(1);
+        return;
+    }
     /* 24 IntToText(value, opt?): 把整数格式化成十进制字符串并**返回字符串句柄**。
      * 静态分析 handler 0x437646：`push engine+0x481374; call wsprintfA`（格式串
      * 0x472c4c = "%d"），然后 `call 0x4445e0` 分配字符串句柄、`movb $0x5,0x814`
