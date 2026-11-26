@@ -30,7 +30,8 @@ static void usage(FILE *f, const char *argv0)
     fprintf(f, "usage: %s <script.hcb> [options]\n", argv0);
     fprintf(f, "  --enc cp932|gbk   script text encoding (default cp932)\n");
     fprintf(f, "  --steps N         instruction budget (default 200000)\n");
-    fprintf(f, "  --text-out FILE   write the text lines as they appear\n");
+    fprintf(f, "  --text-out FILE   write the text lines as they appear\\n");
+    fprintf(f, "  --pctrace FILE    write one executed pc per line (diagnostics)\\n");
     fprintf(f, "  --screenshot FILE write the canvas as a 32-bit BMP\n");
     fprintf(f, "  --quiet           do not echo text\n");
     fprintf(f, "  --click N         synthetic click every N steps\n");
@@ -133,6 +134,7 @@ int main(int argc, char **argv)
     const char *script = NULL;
     const char *encname = "cp932";
     const char *text_out = NULL;
+    const char *pctrace = NULL;
     const char *shot = NULL;
     TextSink sink;
     unsigned long long steps = 200000ULL;
@@ -155,7 +157,9 @@ int main(int argc, char **argv)
             encname = argv[++i];
         } else if (strcmp(a, "--steps") == 0 && i + 1 < argc) {
             steps = strtoull(argv[++i], NULL, 10);
-        } else if (strcmp(a, "--text-out") == 0 && i + 1 < argc) {
+        } else if (strcmp(a, "--pctrace") == 0 && i + 1 < argc) {
+        pctrace = argv[++i];
+    } else if (strcmp(a, "--text-out") == 0 && i + 1 < argc) {
             text_out = argv[++i];
         } else if (strcmp(a, "--screenshot") == 0 && i + 1 < argc) {
             shot = argv[++i];
@@ -227,6 +231,9 @@ int main(int argc, char **argv)
     }
 
     t0 = fvp_plat_now_sec();
+    if (pctrace != NULL) {
+        vm.pctrace = fopen(pctrace, "wb");
+    }
     fvp_vm_start(&vm);
     done = fvp_vm_run(&vm, steps);
     gfx_render(gfx);

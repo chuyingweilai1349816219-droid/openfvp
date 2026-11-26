@@ -4,6 +4,52 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（四十七续）：headless 不出文本的**第一个分叉点**定位到 `MotionAlphaTest(44)` 的返回值
+
+上一轮留下的问题"`bin/fvp-headless.exe` 在 900k 步里 0 行文本"本轮定位到具体一条路径。
+
+### 工具：headless 也能打 pc 轨迹了
+
+`bin/fvp-headless.exe --pctrace FILE`（复用 `vm.pctrace`，与 `bin/fvm.exe --pctrace` 同格式，
+一行一个 pc）。用它逐行比对两个外壳：
+
+```
+headless: 60000 步 / 60000 行 pc
+fvm     : 60000 步 / 60000 行 pc
+第一次不同：第 29938 行   headless=0x58355   fvm=0x5837B
+```
+
+### 分叉的脚本位置（HCB 0x58344..0x58350）
+
+| pc | 指令 | 说明 |
+|---|---|---|
+| `0x58344` | `syscall 42` | `MotionAlpha(254, 0, 255, 1400, true, true)`：给 prim 254 建 1400 ms 的 alpha 补间 |
+| `0x5834a` | `syscall 44` | `MotionAlphaTest(252)`：查动作是否还在跑（原版写 thread+0x814，1 = 还在跑） |
+| `0x5834d..0x58350` | `pushtemp; pushfalse; eq; jmpcond 0x5837B` | 结果 == false 就跳走 |
+
+两个外壳的差别：
+
+| 外壳 | `MotionAlphaTest` 返回 | `eq(temp, false)` | `jmpcond`（假则跳） | 落点 |
+|---|---|---|---|---|
+| `fvm`（无 gfx） | 1（"还在跑"；与 `ref/fvm_ref.py` 的 `cmd_*Test → 1` 一致） | 假 | **跳** | `0x5837B` → 继续推进 |
+| `headless`（有 gfx） | **0（"已结束"）** | 真 | 不跳 | `0x58355` → 进入等待循环 → 之后一直自旋（900k 步 11 ms、0 行文本） |
+
+### 根因判断
+
+不是"文本回调没接"，而是**headless 没有动画时钟**：它只在最后渲染一帧，`MotionAlpha` 建的补间
+进度永远是 0，于是 `gfx_motion_test()` 这一侧答"已结束"（0），与"刚建完动画"的真实状态**相反**；
+脚本因此走进只靠输入/定时器才能退出的等待循环。参考实现里 `*Test` 恒返回 1 恰好等于真实状态那一侧，
+所以 `fvm` 能一路跑到 194 行文本。
+
+### 试过但无效的修法（已回滚，未提交）
+
+给 headless 加分块循环 + `gfx_motion_advance(gfx, vm.virtual_ms 增量)`：
+实测 headless 里 `vm.virtual_ms` 全程为 0（它只在协程唤醒路径推进），补间时钟仍然不动。
+
+下一轮方向：给 headless 一个明确的"步数 → 毫秒"时间模型（例如每 N 步 = 1 帧 16 ms）再泵帧，
+或者把 `*Test` 的"无时钟"判定改成"按已用步数推算动画进度"；并把
+`--pctrace` 的两外壳差异做成门禁（第一个分叉点必须是预期的那一条）。
+
 ## [未发布] — 2026-11-26（四十六续）：重建二进制后暴露的两件事（冻结基线的 194/195 边界 + headless 不出文本）
 
 上一轮结束时 `bin/*.exe` 比源码旧（fvm 是 17:35 的产物）。本轮把所有二进制重建后，

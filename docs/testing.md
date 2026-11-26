@@ -510,3 +510,10 @@ out\fuzz\fvm_guard.exe out\fuzz\repro\case_12345.hcb --steps 2048
 
 所以流程改成：**每轮开始 `mingw32-make -f Makefile` 全量重建 → 再跑五门禁**；
 门禁里凡是用 `bin/*.exe` 的项，都必须在同一次构建里产出。
+
+### headless 的 pc 轨迹开关（2026-11-26 第 222 轮）
+
+`bin/fvp-headless.exe --pctrace FILE` 复用 `vm.pctrace`，一行一个执行过的 pc，格式与
+`bin/fvm.exe --pctrace` 相同，用来定位两个外壳的**第一个分叉点**。第 222 轮用它查出
+headless 之所以 900k 步 0 行文本，是 `0x5834A` 的 `MotionAlphaTest(44)` 在没有动画时钟的
+外壳里答"已结束"，让脚本落进等待循环（详见 CHANGELOG 四十七续）。
