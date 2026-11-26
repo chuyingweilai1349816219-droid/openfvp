@@ -1587,7 +1587,7 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     case 31: /* InputGetDown: synthetic click every click_period steps */
         if (vm->click_period > 0 &&
             (vm->steps % (uint64_t)vm->click_period) < 2u) {
-            t->temp = fvp_make_int(1);
+            t->temp = fvp_make_int(vm->click_mask > 0 ? vm->click_mask : 1);
         } else {
             t->temp = fvp_make_int(0);
         }

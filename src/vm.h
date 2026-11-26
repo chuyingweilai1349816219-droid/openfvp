@@ -270,6 +270,11 @@ typedef struct FvpVM {
     uint32_t stall_pc;
     uint32_t last_pc;
     int64_t click_period;
+    /* 合成点击返回的**位掩码**。原版 InputGetDown 返回 *(engine+0x43C)，
+     * 那是一位掩码（0x4310A4 处就有人 	est %edx,0x43c(%ecx) 测位），脚本
+     * 又用 	est（= (a & (1<<b)) != 0）逐位取，所以只返回 1（bit 0）永远
+     * 满足不了 poll bit 1 / bit 3 的等待循环。默认 1 = 保持既有行为。 */
+    int click_mask;
     int64_t cx;
     int64_t cy;
     int64_t key_mask;

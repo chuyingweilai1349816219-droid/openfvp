@@ -910,6 +910,7 @@ void fvp_vm_init(FvpVM *vm, FvpHcb *hcb, int quiet)
     vm->cx = 960;
     vm->cy = 540;
     vm->click_period = 0;
+    vm->click_mask = 1;
     fvp_arena_init(&vm->arena);
     fvp_map_init(&vm->garr);
     fvp_map_init(&vm->larr);

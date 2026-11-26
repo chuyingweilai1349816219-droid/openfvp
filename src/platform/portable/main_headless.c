@@ -141,6 +141,7 @@ int main(int argc, char **argv)
     unsigned long long click = 0;
     int quiet = 0;
     int text_fixed = 0;
+    int click_mask = 0x0B;
     int i;
     FvpEncoding enc = FVP_ENC_CP932;
     char err[512];
@@ -163,6 +164,8 @@ int main(int argc, char **argv)
             text_out = argv[++i];
         } else if (strcmp(a, "--screenshot") == 0 && i + 1 < argc) {
             shot = argv[++i];
+        } else if (strcmp(a, "--click-mask") == 0 && i + 1 < argc) {
+            click_mask = (int)strtol(argv[++i], NULL, 0);
         } else if (strcmp(a, "--click") == 0 && i + 1 < argc) {
             click = strtoull(argv[++i], NULL, 10);
         } else if (strcmp(a, "--text-fixed-layout") == 0) {
@@ -200,6 +203,14 @@ int main(int argc, char **argv)
     memset(&vm, 0, sizeof vm);
     fvp_vm_init(&vm, &hcb, quiet);
     vm.click_period = (int)click;
+    /* 合成点击的位掩码：原版 InputGetDown 返回 engine+0x43C 那张位掩码
+     * （0x4310A4 处就有 `test %edx,0x43c(%ecx)` 测位），脚本又用 `test`
+     * （(a & (1<<b)) != 0）逐位取。扫 iroseka.hcb 里 syscall 31 附近的
+     * pushint8 位号：bit1 41 次、bit3 16 次、bit0 5 次、其余(2/4/8/10) 1-3 次。
+     * 只给 bit0 时那些等 bit1/bit3 的循环永远退不出来（CHANGELOG 四十九续）。
+     * 键位与按钮的完整对应还没逆完，这里只保证"点击能满足脚本轮询的位"，
+     * 属于合成输入模型的一部分；--click-mask 可改。 */
+    vm.click_mask = click_mask;
 
     gfx = gfx_create(CANVAS_W, CANVAS_H, NULL);
     if (gfx == NULL) {

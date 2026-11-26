@@ -4,6 +4,30 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（五十续）：合成点击改成**位掩码**（默认 bit0|bit1|bit3），headless 走出了旧的等待循环
+
+按四十九续的结论动手：
+
+- `src/vm.h` 新增 `click_mask`（合成点击返回的位掩码，默认 1 = 保持既有行为）；
+- `src/vm.c` 初始化 `click_mask = 1`；
+- `src/syscall.c` 的 `InputGetDown(31)` 在点击窗口里返回 `click_mask` 而不是写死的 1；
+- `src/platform/portable/main_headless.c` 新增 `--click-mask N`，**默认 0x0B（bit0|bit1|bit3）**：
+  扫 `iroseka.hcb` 里 `syscall 31` 附近的 `pushint8` 位号得到 bit1 41 次、bit3 16 次、
+  bit0 5 次、其余(2/4/8/10) 各 1–3 次；只给 bit0 时那些轮询 bit1/bit3 的等待循环
+  永远退不出来（四十九续的推演）。键位↔按钮的完整对应还没逆完，这里只保证
+  "合成点击能满足脚本轮询的位"，并在注释里写明这是合成输入模型的一部分。
+
+### 验证到什么程度（诚实）
+
+| 检查 | 结果 |
+|---|---|
+| `--pctrace` 里旧的等待循环 `0x58347..0x58376` | **不再出现**（20000 步里命中 0 次）→ 位掩码确实解开了那个循环 |
+| `bin/fvp-headless.exe --steps 900000 --click 600 --text-out` | **仍然 0 行文本**（11 ms）→ 卡点已经换地方了，不是同一个循环 |
+| 其它外壳（`bin/fvm.exe` / win32） | `click_mask` 默认 1，行为不变 |
+
+下一轮：给 headless 加"cid 直方图 + 每 N 步的 pc 采样"，看 900k 步到底花在哪个 pc 区间
+（现在既不是输入等待循环、也没有 syscall 输出），再决定是补时间模型还是补某条命令。
+
 ## [未发布] — 2026-11-26（四十九续）：`InputGetDown` 返回的是**位掩码**，我们一直只返回 1（bit 0）
 
 四十八续停在"点击也解不开等待循环"。本轮把这条命令自己反汇编读完，原因清楚了。
