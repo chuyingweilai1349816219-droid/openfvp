@@ -4,6 +4,24 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（补）：headless 外壳的旧版面开关 + 正文浮在 CG 上的行为记录
+
+### 修正（run_all 里 verify_headless 的黑帧）
+- 根因是**测试过期**，不是渲染坏了：第 168 轮把默认文本模型换成图元驱动（不再合成
+  对话框）后，没有任何图片/字库宿主的 headless 外壳就不可能有墨迹；而
+  `verify_headless.py` 的"画面非黑"断言其实一直在测旧版面的合成框。
+- 给 `bin/fvp-headless.exe` 加显式 `--text-fixed-layout`（旧版面），门禁改用它跑：
+  `screenshot is not black in legacy-layout mode (mean 34.8)`。断言没有被删除。
+- 完整 `run_all.py` 复跑：**74 passed / 1 failed（此条）/ 1 skipped**；修后单跑 PASS。
+
+### 记录（正文可以浮在 CG 上：原版行为）
+- 用户实机截图确认：原版存在"只有一行正文、没有对话框"的画面。结构证据：正文窗口的
+  上屏只经过 type-5 文本图元（五彩 `PrimSetText(551, tw=0, x=1, y=1)`，之后由
+  `MotionMove`/`PrimSetXY` 挪位置），对话框是**另一组图元**，两者没有绑定。
+- 写进 `docs/render-model.md`：引擎不得合成对话框、不得把正文强制摆进版面坐标；
+  `--text-fixed-layout` 的合成框明确标注为"仅冻结像素基线用、不是原版行为"。
+- `docs/cross-platform.md` 记录 headless 的文本模式开关。
+
 ## [未发布] — 2026-11-26：标题背景动画修两处显示错误 + 全分辨率；文本窗口几何来自 exe
 
 ### 修正（风车剪影入场位置太靠中：仿射锚点少了背景裁剪原点）

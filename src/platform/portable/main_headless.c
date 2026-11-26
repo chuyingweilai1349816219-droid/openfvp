@@ -34,6 +34,9 @@ static void usage(FILE *f, const char *argv0)
     fprintf(f, "  --screenshot FILE write the canvas as a 32-bit BMP\n");
     fprintf(f, "  --quiet           do not echo text\n");
     fprintf(f, "  --click N         synthetic click every N steps\n");
+    fprintf(f, "  --text-fixed-layout  legacy text layout (synthetic box;\n");
+    fprintf(f, "                    used by tests/verify_headless.py to exercise\n");
+    fprintf(f, "                    the renderer without an asset host)\n");
 }
 
 /* 32 位 BMP（自上而下，BGRA 源画布转 BGR，alpha 丢）。返回 1 成功。 */
@@ -135,6 +138,7 @@ int main(int argc, char **argv)
     unsigned long long steps = 200000ULL;
     unsigned long long click = 0;
     int quiet = 0;
+    int text_fixed = 0;
     int i;
     FvpEncoding enc = FVP_ENC_CP932;
     char err[512];
@@ -157,6 +161,8 @@ int main(int argc, char **argv)
             shot = argv[++i];
         } else if (strcmp(a, "--click") == 0 && i + 1 < argc) {
             click = strtoull(argv[++i], NULL, 10);
+        } else if (strcmp(a, "--text-fixed-layout") == 0) {
+            text_fixed = 1;
         } else if (strcmp(a, "--quiet") == 0) {
             quiet = 1;
         } else if (a[0] == '-' && a[1] != '\0') {
@@ -197,6 +203,12 @@ int main(int argc, char **argv)
         fvp_vm_free(&vm);
         fvp_hcb_free(&hcb);
         return 4;
+    }
+    /* 旧版面（合成对话框 + 每层按版面表画）只在显式要求时打开：
+     * 默认是图元驱动（原版行为），而这个外壳没有图片/字库宿主，
+     * 图元驱动下画不出任何东西（见 tests/verify_headless.py）。 */
+    if (text_fixed) {
+        gfx_set_text_fixed_layout(gfx, 1);
     }
     fvp_vm_attach_gfx(&vm, gfx);
     if (text_out != NULL) {

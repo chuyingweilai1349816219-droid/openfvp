@@ -89,3 +89,12 @@ bin/fvp-headless.exe <script.hcb> --steps 200000 \
   （占位渲染，未接真实窗口）；
 - ✅ 无窗口 headless 外壳已落地（`make headless` + `tests/verify_headless.py` 门禁）；
   可继续把这条路径接进 CI（下一步是写 CI 配置，本仓库暂未提交 CI 文件）。
+## headless 外壳的文本模式开关（2026-11-26）
+
+`bin/fvp-headless.exe`（`src/platform/portable/main_headless.c`）新增
+`--text-fixed-layout`：显式打开旧版面（合成对话框 + 每层按版面表画）。
+
+为什么需要：这个外壳**没有图片/字库宿主**（`gfx_create(..., NULL)`），而默认的
+图元驱动模式只在图元/字库存在时才有墨迹，所以它天然出黑帧。门禁
+`tests/verify_headless.py` 的"画面非黑"断言改用这个开关跑，既保持了对渲染层的
+覆盖，又不把旧版面的合成框当成原版行为。

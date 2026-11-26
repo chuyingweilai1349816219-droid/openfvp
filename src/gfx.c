@@ -3109,6 +3109,22 @@ static void draw_text_all(Gfx *g)
                         (unsigned)p->w, (unsigned)p->h,
                         g->tw[p->tw].size[0], g->tw[p->tw].size[1],
                         g->tw[p->tw].panel_w, g->tw[p->tw].panel_h);
+                {
+                    int q = p->parent;
+                    int guard = 0;
+
+                    while (q > 0 && q < GFX_PRIM_MAX && guard++ < 64) {
+                        const GfxPrim *pp = &g->prim[q];
+
+                        fprintf(stderr,
+                                "   chain %d: type=%d xy=%d,%d parent=%d "
+                                "alpha=%d scale=%u,%u angle=%u\n",
+                                q, pp->type, pp->x, pp->y, pp->parent,
+                                pp->alpha, (unsigned)pp->scale_x,
+                                (unsigned)pp->scale_y, (unsigned)pp->angle);
+                        q = pp->parent;
+                    }
+                }
             }
             for (i = 0; i < GFX_TEXT_MAX; i++) {
                 if (text_visible(&g->tw[i])) {

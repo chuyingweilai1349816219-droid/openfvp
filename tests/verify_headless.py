@@ -4,6 +4,10 @@
 
 证明"核心 + 渲染层"在**不依赖 Win32 窗口 / D3D** 的情况下也能跑：
   1. `make headless` 能构建出 bin/fvp-headless.exe；
+   注意：这个外壳**没有图片/字库宿主**。2026-11-26 起默认文本模型是图元驱动
+   （原版行为：不画合成对话框），所以"画面非黑"这条断言改用
+   `--text-fixed-layout` 跑——它显式打开旧版面（合成对话框 + 版面表），
+   断言仍然测渲染层本身，而不是把断言删掉。
   2. 跑同一份脚本 N 条指令，步数与 fvm 完全一致；
   3. 输出的 BMP 是 1920x1080、不是全黑；
   4. 文本回调能写出至少一行。
@@ -126,7 +130,8 @@ def main():
             os.remove(p)
 
     rc, out = run([exe, args.script, '--steps', str(args.steps),
-                   '--screenshot', shot, '--text-out', text])
+                   '--screenshot', shot, '--text-out', text,
+                   '--text-fixed-layout'])
     check(rc == 0, 'headless run exit 0 (got %s)' % rc)
     check('platform seam = portable' in out,
           'headless reports the portable platform seam')
@@ -156,7 +161,9 @@ def main():
         w, h, mean = stats
         check((w, h) == (1920, 1080),
               'screenshot is 1920x1080 (%dx%d)' % (w, h))
-        check(mean > 1.0, 'screenshot is not black (mean %.1f)' % mean)
+        check(mean > 1.0,
+          'screenshot is not black in legacy-layout mode (mean %.1f)'
+          % mean)
 
     n_lines = 0
     if os.path.isfile(text):
