@@ -105,6 +105,22 @@ EXPECT = [
 ]
 
 HANDLERS = [
+    {'handler': '0x43a8b0', 'confirmed_id': 42,
+     'writes': ['tail-call 0x42d460(engine+0x651E04, id, from, to, ms, mode, flag)'],
+     'rules': ['arg0 = int 1..0xFFF',
+               'arg1 起始 alpha：int 且 0..0xFF，缺/越界回退成**当前 prim+0x07**',
+               'arg2 目标 alpha：同上',
+               'arg3 时长 ms：int 且 **1..300000**，不合法则整条忽略',
+               'arg4 mode：int 0..1（缺省 0）',
+               'arg5 flag：任意类型，`type != 0` → 1'],
+     'guess': 'MotionAlpha(42)（两部作品合计 553 次）'},
+    {'handler': '0x43b9c0', 'confirmed_id': 76,
+     'writes': ['线程 +0x814（VM 返回值）'],
+     'rules': ['arg0 = int 1..0xFFF',
+               'arg1：`type != 0` → 1，否则 0（布尔）',
+               '`0x43B8D0(id, flag)` 命中才把线程 +0x814 置 1',
+               '未命中时不写（保持旧值）'],
+     'guess': 'PrimHit(76)（389 次；鼠标命中测试）'},
     {'handler': '0x437990', 'confirmed_id': 77,
      'writes': ['prim+0x07 = alpha'],
      'rules': ['arg0 = int 且 **1..0xFFF**',

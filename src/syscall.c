@@ -313,19 +313,42 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             (void)gfx_graph_load(g, id, a[1].str->data);
         }
         break;
-    case 42: /* MotionAlpha(id, from, to, ms, mode, flag): take `to` */
-        if (gfx_motion_enabled != NULL && gfx_motion_enabled(g) && argc > 3 &&
-            fvp_gfx_is_int(&a[2]) && fvp_gfx_is_int(&a[3])) {
-            int from = 255;
+    case 42: /* MotionAlpha(id, from, to, ms, mode, flag)
+              * 原版 handler 0x43A8B0：
+              *   id 1..0xFFF；from/to 各自 int 且 0..0xFF，缺/越界时**回退成当前
+              *   prim+0x07 的 alpha**；ms 必须 int 且 **1..300000**，不合法则整条
+              *   忽略；mode int 0..1（缺省 0）；flag 用"类型是否为 0"当布尔。 */
+        if (argc > 3 && fvp_gfx_is_int(&a[3])) {
+            int ms = fvp_gfx_int(&a[3]);
 
-            (void)gfx_get_prim(g, id, GFX_F_ALPHA, &from);
-            (void)gfx_motion_add(g, id, FVP_TWEEN_ALPHA, from, 0,
-                                 fvp_gfx_int(&a[2]), 0, fvp_gfx_int(&a[3]),
-                                 argc > 4 ? fvp_gfx_int(&a[4]) : 1);
-        } else if (argc > 2 && fvp_gfx_is_int(&a[2])) {
-            (void)gfx_set_prim(g, id, GFX_F_ALPHA, fvp_gfx_int(&a[2]));
-        } else if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_ALPHA, fvp_gfx_int(&a[1]));
+            if (ms >= 1 && ms <= 300000) {
+                int from = 0;
+                int to = 0;
+                int mode = 0;
+                int flag = (argc > 5 && a[5].type != 0) ? 1 : 0;
+
+                (void)gfx_get_prim(g, id, GFX_F_ALPHA, &from);
+                to = from;
+                if (argc > 1 && fvp_gfx_is_int(&a[1]) &&
+                    fvp_gfx_int(&a[1]) >= 0 && fvp_gfx_int(&a[1]) <= 0xFF) {
+                    from = fvp_gfx_int(&a[1]);
+                }
+                if (argc > 2 && fvp_gfx_is_int(&a[2]) &&
+                    fvp_gfx_int(&a[2]) >= 0 && fvp_gfx_int(&a[2]) <= 0xFF) {
+                    to = fvp_gfx_int(&a[2]);
+                }
+                if (argc > 4 && fvp_gfx_is_int(&a[4]) &&
+                    fvp_gfx_int(&a[4]) >= 0 && fvp_gfx_int(&a[4]) <= 1) {
+                    mode = fvp_gfx_int(&a[4]);
+                }
+                (void)flag;
+                if (gfx_motion_enabled != NULL && gfx_motion_enabled(g)) {
+                    (void)gfx_motion_add(g, id, FVP_TWEEN_ALPHA, from, 0, to, 0,
+                                         ms, mode);
+                } else {
+                    (void)gfx_set_prim(g, id, GFX_F_ALPHA, to);
+                }
+            }
         }
         break;
     case 45: /* MotionAnim(id, animId, ms, loop) */

@@ -4,6 +4,25 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（三十八续）：MotionAlpha(42) 对齐（from/to 回退 + ms 范围）；PrimHit(76) 语义冻结
+
+继续按使用频率往下推：`MotionAlpha(42)` 553 次、`PrimHit(76)` 389 次。
+
+**`MotionAlpha(42)` = `0x43A8B0`**（按 Variant 偏移逐参数读）：
+- `arg0` id **1..0xFFF**；
+- `arg1/arg2` = 起始/目标 alpha：int 且 **0..0xFF**，缺或越界时**回退成当前 `prim+0x07`**；
+- `arg3` 时长 ms：int 且 **1..300000**，**不合法则整条命令忽略**；
+- `arg4` mode：int 0..1（缺省 0）；`arg5` flag：`type != 0` → 1。
+
+我们原来的实现**完全忽略 arg1**（起始 alpha 一律用当前值），而且 ms 不校验范围——
+这轮对齐。
+
+**`PrimHit(76)` = `0x43B9C0`**：id 1..0xFFF；`arg1` 用 `type != 0` 当布尔；
+`0x43B8D0(id, flag)` 命中才把线程 `+0x814`（VM 返回值）置 1——**未命中时不写**。
+我们的实现命中/未命中都写（写 0），差异记在基线里。
+
+`ref/exe-prim-setters-args.json` 从 12 个 handler 扩到 **14 个**；基线文本/像素均未变。
+
 ## [未发布] — 2026-11-26（三十七续）：对齐两条**最高频**命令 PrimSetAlpha(77) / PrimSetDraw(79)
 
 命令使用矩阵显示：**`PrimSetAlpha(77)` 是两部作品合计 1052 次的最高频命令**，

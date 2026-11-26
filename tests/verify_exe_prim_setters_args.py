@@ -45,9 +45,10 @@ def main():
     hs = ref.get('handlers') or []
 
     print('== 2. 四个 handler 的规则 ==')
-    check(len(hs) == 12, '十二个 handler（实际 %d）' % len(hs))
+    check(len(hs) == 14, '十四个 handler（实际 %d）' % len(hs))
     by = {h['handler']: h for h in hs}
-    for addr in ('0x437990', '0x4379d0', '0x43ba20', '0x43ba90', '0x43baf0',
+    for addr in ('0x43a8b0', '0x43b9c0', '0x437990', '0x4379d0', '0x43ba20',
+                 '0x43ba90', '0x43baf0',
                  '0x43bc40', '0x43bd00', '0x43bdc0', '0x43be40', '0x43bef0',
                  '0x43bf50', '0x43bfa0'):
         check(addr in by, '含 handler %s' % addr)
@@ -93,7 +94,17 @@ def main():
     check(any('0x05' in w for w in dr.get('writes') or []),
           '0x4379D0（PrimSetDraw）写 prim+0x05')
     check('0 或 1' in ' '.join(dr.get('rules') or []), 'draw 只接受 0/1')
-    for addr, cid in (('0x437990', 77), ('0x4379d0', 79),
+    ma = by.get('0x43a8b0') or {}
+    check(any('0x42d460' in w for w in ma.get('writes') or []),
+          '0x43A8B0（MotionAlpha）尾调 0x42D460')
+    check('300000' in ' '.join(ma.get('rules') or []), 'ms 范围 1..300000')
+    check('当前 prim+0x07' in ' '.join(ma.get('rules') or []),
+          'from/to 缺失时回退成当前 alpha')
+    ph = by.get('0x43b9c0') or {}
+    check(any('0x814' in w for w in ph.get('writes') or []),
+          '0x43B9C0（PrimHit）写线程 +0x814')
+    for addr, cid in (('0x43a8b0', 42), ('0x43b9c0', 76),
+                      ('0x437990', 77), ('0x4379d0', 79),
                       ('0x43ba90', 81), ('0x43bf50', 89), ('0x43bfa0', 90),
                       ('0x43bc40', 84), ('0x43bd00', 85), ('0x43bdc0', 86),
                       ('0x43be40', 87), ('0x43bef0', 88)):
@@ -117,6 +128,12 @@ def main():
         check('ang < 0' in seg and 'ang += 3600' in seg, 'case 82 负数归一化')
         check('sc < 100' in seg and 'sc > 10000' in seg, 'case 82 scale 钳位 100..10000')
         check('FVP_S16' in src, 'C 侧有 int16 截断宏')
+        k42 = src.index('case 42:')
+        seg42 = src[k42:k42 + 2000]
+        check('ms >= 1 && ms <= 300000' in seg42, 'case 42 校验 ms 1..300000')
+        check('fvp_gfx_int(&a[1])' in seg42, 'case 42 读 arg1 当起始 alpha')
+        check('gfx_get_prim(g, id, GFX_F_ALPHA, &from)' in seg42,
+              'case 42 回退读当前 alpha')
         k77 = src.index('case 77:')
         check('alpha >= 0 && alpha <= 0xFF' in src[k77:k77 + 900],
               'case 77 只接受 alpha 0..0xFF')
@@ -153,7 +170,7 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 十二个图元 setter handler 的实参规则已冻结，case 82 已按原版语义'
+    print('\nOK: 十四个图元 setter handler 的实参规则已冻结，case 82 已按原版语义'
           '（angle mod 3600 / scale 100..10000 / int16 存储）修正')
     return 0
 
