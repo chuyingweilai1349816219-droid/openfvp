@@ -3,6 +3,24 @@
 > 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
+## [未发布] — 2026-11-26（六十四续）：多游戏矩阵（优先级①）现状盘点
+
+回到目标的第一优先级做了一次盘点：	ests/verify_multigame.py（iroseka + Hoshimemo 的桌面/控制台两路）
+当前是 **5 项失败**，分两组：
+
+| 失败项 | 属于 |
+|---|---|
+| 	ext lines == 195 (frozen baseline) | 已知的 900k 步预算问题（第 195 行落在预算之后，内容已验证正确） |
+| unimpl cmds none (got 1) | 两部作品里各有 1 条仍未实现的 VM 命令 —— **可行动项** |
+| rame is near white at the peak (mean 189) / rame left the white peak ... | 桌面外壳的开场白场过渡抽帧（时序相关，erify_opening_render 单独跑是通过的） |
+
+另：in/fvm.exe 对 Hoshimemo 900k 步能正常输出 **82 行**文本（	hread 0: text lines 82），
+说明第二部作品的主链路是通的；unknown cmds 那串是 fvm 没有 gfx 时的正常现象（渲染命令不在 VM 侧实现）。
+
+下一轮：先把 unimpl cmds 那 1 条找出来并补掉（多游戏矩阵是 openbgi 级项目的硬指标），
+再回头处理开场白场抽帧的时序容差。
+
+
 
 ## [未发布] — 2026-11-26（六十三续）：headless 打开 VM 虚拟时钟（timeline）—— 仍 0 行文本
 
