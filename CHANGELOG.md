@@ -4,6 +4,73 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（九十八续）：265 的 38 个引用点按命令分类 + `global[236]` 守卫把脚本开场跳过了
+
+### 1. `prim 265` 的引用点按"它发的是哪条命令"分类
+
+用 `ref/fvm_ref.py` 解码每个引用点后的第一条 `syscall`：
+
+| 命令 | 站点 | 位置相对 `0x592DF`（等待环） |
+|---|---|---|
+| `MotionAlpha`(42) | `0x59355 / 0x5FF2A / 0x60212 / 0x61F98 / 0x62486` | **全部在环之后** |
+| `MotionMoveS2`(54) | `0x5FF3A / 0x600A6 / 0x61FA8` | 全部在环之后 |
+| `MotionMoveR`(51) | `0x5FF4E / 0x600BA / 0x61FBC` | 全部在环之后 |
+| `MotionMoveS2Test`(56) | `0x5967F` | 在环之后 |
+| `PrimSetAlpha`(77) | `0x58B6A / 0x58B77 / 0x5F908 / 0x61536 / 0x61546` | 前两个在环之前（`0x58B6A/0x58B77` 各执行 1 次） |
+| `MotionMoveZStop`(58) 等 | `0x61222 / 0x63F00` | 在环之后 |
+
+**结论：整个脚本里没有任何一条 `MotionAlpha(265)` 位于 `0x592DF` 之前。** 所以等待环
+"要 265 有 alpha 记录"这个条件，在同一次流程里**不可能被脚本自己满足**——除非这个环
+是"第二次进入标题"用的（记录来自上一轮），或者它的守卫本来就不该让首启走进来。
+
+### 2. 新发现：`global[236]` 守卫让脚本自己的开场被跳过
+
+`0x59087`（标题场景/菜单函数）开头：
+
+```
+590a5  pushint8 0 ; popglobal 236        ; 先把"已进过标题"标记清零
+590aa  pushglobal 0 ; pushfalse ; neq ; jmpcond 0x590C5
+590c5  pushint8 1 ; popglobal 10
+590ca  pushint8 1 ; call 0x584D8          ; 建标题场景（实参 1 = 只装背景）
+590dc  pushglobal 236 ; pushint8 1 ; eq
+590e2  jmpcond 0x59120                   ; (236 == 1) ? 不跳 : 跳到 0x59120
+590e7  pushint8 0/0/0 ; pushtrue ; call 0x3F6A0   ; ← 开场序列（脚本自己的 logo/白场）
+       …
+59120  pushint16 500 …                 ; 500 ms 等待后继续
+```
+
+实测轨迹：`0x590E2` 之后直接到 `0x59120`（说明此刻 `global[236] != 1`），
+**`0x590E7` 那段脚本开场一次都没执行**。
+
+也就是说：我们进入标题函数时 `global[236]` 是 0，于是
+① 脚本开场被跳过、② 继续往下走到 `0x592DF` 的 265 等待环。
+原版是否在**另一条调用路径**里先把 `global[236]` 置 1（从而跑开场、并顺带建立
+菜单图元的动画记录），是本轮留下的具体问题。
+
+### 3. 下一步（可验证）
+
+`popglobal 236` 的站点可以静态枚举（`popglobal` opcode `0x15` + u16 236）。把每个站点
+解码出来、对照执行轨迹，看"谁在什么条件下把 236 置 1"。这比继续在 265 末端猜更接近
+第一分叉点。
+
+### 4. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS** |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_opening_render.py` | **PASS**（两作） |
+| `verify_prim_refs` / `verify_thread_calls` / `verify_text_geometry` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 5. 诚实说明
+
+- 本轮无引擎代码改动（上轮的 headless `--savebin` 已提交），基线数字不变。
+- 两个新事实都是**纯静态/轨迹对照**得到的：① 265 的所有 `Motion*` 都在等待环之后；
+  ② `global[236]` 守卫让脚本开场被跳过。它们把"上游分支"具体化成了
+  "`global[236]` 的赋值路径"，下一轮直接查它。
+
 ## [未发布] — 2026-11-26（九十七续）：headless 加 `--savebin`；带真实存档启动仍然 0 行 —— `265` 标为"待新证据"
 
 ### 1. 新能力：`bin/fvp-headless.exe --savebin <save/save.bin>`
