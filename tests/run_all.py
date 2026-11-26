@@ -645,6 +645,14 @@ def build_steps(args):
                            'MotionMoveS2 = 8 args (scale 100..10000, dur 1..300000, '
                            'mode 1..5), Stop only cancels; PrimSetRS angle unit 3600'))
 
+    # 6.4964 图元结构/绘制派发/父链累积（从 exe 0x438AB0 静态分析提取；缺 work/ 时 SKIP）
+    vph = os.path.join(HERE, 'verify_exe_prim_hierarchy.py')
+    steps.append(Step('verify_exe_prim_hierarchy.py', [PY, '-X', 'utf8', vph], 600,
+                      skip_reason=None,
+                      note='prim struct (stride 0x34, base engine+0x61DD64, 4096 entries),'
+                           ' dispatch 0x438AB0 (7 types, parent chain sums x/y) and the'
+                           ' type-5 text path (layer +0x32, window table +0x98, surface +4)'))
+
     # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
     vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
     steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,

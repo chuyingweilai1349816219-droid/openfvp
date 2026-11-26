@@ -850,3 +850,12 @@ ppDevice           = this+0x8
 图元驱动模式（默认）下：换行宽度 = 面板宽、行数上限 = 面板高 / 行高、字号 = 字模格高
 （只在该层真的被 `TextSize` 写过时；`size_h_set` 标志）。旧路径
 `--text-fixed-layout` 不读这些，冻结像素基线不变。
+
+## 图元父链（A 类基线）
+
+`ref/exe-prim-hierarchy.json`（`scripts/extract-exe-prim-hierarchy.py` 生成，
+`tests/verify_exe_prim_hierarchy.py` 门禁）冻结了引擎的图元结构与派发：
+基址 `engine+0x61DD64`、步长 `0x34`、4096 项；`+0x0C` 父 id、`+0x10` 兄弟 id、
+`+0x2A` 第一个子图元；派发 `0x438AB0` 把**父链上各级 x/y 相加**（组迭代时
+`x = 组.x + 传入x`）。渲染端 `prim_abs_xy()` 实现的就是这条不变式；
+type-5 文本的层号在 `+0x32`，窗口内嵌 surface 在窗口 `+4`。

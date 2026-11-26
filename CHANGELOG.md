@@ -4,6 +4,29 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（再补）：图元层级/绘制派发冻结成 A 类基线
+
+### 基线（正文文本"画在哪"有出处了）
+- 新增 `scripts/extract-exe-prim-hierarchy.py` + `ref/exe-prim-hierarchy.json` +
+  `tests/verify_exe_prim_hierarchy.py`（已登记进 `tests/run_all.py`）。逐条校验
+  **24 条关键指令**，冻结：
+  * 图元基址 `engine+0x61DD64`、步长 **0x34**、4096 项、id 1..0xFFF；
+  * 字段表（type/内容标志/dirty 位/alpha/blend/父 id/兄弟 id/x/y/w/h/OP/角度/缩放/
+    首子/图形槽/文本层号）；
+  * 派发 `0x438AB0`：有父 → 把本图元 x/y/alpha 抄进父图元再上溯；无父 → `(type-1)`
+    查 `0x438C9C` 的 7 项跳表；
+  * 组迭代 `0x438B22..0x438B48`：子调用参数 = 组.x + 传入x（**父链坐标相加**）；
+  * type-5 文本：`+0x32` 层号 → `engine+0x98` 窗口表 → 窗口 `+4` 内嵌 surface，
+    在父链累积坐标上画。
+- 不变式"屏幕坐标 = 父链上 x/y 之和"在门禁里与 C 侧 `prim_abs_xy()` 交叉核对。
+
+### 记录（正文图元位置追踪：60k..900k 步）
+- `FVP_DEBUG_TEXT` 增加文本图元父链转储；实测序章里 tw=0 只有图元 551，位置只在
+  `(1,1)`/`(1,27)` 之间变化，父图元是 `type=1 xy=(0,0)` 的组。
+- 因此"原版正文出现在画面中部"的那一层机制**尚未找到**（候选：那些场景里另有绑到
+  tw=0 的图元，或文本窗口内还有未映射的屏内偏移字段）。如实写进
+  `docs/render-model.md`，不猜、不用截图拟合补。
+
 ## [未发布] — 2026-11-26（补）：headless 外壳的旧版面开关 + 正文浮在 CG 上的行为记录
 
 ### 修正（run_all 里 verify_headless 的黑帧）

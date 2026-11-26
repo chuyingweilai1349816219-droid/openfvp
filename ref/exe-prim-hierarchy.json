@@ -1,0 +1,183 @@
+{
+ "dispatch": {
+  "args": [
+   "this(renderer)",
+   "x（父链累积）",
+   "y（父链累积）",
+   "prim"
+  ],
+  "func": "0x438ab0",
+  "invariant": "图元屏幕坐标 = 父链上各级 x/y 之和（叶子自身 x/y 由父图元抄写步骤并入）；本引擎 gfx.c 的 prim_abs_xy() 实现的正是这条。",
+  "steps": [
+   {
+    "pc": "0x438ab5",
+    "what": "prim+0x05 == 0 → 不画"
+   },
+   {
+    "pc": "0x438ac2",
+    "what": "读 prim+0x0c 父 id；!= 0xFFFF 时把本图元的x/y/alpha 抄进父图元，再以父为目标继续上溯"
+   },
+   {
+    "pc": "0x438ad4",
+    "what": "图元基址 = engine + 0x61DD64 + id*0x34"
+   },
+   {
+    "pc": "0x438afa",
+    "what": "无父时按 type（prim+0x04）- 1 查 0x438c9c 的7 项跳表派发"
+   },
+   {
+    "pc": "0x438b0f",
+    "what": "组类型：取 prim+0x2a 第一个子图元"
+   },
+   {
+    "pc": "0x438b22",
+    "what": "子调用 x = 组.x + 传入 x；y = 组.y + 传入 y"
+   },
+   {
+    "pc": "0x438b44",
+    "what": "沿 prim+0x10 遍历同组兄弟"
+   },
+   {
+    "pc": "0x438c54",
+    "what": "type-5：prim+0x32 取文本层号，engine+0x98+层号*4 取窗口，+4 = 内嵌 surface，在父链累积的 (x,y) 上画"
+   }
+  ],
+  "type_count": 7,
+  "type_table": "0x438c9c"
+ },
+ "instructions": [
+  {
+   "instr": "cmpb   $0x0,0x5(%esi)",
+   "pc": "0x438ab5"
+  },
+  {
+   "instr": "movzwl 0xc(%esi),%eax",
+   "pc": "0x438ac2"
+  },
+  {
+   "instr": "mov    0x14(%esi),%cx",
+   "pc": "0x438acc"
+  },
+  {
+   "instr": "imul   $0x34,%eax,%eax",
+   "pc": "0x438ad1"
+  },
+  {
+   "instr": "lea    0x61dd64(%eax,%edi,1),%eax",
+   "pc": "0x438ad4"
+  },
+  {
+   "instr": "mov    %cx,0x14(%eax)",
+   "pc": "0x438adb"
+  },
+  {
+   "instr": "mov    0x7(%esi),%cl",
+   "pc": "0x438ae7"
+  },
+  {
+   "instr": "mov    %cl,0x7(%eax)",
+   "pc": "0x438aea"
+  },
+  {
+   "instr": "movsbl 0x4(%esi),%eax",
+   "pc": "0x438afa"
+  },
+  {
+   "instr": "dec    %eax",
+   "pc": "0x438afe"
+  },
+  {
+   "instr": "cmp    $0x6,%eax",
+   "pc": "0x438aff"
+  },
+  {
+   "instr": "jmp    *0x438c9c(,%eax,4)",
+   "pc": "0x438b08"
+  },
+  {
+   "instr": "movswl 0x2a(%esi),%eax",
+   "pc": "0x438b0f"
+  },
+  {
+   "instr": "movswl 0x16(%esi),%edx",
+   "pc": "0x438b22"
+  },
+  {
+   "instr": "imul   $0x34,%eax,%eax",
+   "pc": "0x438b26"
+  },
+  {
+   "instr": "movswl 0x14(%esi),%eax",
+   "pc": "0x438b30"
+  },
+  {
+   "instr": "add    0x18(%esp),%eax",
+   "pc": "0x438b34"
+  },
+  {
+   "instr": "add    %ebp,%edx",
+   "pc": "0x438b38"
+  },
+  {
+   "instr": "call   0x438ab0",
+   "pc": "0x438b3f"
+  },
+  {
+   "instr": "movswl 0x10(%ebx),%eax",
+   "pc": "0x438b44"
+  },
+  {
+   "instr": "movswl 0x32(%esi),%ecx",
+   "pc": "0x438c54"
+  },
+  {
+   "instr": "mov    0x98(%eax,%ecx,4),%edx",
+   "pc": "0x438c5d"
+  },
+  {
+   "instr": "add    $0x4,%edx",
+   "pc": "0x438c68"
+  },
+  {
+   "instr": "call   0x42ae40",
+   "pc": "0x438c79"
+  }
+ ],
+ "note": "从 exe 静态分析抄出的图元结构与绘制派发事实（A 类）；由 scripts/extract-exe-prim-hierarchy.py 生成",
+ "prim": {
+  "base": "engine+0x61DD64",
+  "count": 4096,
+  "fields": {
+   "0x04": "type（1..7；派发用 movsbl 读）",
+   "0x05": "内容标志（为 0 时整条派发直接返回）",
+   "0x06": "dirty/选项位（bit0 = WH 写过，bit1 = OP 写过，bit6 = 需要重画）",
+   "0x07": "alpha 字节",
+   "0x08": "blend 字节",
+   "0x0c": "父图元 id（u16，0xFFFF = 无父）",
+   "0x10": "下一个同组兄弟 id（u16，0xFFFF = 无）",
+   "0x14": "x（u16，脚本按 16 位写，即负数按补码存）",
+   "0x16": "y（u16）",
+   "0x18": "w（u16，PrimSetWH）",
+   "0x1a": "h（u16）",
+   "0x20": "OP.x（u16，仅 type==4 生效）",
+   "0x22": "OP.y（u16，仅 type==4 生效）",
+   "0x24": "角度（u16，模 3600；单位 0.1° ⇒ 3600 = 一圈）",
+   "0x26": "scale x（per-mille，钳 100..10000）",
+   "0x28": "scale y（per-mille）",
+   "0x2a": "第一个子图元 id（u16，0xFFFF = 无）",
+   "0x2e": "图形槽号（u16，0xFFFF/-1/-2 是特殊通道）",
+   "0x32": "文本窗口层号（u16，type-5 用）"
+  },
+  "id_range": [
+   1,
+   4095
+  ],
+  "stride": 52
+ },
+ "text_prim": {
+  "draw_target": "0x42ae40",
+  "layer_field": 50,
+  "surface_offset_in_window": 4,
+  "window_table": "engine+0x98（32 项指针）"
+ }
+}
