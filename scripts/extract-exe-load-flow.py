@@ -271,7 +271,61 @@ def extract(path):
                      'what': '0x426C70(engine+0x65380C)'},
                     {'pc': '0x0043f330', 'instr': 'call   0x426ee0',
                      'what': '0x426EE0(engine+0x65BA54)'},
+                    {'pc': '0x0043f33c', 'instr': 'call   0x4270a0',
+                     'what': '0x4270A0(engine+0x679A5C)'},
+                    {'pc': '0x0043f348', 'instr': 'call   0x427350',
+                     'what': '0x427350(engine+0x67CE64)'},
+                    {'pc': '0x0043f354', 'instr': 'call   0x4270a0',
+                     'what': '0x4270A0(engine+0x680A6C)'},
+                    {'pc': '0x0043f360', 'instr': 'call   0x428770',
+                     'what': '0x428770(engine+0x683E74)'},
+                    {'pc': '0x0043f36c', 'instr': 'call   0x427f00',
+                     'what': '0x427F00(engine+0x683F04)'},
+                    {'pc': '0x0043f37d', 'instr': 'mov    %edx,0x651d64(%esi)',
+                     'what': 'engine+0x651D64 <- u32（主图元树根 id）'},
+                    {'pc': '0x0043f38f', 'instr': 'call   0x433850',
+                     'what': '32 个文本窗口 × 0x433850（窗口反序列化：面板/颜色/'
+                             '格式/笔位），窗口表步长 4（0x98..0x118）'},
+                    {'pc': '0x0043f3b1', 'instr': 'call   0x422720',
+                     'what': '0x422720(renderer+0x2D4, engine)（渲染状态）'},
+                    {'pc': '0x0043f3c2', 'instr': 'call   0x441540',
+                     'what': '0x441540(engine+0x6A7E34, engine)（脚本引擎）'},
+                    {'pc': '0x0043f3d4', 'instr': 'call   0x431e70',
+                     'what': '0x431E70(engine+0x684378)'},
+                    {'pc': '0x0043f3e6', 'instr': 'call   0x431e70',
+                     'what': '0x431E70(engine+0x6893C0)'},
+                    {'pc': '0x0043f404', 'instr': 'mov    %dl,0x458(%eax)',
+                     'what': 'engine+0x458 <- (流里的字节 != 0)（一个开关）'},
+                    {'pc': '0x0043f426', 'instr': 'call   0x441860',
+                     'what': '0x441860(engine, 流里的字节 != 0)'},
                 ],
+                'wait_loop': {
+                    'note': '恢复完字段后**不立即返回**：先把 engine+0x101058 置成 2，'
+                            '然后循环"取 tick → 0x441680 复位 → 0x42A6C0 gfx 复位 → '
+                            '0x438D20 场景复位 → 0x42C4B0 → 0x441350"，直到 '
+                            'engine+0x101058 == 0 才退出（读档时的过渡/淡入状态机：'
+                            '进入时 3、恢复后 2、结束时 0）。',
+                    'steps': [
+                        {'pc': '0x0043f431', 'instr': 'movl   $0x2,0x101058(%esi)',
+                         'what': 'engine+0x101058 = 2'},
+                        {'pc': '0x0043f43b', 'instr': 'movl   $0x258,0x10105c(%esi)',
+                         'what': 'engine+0x10105C = 0x258（600）'},
+                        {'pc': '0x0043f450', 'instr': 'mov    0x45d2ec,%ebx',
+                         'what': '循环起点：取 GetTickCount 指针'},
+                        {'pc': '0x0043f466', 'instr': 'call   0x441680',
+                         'what': '0x441680(engine+0x120) 复位'},
+                        {'pc': '0x0043f482', 'instr': 'call   0x42a6c0',
+                         'what': '0x42A6C0 gfx 复位'},
+                        {'pc': '0x0043f48c', 'instr': 'call   0x438d20',
+                         'what': '0x438D20(engine, 0, -1) 场景复位'},
+                        {'pc': '0x0043f49d', 'instr': 'call   0x42c4b0',
+                         'what': '0x42C4B0 gfx 复位'},
+                        {'pc': '0x0043f4b4', 'instr': 'call   0x441350',
+                         'what': '0x441350 脚本引擎复位'},
+                        {'pc': '0x0043f4c6', 'instr': 'jne    0x43f450',
+                         'what': 'engine+0x101058 != 0 就继续循环'},
+                    ],
+                },
                 'restore_note': '读档的字段恢复是**固定顺序**：先散字段（线程下标/计数），'
                                 '再逐表恢复（0x6A49EC stride4×0x80、0x6A4DF0 '
                                 'stride0x14×0x100、0x6A49C8 stride0xC×0x4B0、'
@@ -323,8 +377,8 @@ def extract(path):
             },
         },
         'unknown': [
-            '0x43ee90 的流式反序列化**每一段**分别对应哪些状态（已确认按 2 字节长度'
-            '串逐段读进 engine+0xfb4/0xfb8/… 容器，但段序与字段的对应还没排全）',
+            '0x43ee90 的流式反序列化里 engine+0xfb4/0xfb8/… 容器各自是哪一类数据'
+            '（段格式与顺序已定，容器语义还没排全）',
             '线程重跑后脚本用哪个全局量判断"该回哪个场景"',
         ],
         'script_sites': script_sites(),
@@ -357,7 +411,16 @@ def main(argv=None):
             if got != st['instr']:
                 print('FAIL: %s = %r（期望 %r）' % (st['pc'], got, st['instr']))
                 return 1
-        print('restore steps: %d 条逐条核对通过' % len(steps))
+        wl = (result['frame_consumers']['load_apply'].get('wait_loop')
+              or {}).get('steps') or []
+        for st in wl:
+            got = rows.get(int(st['pc'], 16))
+            if got != st['instr']:
+                print('FAIL(wait): %s = %r（期望 %r）'
+                      % (st['pc'], got, st['instr']))
+                return 1
+        print('restore steps: %d 条、wait loop %d 条逐条核对通过'
+              % (len(steps), len(wl)))
     else:
         print('restore steps: %d 条（缺反汇编清单，跳过逐条核对）' % len(steps))
 

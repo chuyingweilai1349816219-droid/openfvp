@@ -179,6 +179,71 @@
      "instr": "call   0x426ee0",
      "pc": "0x0043f330",
      "what": "0x426EE0(engine+0x65BA54)"
+    },
+    {
+     "instr": "call   0x4270a0",
+     "pc": "0x0043f33c",
+     "what": "0x4270A0(engine+0x679A5C)"
+    },
+    {
+     "instr": "call   0x427350",
+     "pc": "0x0043f348",
+     "what": "0x427350(engine+0x67CE64)"
+    },
+    {
+     "instr": "call   0x4270a0",
+     "pc": "0x0043f354",
+     "what": "0x4270A0(engine+0x680A6C)"
+    },
+    {
+     "instr": "call   0x428770",
+     "pc": "0x0043f360",
+     "what": "0x428770(engine+0x683E74)"
+    },
+    {
+     "instr": "call   0x427f00",
+     "pc": "0x0043f36c",
+     "what": "0x427F00(engine+0x683F04)"
+    },
+    {
+     "instr": "mov    %edx,0x651d64(%esi)",
+     "pc": "0x0043f37d",
+     "what": "engine+0x651D64 <- u32（主图元树根 id）"
+    },
+    {
+     "instr": "call   0x433850",
+     "pc": "0x0043f38f",
+     "what": "32 个文本窗口 × 0x433850（窗口反序列化：面板/颜色/格式/笔位），窗口表步长 4（0x98..0x118）"
+    },
+    {
+     "instr": "call   0x422720",
+     "pc": "0x0043f3b1",
+     "what": "0x422720(renderer+0x2D4, engine)（渲染状态）"
+    },
+    {
+     "instr": "call   0x441540",
+     "pc": "0x0043f3c2",
+     "what": "0x441540(engine+0x6A7E34, engine)（脚本引擎）"
+    },
+    {
+     "instr": "call   0x431e70",
+     "pc": "0x0043f3d4",
+     "what": "0x431E70(engine+0x684378)"
+    },
+    {
+     "instr": "call   0x431e70",
+     "pc": "0x0043f3e6",
+     "what": "0x431E70(engine+0x6893C0)"
+    },
+    {
+     "instr": "mov    %dl,0x458(%eax)",
+     "pc": "0x0043f404",
+     "what": "engine+0x458 <- (流里的字节 != 0)（一个开关）"
+    },
+    {
+     "instr": "call   0x441860",
+     "pc": "0x0043f426",
+     "what": "0x441860(engine, 流里的字节 != 0)"
     }
    ],
    "restore_steps_note": "每条的 pc/instr 都在门禁里逐条核对反汇编清单",
@@ -199,7 +264,57 @@
      "memcpy_fn": "0x00447800",
      "push_fn": "0x00433c60"
     }
-   ]
+   ],
+   "wait_loop": {
+    "note": "恢复完字段后**不立即返回**：先把 engine+0x101058 置成 2，然后循环\"取 tick → 0x441680 复位 → 0x42A6C0 gfx 复位 → 0x438D20 场景复位 → 0x42C4B0 → 0x441350\"，直到 engine+0x101058 == 0 才退出（读档时的过渡/淡入状态机：进入时 3、恢复后 2、结束时 0）。",
+    "steps": [
+     {
+      "instr": "movl   $0x2,0x101058(%esi)",
+      "pc": "0x0043f431",
+      "what": "engine+0x101058 = 2"
+     },
+     {
+      "instr": "movl   $0x258,0x10105c(%esi)",
+      "pc": "0x0043f43b",
+      "what": "engine+0x10105C = 0x258（600）"
+     },
+     {
+      "instr": "mov    0x45d2ec,%ebx",
+      "pc": "0x0043f450",
+      "what": "循环起点：取 GetTickCount 指针"
+     },
+     {
+      "instr": "call   0x441680",
+      "pc": "0x0043f466",
+      "what": "0x441680(engine+0x120) 复位"
+     },
+     {
+      "instr": "call   0x42a6c0",
+      "pc": "0x0043f482",
+      "what": "0x42A6C0 gfx 复位"
+     },
+     {
+      "instr": "call   0x438d20",
+      "pc": "0x0043f48c",
+      "what": "0x438D20(engine, 0, -1) 场景复位"
+     },
+     {
+      "instr": "call   0x42c4b0",
+      "pc": "0x0043f49d",
+      "what": "0x42C4B0 gfx 复位"
+     },
+     {
+      "instr": "call   0x441350",
+      "pc": "0x0043f4b4",
+      "what": "0x441350 脚本引擎复位"
+     },
+     {
+      "instr": "jne    0x43f450",
+      "pc": "0x0043f4c6",
+      "what": "engine+0x101058 != 0 就继续循环"
+     }
+    ]
+   }
   },
   "load_impl": {
    "bytes": "81ec08010000a188f4470033c4898424040100005355568bf18b86cc0f00008b0d681348008b91647e6a005750528d4424186864da450050e8ea99000083c4108d4c2410518bcee8e455ffff8b15681348008b82347e6a008d7804bd000100008b078b48046858020000c6401100e86d73ffff83c70483ed0175e5bb03000000",
@@ -470,7 +585,7 @@
   }
  },
  "unknown": [
-  "0x43ee90 的流式反序列化**每一段**分别对应哪些状态（已确认按 2 字节长度串逐段读进 engine+0xfb4/0xfb8/… 容器，但段序与字段的对应还没排全）",
+  "0x43ee90 的流式反序列化里 engine+0xfb4/0xfb8/… 容器各自是哪一类数据（段格式与顺序已定，容器语义还没排全）",
   "线程重跑后脚本用哪个全局量判断\"该回哪个场景\""
  ]
 }

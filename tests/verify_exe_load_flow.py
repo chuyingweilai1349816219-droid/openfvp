@@ -155,7 +155,7 @@ def main():
     check('反序列化' in unk or '流式' in unk,
           'unknown 改成"流式反序列化各段对应哪些状态"')
 
-    print('== 5d. 读档恢复顺序（22 步）==')
+    print('== 5d. 读档恢复顺序（35 步 + 9 步等待循环）==')
     steps = la.get('restore_steps') or []
     check(len(steps) >= 20, '恢复步骤 >= 20（实际 %d）' % len(steps))
     joined = ' '.join((x.get('what') or '') for x in steps)
@@ -170,6 +170,23 @@ def main():
           'prim_alt 表按 stride 0x34 逐项恢复')
     check('固定顺序' in (la.get('restore_note') or ''),
           'restore_note 写明这是固定顺序')
+    check(len(steps) >= 30, '恢复步骤 >= 30（实际 %d）' % len(steps))
+    check('0x433850' in joined and '文本窗口' in joined,
+          '32 个文本窗口经 0x433850 反序列化恢复（文本层也在存档里）')
+    check('0x651D64' in joined, '恢复主图元树根 id（engine+0x651D64）')
+    wl = la.get('wait_loop') or {}
+    wls = wl.get('steps') or []
+    check(len(wls) >= 8, '等待循环步骤 >= 8（实际 %d）' % len(wls))
+    wjoin = ' '.join((x.get('what') or '') for x in wls)
+    check('0x101058 = 2' in wjoin, '恢复后把 engine+0x101058 置 2')
+    check('GetTickCount' in wjoin, '循环里取 tick')
+    check('0x438d20' in wjoin.lower() or '0x438D20' in wjoin,
+          '循环里做场景复位（0x438D20）')
+    check('0x101058 != 0' in wjoin, '循环条件：engine+0x101058 != 0')
+    check('3' in (wl.get('note') or '') and '2' in (wl.get('note') or '') and
+          '0' in (wl.get('note') or ''),
+          'note 写明 3 → 2 → 0 的状态机')
+
     # 与对象表基线交叉核对：步长/项数必须一致
     obj = os.path.join(FVP, 'ref', 'exe-engine-objects.json')
     if os.path.isfile(obj):
