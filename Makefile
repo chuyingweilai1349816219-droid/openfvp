@@ -27,12 +27,13 @@ THUMB_OBJ = src/thumb.o
 TIMER_OBJ = src/timer.o
 HISTORY_OBJ = src/history.o
 SAVEHIST_OBJ = src/savehist.o
+SAVETAIL_OBJ = src/savetail.o
 
 OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ) \
            $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ) \
-           $(SAVEHIST_OBJ)
+           $(SAVEHIST_OBJ) $(SAVETAIL_OBJ)
 LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ) \
-           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ) $(SAVEHIST_OBJ)
+           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ) $(SAVEHIST_OBJ) $(SAVETAIL_OBJ)
 
 # 无窗口（headless）外壳：核心 + 渲染层 + 便携 OS 缝，不依赖 Win32。
 HEADLESS_BIN = bin/fvp-headless$(EXE)
@@ -44,7 +45,7 @@ LIB = bin/libfvp.a
 HEADERS = src/fvp.h src/encoding.h src/hcb.h src/vm.h src/syscall.h \
           src/snd.h src/bin.h src/inflate.h src/hzc1.h \
           src/textattr.h src/timer.h src/history.h src/motion.h src/save.h \
-          src/save_vm.h src/savehist.h \
+          src/save_vm.h src/savehist.h src/savetail.h \
           src/flags.h src/thumb.h \
           src/gen_cp932.h src/gen_gbk.h src/gen_cmd_table.h
 
@@ -452,6 +453,24 @@ clean-savehist:
 .PHONY: test_savehist clean-savehist
 
 # ---------------------------------------------------------------------------
+# 槽尾字符串池（位置随"每槽全局变量"条数平移：src/savetail.c）
+#   make test_savetail
+# ---------------------------------------------------------------------------
+SAVETAIL_TEST = bin/test_savetail$(EXE)
+
+test_savetail: $(SAVETAIL_TEST)
+
+$(SAVETAIL_TEST): tests/test_savetail.c src/savetail.c src/savetail.h \
+                  src/save.h $(OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_savetail.c \
+		$(filter-out src/main.o,$(OBJ)) $(LDFLAGS) -lm
+
+clean-savetail:
+	-rm -f $(SAVETAIL_TEST)
+
+.PHONY: test_savetail clean-savetail
+
+# ---------------------------------------------------------------------------
 # 命中测试 PrimHit(76)（gfx 层的父链累加 + 矩形判定）
 #   make test_prim_hit
 # ---------------------------------------------------------------------------
@@ -692,7 +711,7 @@ clean-nullvalue:
 UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
-         $(SAVEHIST_TEST) \
+         $(SAVEHIST_TEST) $(SAVETAIL_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
              $(GFX_XFORM_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \

@@ -35,6 +35,8 @@ SLOTS = ('s481', 's485', 's800', 's901', 's905', 's906')
 CTX_COUNT = 32
 CTX_STRIDE = 0xB28
 CTX_BYTES = CTX_COUNT * CTX_STRIDE
+GLOBALS_PER_SLOT = 1471          # 6 份真实存档里每槽全局变量的条数
+POOL_BASE = 0x16610              # 全局变量 0 条时字符串池标签的偏移
 
 fails = []
 
@@ -138,7 +140,8 @@ def main():
     if not os.path.isdir(SAVE):
         print('  SKIP: 缺存档目录 %s' % SAVE)
     else:
-        counts = {'ctx_data': 0, 'table_ok': 0, 'markers': 0, 'len_ok': 0}
+        counts = {'ctx_data': 0, 'table_ok': 0, 'markers': 0, 'len_ok': 0,
+                  'pool': 0}
         for slot in SLOTS:
             path = os.path.join(SAVE, slot + '.bin')
             if not os.path.isfile(path):
@@ -166,6 +169,18 @@ def main():
                         sum(1 for s in slots if s) == 0)
             if table_ok:
                 counts['table_ok'] += 1
+            # 字符串池标签：0x16610 + globals_bytes（6 份样本 = 1471×8 → 0x19408）
+            pool_off = POOL_BASE + GLOBALS_PER_SLOT * 8
+            tag = struct.unpack_from('<I', blob, pool_off)[0]
+            cnt = struct.unpack_from('<I', blob, pool_off + 4)[0]
+            pool_ok = tag == 0x20 and cnt <= 8
+            if pool_ok:
+                counts['pool'] += 1
+            check(pool_ok, '%s: 字符串池标签 @%#x（0x16610 + %d×8）= %#x，条数 %d'
+                  % (slot, pool_off, GLOBALS_PER_SLOT, tag, cnt))
+            # 全局变量表长度必须正好把标签推到 0x19408：模 8 对齐且落在扫描窗口内
+            check(pool_off == 0x19408, '%s: 标签偏移 = 0x19408（全局变量 %d 条）'
+                  % (slot, GLOBALS_PER_SLOT))
             markers = blob[0x18] == 2 and blob[-2:] == b'\x01\x01'
             if markers:
                 counts['markers'] += 1
@@ -184,6 +199,8 @@ def main():
               % (counts['markers'], n))
         check(counts['len_ok'] == n, '6 份都符合槽头字符串长度约定（%d/%d）'
               % (counts['len_ok'], n))
+        check(counts['pool'] == n, '6 份都在 0x16610+1471×8 处找到字符串池标签'
+              '（%d/%d）' % (counts['pool'], n))
 
     print('== 4. 文档记录 ==')
     doc = io.open(DOC, encoding='utf-8').read()

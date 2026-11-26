@@ -525,6 +525,20 @@ def build_steps(args):
                           note='100-slot ring: count cap, pos wrap, slot = pos-idx, '
                                'kind/type filters, NULL safety'))
 
+    # 4n3. 槽尾字符串池（位置随全局变量条数平移：src/savetail.c）
+    test_savetail = tools.get('test_savetail')
+    if not test_savetail or not os.path.isfile(test_savetail):
+        steps.append(Step('test_savetail', None, 0,
+                          skip_reason='bin/test_savetail.exe missing '
+                                      '(run: make test_savetail)'))
+    else:
+        steps.append(Step('test_savetail', [test_savetail], 120,
+                          note='slot-tail string pool: tag located after the '
+                               'per-slot globals (0x16610 + 1471*8 = 0x19408 in '
+                               'the 6 real saves), not a fixed offset; 0/1471/100 '
+                               'globals synthetic cases, malformed inputs and '
+                               'two-candidate ambiguity rejected'))
+
     # 4n2. 槽尾台词历史环（读档 step-2 第一段：src/savehist.c）
     test_savehist = tools.get('test_savehist')
     if not test_savehist or not os.path.isfile(test_savehist):

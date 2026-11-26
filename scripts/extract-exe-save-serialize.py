@@ -94,7 +94,11 @@ SEGMENTS = [
      'kind': 'array', 'va': '0x0043e17f',
      'frags': ['8bbec8666a00', '8b9ebcdf6800'],
      'src': 'engine+0x68dfbc', 'count_src': 'engine+0x6a66c8',
-     'stride': 8, 'note': '每槽全局变量：count × 8B（本作 count 实测 0）'},
+     'stride': 8,
+     'note': '每槽全局变量：count × 8B，count 是**运行时**条数。6 份真实存档实测 '
+             'count = 1471（0x2DF8 字节），所以它后面 128 槽字符串表、0x100 块…'
+             '直到字符串池标签的偏移都随 count 平移（标签 = 0x16610 + count*8，'
+             '样本里 = 0x19408）。旧文档写成 count=0 是错的，已按实测改正'},
     {'order': 7, 'stage': 'tail', 'label': 'coroutine snapshots',
      'kind': 'array_call', 'va': '0x0043e1cb',
      'frags': ['8dbec0df6800', 'bb20000000'],
