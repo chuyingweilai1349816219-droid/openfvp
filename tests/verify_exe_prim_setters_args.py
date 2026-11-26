@@ -114,6 +114,13 @@ def main():
             k = src.index(case)
             seg2 = src[k:k + 900]
             check('FVP_S16' in seg2, '%s 用 int16 截断' % case)
+        # 84：造 type-7 + 位置 + 0..1 开关
+        k = src.index('case 84:')
+        seg84 = src[src.index('case 84:', k):]
+        seg84 = seg84[:1600]
+        check('GFX_F_TYPE, 7' in seg84, 'case 84 造 type-7 图元')
+        check('on >= 0 && on <= 1' in seg84, 'case 84 开关只接受 0..1')
+        check('GFX_F_X' in seg84 and 'GFX_F_Y' in seg84, 'case 84 写 x/y')
         # 85/86/87 的范围检查与原版 handler 对齐
         k = src.index('case 85:')
         seg = src[k:k + 900]

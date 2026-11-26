@@ -195,6 +195,8 @@ def main(argv=None):
                     'prim+0x06 的 0x40 位在渲染端如何使用还没读',
                     'handler 0x43BE40 造 type-2 图元时 +0x30 的语义（1..0xFF 范围）'],
         'c_side': {
+            'fixed_205': 'case 84（PrimSetSnow）：造 type-7 图元 + 位置 + 0..1 开关，'
+                         '与原版 0x43BC40 的结构一致（渲染端仍不画 snow）',
             'fixed_199': 'src/syscall.c 的 case 81/89/90 现在按原版把值当 **int16** 存'
                          '（FVP_S16：u16 截断），因为原版这些字段都是 u16 写、int16 读',
             'fixed_198': 'case 82（PrimSetRS）：angle 取模 3600、scale 钳位 100..10000',

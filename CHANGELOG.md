@@ -4,6 +4,25 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（三十三续）：PrimSetSnow(84) 按原版结构落地（造 type-7 图元 + 位置 + 开关）
+
+`PrimSetSnow(84)` 原来只记了一个 per-prim 布尔（`vm->prim_snow[id]`），既不造图元也不
+记位置。对照原版 handler `0x43BC40`：
+
+```
+arg0 int 1..0xFFF
+0x439BF0(id, 7)   → 造 type-7（snow）图元（等价于整体复位）
+arg1 int 0..1     → prim+0x2E（越界保持 0）
+arg2/arg3 int     → x/y
+```
+
+已按这个结构实现：复位该图元 → 置 `GFX_F_TYPE = 7` → 开关只接受 0..1 → x/y 按 int16
+写入。**渲染端仍然不画 snow**（原版的 type-7 走自己的绘制路径，那是后面单独一轮的事），
+所以冻结的文本基线与像素基线都没变。
+
+门禁 `verify_exe_prim_setters_args.py` 的 C 侧断言加了 84 的三条（type-7 / 开关范围 /
+x/y）。
+
 ## [未发布] — 2026-11-26（三十二续）：拿命令名字对照我们的实现，修掉 85/86/87/88 四处偏差
 
 命令表补全之后，`PrimSetSprt/Snow/Text/Tile/UV` 终于有了确切名字与实参范围。逐条对照

@@ -2010,9 +2010,38 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             return;
         }
         break;
-    case 84:
-        if (argc >= 2) {
-            (void)fvp_vm_prim_snow(vm, &args[0], &args[1]);
+    case 84: /* PrimSetSnow(id, on, x?, y?)
+              * 原版 0x43BC40：造 **type-7（snow）** 图元（0x439BF0(id,7)，
+              * 等价于整体复位），arg1 只接受 int 且 **0..1**（越界保持 0）写 +0x2E，
+              * arg2/arg3 → x/y。渲染端目前不画 snow（与原版一致），只对齐状态。 */
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
+            int sid = (int)args[0].i;
+
+            if (sid >= 1 && sid <= 0xFFF) {
+                Gfx *gg = (vm->gfx_bridge != NULL) ? vm->gfx_bridge->gfx : NULL;
+
+                if (gg != NULL) {
+                    (void)gfx_prim_reset(gg, sid);
+                    (void)gfx_set_prim(gg, sid, GFX_F_TYPE, 7);
+                }
+                if (argc >= 2 && args[1].type == (uint8_t)FVP_INT) {
+                    int on = (int)args[1].i;
+
+                    if (on >= 0 && on <= 1) {
+                        (void)fvp_vm_prim_snow(vm, &args[0], &args[1]);
+                    }
+                }
+                if (gg != NULL && argc >= 3 &&
+                    args[2].type == (uint8_t)FVP_INT) {
+                    (void)gfx_set_prim(gg, sid, GFX_F_X,
+                                       (int)(int16_t)args[2].i);
+                }
+                if (gg != NULL && argc >= 4 &&
+                    args[3].type == (uint8_t)FVP_INT) {
+                    (void)gfx_set_prim(gg, sid, GFX_F_Y,
+                                       (int)(int16_t)args[3].i);
+                }
+            }
             return;
         }
         break;

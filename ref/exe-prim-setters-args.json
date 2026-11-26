@@ -4,6 +4,7 @@
   "already_ok": "case 81/89/90 的逐分量 int 检查（非 int = 保持原值）",
   "fixed_198": "case 82（PrimSetRS）：angle 取模 3600、scale 钳位 100..10000",
   "fixed_199": "src/syscall.c 的 case 81/89/90 现在按原版把值当 **int16** 存（FVP_S16：u16 截断），因为原版这些字段都是 u16 写、int16 读",
+  "fixed_205": "case 84（PrimSetSnow）：造 type-7 图元 + 位置 + 0..1 开关，与原版 0x43BC40 的结构一致（渲染端仍不画 snow）",
   "note": "prim+0x06 的\"已写\"位（bit0/bit1）我们只在语义上跟随，渲染器不依赖它们"
  },
  "common": [

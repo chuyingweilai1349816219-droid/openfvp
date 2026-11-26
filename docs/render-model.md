@@ -1113,6 +1113,7 @@ call   0x4387d0            ; register(entry, name)
 | `PrimSetText(86)` | 直接把 arg1 当 TW | 只接受 int 且 **0..0x1F**（越界保持 0） |
 | `PrimSetTile(87)` | 只写 tile，**丢掉 x/y/w/h** | tile 限 **-1..0xFF**，并补上 arg2..arg5 → x/y/w/h |
 | `PrimSetUV(88)` | 不截断 | u/v 按 **int16** 截断 |
+| `PrimSetSnow(84)` | 只记一个布尔，不造图元 | **造 type-7 图元**（复位）+ 开关 0..1 + x/y（渲染端仍不画 snow，与原版一致） |
 
 关键条目（其它）：
 
