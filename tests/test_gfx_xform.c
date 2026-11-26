@@ -47,6 +47,11 @@ static int g_pass = 0;
 #define IMG_W 40
 #define IMG_H 30
 
+/* 合成的 HZC1 头坐标（0x18/0x1A）。真实素材（系统菜单、命令条、确认框）全靠
+ * 这两个字段定位，脚本里没有 PrimSetXY；第 10 组测试钉住"头坐标是偏置"这件事。 */
+static int g_bias_x = 0;
+static int g_bias_y = 0;
+
 static int fake_load(void *ud, const char *name, GfxImage *out)
 {
     size_t n;
@@ -67,8 +72,8 @@ static int fake_load(void *ud, const char *name, GfxImage *out)
     }
     out->w = IMG_W;
     out->h = IMG_H;
-    out->x = 0;
-    out->y = 0;
+    out->x = g_bias_x;
+    out->y = g_bias_y;
     out->frames = 1;
     return 0;
 }
@@ -628,6 +633,54 @@ int main(void)
     }
 
     gfx_destroy(g);
+
+    printf("== 10. HZC1 头的屏幕坐标是偏置：绘制位置 = 图元坐标 + 头坐标 ==\n");
+    /* 现实依据：游戏内 UI（系统菜单 8 项、命令条 26 键、确认框 7 提示）在脚本里
+     * 一条 PrimSetXY 都没有，全靠 HZC1 头 0x18/0x1A 定位。这里用合成图钉住
+     * "头坐标当偏置加在图元坐标上"这条渲染语义。 */
+    g_bias_x = 40;
+    g_bias_y = 25;
+    {
+        Gfx *gb = make_canvas();
+        int hx0 = 0, hy0 = 0, hx1 = 0, hy1 = 0;
+        long hn = 0;
+
+        CHECK(gb != NULL, "带头坐标的画布（40,25）");
+        if (gb != NULL) {
+            gfx_prim_reset(gb, 9);
+            (void)gfx_set_prim(gb, 9, GFX_F_TYPE, 4);
+            (void)gfx_set_prim(gb, 9, GFX_F_GRAPH, 1);
+            (void)gfx_set_prim(gb, 9, GFX_F_X, 10);
+            (void)gfx_set_prim(gb, 9, GFX_F_Y, 10);
+            clear_canvas(gb);
+            gfx_render(gb);
+            CHECK(ink_box(gb, &hx0, &hy0, &hx1, &hy1, &hn) == 1, "有墨迹");
+            CHECK(hx0 == 50 && hy0 == 35 && hx1 == 89 && hy1 == 64,
+                  "prim(10,10) + 头(40,25) = (50,35)..(89,64)（实际 %d,%d..%d,%d）",
+                  hx0, hy0, hx1, hy1);
+            CHECK(hn == (long)IMG_W * IMG_H, "铺满 %ld 像素（实际 %ld）",
+                  (long)IMG_W * IMG_H, hn);
+
+            /* 图元再被脚本移动：偏置不变，整体跟着平移 */
+            (void)gfx_set_prim(gb, 9, GFX_F_X, 100);
+            clear_canvas(gb);
+            gfx_render(gb);
+            CHECK(ink_box(gb, &hx0, &hy0, &hx1, &hy1, &hn) == 1, "移动后仍有墨迹");
+            CHECK(hx0 == 140 && hy0 == 35,
+                  "prim(100,10) + 头(40,25) = (140,35)（实际 %d,%d）", hx0, hy0);
+
+            /* 直接 blit 不带偏置（外壳自绘 UI 用），与图元路径区分开 */
+            clear_canvas(gb);
+            CHECK(gfx_draw_image_at(gb, 1, 10, 10) == 1, "direct blit 返回 1");
+            CHECK(ink_box(gb, &hx0, &hy0, &hx1, &hy1, &hn) == 1, "direct 有墨迹");
+            CHECK(hx0 == 10 && hy0 == 10,
+                  "gfx_draw_image_at 不叠加头坐标（实际 %d,%d）", hx0, hy0);
+            gfx_destroy(gb);
+        }
+    }
+    g_bias_x = 0;
+    g_bias_y = 0;
+
     printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
