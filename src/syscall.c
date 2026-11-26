@@ -292,6 +292,18 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         return 0;
     }
     id = (argc > 0) ? fvp_gfx_int(&a[0]) : 0;
+    if (getenv("FVP_DEBUG_MOTION") != NULL &&
+        (cid == 42u || cid == 48u || cid == 54u)) {
+        uint32_t q;
+
+        fprintf(stderr, "motion cmd=%u argc=%u args:", (unsigned)cid,
+                (unsigned)argc);
+        for (q = 0; q < argc && q < 8u; ++q) {
+            fprintf(stderr, " [%u t=%u v=%lld]", (unsigned)q,
+                    (unsigned)a[q].type, (long long)a[q].i);
+        }
+        fputc('\n', stderr);
+    }
 
     switch (cid) {
     case 7: /* ColorSet(idx, R, G, B, A)
@@ -1508,6 +1520,17 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     uint32_t k;
 
     vm->gfx_handled = 0;
+    /* 诊断：FVP_TRACE_CIDS=1 时按首次出现打印每条命令（含步数），用来回答
+     * "脚本到底调没调这条命令"这类问题（例如 Motion*(42/48/54) 在 headless 里
+     * 是否真的被调用过，见 CHANGELOG 五十九续）。 */
+    if (getenv("FVP_TRACE_CIDS") != NULL) {
+        static unsigned char seen[512];
+        if (cid < 512u && !seen[cid]) {
+            seen[cid] = 1;
+            fprintf(stderr, "cid %u first at step %llu\n", (unsigned)cid,
+                    (unsigned long long)vm->steps);
+        }
+    }
     if (argc > (uint32_t)FVP_MAX_ARGC) {
         argc = (uint32_t)FVP_MAX_ARGC;
     }
