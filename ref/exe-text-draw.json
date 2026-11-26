@@ -1,0 +1,140 @@
+{
+ "call": {
+  "args": [
+   "this(renderer)",
+   "argx（父链累积）",
+   "argy（父链累积）",
+   "prim",
+   "surf（type-5 时 = 窗口内嵌 surface）"
+  ],
+  "dispatcher": "0x438ab0",
+  "draw": "0x42ae40",
+  "type5_site": "0x438c54"
+ },
+ "conclusion": "文本面板 1:1 画在 prim 的 (x,y) 上（surface 偏移默认 0），尺寸 = TextBuff 建出来的面板尺寸；不缩放、没有版式偏移。本引擎 gfx.c 的 type-5 路径（prim_abs_xy → draw_text_window）实现的正是这条。",
+ "fields": {
+  "prim+0x06.bit0": "WH 写过（PrimSetText 会清掉，所以文本面板用面板尺寸）",
+  "prim+0x06.bit1": "OP 写过（决定落点用 OP 还是 surface 偏移）",
+  "prim+0x14": "x（落点基准）",
+  "prim+0x16": "y（落点基准）",
+  "prim+0x18": "w（WH 写过时用）",
+  "prim+0x1a": "h（WH 写过时用）",
+  "prim+0x20": "OP.x（OP 写过时加到落点）",
+  "prim+0x22": "OP.y",
+  "surface+0x510": "surface 宽（WH 没写过时当绘制宽）",
+  "surface+0x512": "surface 高（WH 没写过时当绘制高）",
+  "surface+0x514": "源裁剪原点 x（缩放分支里减掉）",
+  "surface+0x516": "源裁剪原点 y",
+  "surface+0x518": "落点偏移 x（无 OP 分支里加上）",
+  "surface+0x51a": "落点偏移 y"
+ },
+ "instructions": [
+  {
+   "instr": "movswl 0x32(%esi),%ecx",
+   "pc": "0x438c54"
+  },
+  {
+   "instr": "mov    0x98(%eax,%ecx,4),%edx",
+   "pc": "0x438c5d"
+  },
+  {
+   "instr": "add    $0x4,%edx",
+   "pc": "0x438c68"
+  },
+  {
+   "instr": "call   0x42ae40",
+   "pc": "0x438c79"
+  },
+  {
+   "instr": "cmpb   $0x0,0x508(%ebx)",
+   "pc": "0x42ae50"
+  },
+  {
+   "instr": "cmpb   $0x0,0x7(%edi)",
+   "pc": "0x42ae64"
+  },
+  {
+   "instr": "testb  $0x1,0x6(%edi)",
+   "pc": "0x42aec8"
+  },
+  {
+   "instr": "movswl 0x510(%ebx),%eax",
+   "pc": "0x42aef6"
+  },
+  {
+   "instr": "movswl 0x512(%ebx),%edx",
+   "pc": "0x42aefd"
+  },
+  {
+   "instr": "testb  $0x2,0x6(%edi)",
+   "pc": "0x42af08"
+  },
+  {
+   "instr": "movswl 0x514(%ebx),%eax",
+   "pc": "0x42af10"
+  },
+  {
+   "instr": "movswl 0x518(%ebx),%edx",
+   "pc": "0x42af30"
+  },
+  {
+   "instr": "testb  $0x2,0x6(%edi)",
+   "pc": "0x42b41f"
+  },
+  {
+   "instr": "movswl 0x22(%edi),%edx",
+   "pc": "0x42b429"
+  },
+  {
+   "instr": "add    0xc(%ebp),%edx",
+   "pc": "0x42b42d"
+  },
+  {
+   "instr": "movswl 0x16(%edi),%eax",
+   "pc": "0x42b430"
+  },
+  {
+   "instr": "add    0x8(%ebp),%ecx",
+   "pc": "0x42b438"
+  },
+  {
+   "instr": "add    %edx,%eax",
+   "pc": "0x42b43b"
+  },
+  {
+   "instr": "add    %ecx,%edx",
+   "pc": "0x42b445"
+  },
+  {
+   "instr": "movswl 0x51a(%ebx),%ecx",
+   "pc": "0x42b484"
+  },
+  {
+   "instr": "add    0xc(%ebp),%ecx",
+   "pc": "0x42b48b"
+  },
+  {
+   "instr": "movswl 0x518(%ebx),%eax",
+   "pc": "0x42b492"
+  },
+  {
+   "instr": "add    0x8(%ebp),%eax",
+   "pc": "0x42b499"
+  },
+  {
+   "instr": "andb   $0xfe,0x6(%eax)",
+   "pc": "0x43bde1"
+  }
+ ],
+ "note": "从 exe 静态分析抄出的文本面板落点/尺寸规则（A 类）；由 scripts/extract-exe-text-draw.py 生成",
+ "position": {
+  "else": "x = prim+0x14 + surf+0x518 + argx；y = prim+0x16 + surf+0x51a + argy",
+  "if_op_written": "x = prim+0x14 + prim+0x20 + argx；y = prim+0x16 + prim+0x22 + argy",
+  "source_crop": "surf+0x514 / surf+0x516 是**源裁剪原点**（缩放分支里被减掉，不是落点）"
+ },
+ "size": {
+  "else": "surf+0x510 / surf+0x512（= 面板尺寸）",
+  "if_wh_written": "prim+0x18 / prim+0x1a",
+  "why_text_uses_panel": "PrimSetText(86) 的 0x43BDE1 清掉 prim+0x06 bit0，所以文本面板永远走 else 分支"
+ }
+}

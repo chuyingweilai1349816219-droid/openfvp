@@ -923,6 +923,27 @@ VM 帧模型**。脚本侧的证据（全部在 `ref/script-window-geometry.json
 基线，把修复留到下一轮：先用原版可执行文件的解释器（或原版文本）验证"槽窗口
 到底以哪个字节为准"，再一次性改 VM + `ref/fvm_ref.py` + 重新冻结文本基线。
 
+## 文本面板画在哪、多大（A 类：`ref/exe-text-draw.json`）
+
+"面板是不是画在 prim 的 x/y 上"这个问题一直悬着。本轮把 `0x42AE40`（type-4/5 共用
+的贴图绘制）的目标矩形算法读通并冻结（`scripts/extract-exe-text-draw.py` 逐条校验
+24 条指令，`tests/verify_exe_text_draw.py` 门禁）：
+
+| 事实 | 出处 |
+|---|---|
+| 调用约定 `0x42AE40(this, argx, argy, prim, surf)`；type-5 在 `0x438C54` 把**父链累积**的坐标透传 | `0x438C54..0x438C79` |
+| 尺寸：prim 的 WH 写过（`prim+0x06` bit0）→ `prim+0x18/+0x1a`；否则 → **surface 的 `0x510/0x512`**（面板尺寸） | `0x42AEC8`、`0x42AEF6/0x42AEFD` |
+| 落点：OP 写过（bit1）→ `prim(x,y) + OP(0x20/0x22) + 累积`；否则 → `prim(x,y) + surface(0x518/0x51a) + 累积` | `0x42B41F..0x42B445`、`0x42B484..0x42B4A6` |
+| `surface+0x514/+0x516` 是**源裁剪原点**（缩放分支里被减掉），不是落点 | `0x42AECE..0x42AEE6`、`0x42AF10` |
+| `PrimSetText(86)` **清掉 WH 位**（`andb $0xfe,0x6(%eax)`） | `0x43BDE1` |
+
+⇒ **结论：文本面板 1:1 画在 prim 的 (x,y) 上，尺寸就是 TextBuff 建出来的面板尺寸；
+不缩放、没有版式偏移。** 本引擎 `gfx.c` 的 type-5 路径（`prim_abs_xy()` →
+`draw_text_window()`）实现的正是这条。
+
+于是正文窗口的位置问题彻底闭环：`PrimSetText(551, 0)` 在修正帧模型下是 **(431,880)**，
+面板 **1380×1024**（TextBuff 的尺寸下限 1024），面板就画在 (431,880) 处。
+
 ## 引擎自建对象表（A 类：`ref/exe-engine-objects.json`）
 
 `0x448833` 是引擎的 `Construct(base, elemsize, count, ctor)`：先

@@ -4,6 +4,19 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（七续）：文本面板落点/尺寸冻结成 A 类基线（`ref/exe-text-draw.json`）
+
+`0x42AE40`（type-4/5 共用的贴图绘制）的目标矩形算法读通：
+- 尺寸：WH 写过 → `prim+0x18/+0x1a`；否则 → **surface `0x510/0x512`（面板尺寸）**；
+  `PrimSetText(86)` 在 `0x43BDE1` 清掉 WH 位，所以**文本永远用面板尺寸**；
+- 落点：OP 写过 → `prim + OP + 父链累积`；否则 → `prim + surface(0x518/0x51a) + 累积`；
+  `surface+0x514/+0x516` 是源裁剪原点（不是落点）。
+⇒ **文本面板 1:1 画在 prim 的 (x,y) 上，尺寸 = 面板尺寸**，不缩放、无版式偏移。
+这与 `gfx.c` 的 `prim_abs_xy()` → `draw_text_window()` 一致（门禁交叉核对）。
+
+新增 `scripts/extract-exe-text-draw.py` + `ref/exe-text-draw.json` +
+`tests/verify_exe_text_draw.py`（`run_all` 6.49648，24 条指令逐条校验）。
+
 ## [未发布] — 2026-11-26（六续）：TextBuff 面板尺寸是**下限 1024**，不是"钳到 1024"
 
 `FVP_FRAME_SLOTS=1` 下 script 真的给正文层建了面板：**`TextBuff layer=0 w=1380 h=1024`**

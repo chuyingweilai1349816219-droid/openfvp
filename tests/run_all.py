@@ -680,6 +680,15 @@ def build_steps(args):
                            'body window at the script value (431,880) and changes the text '
                            'output (6760 B) — re-freezing that baseline needs a decision'))
 
+    # 6.49648 文本面板落点/尺寸（从 exe 0x42AE40 抄出来；缺 work/ 时 SKIP）
+    vtd = os.path.join(HERE, 'verify_exe_text_draw.py')
+    steps.append(Step('verify_exe_text_draw.py', [PY, '-X', 'utf8', vtd], 600,
+                      skip_reason=None,
+                      note='text panel placement from the exe: size = prim w/h if the WH flag '
+                           'is set else the surface size (PrimSetText clears WH, so text uses '
+                           'the panel), position = prim + OP (or surface +0x518/+0x51a) + the '
+                           'parent-chain sum -> the panel is drawn 1:1 at the prim (x,y)'))
+
     # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
     vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
     steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,
