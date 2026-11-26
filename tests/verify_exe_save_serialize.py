@@ -12,8 +12,9 @@
    子读/写器的固定字节数）；
 3. **数据侧**：拿 6 份真实存档按这个模型走一遍，验证可证伪的推论
    （`tail[0:0x3068]` = 1549 条每槽全局变量 → 32 个上下文 0x163A0 →
-   线程下标 @0x19408 → 128 槽动态字符串表 @0x19410 → … → +0x600 处是
-   台词历史环，环记录起点与独立扫描值逐份一致），并校验读档侧 20 步游标顺序。
+   线程下标 @0x19408 → 128 槽动态字符串表 @0x19410 → … → 256 项表 → …
+   → 台词历史环，中间**没有缺口**；环记录起点与独立扫描值逐份一致），
+   并校验读档侧 20 步游标顺序。
    缺存档/缺 exe 时 SKIP。
 
 用法：python tests/verify_exe_save_serialize.py
@@ -45,7 +46,8 @@ CTX_BYTES = CTX_COUNT * CTX_ITEM              # 0x163A0
 POOL_BASE = 0x163A0          # 线程下标 u32 的基址（全局变量 0 条时）
 THREAD_NONE = 0x20
 SLOT_COUNT = 0x80
-WALK_GAP = 0x600             # 调色板与历史环之间尚未逆清的定长块
+ITEM_COUNT = 0x100           # 0x6A4DF0 那张表是 256 项（不是 128）
+ITEM_STRIDE = 0x14           # 内存步长；256 × 0x14 = 0x1400 = 0x6A61F0-0x6A4DF0
 # 独立扫描出来的“历史环第一条记录”偏移（旧报告里的 ring 位置就是这么来的）
 RING_RECORD_OFF = {
     's481': 0x20622, 's485': 0x328ce, 's800': 0x328c5,
@@ -109,17 +111,17 @@ def walk_to_ring(blob):
     u = struct.unpack_from('<I', blob, pos)[0]
     pos += 4
     item_counts = []
-    for _ in range(SLOT_COUNT):
+    for _ in range(ITEM_COUNT):
         c = struct.unpack_from('<I', blob, pos)[0]
         item_counts.append(c)
         pos += 12 + 12 * c
         if pos > len(blob):
-            return None, {'error': '128 项表越界'}
+            return None, {'error': '256 项表越界'}
     pos += 0x200 + 0x200 + 1 + 16 * 9 + 0x400
     diag = {'thread': thread, 'str_count': str_cnt, 'nonempty': nonempty,
             'u32_0x6a4dec': u, 'items_nonempty': sum(1 for c in item_counts if c),
-            'walk_end': pos, 'ring': pos + WALK_GAP}
-    return pos + WALK_GAP, diag
+            'walk_end': pos, 'ring': pos}
+    return pos, diag
 
 
 def main():
@@ -173,6 +175,12 @@ def main():
     check(ctx['call'] == '0x00445640', '协程快照子序列化器 0x445640')
     st = [s for s in tail if s['label'] == 'dynamic string table'][0]
     check(st['count'] == 0x80, '动态字符串表 128 槽')
+    it = [s for s in tail if s['label'] == 'table 0x6a4df0'][0]
+    check(it['count'] == ITEM_COUNT and it['stride'] == ITEM_STRIDE,
+          '0x6A4DF0 表是 %d 项 × 0x%X（内存跨度 %#x）'
+          % (it['count'], it['stride'], it['count'] * it['stride']))
+    check(it['count'] * it['stride'] == 0x6A61F0 - 0x6A4DF0,
+          '表的内存跨度 == 0x6A61F0 - 0x6A4DF0（%#x）' % (0x6A61F0 - 0x6A4DF0))
     check(st['writer'] == '0x00434410', '字符串写法 0x434410（u16 长度含 NUL）')
     check(ref['helpers']['string_u16']['empty_sentinel'] == '0x00481364',
           '空串哨兵 0x481364（只写 u16 0）')
@@ -191,8 +199,8 @@ def main():
     check(subs['context']['fn'] == '0x00445540',
           '上下文反序列化器 0x445540')
     check('12 + 12×count' in subs['item128']['bytes_rule'],
-          '128 项表每项 12 + 12×count 字节')
-    check(subs['item128']['fn'] == '0x00446210', '128 项表读取器 0x446210')
+          '256 项表每项 12 + 12×count 字节')
+    check(subs['item128']['fn'] == '0x00446210', '256 项表读取器 0x446210')
     check(subs['savebin_globals_split']['fn'] == '0x00439743',
           'save.bin 全局量区间 0x439743')
     samples = ref['samples']
@@ -223,7 +231,7 @@ def main():
     check(any('8dbeec496a00' in r['bytes'] for r in rd),
           '128 槽字符串表逐条读（0x43F152 调 0x433F60）')
     check(any('8dbef04d6a00' in r['bytes'] for r in rd),
-          '128 项表在 0x43F1CA（逐项读，不是整块 memcpy）')
+          '256 项表在 0x43F1CA（逐项读，不是整块 memcpy）')
     check(any('c0446a00' in r['bytes'] for r in rd),
           '调色板 → engine+0x6A44C0（0x43F24E）')
     check(rd[-1]['va'] == '0x0043f282' and
@@ -279,7 +287,7 @@ def main():
                   '%s: 线程下标 @%#x = %#x，非空字符串 %d 条（type5 也是 %d 条）'
                   % (slot, tb, thread, str_cnt, types.count(5)))
 
-            # 3c. 前向走查到历史环：+0x600 后落点 == 独立扫描的记录起点 - 8
+            # 3c. 前向走查：终点就是历史环起点（无缺口），记录起点 == 独立扫描值
             ring, diag = walk_to_ring(blob)
             want_rec = RING_RECORD_OFF[slot]
             rc = struct.unpack_from('<I', blob, ring)[0] if ring else -1
@@ -289,9 +297,9 @@ def main():
             if walk_ok:
                 counts['walk'] += 1
             check(walk_ok,
-                  '%s: 走查终点 %#x + %#x → 历史环 count=%d pos=%d，'
+                  '%s: 走查终点 %#x（无缺口）→ 历史环 count=%d pos=%d，'
                   '记录起点 %#x（独立扫描值 %#x）'
-                  % (slot, diag.get('walk_end', 0), WALK_GAP, rc, rp,
+                  % (slot, diag.get('walk_end', 0), rc, rp,
                      (ring or 0) + 8, want_rec))
 
             markers = blob[-2:] == b'\x01\x01'
@@ -322,7 +330,8 @@ def main():
     check('1549' in doc, '文档写了每槽全局变量 1549 条')
     check('0x3068' in doc, '文档写了每槽全局变量 0x3068 字节')
     check('0x163A0' in doc or '0x163a0' in doc, '文档写了 32 上下文 = 0x163A0')
-    check('0x600' in doc, '文档写了调色板与历史环之间那段 0x600 未解块')
+    check('256 项' in doc or '256项' in doc,
+          '文档写了 0x6A4DF0 那张表是 256 项')
     check('savetail' in doc or '扫描定位' in doc, '文档写了字符串表位置靠扫描定位')
 
     if fails:
@@ -331,7 +340,8 @@ def main():
     print('\nOK: 存档槽写/读顺序都已冻结（写 31 段；读 20 步，游标从 7 开始）；'
           '数据侧 6 份真实存档验证了"tail 开头 = 1549 条全局变量（0x3068）→ '
           '32 上下文（0x163A0）→ 线程下标 @0x19408 → 128 槽字符串表 @0x19410 '
-          '→ … → +0x600 处 = 台词历史环，记录起点与独立扫描逐份一致"')
+          '→ … → 256 项表 → … → 台词历史环（走查无缺口），'
+          '记录起点与独立扫描逐份一致"')
     return 0
 
 

@@ -138,10 +138,12 @@ SEGMENTS = [
         {'order': 14, 'stage': 'tail', 'label': 'table 0x6a4df0',
      'kind': 'array_call', 'va': '0x0043e317',
      'frags': ['8dbef04d6a00'], 'src': 'engine+0x6a4df0',
-     'count': 0x80, 'stride': 0x14, 'call': '0x00445330',
-     'note': '128 项表，内存步长 0x14；每项写进文件的字节数 = 12 + 12×count'
-             '（u32 count + u32 + u32 + count×12 原样搬运，见 '
-             'sub_readers.item128）'},
+     'count': 0x100, 'stride': 0x14, 'call': '0x00445330',
+     'note': '**256 项**表（循环计数器 ebx 是上一段 mov ebx,0x100 留下的 '
+             '0x100，见 0x43E26C；读档侧 0x43F1D0 也是 mov ebp,0x100）；'
+             '内存步长 0x14，256×0x14 = 0x1400 = 0x6A61F0 - 0x6A4DF0 互证。'
+             '每项写进文件的字节数 = 12 + 12×count（u32 count + u32 + u32 + '
+             'count×12 原样搬运，见 sub_readers.item128）'},
 {'order': 15, 'stage': 'tail', 'label': 'block 0x6a61f0',
      'kind': 'blob', 'va': '0x0043e330', 'frags': ['8d86f0616a00'],
      'src': 'engine+0x6a61f0', 'size': 0x200, 'note': '定长 512B'},
@@ -262,7 +264,7 @@ READER = [
     {'order': 11, 'va': '0x0043f1b3', 'frags': ['8b0c08', '898eec4d6a00'],
      'fact': 'u32 → engine+0x6A4DEC'},
     {'order': 12, 'va': '0x0043f1ca', 'frags': ['8dbef04d6a00', 'bd00010000'],
-     'fact': '128 项表：逐项调 0x446210（变长：3×u32 + count×12）'},
+     'fact': '256 项表：逐项调 0x446210（变长：3×u32 + count×12）'},
     {'order': 13, 'va': '0x0043f1e5', 'frags': ['6800020000', '8d96f0616a00'],
      'fact': '0x200 块 → engine+0x6A61F0'},
     {'order': 14, 'va': '0x0043f207', 'frags': ['6800020000', '8d86f0636a00'],
@@ -294,12 +296,12 @@ SUB_READERS = [
      'note': '固定 2845 = 0xB1D 字节；32 条 → 0x163A0。序列化器 0x445640 走'
              '同一条字段顺序'},
     {'id': 'item128',
-     'label': '128 项表的单项读入',
+     'label': '256 项表的单项读入',
      'fn': '0x00446210', 'span': 0x70,
      'frags': ['8b74240c', '8b1c01', '8d2c5b', '03ed', '895f08'],
      'bytes_rule': '12 + 12×count',
      'layout': 'u32 count + u32 + u32 + count×12 原样搬运',
-     'note': '内存步长 0x14，写盘长度随 count 变'},
+     'note': '内存步长 0x14，表共 256 项（256×0x14 = 0x1400 = 0x6A61F0-0x6A4DF0），写盘长度随 count 变'},
     {'id': 'savebin_globals_split',
      'label': 'save.bin 写的全局变量区间',
      'fn': '0x00439743', 'span': 0x30,
@@ -322,13 +324,15 @@ SAMPLES = {
     'string_table_offset': '0x19410',
     'slot_count': 0x80,
     'nonempty_strings': [1, 1, 0, 0, 2, 0],
-    'walk_gap_before_history_ring': '0x600',
+    'items_table_count': 0x100,
+    'items_table_memory_bytes': '0x1400',
     'history_ring_record_offsets': {
         's481': '0x20622', 's485': '0x328ce', 's800': '0x328c5',
         's901': '0x1aead', 's905': '0x20633', 's906': '0x1aead',
     },
     'note': '槽尾 = 全局变量 0x3068 → 32 上下文 0x163A0 → 线程下标 0x19408 '
-            '→ 128 槽字符串表 0x19410 → … → 台词历史环（走查 +0x600 处）；'
+            '→ 128 槽字符串表 0x19410 → 0x100×2 → u32 → 256 项表 → 0x200×2 '
+            '→ 1B+16×9B → 调色板 0x400 → 台词历史环（走查**无缺口**直接落点）；'
             '环记录起点与独立扫描结果逐份一致',
 }
 
@@ -355,11 +359,10 @@ INVARIANTS = [
                'src/savetail.c 已按 0x163A0 基址扫描定位'},
     {'id': 'walk_to_ring',
      'claim': '从 tail 开头按段前向走查（全局 → 32 上下文 → 线程/条数 → 128 槽'
-              '→ 0x100 → 0x100 → u32 → 128 项表 → 0x200 → 0x200 → 1+16×9 →'
-              ' 0x400 调色板）之后还有一段尚未逆清的 0x600 定长块，紧接着就是'
-              '台词历史环',
-     'verify': '6/6 走查 +0x600 恰好落在历史环 count 字段，环 count/pos 合法'
-               '（s905: 11/10），且记录区起点与独立扫描的 '
+              '→ 0x100 → 0x100 → u32 → **256 项表** → 0x200 → 0x200 → 1+16×9 →'
+              ' 0x400 调色板）**没有任何缺口**，直接落在台词历史环的 count 字段',
+     'verify': '6/6 走查终点 == 历史环起点，环 count/pos 合法（s905: 11/10），'
+               '且记录区起点与独立扫描的 '
                '0x20622/0x328ce/0x328c5/0x1aead/0x20633/0x1aead 逐份一致'},
     {'id': 'tail_end_marker',
      'claim': '文件最后两字节 = (engine+0x458, engine+0x85!=0)',
@@ -371,9 +374,6 @@ INVARIANTS = [
 ]
 
 UNKNOWN = [
-    '调色板（第 19 段）与台词历史环之间那段恒定 0x600 字节的定长块：6 份存档'
-    '里长度一致、内容随存档变化，尚未逆清来源（是不是 0x6A65FC 那组 16 项'
-    '之外的又一张表 / 第二块调色板，待查）',
     '第 20 段之后各子序列化器（0x43DCE0 外字表 / 0x4292B0 4096 项 / '
     '0x429570 64 项 / 0x42D880 32 槽 / 0x4221E0 窗口 / 0x441320 脚本对象）'
     '的字节数',
