@@ -4,6 +4,26 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（六十三续）：headless 打开 VM 虚拟时钟（timeline）—— 仍 0 行文本
+
+按六十二续的候选 3 动手：[`src/platform/portable/main_headless.c`](src/platform/portable/main_headless.c)
+在 `fvp_vm_start` 前设 `vm.timeline_on = 1`（等价 `bin/fvm.exe --timeline`；可用
+`FVP_NO_TIMELINE=1` 关掉做对照）。理由：`fvp_vm_run()` 只在 `timeline_on` 时把所有线程
+都阻塞的等待推进到下一个唤醒点（`timeline_advance()`），没有帧循环的外壳关着时钟时
+`ThreadRaise(ms)`/定时器只有"醒来即继续"的退化语义。
+
+实测（2M 步、`--click 600`）：
+
+| 指标 | 关时钟（六十二续） | 开时钟（本轮） |
+|---|---|---|
+| `threadnext`（= 帧） | 141k / 3M 步 | **93.8k / 2M 步** |
+| `primhit` | 0/0 | 0/0 |
+| `--text-out` | 0 行 | **仍 0 行** |
+
+⇒ 候选 3 **不是**根因（但打开时钟在语义上是对的，保留）。卡点仍在"开场后那段等待循环"，
+且 `PrimHit`/`TitleMenu`/光标命令依旧从未被调用。下一步看候选 1/2：
+`TimerGet(138)` 的缺席、以及 `global236`（跳过动画开关）在零售脚本里的取值与写者。
+
 ## [未发布] — 2026-11-26（六十二续）：脚本**从未走到菜单交互**（`PrimHit`/`TitleMenu`/光标命令全都没被调用）
 
 给 headless 加了两个诊断：`FVP_CURSOR="x,y"`（把光标放到指定画布坐标）与收尾打印
