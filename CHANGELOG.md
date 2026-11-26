@@ -4,6 +4,29 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（五十五续）：headless 的补间表一直是**空的**（motion 从未启用）
+
+给 `gfx_motion_test` 加了 `FVP_DEBUG_MOTION` 打印后，一条关键事实露出来：
+
+```
+motion_test prim=252 kind=1 -> 0 (table=0 now_ms=32)
+motion_test prim=252 kind=1 -> 0 (table=0 now_ms=127968)
+```
+
+**table=0** —— headless 里补间表一条记录都没有：`Motion*` 命令在 `motion_on==0` 时按设计
+只沿时间轴走、不登记可查询状态，于是 `MotionXxxTest` 永远答"没有在跑的动作"，脚本的
+等待循环与真实状态相反。改动：
+
+- [`src/gfx.c`](src/gfx.c)：`gfx_motion_test` 加 `FVP_DEBUG_MOTION` 环境变量打印
+  （prim / kind / 结果 / 表长 / now_ms）；
+- [`src/platform/portable/main_headless.c`](src/platform/portable/main_headless.c)：
+  attach 之前 `gfx_motion_set_enabled(gfx, 1)` —— headless 已有 ThreadNext 帧泵
+  （五十一续），补间必须真记录才能被推进。
+
+效果：900k 步运行时间 11 ms → **85 ms**（开始真正做补间计算），但 `--text-out`
+**仍然 0 行**。下一步：用 `FVP_DEBUG_MOTION` 看 265 号图元的补间何时建、时长多少、
+`now_ms` 推进到哪，判断是"脚本在等一个我们没建的补间"还是"等的是别的命令"。
+
 ## [未发布] — 2026-11-26（五十四续）：合成点击改成**边沿触发**（按下 1 步 + 抬起 1 步）
 
 `src/syscall.c`：`InputGetDown(31)` 从"每 period 步里连续 2 步为按下"改成
