@@ -4,6 +4,27 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（五十二续）：把 headless 的步数花在哪钉死 —— 是"菜单等点击"层，从未进正文
+
+帧泵（五十一续）之后重做 pc 直方图：
+
+| pc | 900k 内次数 | 指令 |
+|---|---|---|
+| `0x23827/0x2382A/0x2382D` | 41384 | `ThreadNext(133)` 让出（= 一帧） |
+| `0x592DF..0x592E8` | 40992 | `MotionAlphaTest(265); eq(temp,false); jmpcond` |
+| `0x592ED..0x592FC` | 40992 | `InputGetDown; test 3; test 1; logor; jmpcond` |
+
+`0x592D4..0x592FC` 是一段"等点击"的标准轮询（命中就 `syscall 9` ControlPulse 再回到
+`0x592DF`）；`motion_active=0`、`threadnext=41385` 说明帧泵生效、动画都跑完了。
+
+**关键否定**：4,000,000 步也还是 **0 行文本**（`threadnext=188958`、`motion_active=0`）。
+即 headless 一直在"标题/菜单那一层"反复等点击，**根本没进正文** —— 与 `--text-out`
+0 行、以及 cid 轨迹里**从未出现 123(TextPrint)** 完全一致。
+
+下一步不再是补时间模型，而是比较两个外壳在**菜单路径**上的返回值差异
+（候选：`TitleMenu(141)` / `PrimHit(76)` / `GraphLoad(22)` 在"没有素材宿主"时的返回与分支；
+iroseka 里 PrimHit 用了 211 次、TitleMenu 6 次）。
+
 ## [未发布] — 2026-11-26（五十一续）：headless 的动画时钟用 **ThreadNext = 一帧** 建模
 
 用 --pctrace 对 200k 步做 pc 直方图，卡点看清了：
