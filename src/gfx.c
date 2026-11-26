@@ -3521,6 +3521,14 @@ void gfx_motion_advance(Gfx *g, int dt_ms)
     fvp_motion_reap(&g->motion);
 }
 
+int gfx_motion_test(Gfx *g, int prim_id, int kind)
+{
+    if (g == NULL) {
+        return 0;
+    }
+    return fvp_motion_test(&g->motion, prim_id, kind);
+}
+
 int gfx_motion_active(const Gfx *g)
 {
     return (g != NULL) ? (int)fvp_motion_active_count(&g->motion) : 0;

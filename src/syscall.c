@@ -66,6 +66,7 @@
 #pragma weak gfx_prim_hit
 #pragma weak gfx_motion_add
 #pragma weak gfx_motion_cancel
+#pragma weak gfx_motion_test
 #pragma weak gfx_motion_enabled
 
 /* Same story for the audio layer (src/snd.c): bin/fvm.exe links neither it
@@ -1814,7 +1815,19 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     case 15:  /* DissolveWait: already finished */
     case 44:  /* MotionAlphaTest */
     case 47:  /* MotionAnimTest */
-    case 50:  /* MotionMoveTest */
+    case 50:  /* MotionMoveTest(id)：原版 0x43ACE0 —— id 1..0xFFF，
+               * 把"该图元动作是否还在跑"写进返回值（1 = 还在跑）。 */
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT &&
+            gfx_motion_test != NULL && vm->gfx_bridge != NULL) {
+            int tid = (int)args[0].i;
+
+            if (tid >= 1 && tid <= 0xFFF) {
+                t->temp = fvp_make_int(
+                    gfx_motion_test(vm->gfx_bridge->gfx, tid, -1) ? 1 : 0);
+                return;
+            }
+        }
+        break;
     case 53:  /* MotionMoveRTest */
     case 56:  /* MotionMoveS2Test */
     case 59:  /* MotionMoveZTest */

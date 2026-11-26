@@ -29,6 +29,13 @@ OUT_JSON = os.path.join(ROOT, 'ref', 'exe-prim-setters-args.json')
 LINE = re.compile(r'^\s+([0-9a-f]+):\t([0-9a-f ]+?)\s*\t(.*)$')
 
 EXPECT = [
+    # 0x43ace0：MotionMoveTest（cmd 50）：id 1..0xFFF -> 线程 +0x814（1 = 还在跑）
+    (0x43ACE4, 'cmpb   $0x2,(%eax)'),
+    (0x43ACEC, 'cmp    $0x1,%eax'),
+    (0x43ACF1, 'cmp    $0xfff,%eax'),
+    (0x43AD13, 'call   0x4231a0'),
+    (0x43AD1A, 'setne  %al'),
+    (0x43AD1D, 'mov    %al,0x814(%esi)'),
     # 0x437990：PrimSetAlpha（cmd 77）：id 1..0xFFF、alpha 0..0xFF -> prim+0x07
     (0x437994, 'cmpb   $0x2,(%edx)'),
     (0x43799C, 'cmp    $0x1,%eax'),
@@ -105,6 +112,12 @@ EXPECT = [
 ]
 
 HANDLERS = [
+    {'handler': '0x43ace0', 'confirmed_id': 50,
+     'writes': ['线程 +0x814（VM 返回值）'],
+     'rules': ['arg0 = int 且 **1..0xFFF**',
+               '`0x4231A0(engine+0x65BA54, id)` 查该图元动作是否还在跑',
+               '`setne` 后**无条件**写线程 +0x814：1 = 还在跑，0 = 已结束'],
+     'guess': 'MotionMoveTest(50)（两部作品合计 447 次）'},
     {'handler': '0x43a8b0', 'confirmed_id': 42,
      'writes': ['tail-call 0x42d460(engine+0x651E04, id, from, to, ms, mode, flag)'],
      'rules': ['arg0 = int 1..0xFFF',

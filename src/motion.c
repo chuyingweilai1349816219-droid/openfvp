@@ -206,6 +206,29 @@ size_t fvp_motion_done_count(const FvpMotion *m)
     return n;
 }
 
+int fvp_motion_test(const FvpMotion *m, int prim_id, int kind)
+{
+    size_t i;
+
+    if (m == NULL) {
+        return 0;
+    }
+    for (i = 0; i < m->n; ++i) {
+        const FvpTween *t = &m->e[i];
+
+        if (t->prim_id != prim_id) {
+            continue;
+        }
+        if (kind >= 0 && t->kind != kind) {
+            continue;
+        }
+        if (tween_progress(m, t) < 1.0) {
+            return 1; /* 还在跑 */
+        }
+    }
+    return 0;
+}
+
 size_t fvp_motion_active_count(const FvpMotion *m)
 {
     if (m == NULL) {

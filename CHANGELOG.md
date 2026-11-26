@@ -4,6 +4,25 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（三十九续）：MotionMoveTest(50) 真实现（动画开着时不再"秒结束"）
+
+`MotionMoveTest(50)` 两部作品合计 **447 次**。原版 handler `0x43ACE0`：
+- id 1..0xFFF；
+- `0x4231A0(engine+0x65BA54, id)` 查该图元动作是否还在跑；
+- **无条件**把结果 `setne` 写进线程 `+0x814`（返回值）：**1 = 还在跑**。
+
+我们原来把它和 `MotionAlphaTest`/`MotionMoveRTest` 等一起当"已完成"恒返回 1——
+动画关闭的默认路径下这是对的，但**动画开着时脚本会以为已经结束，直接跳过整段动画**。
+
+实现：
+- `motion.c` 新增 `fvp_motion_test(m, prim_id, kind)`（按图元 + 补间类型查未完成的补间）；
+- `gfx.c/h` 暴露 `gfx_motion_test()`（`syscall.c` 里按现有惯例加 `#pragma weak` 以便单测链接）；
+- `case 50`：校验 id 1..0xFFF，把 `gfx_motion_test(...) ? 1 : 0` 写进返回值。
+
+冻结的文本基线与像素基线均未变化（默认动画关闭时新代码走的还是"1 = 已结束"）。
+
+`ref/exe-prim-setters-args.json` 从 14 个 handler 扩到 **15 个**。
+
 ## [未发布] — 2026-11-26（三十八续）：MotionAlpha(42) 对齐（from/to 回退 + ms 范围）；PrimHit(76) 语义冻结
 
 继续按使用频率往下推：`MotionAlpha(42)` 553 次、`PrimHit(76)` 389 次。

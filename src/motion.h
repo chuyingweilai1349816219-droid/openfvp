@@ -86,6 +86,9 @@ void fvp_motion_reap(FvpMotion *m);
 /* 还在跑的条数。 */
 size_t fvp_motion_active_count(const FvpMotion *m);
 
+/* 某个图元（kind < 0 = 任意类型）是否还有没跑完的补间。MotionMoveTest(50) 用它。 */
+int fvp_motion_test(const FvpMotion *m, int prim_id, int kind);
+
 /* Motion*Stop(primId)：撤掉某个图元的某一类补间（正在跑的与已跑完的都撤）。
  * kind < 0 表示"所有种类"。返回撤掉的条数。
  * 对应原版程序里的 4 条命令：

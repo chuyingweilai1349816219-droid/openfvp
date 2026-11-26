@@ -265,6 +265,8 @@ int gfx_motion_enabled(const Gfx *g);
 /* 推进 dt_ms；启用时把每条活跃补间的当前值写回图元字段。 */
 void gfx_motion_advance(Gfx *g, int dt_ms);
 int gfx_motion_active(const Gfx *g);
+/* 某图元是否还有没跑完的补间（MotionMoveTest(50) 用）。 */
+int gfx_motion_test(Gfx *g, int prim_id, int kind);
 void gfx_motion_clear(Gfx *g);
 
 /* Attachment: parent becomes a group (type 1), child is moved to the end of

@@ -1155,6 +1155,7 @@ call   0x4387d0            ; register(entry, name)
 | `0x43BE40` | `prim+0x30` + x/y/w/h | `0x439BF0(id, 2)` 造 **type-2** 图元；arg1 范围 **-1..0xFF** → `+0x30`；arg2..arg5 → x/y/w/h |
 | `0x43BA20`（**cmd 78 `PrimSetBlend`**） | `prim+0x08`（blend） | id 允许 **0..0xFFF**（这一条允许 0）；arg1 只接受 **0..1**（0 = over / 1 = additive），越界保持原值；不置任何 flags 位 |
 | `0x437990`（**cmd 77 `PrimSetAlpha`**） | `prim+0x07`（alpha） | id **1..0xFFF**；arg1 int 且 **0..0xFF**（`cmpl $0xff; ja` 无符号比较），越界保持原值；不置 flags。**全片最高频命令**（两部作品合计 1052 次） |
+| `0x43ACE0`（**cmd 50 `MotionMoveTest`**） | 线程 `+0x814`（返回值） | id 1..0xFFF；`0x4231A0(engine+0x65BA54, id)` 查该图元动作是否还在跑，**无条件**写返回值：1 = 还在跑。两部作品合计 447 次 |
 | `0x43A8B0`（**cmd 42 `MotionAlpha`**） | 尾调 `0x42D460(engine+0x651E04, …)` | id 1..0xFFF；**from/to 各自 int 0..0xFF，缺/越界回退成当前 `prim+0x07`**；**ms 必须 int 1..300000，否则整条忽略**；mode 0..1（缺省 0）；flag = `type != 0`。两部作品合计 553 次 |
 | `0x43B9C0`（**cmd 76 `PrimHit`**） | 线程 `+0x814`（返回值） | id 1..0xFFF；arg1 用 `type != 0` 当布尔；`0x43B8D0(id, flag)` 命中才把返回值置 1（未命中不写）。389 次（标题菜单命中就靠它） |
 | `0x4379D0`（**cmd 79 `PrimSetDraw`**） | `prim+0x05`（可见性） | id **0..0xFFF**（允许 0）；arg1 **只接受 0 或 1**，其它保持原值。绘制分派第一步就是 `cmpb $0x0,0x05(%prim)`，为 0 直接返回（`0x438AB5`） |

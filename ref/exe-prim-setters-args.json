@@ -14,6 +14,19 @@
  ],
  "handlers": [
   {
+   "confirmed_id": 50,
+   "guess": "MotionMoveTest(50)（两部作品合计 447 次）",
+   "handler": "0x43ace0",
+   "rules": [
+    "arg0 = int 且 **1..0xFFF**",
+    "`0x4231A0(engine+0x65BA54, id)` 查该图元动作是否还在跑",
+    "`setne` 后**无条件**写线程 +0x814：1 = 还在跑，0 = 已结束"
+   ],
+   "writes": [
+    "线程 +0x814（VM 返回值）"
+   ]
+  },
+  {
    "confirmed_id": 42,
    "guess": "MotionAlpha(42)（两部作品合计 553 次）",
    "handler": "0x43a8b0",
@@ -221,6 +234,30 @@
   }
  ],
  "instructions": [
+  {
+   "instr": "cmpb   $0x2,(%eax)",
+   "pc": "0x43ace4"
+  },
+  {
+   "instr": "cmp    $0x1,%eax",
+   "pc": "0x43acec"
+  },
+  {
+   "instr": "cmp    $0xfff,%eax",
+   "pc": "0x43acf1"
+  },
+  {
+   "instr": "call   0x4231a0",
+   "pc": "0x43ad13"
+  },
+  {
+   "instr": "setne  %al",
+   "pc": "0x43ad1a"
+  },
+  {
+   "instr": "mov    %al,0x814(%esi)",
+   "pc": "0x43ad1d"
+  },
   {
    "instr": "cmpb   $0x2,(%edx)",
    "pc": "0x437994"
