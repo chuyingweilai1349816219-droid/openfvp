@@ -4,6 +4,20 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（八续）：文本窗口位置是运行期可变的（MotionMove 实证）
+
+给 `MotionMove(48)` / `MotionMoveR(51)` 加了 `FVP_DEBUG_TEXT` 日志（只加日志，不改行为），
+带点击的 60 s 运行抓到：
+
+```
+MotionMove prim=551 x=1 y=880 z=1 ms=1 mode=3 (instant)
+MotionMove prim=552 x=1 y=852 z=1 ms=1 mode=3 (instant)
+```
+
+即正文窗口先由 `PrimSetText(551,0,230,522)`→画布 (431,880) 建好，随后被 `MotionMove`
+挪到 **(1,880)**（名字窗口同理挪到 (1,852)）。所以"原版正文为什么在某个位置"必须按
+当时的 MotionMove 参数解释，只看 `PrimSetText` 初值会错。
+
 ## [未发布] — 2026-11-26（七续）：文本面板落点/尺寸冻结成 A 类基线（`ref/exe-text-draw.json`）
 
 `0x42AE40`（type-4/5 共用的贴图绘制）的目标矩形算法读通：

@@ -333,6 +333,17 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         }
         break;
     case 48: /* MotionMove(id, x, y, z, ?, ms, mode, flag)：开启动画时插补间 */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr,
+                    "MotionMove prim=%d x=%d y=%d z=%d ms=%d mode=%d%s\n", id,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : -1,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : -1,
+                    argc > 3 ? fvp_gfx_int(&a[3]) : -1,
+                    argc > 5 ? fvp_gfx_int(&a[5]) : -1,
+                    argc > 6 ? fvp_gfx_int(&a[6]) : -1,
+                    (gfx_motion_enabled != NULL && gfx_motion_enabled(g))
+                        ? " (tween)" : " (instant)");
+        }
         if (gfx_motion_enabled != NULL && gfx_motion_enabled(g) && argc > 5 &&
             fvp_gfx_is_int(&a[5]) && (fvp_gfx_is_int(&a[1]) ||
                                       fvp_gfx_is_int(&a[2]))) {
@@ -371,6 +382,11 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
     case 52: /* MotionMoveRStop */
         break;
     case 51: /* MotionMoveR(id, x, y, ...) */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "MotionMoveR prim=%d x=%d y=%d\n", id,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : -1,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : -1);
+        }
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
             (void)gfx_set_prim(g, id, GFX_F_X, fvp_gfx_int(&a[1]));
         }

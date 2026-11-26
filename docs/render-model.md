@@ -941,8 +941,22 @@ VM 帧模型**。脚本侧的证据（全部在 `ref/script-window-geometry.json
 不缩放、没有版式偏移。** 本引擎 `gfx.c` 的 type-5 路径（`prim_abs_xy()` →
 `draw_text_window()`）实现的正是这条。
 
-于是正文窗口的位置问题彻底闭环：`PrimSetText(551, 0)` 在修正帧模型下是 **(431,880)**，
-面板 **1380×1024**（TextBuff 的尺寸下限 1024），面板就画在 (431,880) 处。
+于是落点规则闭环：`PrimSetText(551, 0)` 在修正帧模型下建在 **(431,880)**、
+面板 **1380×1024**（TextBuff 的尺寸下限 1024），面板就画在 prim 的 (x,y) 处。
+
+**但 x/y 是运行期可变的**：带点击的 60 s 实测（`FVP_DEBUG_TEXT=1` 抓 MotionMove）里，
+脚本随后就把正文/名字窗口挪走了：
+
+```
+MotionMove prim=551 x=1 y=880 z=1 ms=1 mode=3 (instant)
+MotionMove prim=552 x=1 y=852 z=1 ms=1 mode=3 (instant)
+```
+
+也就是说这些窗口的位置**不是一次设定就不动的**：`MotionMove`(48) 会改 `prim+0x14/+0x16`
+（我们的实现：`--motion` 关时直接写值、开时插补间）。所以：
+1. "原版正文为什么在某处"要按**那个场景当时的 MotionMove 参数**去解释，不能只看
+   `PrimSetText` 的初值；
+2. 抓窗口位置必须抓 MotionMove（本轮已给 48/51 加了 `FVP_DEBUG_TEXT` 日志）。
 
 ## 引擎自建对象表（A 类：`ref/exe-engine-objects.json`）
 
