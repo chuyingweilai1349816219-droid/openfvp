@@ -4,6 +4,70 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（八十续）：开场背景过渡（25 s 缩放/旋转）+ 一帧场景回放窗口
+
+### 1. 开场白底后面那块背景，现在真的在动
+
+**脚本事实**（静态提取，不是抓帧拟合）：建标题场景时脚本就先给 `title_bg1_A..D`
+排了两条 25 s 动画——`0x59143/0x5915A/0x59171/0x59188` 的 `MotionMoveS2`
+（五彩四层 1300..4000→800..900 per-mille；星空 2000→1000，40000 ms）与
+`MotionMoveR`（7.5..62.5°→0）；这四条都在开场调用 `0x591EC` **之前**，所以白底
+淡出露出的背景本来就是动的。
+
+**外壳改动**：`--opening` 默认打开 `opts.title_bg_anim`（脚本语义）；新增
+`--title-bg-static` 作为诊断旁路，只压掉"开场自动打开"。
+
+**门禁重写**：`tests/verify_opening_render.py` 现在跑三组对照（每作 5 次真启动）：
+
+| 对照 | 五彩斑斓 | 星空 |
+|---|---|---|
+| 早期帧近白 | 98.8% | 97.4% |
+| 早期 vs 淡出中（2900 ms）mean_abs | 50.74 | 14.58 |
+| 淡出中近白比例（相对白场下降） | 98.8% → 32.2% | 97.4% → 86.9% |
+| 结束帧 vs 静态标题（`--title-bg-static`） | **逐字节 0 差** | **逐字节 0 差** |
+| 结束帧 vs 静止标题（默认带背景动画） | mean_abs 13.70 | mean_abs 44.94 |
+| 淡出中 vs 静止标题 | 54.17 | 54.10 |
+
+星空的标题背景是浅色海天，近白比例天然高，所以把"绝对近白 < 80%"改成
+"相对白场的下降 > 5 个百分点" —— 绝对阈值在亮背景作品上会误判。这一改也让
+`--opening --title-bg-static` 的结束帧恢复到与静态标题帧**逐字节相同**（旧断言
+在背景动画打开后只能靠容差，属于退让；现在两条都测）。
+
+### 2. `--scene`：把一帧渲染状态放进真窗口
+
+`work/scene_to_bin.py` 把 `gfx-scene.json` 转成紧凑二进制（magic `FVPS`：canvas /
+bg / graphs / prims / texts / text_layout），新文件
+`src/platform/win32/win32_scene.{c,h}` 在真窗口里按 `src/gfx.c` 重画这一帧，不跑 VM。
+
+- `fvp.exe --scene out/c/scene.bin`：人眼验收某一帧的位置、层序、字号；
+- `--hide-text-layer N`（可重复）：不画第 N 层文本。典型用法 `--hide-text-layer 9`
+  去掉旧版式里那个**原版并不存在**的「章节标题」卡；
+- `--text-fixed-layout` 仍可与 `--scene` 组合，看旧版式的合成框；
+- `test_gfx` 同时新增 `--prim-text`（跳过 `gfx_set_text_fixed_layout(1)`），
+  同一份 dump 可以对比"旧版式 / 图元驱动"两条路径。
+
+实测：`--scene out\c\scene.bin --text-fixed-layout --hide-text-layer 9` 跑通，
+窗口进入回放后稳定重画，日志 `scene: 隐藏文本层 9`、`scene: scene.bin 已载入`。
+
+### 3. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS**（含 `test_openseq` 2620、`test_titleenter` 3513、`test_titlebg` 2167） |
+| `tests/compare.py --run` | **PASS**（前缀 + 预算；冻结基线 195 行 / 6496 B） |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（293 px / 0.0141% / PSNR 49.94 / SSIM 0.99971） |
+| `tests/verify_opening_render.py` | **PASS**（两作，见上表） |
+| `scripts/check-docs.py` | **PASS** |
+
+### 4. 诚实说明
+
+- 本轮的"背景在动"仍是**离线对照**（抓帧），不是逆向替代品；脚本侧的常量来自
+  `ref/title-bg-motion.json` 与 `ref/opening-scene.json`，抓帧只用来证明"确实在动"。
+- `--scene` 回放的是 dump 的状态，**不代表引擎能跑到那一帧**：标题→正文仍卡在
+  `prim 265` 的动作记录缺席（见"七十八续"），本轮没有进展。
+- `test_gfx` 不加 `--prim-text` 时会写 `out/c/gfx-frame.png`（冻结基线那一张）；
+  本轮试验中覆盖过一次，已用原参数重新生成并通过 `verify_gfx`。
+
 ## [未发布] — 2026-11-26（七十九续）：修外壳装配 —— `--opening` 单独运行也能看到 FAVORITE logo
 
 **用户现场反馈**：跑起来只看到天空 CG，`--opening` 抓的 39 帧里**一个 logo 都没有**，而且开场「立刻结束」。本轮定位到的是外壳装配缺陷，不是新的逆向结论；openseq 时间轴数学与 `ref/opening-scene.json`

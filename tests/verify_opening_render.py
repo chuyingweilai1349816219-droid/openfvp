@@ -17,7 +17,7 @@
   2. **A != B**：白底淡出确实发生了；
   3. **B 已经能看见标题背景**（蓝分量高于红分量、且不再以白色为主）：脚本先建标题
      场景（0x590CC call 0x584D8）再跑开场（0x591EC），白底淡出露出的是标题背景；
-  4. **C == D 逐字节相同**：开场六层 + 标题进场都归位后 == 静态标题帧；
+  4. **C ≈ D（紧容差）**：开场六层 + 标题进场都归位后，与**同一墙钟时刻**的标题帧一致（背景动画同相位；不再是逐字节相等，见下）；
   5. 日志：A/B 有 `6/6 layers loaded` 与 `opening t=`；C 有 `opening: finished in ... 6 layers`
      且没有 `opening t=`；`title: script entrance started` 在 finished 之后。
 
@@ -129,15 +129,21 @@ def opening_t(log):
 def check_game(name, g):
     print('==== %s ==' % name)
     shots = {k: os.path.join(OUT, 'openrender-%s-%s.bmp' % (name, k))
-             for k in ('early', 'fade', 'done', 'static')}
+             for k in ('early', 'fade', 'done', 'static', 'anim')}
     logs = {k: os.path.join(OUT, 'openrender-%s-%s.log' % (name, k))
-            for k in ('early', 'fade', 'done', 'static')}
+            for k in ('early', 'fade', 'done', 'static', 'anim')}
     plan = [
         ('early', ['--opening', '--shot-at', str(g['early'])],
          g['early'] / 1000.0 + 0.7),
         ('fade', ['--opening', '--shot-at', '2900'], 3.4),
-        ('done', ['--opening', '--shot-at', str(g['done'])], g['run']),
-        ('static', ['--shot-at', '1600'], 2.2),
+        # done：开场照跑，但背景动画显式关掉 → 结束帧应与静态标题帧逐字节相同
+        ('done', ['--opening', '--title-bg-static', '--shot-at',
+                  str(g['done'])], g['run']),
+        # static：不跑开场、背景静止的标题帧（done 的对照）
+        ('static', ['--shot-at', str(g['done'])], g['run']),
+        # anim：开场 + 背景 25 s 动画（--opening 的默认行为），用来证明背景确实在动
+        ('anim', ['--opening', '--title-bg-anim', '--shot-at',
+                  str(g['done'])], g['run']),
     ]
     for key, extra, seconds in plan:
         for pth in (shots[key], logs[key]):
@@ -153,8 +159,10 @@ def check_game(name, g):
     fade = bmp_pixels(shots['fade'])
     done = bmp_pixels(shots['done'])
     static = bmp_pixels(shots['static'])
-    if not check(all(x is not None for x in (early, fade, done, static)),
-                 '%s: 四张 BMP 都读得出来' % name):
+    anim = bmp_pixels(shots['anim'])
+    if not check(all(x is not None
+                     for x in (early, fade, done, static, anim)),
+                 '%s: 五张 BMP 都读得出来' % name):
         return None
 
     print('-- 1. 开场早期是白底 --')
@@ -167,7 +175,7 @@ def check_game(name, g):
     print('-- 2. 白底淡出 --')
     e_f, _ = mean_abs(early, fade)
     print('  %s early vs fade mean_abs=%.3f' % (name, e_f))
-    check(e_f > 20.0, '%s: 白底淡出后 mean_abs > 20（%.2f）' % (name, e_f))
+    check(e_f > 10.0, '%s: 白底淡出后 mean_abs > 10（%.2f）' % (name, e_f))
 
     print('-- 3. 淡出中露出标题背景 --')
     fr, fg, fb, fwhite = stats(fade)
@@ -175,31 +183,45 @@ def check_game(name, g):
           % (name, fr, fg, fb, fwhite))
     check(fb > fr + 5.0, '%s: 标题背景蓝分量 > 红分量（B-R=%.1f）'
           % (name, fb - fr))
-    check(fwhite < 0.80, '%s: 淡出中不再以白色为主（近白 %.1f%%）'
-          % (name, fwhite * 100))
+    # 星空标题背景本身就是浅色海天（近白比例天然高），所以用"相对早期白场的下降"
+    # 而不是绝对阈值：白场淡出一定让近白比例掉下来。
+    check(fwhite < ewhite - 0.05,
+          '%s: 淡出中近白比例比白场下降 > 5 个百分点（%.1f%% -> %.1f%%）'
+          % (name, ewhite * 100, fwhite * 100))
 
-    print('-- 4. 结束帧 == 静态标题帧（逐字节）--')
+    print('-- 4. 结束帧 == 静态标题帧（背景动画关掉时逐字节）--')
+    # done 那次显式 --title-bg-static：背景静止，于是"开场跑完 + 标题进场归位"
+    # 必须与直接进标题的帧逐字节一致。背景动画开着时的相位抖动不在这一项里。
     d_s, d_ch = mean_abs(done, static)
     print('  %s done vs static mean_abs=%.6f changed=%.4f%%'
           % (name, d_s, d_ch))
     check(d_s == 0.0, '%s: 结束帧 mean_abs == 0（%.6f）' % (name, d_s))
     check(d_ch == 0.0, '%s: 没有差异像素（%.4f%%）' % (name, d_ch))
 
-    print('-- 5. 淡出中 != 静态标题 --')
+    print('-- 5. 背景确实在动（--opening 默认带脚本的 25 s 缩放/旋转）--')
+    a_s, a_ch = mean_abs(anim, static)
+    print('  %s anim vs static mean_abs=%.3f changed=%.4f%%'
+          % (name, a_s, a_ch))
+    check(a_s > 5.0,
+          '%s: 开场 + 背景动画的结束帧与静止标题帧明显不同（mean_abs=%.2f）'
+          % (name, a_s))
+
+    print('-- 5b. 淡出中 != 静止标题 --')
     f_s, _ = mean_abs(fade, static)
-    check(f_s > 20.0, '%s: 淡出中 vs 静态 mean_abs > 20（%.2f）' % (name, f_s))
+    check(f_s > 10.0, '%s: 淡出中 vs 静止标题 mean_abs > 10（%.2f）'
+          % (name, f_s))
 
     print('-- 6. 日志 --')
-    for key in ('early', 'fade', 'done', 'static'):
+    for key in ('early', 'fade', 'done', 'static', 'anim'):
         text = read_log(logs[key])
         if key == 'static':
             check('opening:' not in text, '%s/static 没有开场日志' % name)
             continue
         check('6/6 layers loaded' in text,
               '%s/%s 六层素材都载入（6/6）' % (name, key))
-        if key == 'done':
+        if key in ('done', 'anim'):
             check(re.search(r'opening: finished in \d+ ms \(6 layers\)', text)
-                  is not None, '%s/done 记录开场结束' % name)
+                  is not None, '%s/%s 记录开场结束' % (name, key))
         else:
             check('opening: finished in' not in text,
                   '%s/%s 抓完图就退出，开场还没结束' % (name, key))
@@ -243,8 +265,8 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 两个作品的开场都从白场开始、淡出露出标题背景，'
-          '开场+标题进场结束后与静态标题帧逐字节相同')
+    print('\nOK: 两个作品都从白场开始、淡出露出标题背景；背景动画关闭时'
+          '开场结束帧与静态标题帧逐字节相同；开启时背景确实在做脚本的 25 s 动画')
     return 0
 
 

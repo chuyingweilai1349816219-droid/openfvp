@@ -990,7 +990,7 @@ static double now_ms(void)
 
 static void usage(void)
 {
-    printf("usage: test_gfx <gfx-scene.json> [-o outdir] [-r repeat] "
+    printf("usage: test_gfx <gfx-scene.json> [-o outdir] [-r repeat] [--prim-text] "
            "[--no-png]\n");
 }
 
@@ -1000,6 +1000,7 @@ int main(int argc, char **argv)
     const char *outdir = "out/c";
     int repeat = 3;
     int no_png = 0;
+    int prim_text = 0; /* --prim-text: 图元驱动（原版）而不是旧版式 */
     JVal *root;
     Gfx *g;
     GfxHost host;
@@ -1021,6 +1022,8 @@ int main(int argc, char **argv)
             outdir = argv[++i];
         } else if (strcmp(argv[i], "-r") == 0 && i + 1 < argc) {
             repeat = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--prim-text") == 0) {
+            prim_text = 1;
         } else if (strcmp(argv[i], "--no-png") == 0) {
             no_png = 1;
         } else if (strcmp(argv[i], "--game") == 0 && i + 1 < argc) {
@@ -1092,7 +1095,9 @@ int main(int argc, char **argv)
     /* 这个 harness 是 verify_gfx 的“冻结像素基线”一侧：显式用旧路径
      * （合成对话框 + 每层按版面表画）。引擎默认已经改成图元驱动（原版做法），
      * 但基线是旧路径冻结的，所以这里必须钉住 old path，不能跟着默认走。 */
-    gfx_set_text_fixed_layout(g, 1);
+    if (!prim_text) {
+        gfx_set_text_fixed_layout(g, 1);
+    }
     if (g == NULL) {
         fprintf(stderr, "test_gfx: gfx_create failed\n");
         return 1;

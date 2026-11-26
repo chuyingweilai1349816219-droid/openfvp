@@ -182,6 +182,8 @@ int gfx_typewriter_enabled(const Gfx *g);
  *   fixed=1（外壳 --text-fixed-layout）：旧路径，引擎画合成对话框 + 32 个窗口按
  *         gfx_layout_default 各画一遍。**冻结像素基线用它，不要把它当正确行为。** */
 void gfx_set_text_fixed_layout(Gfx *g, int fixed);
+/* 外壳 --hide-text-layer N：不画第 N 层文本窗口（诊断/对照用） */
+void gfx_text_set_hidden(Gfx *g, int layer, int hidden);
 int gfx_text_fixed_layout(const Gfx *g);
 /* 兼容旧名：gfx_set_text_prims(g, 1) == fixed 0（现在的默认），(g, 0) == fixed 1。 */
 void gfx_set_text_prims(Gfx *g, int on);

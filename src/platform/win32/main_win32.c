@@ -40,6 +40,7 @@
 #include "win32_audio.h"
 #include "win32_log.h"
 #include "win32_window.h"
+#include "win32_scene.h"
 #include "win32_gdi_text.h"
 #include "../../titlemenu.h"
 #include "../../openseq.h"
@@ -138,10 +139,14 @@ typedef struct Options {
     /* --title-anim：标题进场动画（logo alpha 0..255 / 缩放 10000..1000，
      * 参数来自脚本；--opening 时自动打开）。默认关 → 冻结基线不变。 */
     int title_anim;
-    /* --title-bg-anim：标题背景的脚本动画（目前只实现星空：
-     * MotionMoveS2 2000→1000 per-mille / 40000 ms，左上锚、无旋转）。
-     * 默认关 → 冻结基线不变；--title-anim 不会自动打开它。 */
+    /* --title-bg-anim：标题背景的脚本动画（五彩：四层 1300..4000→800..900
+     * per-mille / 25 s + 150/250/550/1250→0 旋转；星空：2000→1000 / 40 s）。
+     * 默认关 → 冻结基线不变；--opening 会自动打开（脚本先排背景动画再跑开场）。 */
     int title_bg_anim;
+    /* --title-bg-static：强制关掉标题背景动画。--opening 会默认打开它
+     * （脚本在建标题场景时就排好了背景的 25 s 缩放+旋转），这个开关是给
+     * 逐帧对比/诊断用的旁路。 */
+    int title_bg_static;
     /* --title-bg-div N：仿射层合成的内部分辨率除数（1 全分辨率 / 2 默认 /
      * 4 / 8）。只影响 --title-bg-anim 的画面清晰度与帧率。 */
     int title_bg_div;
@@ -160,7 +165,12 @@ typedef struct Options {
     /* --auto-click MS：每 MS 毫秒注入一次合成点击（与 --no-input 一起用，
      * 让"推进对话"这件事可确定性复现）。 */
     int auto_click_ms;
-    int load_restart; /* --load-restart：Load(slot) 时读槽文件 + 复位场景 + 重启脚本
+    int load_restart;
+    /* --scene FILE：把 work/scene_to_bin.py 导出的一帧渲染状态直接在窗口里显示
+     * （不跑 VM，人眼验收用）。--hide-text-layer N 可重复，指定不画哪一层文本。 */
+    wchar_t scene_path[PATH_CAP];
+    int hide_text_layer[8];
+    int n_hide_text_layer; /* --load-restart：Load(slot) 时读槽文件 + 复位场景 + 重启脚本
                        * （保留 globals/flags；槽尾快照段还没逆清，暂不应用） */
     int debug_save_request;
     int debug_load_request;
@@ -481,11 +491,14 @@ static const wchar_t *usage_text(void)
            L"  --title-menu        先显示引擎侧标题菜单（New Game/Continue/Album/Option/Exit），\n"
            L"                      选 New Game 才开始跑脚本（默认关；几何按原版实测）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
-           L"  --title-bg-anim     标题背景按脚本做缩放+旋转动画（五彩四层 25 s；星空 2000->1000 40 s；默认关）\n"
+           L"  --title-bg-anim     标题背景按脚本做缩放+旋转动画（五彩四层 25 s；星空 2000->1000 40 s；默认关，--opening 自动打开）\n"
+           L"  --title-bg-static   强制关掉标题背景动画（诊断/逐帧对比用）\n"
            L"  --title-bg-div N    背景动画的内部分辨率除数（1 默认 = 全分辨率最清晰，2/4/8 更快）\n"
            L"  --auto-click MS     每 MS 毫秒注入一次合成点击（配 --no-input 可确定性推进对话）\n"
            L"  --dump-text-prims   每 500 ms 把文本图元 id/层号/位置/父链绝对位置写进日志\n"
            L"  --load-restart      Load(slot) 时读槽文件 + 复位场景 + 重启脚本（保留 globals/flags）\n"
+           L"  --scene FILE       显示一帧已导出的渲染状态（work/scene_to_bin.py 产物；人眼验收）\n"
+           L"  --hide-text-layer N  --scene 时不画第 N 层文本（可重复）\n"
            L"  --shot-every MS     运行中每 MS 毫秒抓一张（配 --shot-prefix；做动画 demo）\n"
            L"  --shot-prefix P     --shot-every 的文件名前缀（写 P-0000.bmp ..）\n"           L"  --shot-div N       抓帧时 box 降采样 N 倍（1..8，默认 1）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
@@ -564,9 +577,12 @@ static void defaults(Options *o)
     o->opening = 0;
     o->title_anim = -1; /* -1 = 未指定，见 main 里的 --opening 联动 */
     o->title_bg_anim = 0;
+    o->title_bg_static = 0;
     o->title_bg_div = 1;
     o->auto_click_ms = 0;
     o->preview_slot = -1;
+    o->scene_path[0] = L'\0';
+    o->n_hide_text_layer = 0;
     o->load_slot = -1;
     o->menu_at = -1;
     o->menu_pick = -1;
@@ -793,6 +809,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             wcsncpy(o->shot_prefix, argv[++i], PATH_CAP - 1);
         } else if (wcscmp(a, L"--title-no-bg") == 0) {
             o->title_no_bg = 1;
+        } else if (wcscmp(a, L"--title-bg-static") == 0) {
+            o->title_bg_static = 1;
         } else if (wcscmp(a, L"--auto-click") == 0 && i + 1 < argc) {
             int ms = _wtoi(argv[++i]);
 
@@ -809,6 +827,12 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->debug_save_request = _wtoi(argv[++i]);
         } else if (wcscmp(a, L"--load-restart") == 0) {
             o->load_restart = 1;
+        } else if (wcscmp(a, L"--scene") == 0 && i + 1 < argc) {
+            wcsncpy(o->scene_path, argv[++i], PATH_CAP - 1);
+        } else if (wcscmp(a, L"--hide-text-layer") == 0 && i + 1 < argc) {
+            if (o->n_hide_text_layer < 8) {
+                o->hide_text_layer[o->n_hide_text_layer++] = _wtoi(argv[++i]);
+            }
         } else if (wcscmp(a, L"--debug-load-request") == 0 &&
                    i + 1 < argc) {
             o->debug_load_request = _wtoi(argv[++i]);
@@ -3201,6 +3225,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
      * 开场期间不画标题菜单（见帧循环里的 opening_active 判断）。 */
     if (opts.opening) {
         opening_active = 1;
+        /* 开场的背景过渡：脚本在建标题场景时就先给 title_bg1_A..D 排了 25 s 的
+         * 慢缩放+旋转（hcb 0x59143/0x5915A/0x59171/0x59188，都在开场调用
+         * 0x591EC 之前），所以白底淡出时露出的背景是**正在动**的，而不是
+         * 一张静止图。--opening 默认打开这条背景动画；显式 --title-bg-static
+         * 可关掉（诊断/逐帧对比用）。 */
+        if (!opts.title_bg_static) {
+            opts.title_bg_anim = 1;
+        }
         /* 真正的日志在素材载入之后打（这里 log 文件还没打开）。 */
     }
     /* 存档字符串编码：显式 --save-encoding 优先，否则跟随脚本编码。 */
@@ -3672,6 +3704,34 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
     }
 
+    /* ---- --scene：只显示一帧已导出的渲染状态（人眼验收用，不跑 VM） ---- */
+    if (opts.scene_path[0] != L'\0') {
+        int rc = 0;
+        int k;
+
+        if (!fvp_scene_load(gfx, opts.scene_path)) {
+            fvp_logf("scene: 读取失败: %s", "scene.bin");
+            show_error(L"fvp.exe", L"--scene 文件读取失败。");
+            rc = 6;
+        } else {
+            for (k = 0; k < opts.n_hide_text_layer; ++k) {
+                gfx_text_set_hidden(gfx, opts.hide_text_layer[k], 1);
+                fvp_logf("scene: 隐藏文本层 %d", opts.hide_text_layer[k]);
+            }
+            fvp_logf("scene: %s 已载入（ESC / 关窗口退出）", "scene.bin");
+            (void)fvp_scene_present_loop(gfx, &win);
+        }
+        fvp_win32_destroy(&win);
+        gfx_destroy(gfx);
+        fvp_audio_stop(audio);
+        snd_destroy(snd);
+        fvp_vm_free(&vm);
+        fvp_hcb_free(&hcb);
+        fvp_log_close();
+        timeEndPeriod(1);
+        LocalFree(argv);
+        return rc;
+    }
     trace_mark("window created");
     t_ready = now_sec();
     fvp_logf("startup: script+vm+gfx+window ready in %.1f ms",

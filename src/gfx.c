@@ -567,6 +567,7 @@ struct Gfx {
      * （verify_gfx 等）就是用这条路径冻结的，所以它必须原样保留。 */
     int text_fixed_layout;
     unsigned char text_bound[GFX_TEXT_MAX]; /* 本帧已由图元画过的文本窗口 */
+    unsigned char tw_hidden[GFX_TEXT_MAX]; /* 外壳 --hide-text-layer：不画这层文本 */
     /* 标题背景缩放缓存（gfx_draw_image_zoomed）。1920x1080 的三角形滤波缩放
      * 一次 ~80 ms，而脚本动画 40 s 内只变化 ~25‰/s；把源矩形量化到 16 px 后
      * 每 ~0.6 s 才会重算一次，其余帧直接贴缓存。 */
@@ -2122,7 +2123,7 @@ static void walk_tree(Gfx *g, int pid, int depth, const GfxXf *parent)
         int origin[2];
 
         if (p->draw && p->alpha > 0 && p->tw >= 0 && p->tw < GFX_TEXT_MAX &&
-            text_visible(&g->tw[p->tw])) {
+            !g->tw_hidden[p->tw] && text_visible(&g->tw[p->tw])) {
             prim_abs_xy(g, pid, &origin[0], &origin[1]);
             draw_text_window(g, p->tw, origin, p->alpha);
             g->text_bound[p->tw] = 1u;
@@ -2862,7 +2863,7 @@ static void draw_text_window(Gfx *g, int idx, const int *origin,
     int budget = 0;      /* 还剩几个可见字符（只在新行里扣） */
     int clipped = 0;
 
-    if (!text_visible(tw)) {
+    if (!text_visible(tw) || g->tw_hidden[idx]) {
         return;
     }
     /* 逐字显示：只把前 shown_chars 个字符交给排版。关闭时 budget 无限。 */
@@ -5534,6 +5535,14 @@ size_t gfx_tex_cap_bytes(const Gfx *g)
 /* 文本图元定位（原版做法）：PrimSetText(86) 把文本窗口挂到图元上，位置由图元
  * 决定。默认是**图元驱动**（原版做法）；`fixed` 打开后退回旧路径
      * “合成对话框 + 版面表”，冻结像素基线用它。 */
+void gfx_text_set_hidden(Gfx *g, int layer, int hidden)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return;
+    }
+    g->tw_hidden[layer] = hidden ? 1u : 0u;
+}
+
 void gfx_set_text_fixed_layout(Gfx *g, int fixed)
 {
     if (g == NULL) {

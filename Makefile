@@ -114,7 +114,7 @@ clean:
 WIN32_DIR   = src/platform/win32
 WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
                $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c \
-               $(WIN32_DIR)/win32_gdi_text.c
+               $(WIN32_DIR)/win32_gdi_text.c $(WIN32_DIR)/win32_scene.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
               src/titlemenu.c src/savelist.c src/savetail.c src/savehist.c src/openseq.c \
               src/titleenter.c src/titlebg.c \
