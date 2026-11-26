@@ -80,7 +80,14 @@ def main():
           '面板尺寸写 tw+0x5DC/0x5DE')
     check('w*h*4' in (ok.get('buffer') or ''), '缓冲 = w*h*4 挂在 tw+0x520')
 
-    print('== 5. C 侧一致性 ==')
+    print('== 5. handler 的实参规则 ==')
+    ha = ref.get('handler_args') or {}
+    check('0..0x1F' in (ha.get('layer') or ''), '层号范围 0..0x1F 有记录')
+    check('缺省 8' in (ha.get('w') or '') and '缺省 8' in (ha.get('h') or ''),
+          'w/h 缺省 8 有记录')
+    check('>= 0' in (ha.get('w') or ''), 'w 只在 int 且 >=0 时覆盖')
+
+    print('== 6. C 侧一致性 ==')
     gfx = read(os.path.join(FVP, 'src', 'gfx.c'))
     check('if (w > 0x400 || h > 0x400) {' in gfx,
           'gfx_text_set_buff() 用同一个 0x400 上限')
@@ -90,6 +97,15 @@ def main():
     concl = ref.get('conclusion') or ''
     check('不是我们引擎的 bug' in concl,
           '结论写明"脚本的 TextBuff(0,1380,1024) 越界，原版也会中断"')
+    sysc = read(os.path.join(FVP, 'src', 'syscall.c'))
+    seg = sysc[sysc.index('case 110:'):sysc.index('case 123:')]
+    check('int layer = fvp_gfx_int(&a[0]);' in seg,
+          'syscall case 110 用 arg0 当层号（不是把 a[1] 当层号）')
+    check('layer >= 0 && layer <= 0x1F' in seg, 'case 110 检查层号 0..0x1F')
+    check('int bw = 8;' in seg and 'int bh = 8;' in seg,
+          'case 110 的 w/h 缺省 8（与 handler 一致）')
+    check('fvp_gfx_int(&a[1]) >= 0' in seg and 'fvp_gfx_int(&a[2]) >= 0' in seg,
+          'case 110 只在 int 且 >=0 时覆盖 w/h')
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))

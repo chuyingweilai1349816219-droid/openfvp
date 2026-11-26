@@ -1,6 +1,11 @@
 {
  "conclusion": "w > 1024 或 h > 1024 时原版**抛异常**而不是静默放弃；本引擎（gfx_text_set_buff）在同一条件下返回 0（放弃），因为 VM 侧没有异常语义可承载。脚本的正文层调用 TextBuff(0,1380,1024) 正好越界，所以那段窗口设置在原版里会中断——不是我们引擎的 bug。",
  "handler": "0x430ea0",
+ "handler_args": {
+  "h": "arg2：缺省 8；只有\"是 int 且 >= 0\"才覆盖（0x43C85D/0x43C870）",
+  "layer": "arg0：必须是 int 且在 0..0x1F，否则整条命令忽略（0x43C834/0x43C840）",
+  "w": "arg1：缺省 8；只有\"是 int 且 >= 0\"才覆盖（0x43C858/0x43C861）"
+ },
  "instructions": [
   {
    "instr": "cmp    $0x400,%edi",
@@ -61,6 +66,26 @@
   {
    "instr": "call   0x44837c",
    "pc": "0x431035"
+  },
+  {
+   "instr": "cmpb   $0x2,(%eax)",
+   "pc": "0x43c834"
+  },
+  {
+   "instr": "cmp    $0x1f,%ecx",
+   "pc": "0x43c840"
+  },
+  {
+   "instr": "mov    $0x8,%edi",
+   "pc": "0x43c858"
+  },
+  {
+   "instr": "mov    %edi,%esi",
+   "pc": "0x43c85d"
+  },
+  {
+   "instr": "call   0x430ea0",
+   "pc": "0x43c87b"
   }
  ],
  "limit": {

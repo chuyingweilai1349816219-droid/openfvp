@@ -651,13 +651,22 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
                     argc > 1 ? fvp_gfx_int(&a[1]) : -1,
                     argc > 2 ? fvp_gfx_int(&a[2]) : -1);
         }
-        if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            int bw = fvp_gfx_int(&a[1]);
-            int bh = (argc > 2 && fvp_gfx_is_int(&a[2]))
-                         ? fvp_gfx_int(&a[2])
-                         : 8;
+        /* 原版 0x43C830：arg0 必须是 int 且在 0..0x1F（层号），否则整条忽略；
+         * w/h 各自缺省 8，只有"是 int 且 >= 0"时才覆盖；随后调 0x430EA0。 */
+        if (argc > 0 && fvp_gfx_is_int(&a[0])) {
+            int layer = fvp_gfx_int(&a[0]);
+            int bw = 8;
+            int bh = 8;
 
-            (void)gfx_text_set_buff(g, id, bw, bh);
+            if (layer >= 0 && layer <= 0x1F) {
+                if (argc > 1 && fvp_gfx_is_int(&a[1]) && fvp_gfx_int(&a[1]) >= 0) {
+                    bw = fvp_gfx_int(&a[1]);
+                }
+                if (argc > 2 && fvp_gfx_is_int(&a[2]) && fvp_gfx_int(&a[2]) >= 0) {
+                    bh = fvp_gfx_int(&a[2]);
+                }
+                (void)gfx_text_set_buff(g, layer, bw, bh);
+            }
         }
         break;
     case 123: /* TextPrint(layer, text) */

@@ -51,6 +51,12 @@ EXPECT = [
     (0x430FFD, 'call   0x447c05'),           # 构造异常
     (0x43101B, 'call   0x4258f0'),           # 格式化错误信息
     (0x431035, 'call   0x44837c'),           # throw
+    # handler 0x43C830：层号 0..0x1F、w/h 缺省 8、只有 int 且 >=0 才覆盖
+    (0x43C834, 'cmpb   $0x2,(%eax)'),         # arg0 必须是 int
+    (0x43C840, 'cmp    $0x1f,%ecx'),          # 层号 <= 0x1F
+    (0x43C858, 'mov    $0x8,%edi'),           # w 缺省 8
+    (0x43C85D, 'mov    %edi,%esi'),           # h 缺省 8
+    (0x43C87B, 'call   0x430ea0'),            # 交给构造/改尺寸函数
 ]
 
 
@@ -94,6 +100,11 @@ def main(argv=None):
             'on_overflow': '抛异常：错误码 0x80（0x430ff8 push $0x80），'
                            '0x447C05 构造 → 0x4258F0 格式化（格式串 0x45D8C4）→ '
                            '0x44837C throw',
+        },
+        'handler_args': {
+            'layer': 'arg0：必须是 int 且在 0..0x1F，否则整条命令忽略（0x43C834/0x43C840）',
+            'w': 'arg1：缺省 8；只有"是 int 且 >= 0"才覆盖（0x43C858/0x43C861）',
+            'h': 'arg2：缺省 8；只有"是 int 且 >= 0"才覆盖（0x43C85D/0x43C870）',
         },
         'on_ok': {
             'panel_w': 'tw+0x5dc',
