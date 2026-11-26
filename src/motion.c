@@ -231,6 +231,14 @@ int fvp_motion_test(const FvpMotion *m, int prim_id, int kind)
         if (kind >= 0 && t->kind != kind) {
             continue;
         }
+        /* 诊断开关：翻转返回值，用来验证"这个 *Test 到底是
+         * ‘有记录’还是‘没记录’"。默认关，不影响任何门禁。 */
+        if (getenv("FVP_MOTION_TEST_INVERT") != NULL) {
+            return 0;
+        }
+        return 1;
+    }
+    if (getenv("FVP_MOTION_TEST_INVERT") != NULL) {
         return 1;
     }
     return 0;

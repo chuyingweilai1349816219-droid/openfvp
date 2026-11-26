@@ -1368,3 +1368,13 @@ OP 轴心缩放时显示哪一块"（现在标题背景是静态中心裁剪 240
 （`pushint16`/`pushint8` 立即数），`--json` 给门禁用；门禁
 `tests/verify_prim_refs.py` 冻结了 265 的 38 个引用点与上面四个调用点。
 
+## 附录 B：`MotionAlphaTest(265)` 的两个对照实验（2026-11-26）
+
+| 开关 | 作用 | 结果 |
+|---|---|---|
+| `FVP_MOTION_TEST_INVERT=1` | 翻转 `*Test` 返回值 | 脚本离开等待循环：`primhit` 0 → **187**（与无 gfx 的 `fvm.exe` 一致），但随即空转清理：`0x235C9..0x235DC`（GraphLoad(prim,true)+PrimGroupOut+PrimSetNull）出现 **190 次** |
+| `FVP_MOTION_NO_REAP=1` | 不回收已完成补间 | 无变化（`primhit` 0/0、41395 ThreadNext）——因为 265 的记录从未创建 |
+
+结论：卡死既不是 `*Test` 极性，也不是记录回收；缺的是**脚本自己的菜单交互**
+（悬停/选中时给菜单组 265 排动画）。我们的外壳用引擎侧菜单，脚本菜单路径没走，
+所以记录永远不出现。默认路径两个开关都关，门禁数字不变。

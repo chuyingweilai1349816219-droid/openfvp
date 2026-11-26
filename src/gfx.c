@@ -3534,7 +3534,13 @@ void gfx_motion_advance(Gfx *g, int dt_ms)
             break;
         }
     }
-    fvp_motion_reap(&g->motion);
+    /* 诊断：FVP_MOTION_NO_REAP=1 时不回收已完成的补间。
+     * 原版的 `*Test` 只查“容器里有没有这条记录”（0x422990，
+     * 不看进度）；我们每帧 reap 会让“已跑完但还没 Stop”的记录消失，
+     * 这一差异是待验证项。默认开❤旧行为不变❤。 */
+    if (getenv("FVP_MOTION_NO_REAP") == NULL) {
+        fvp_motion_reap(&g->motion);
+    }
 }
 
 int gfx_motion_test(Gfx *g, int prim_id, int kind)
