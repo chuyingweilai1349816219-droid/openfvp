@@ -29,6 +29,19 @@ OUT_JSON = os.path.join(ROOT, 'ref', 'exe-prim-setters-args.json')
 LINE = re.compile(r'^\s+([0-9a-f]+):\t([0-9a-f ]+?)\s*\t(.*)$')
 
 EXPECT = [
+    # 0x437990：PrimSetAlpha（cmd 77）：id 1..0xFFF、alpha 0..0xFF -> prim+0x07
+    (0x437994, 'cmpb   $0x2,(%edx)'),
+    (0x43799C, 'cmp    $0x1,%eax'),
+    (0x4379A1, 'cmp    $0x1000,%eax'),
+    (0x4379AE, 'cmpl   $0xff,0xc(%edx)'),
+    (0x4379BA, 'imul   $0x34,%eax,%eax'),
+    (0x4379BD, 'mov    %dl,0x61dd6b(%eax,%ecx,1)'),
+    # 0x4379d0：PrimSetDraw（cmd 79）：id 0..0xFFF、draw 只收 0/1 -> prim+0x05
+    (0x4379DC, 'test   %eax,%eax'),
+    (0x4379E7, 'cmpb   $0x2,0x8(%edx)'),
+    (0x4379F0, 'test   %edx,%edx'),
+    (0x437A01, 'cmp    $0x1,%edx'),
+    (0x437A09, 'mov    %dl,0x61dd69(%eax,%ecx,1)'),
     # 0x43ba20：PrimSetBlend（cmd 78）：id 0..0xFFF，blend 0..1 -> prim+0x08
     (0x43BA24, 'cmpb   $0x2,(%edx)'),
     (0x43BA2E, 'jl     0x43ba58'),
@@ -92,7 +105,20 @@ EXPECT = [
 ]
 
 HANDLERS = [
-    {'handler': '0x43ba20', 'writes': ['prim+0x08 = blend'],
+    {'handler': '0x437990', 'confirmed_id': 77,
+     'writes': ['prim+0x07 = alpha'],
+     'rules': ['arg0 = int 且 **1..0xFFF**',
+               'arg1 int 且 **0..0xFF**（`cmpl $0xff; ja` 无符号比较），越界保持原值',
+               '不置任何 flags 位'],
+     'guess': 'PrimSetAlpha(77)（两部作品合计 1052 次，全片最高频）'},
+    {'handler': '0x4379d0', 'confirmed_id': 79,
+     'writes': ['prim+0x05 = draw（可见性）'],
+     'rules': ['arg0 = int 且 **0..0xFFF**（这一条允许 0）',
+               'arg1 int 且**只接受 0 或 1**，其它值保持原值',
+               '不置 flags；绘制分派先判 prim+0x05 == 0 直接返回（0x438AB5）'],
+     'guess': 'PrimSetDraw(79)（两部作品合计 353 次）'},
+    {'handler': '0x43ba20', 'confirmed_id': 78,
+     'writes': ['prim+0x08 = blend'],
      'rules': ['arg0 = int 且 **0..0xFFF**（这一条允许 0）',
                'arg1 int 且 **0..1** → prim+0x08 = (u8)值',
                '越界保持原值；不置任何 flags 位'],
@@ -103,7 +129,7 @@ HANDLERS = [
                'arg1/arg2 各自 int 才写，写 u16 并 flags |= 0x02',
                '末尾无条件 flags |= 0x40'],
      'guess': 'PrimSetOP(81)'},
-    {'handler': '0x43baf0', 'writes': ['prim+0x24 = angle', 'prim+0x26/0x28 = scale'],
+    {'handler': '0x43baf0', 'confirmed_id': 82, 'writes': ['prim+0x24 = angle', 'prim+0x26/0x28 = scale'],
      'rules': ['arg0 = int 且 1..0xFFF',
                'arg1 int → angle = v % 3600（0xE10），负数也归一化，存 u16',
                'arg2 int → scale 钳位 100..10000（per-mille），同时写 +0x26 与 +0x28',

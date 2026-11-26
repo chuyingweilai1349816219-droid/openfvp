@@ -1154,6 +1154,8 @@ call   0x4387d0            ; register(entry, name)
 | `0x43BDC0` | `prim+0x32`（**文本层号**）+ x/y | `0x439BF0(id, 5)` 造 **type-5（文本）** 图元，清 `flags` 的 bit0；文本层号范围 **0..0x1F**（与 `TextBuff` 的层号一致） |
 | `0x43BE40` | `prim+0x30` + x/y/w/h | `0x439BF0(id, 2)` 造 **type-2** 图元；arg1 范围 **-1..0xFF** → `+0x30`；arg2..arg5 → x/y/w/h |
 | `0x43BA20`（**cmd 78 `PrimSetBlend`**） | `prim+0x08`（blend） | id 允许 **0..0xFFF**（这一条允许 0）；arg1 只接受 **0..1**（0 = over / 1 = additive），越界保持原值；不置任何 flags 位 |
+| `0x437990`（**cmd 77 `PrimSetAlpha`**） | `prim+0x07`（alpha） | id **1..0xFFF**；arg1 int 且 **0..0xFF**（`cmpl $0xff; ja` 无符号比较），越界保持原值；不置 flags。**全片最高频命令**（两部作品合计 1052 次） |
+| `0x4379D0`（**cmd 79 `PrimSetDraw`**） | `prim+0x05`（可见性） | id **0..0xFFF**（允许 0）；arg1 **只接受 0 或 1**，其它保持原值。绘制分派第一步就是 `cmpb $0x0,0x05(%prim)`，为 0 直接返回（`0x438AB5`） |
 
 **关键一致性事实**：这些字段全部用 `mov %xx,off`（**u16 写入**）、渲染时按 int16 读回，
 所以 x/y/w/h/op/u/v 实际是 **int16**。我们原来存 32 位原值——本轮已改成 int16 截断

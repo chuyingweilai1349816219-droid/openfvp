@@ -4,6 +4,24 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（三十七续）：对齐两条**最高频**命令 PrimSetAlpha(77) / PrimSetDraw(79)
+
+命令使用矩阵显示：**`PrimSetAlpha(77)` 是两部作品合计 1052 次的最高频命令**，
+`PrimSetDraw(79)` 也有 353 次。这两条我们的旧实现都只判"是 int"，范围一概不管。
+
+读 handler：
+
+| 命令 | handler | 规则 |
+|---|---|---|
+| `PrimSetAlpha(77)` | `0x437990` | id **1..0xFFF**；alpha int 且 **0..0xFF**（`cmpl $0xff; ja` 无符号比较），越界保持原值；写 u8 → `prim+0x07`；不置 flags |
+| `PrimSetDraw(79)` | `0x4379D0` | id **0..0xFFF**（允许 0）；draw **只接受 0 或 1**，其它保持原值；写 u8 → `prim+0x05`（可见性）；绘制分派第一步 `cmpb $0x0,0x05(%prim)`，为 0 直接返回 |
+
+已按此对齐（case 77 只接受 0..0xFF、case 79 只接受 0/1）。冻结的文本基线与像素基线
+均未变化——说明现有场景没踩到越界值，但这两条是高频道，越界行为迟早会遇到。
+
+`ref/exe-prim-setters-args.json` 从 10 个 handler 扩到 **12 个**（新增 77/79，均带
+`confirmed_id`）；门禁的 C 侧断言也加了这两条。
+
 ## [未发布] — 2026-11-26（三十六续）：两部作品用到的 131 条命令**全部实现**（最后一条 PartsMotionTest(69)）
 
 做了一次真正的多作品兼容性审计：用 `ref/fvm_ref.py` 把两部作品的脚本全量解码，

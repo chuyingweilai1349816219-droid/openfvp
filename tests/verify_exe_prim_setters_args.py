@@ -45,10 +45,11 @@ def main():
     hs = ref.get('handlers') or []
 
     print('== 2. 四个 handler 的规则 ==')
-    check(len(hs) == 10, '十个 handler（实际 %d）' % len(hs))
+    check(len(hs) == 12, '十二个 handler（实际 %d）' % len(hs))
     by = {h['handler']: h for h in hs}
-    for addr in ('0x43ba20', '0x43ba90', '0x43baf0', '0x43bc40', '0x43bd00',
-                 '0x43bdc0', '0x43be40', '0x43bef0', '0x43bf50', '0x43bfa0'):
+    for addr in ('0x437990', '0x4379d0', '0x43ba20', '0x43ba90', '0x43baf0',
+                 '0x43bc40', '0x43bd00', '0x43bdc0', '0x43be40', '0x43bef0',
+                 '0x43bf50', '0x43bfa0'):
         check(addr in by, '含 handler %s' % addr)
     op = by.get('0x43ba90') or {}
     check(any('0x20' in w for w in op.get('writes') or []), '0x43BA90 写 op1(+0x20)')
@@ -84,7 +85,16 @@ def main():
           '0x43BA20（PrimSetBlend）写 prim+0x08')
     check('0..1' in ' '.join(bl.get('rules') or []), 'blend 范围 0..1')
     check(bl.get('confirmed_id') == 78, 'PrimSetBlend 的 id = 78（已证实）')
-    for addr, cid in (('0x43ba90', 81), ('0x43bf50', 89), ('0x43bfa0', 90),
+    al = by.get('0x437990') or {}
+    check(any('0x07' in w for w in al.get('writes') or []),
+          '0x437990（PrimSetAlpha）写 prim+0x07')
+    check('0..0xFF' in ' '.join(al.get('rules') or []), 'alpha 范围 0..0xFF')
+    dr = by.get('0x4379d0') or {}
+    check(any('0x05' in w for w in dr.get('writes') or []),
+          '0x4379D0（PrimSetDraw）写 prim+0x05')
+    check('0 或 1' in ' '.join(dr.get('rules') or []), 'draw 只接受 0/1')
+    for addr, cid in (('0x437990', 77), ('0x4379d0', 79),
+                      ('0x43ba90', 81), ('0x43bf50', 89), ('0x43bfa0', 90),
                       ('0x43bc40', 84), ('0x43bd00', 85), ('0x43bdc0', 86),
                       ('0x43be40', 87), ('0x43bef0', 88)):
         check((by.get(addr) or {}).get('confirmed_id') == cid,
@@ -107,6 +117,12 @@ def main():
         check('ang < 0' in seg and 'ang += 3600' in seg, 'case 82 负数归一化')
         check('sc < 100' in seg and 'sc > 10000' in seg, 'case 82 scale 钳位 100..10000')
         check('FVP_S16' in src, 'C 侧有 int16 截断宏')
+        k77 = src.index('case 77:')
+        check('alpha >= 0 && alpha <= 0xFF' in src[k77:k77 + 900],
+              'case 77 只接受 alpha 0..0xFF')
+        k79 = src.index('case 79:')
+        check('draw == 0 || draw == 1' in src[k79:k79 + 900],
+              'case 79 只接受 draw 0/1')
         k78 = src.index('case 78:')
         seg78 = src[k78:k78 + 900]
         check('blend >= 0 && blend <= 1' in seg78, 'case 78 只接受 blend 0..1')
@@ -137,7 +153,7 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 十个图元 setter handler 的实参规则已冻结，case 82 已按原版语义'
+    print('\nOK: 十二个图元 setter handler 的实参规则已冻结，case 82 已按原版语义'
           '（angle mod 3600 / scale 100..10000 / int16 存储）修正')
     return 0
 

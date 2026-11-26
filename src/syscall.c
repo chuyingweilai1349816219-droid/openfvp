@@ -468,9 +468,15 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
     case 75: /* PrimGroupOut(id) */
         (void)gfx_prim_group_out(g, id);
         break;
-    case 77: /* PrimSetAlpha(id, alpha) */
+    case 77: /* PrimSetAlpha(id, alpha)
+              * 原版 0x437990：id 1..0xFFF；alpha 只接受 int 且 **0..0xFF**，
+              * 越界保持原值；写 u8 到 prim+0x07，不置 flags。 */
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_ALPHA, fvp_gfx_int(&a[1]));
+            int alpha = fvp_gfx_int(&a[1]);
+
+            if (alpha >= 0 && alpha <= 0xFF) {
+                (void)gfx_set_prim(g, id, GFX_F_ALPHA, alpha);
+            }
         }
         break;
     /* 原版把这些字段按 u16 存、按 int16 读回（handler 0x43BF50/0x43BFA0 等），
@@ -488,9 +494,15 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             }
         }
         break;
-    case 79: /* PrimSetDraw(id, draw) */
+    case 79: /* PrimSetDraw(id, draw)
+              * 原版 0x4379D0：id 0..0xFFF（允许 0）；draw **只接受 0 / 1**，
+              * 其它值保持原值；写 u8 到 prim+0x05（可见性），不置 flags。 */
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_DRAW, fvp_gfx_int(&a[1]));
+            int draw = fvp_gfx_int(&a[1]);
+
+            if (draw == 0 || draw == 1) {
+                (void)gfx_set_prim(g, id, GFX_F_DRAW, draw);
+            }
         }
         break;
     case 80: /* PrimSetNull(id) */

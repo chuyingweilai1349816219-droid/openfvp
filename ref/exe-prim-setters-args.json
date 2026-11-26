@@ -14,6 +14,32 @@
  ],
  "handlers": [
   {
+   "confirmed_id": 77,
+   "guess": "PrimSetAlpha(77)（两部作品合计 1052 次，全片最高频）",
+   "handler": "0x437990",
+   "rules": [
+    "arg0 = int 且 **1..0xFFF**",
+    "arg1 int 且 **0..0xFF**（`cmpl $0xff; ja` 无符号比较），越界保持原值",
+    "不置任何 flags 位"
+   ],
+   "writes": [
+    "prim+0x07 = alpha"
+   ]
+  },
+  {
+   "confirmed_id": 79,
+   "guess": "PrimSetDraw(79)（两部作品合计 353 次）",
+   "handler": "0x4379d0",
+   "rules": [
+    "arg0 = int 且 **0..0xFFF**（这一条允许 0）",
+    "arg1 int 且**只接受 0 或 1**，其它值保持原值",
+    "不置 flags；绘制分派先判 prim+0x05 == 0 直接返回（0x438AB5）"
+   ],
+   "writes": [
+    "prim+0x05 = draw（可见性）"
+   ]
+  },
+  {
    "confirmed_id": 78,
    "guess": "PrimSetBlend(78)",
    "handler": "0x43ba20",
@@ -42,6 +68,7 @@
    ]
   },
   {
+   "confirmed_id": 82,
    "guess": "PrimSetRS(82)",
    "handler": "0x43baf0",
    "rules": [
@@ -164,6 +191,50 @@
   }
  ],
  "instructions": [
+  {
+   "instr": "cmpb   $0x2,(%edx)",
+   "pc": "0x437994"
+  },
+  {
+   "instr": "cmp    $0x1,%eax",
+   "pc": "0x43799c"
+  },
+  {
+   "instr": "cmp    $0x1000,%eax",
+   "pc": "0x4379a1"
+  },
+  {
+   "instr": "cmpl   $0xff,0xc(%edx)",
+   "pc": "0x4379ae"
+  },
+  {
+   "instr": "imul   $0x34,%eax,%eax",
+   "pc": "0x4379ba"
+  },
+  {
+   "instr": "mov    %dl,0x61dd6b(%eax,%ecx,1)",
+   "pc": "0x4379bd"
+  },
+  {
+   "instr": "test   %eax,%eax",
+   "pc": "0x4379dc"
+  },
+  {
+   "instr": "cmpb   $0x2,0x8(%edx)",
+   "pc": "0x4379e7"
+  },
+  {
+   "instr": "test   %edx,%edx",
+   "pc": "0x4379f0"
+  },
+  {
+   "instr": "cmp    $0x1,%edx",
+   "pc": "0x437a01"
+  },
+  {
+   "instr": "mov    %dl,0x61dd69(%eax,%ecx,1)",
+   "pc": "0x437a09"
+  },
   {
    "instr": "cmpb   $0x2,(%edx)",
    "pc": "0x43ba24"
