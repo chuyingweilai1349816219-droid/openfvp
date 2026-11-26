@@ -4247,3 +4247,8 @@ make check / verify_gfx / compare / check-docs 全部 PASS。
 
 [0.1.1]: https://github.com/chuyingweilai1349816219-droid/openfvp/releases/tag/v0.1.1
 [0.1.0]: https://github.com/chuyingweilai1349816219-droid/openfvp/releases/tag/v0.1.0
+补充（第 234 轮实测）：把"素材目录"改成**从脚本路径推导**（不依赖环境变量），仍然打不开。
+根因已定位到 `src/gfx.c` 的 `gfx_win32_ansi_path()`：它把入参当 **UTF-8** 转成 ANSI 再 `fopen`；
+而 portable 层的 `argv` 在 Windows 上已经是 **ANSI（CP936）** 字节，二次转换后路径就坏了。
+修法（下一轮）：统一编码契约 —— 要么 portable 层用 `GetCommandLineW` + `CP_UTF8` 提供 UTF-8 argv
+（所有 layload 路径都按 UTF-8 → 宽字符打开），要么让 `gfx_archive_host_create()` 直接接受 ANSI。

@@ -222,7 +222,32 @@ int main(int argc, char **argv)
          * （CHANGELOG 五十六续）；给了素材才可能走进正文。 */
         static GfxArchiveHost *arc_host = NULL;
         const char *gd = getenv("FVP_GAME_DIR");
+        char dirbuf[4096];
         const GfxHost *host = NULL;
+
+        if (gd == NULL && script != NULL) {
+            /* 没给 FVP_GAME_DIR 时，从脚本路径推目录：脚本路径是命令行实参，
+             * 它的编码链路是可靠的（中文目录下的 iroseka.hcb 一直能读），
+             * 而环境变量那一跳会走 CRT 的 ANSI 转换，中文会坏（CHANGELOG 五十八续）。 */
+            const char *p = script;
+            const char *slash = NULL;
+            size_t n;
+
+            while (*p != '\0') {
+                if (*p == '/' || *p == '\\') {
+                    slash = p;
+                }
+                ++p;
+            }
+            if (slash != NULL) {
+                n = (size_t)(slash - script);
+                if (n > 0 && n < sizeof dirbuf) {
+                    memcpy(dirbuf, script, n);
+                    dirbuf[n] = '\0';
+                    gd = dirbuf;
+                }
+            }
+        }
 
         if (gd != NULL && gd[0] != '\0') {
             arc_host = gfx_archive_host_create(gd);
