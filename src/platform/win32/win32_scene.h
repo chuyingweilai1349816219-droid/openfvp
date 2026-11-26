@@ -12,8 +12,8 @@ extern "C" {
 /* 读一帧场景二进制并灌进 gfx（prims / graphs / texts / text_layout）。 */
 int fvp_scene_load(Gfx *gfx, const wchar_t *path);
 
-/* 显示一帧，直到窗口关闭（ESC / 关闭按钮）。 */
-int fvp_scene_present_loop(Gfx *gfx, FvpWin32Window *win);
+/* 显示一帧，直到窗口关闭（ESC / 关闭按钮）或 seconds>0 到点。 */
+int fvp_scene_present_loop(Gfx *gfx, FvpWin32Window *win, double seconds);
 
 #ifdef __cplusplus
 }

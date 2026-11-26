@@ -3718,8 +3718,22 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 gfx_text_set_hidden(gfx, opts.hide_text_layer[k], 1);
                 fvp_logf("scene: 隐藏文本层 %d", opts.hide_text_layer[k]);
             }
-            fvp_logf("scene: %s 已载入（ESC / 关窗口退出）", "scene.bin");
-            (void)fvp_scene_present_loop(gfx, &win);
+            fvp_logf("scene: %s 已载入（ESC / 关窗口退出%s）", "scene.bin",
+                     opts.run_seconds > 0.0 ? "，或 --run-seconds 到点" : "");
+            (void)fvp_scene_present_loop(gfx, &win, opts.run_seconds);
+            if (opts.screenshot[0] != L'\0') {
+                const uint32_t *px;
+                int cw = 0;
+                int ch = 0;
+
+                px = gfx_canvas(gfx, &cw, &ch);
+                if (px != NULL && write_bmp32(opts.screenshot, px, cw, ch)) {
+                    char u8s[PATH_CAP * 3];
+
+                    fvp_logf("screenshot: %s %dx%d (scene mode)", 
+                             w2u(opts.screenshot, u8s, sizeof(u8s)), cw, ch);
+                }
+            }
         }
         fvp_win32_destroy(&win);
         gfx_destroy(gfx);

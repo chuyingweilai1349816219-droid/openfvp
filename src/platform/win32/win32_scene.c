@@ -1,12 +1,4 @@
-/* FVP Win32 shell -- replay one dumped render state in a real window.
- *
- * 用途：`bin/fvp.exe --scene out/c/scene.bin` 把 work/scene_to_bin.py 导出的
- * 一帧渲染状态（prims / graphs / texts / text_layout）灌进 src/gfx.c，然后在
- * 真正的 1920x1080 窗口里显示出来。它不跑 VM，只用于"人眼验收"某一帧：
- * 位置、对话框、字号、层序都来自 dump，和离线 PNG 是同一份状态。
- *
- * 场景二进制格式见 work/scene_to_bin.py 顶部（小端，magic "FVPS"）。
- */
+/* FVP Win32 shell -- replay one dumped render state in a real window. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +6,6 @@
 
 #include "gfx.h"
 #include "win32_scene.h"
-#include "win32_window.h"
 
 typedef struct SceneReader {
     FILE *fp;
@@ -86,7 +77,6 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
         fclose(r.fp);
         return 0;
     }
-    /* canvas / background：canvas 取自窗口侧（1920x1080 固定），这里只吃 bg。 */
     {
         int cw = 0, ch = 0, bg[4];
 
@@ -102,7 +92,6 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
         }
         gfx_set_background(gfx, bg[0], bg[1], bg[2], bg[3]);
     }
-    /* graphs */
     if (!rd_i32(&r, &n)) {
         fclose(r.fp);
         return 0;
@@ -133,7 +122,6 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
         }
         free(name);
     }
-    /* prims */
     if (!r.bad && rd_i32(&r, &n)) {
         for (i = 0; i < n && !r.bad; ++i) {
             int v[20];
@@ -156,7 +144,6 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
             }
         }
     }
-    /* texts */
     if (!r.bad && rd_i32(&r, &n)) {
         for (i = 0; i < n && !r.bad; ++i) {
             int idx = 0, col[3], size[2], out[2], has_pos = 0, pos[2] = {0, 0};
@@ -215,7 +202,6 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
             }
         }
     }
-    /* text_layout */
     if (!r.bad && rd_i32(&r, &n)) {
         for (i = 0; i < n && !r.bad; ++i) {
             int idx = 0, x = 0, y = 0, maxw = 1920, size = 32, lines = 1;
@@ -241,12 +227,16 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
     return r.bad ? 0 : 1;
 }
 
-/* 只要窗口还活着就一直重画这一帧（不推进任何状态）。 */
-int fvp_scene_present_loop(Gfx *gfx, FvpWin32Window *win)
+/* 只要窗口还活着就重画这一帧（不推进任何状态）。
+ * seconds > 0 时到点自动退出（`--run-seconds` 在回放模式下同样生效）。 */
+int fvp_scene_present_loop(Gfx *gfx, FvpWin32Window *win, double seconds)
 {
+    ULONGLONG t0;
+
     if (gfx == NULL || win == NULL) {
         return 0;
     }
+    t0 = GetTickCount64();
     while (!win->quit) {
         const uint32_t *canvas;
         int cw = 0;
@@ -259,6 +249,13 @@ int fvp_scene_present_loop(Gfx *gfx, FvpWin32Window *win)
         canvas = gfx_canvas(gfx, &cw, &ch);
         if (canvas != NULL) {
             (void)fvp_win32_present(win, canvas, cw, ch);
+        }
+        if (seconds > 0.0) {
+            double elapsed = (double)(GetTickCount64() - t0) / 1000.0;
+
+            if (elapsed >= seconds) {
+                break;
+            }
         }
         Sleep(16);
     }

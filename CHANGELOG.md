@@ -4,6 +4,65 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（一百续）：`--scene` 回放支持 `--run-seconds`/`--screenshot`，并新增"回放 == 实时"逐像素门禁
+
+### 1. 回放模式补齐两件事
+
+`bin/fvp.exe --scene FILE` 之前只能手动关窗口（回放循环不认 `--run-seconds`，也不写
+`--screenshot`）。本轮补上：
+
+| 能力 | 行为 |
+|---|---|
+| `--run-seconds S` | 回放到 S 秒自动退出（`fvp_scene_present_loop(gfx, win, seconds)`，用 `GetTickCount64` 计墙钟） |
+| `--screenshot FILE` | 退出时把最后一帧写成 32 位 BMP（与正常模式同一套 `write_bmp32`） |
+
+这样回放就能进自动化门禁，不再需要外部 `Stop-Process` 收尾。
+
+### 2. 新门禁：`tests/verify_scene_replay.py`
+
+链路（全部真跑）：
+
+```
+1) bin/fvp-headless.exe iroseka.hcb --steps 30000 --dump-scene out/c/scene-replay.bin --screenshot live.bmp
+     → headless: scene -> … ；screenshot -> …（24 位 BMP，1920x1080）
+2) bin/fvp.exe --game <dir> --script iroseka.hcb --scene out/c/scene-replay.bin
+     --run-seconds 1.5 --screenshot replay.bmp --log …
+3) 逐像素比较 live.bmp 与 replay.bmp
+```
+
+实测结果：
+
+```
+live   1920x1080, replay 1920x1080
+pixels 0/2073600 changed (0.0000%), max channel diff 0
+
+OK: --scene 回放与引擎实时渲染的同一帧逐像素一致
+```
+
+意义：这是目标清单 ② 「让离线帧与窗口一致」的**直接证据**——同一份场景二进制，
+经 `--dump-scene` 导出、外壳 `--scene` 读回，画出来和引擎实时那条路径**逐像素相同**。
+如果以后 FVPS 格式或装载逻辑丢字段，这条门禁会立刻变红。
+
+### 3. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS** |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_opening_render.py` | **PASS**（两作） |
+| `tests/verify_scene_replay.py`（新） | **PASS**（0/2,073,600 差异像素） |
+| `verify_prim_refs` / `verify_thread_calls` / `verify_text_geometry` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 4. 诚实说明
+
+- 这条门禁覆盖的是**引擎能真实跑到的那一帧**（第 30,000 步，标题前）。它证明的是
+  "回放链路无损"，**不**等于"正文帧已经能看到"——正文帧仍然受 `prim 265` 卡死影响。
+- 但它把 ② 从"没有验收手段"变成"有逐像素门禁"，以后导出/回放任何一帧都可以复用。
+- 本轮顺带把 `--scene` 的自动化收尾补上；上一轮记录里"回放要手动 Stop-Process"的问题
+  就此消除。
+
 ## [未发布] — 2026-11-26（九十九续）：`global[236]` 的六个赋值站点 —— 脚本开场只在"菜单动作"路径上
 
 上一轮把问题收敛到 `global[236]` 守卫。这一轮把它的赋值站点全枚举出来并和轨迹对照。
