@@ -153,6 +153,9 @@ typedef struct Options {
     int title_no_bg; /* --title-no-bg：标题菜单不铺背景（几何测量用） */
     int title_hover_seed; /* --title-hover N：启动就把第 N 项设为 hover（截图/门禁用，-1 = 不动） */
     int title_no_hover; /* --title-no-hover：完全不按鼠标位置算 hover（截图门禁用） */
+    /* --dump-text-prims：每 500 ms 把每个文本图元的 id/层号/位置/父链绝对位置
+     * 写进日志（诊断正文位置用，不影响渲染）。 */
+    int dump_text_prims;
     int load_restart; /* --load-restart：Load(slot) 时读槽文件 + 复位场景 + 重启脚本
                        * （保留 globals/flags；槽尾快照段还没逆清，暂不应用） */
     int debug_save_request;
@@ -476,6 +479,7 @@ static const wchar_t *usage_text(void)
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
            L"  --title-bg-anim     标题背景按脚本做缩放+旋转动画（五彩四层 25 s；星空 2000->1000 40 s；默认关）\n"
            L"  --title-bg-div N    背景动画的内部分辨率除数（1 = 全分辨率最清晰，2 默认，4/8 更快）\n"
+           L"  --dump-text-prims   每 500 ms 把文本图元 id/层号/位置/父链绝对位置写进日志\n"
            L"  --load-restart      Load(slot) 时读槽文件 + 复位场景 + 重启脚本（保留 globals/flags）\n"
            L"  --shot-every MS     运行中每 MS 毫秒抓一张（配 --shot-prefix；做动画 demo）\n"
            L"  --shot-prefix P     --shot-every 的文件名前缀（写 P-0000.bmp ..）\n"           L"  --shot-div N       抓帧时 box 降采样 N 倍（1..8，默认 1）\n"
@@ -783,6 +787,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             wcsncpy(o->shot_prefix, argv[++i], PATH_CAP - 1);
         } else if (wcscmp(a, L"--title-no-bg") == 0) {
             o->title_no_bg = 1;
+        } else if (wcscmp(a, L"--dump-text-prims") == 0) {
+            o->dump_text_prims = 1;
         } else if (wcscmp(a, L"--title-no-hover") == 0) {
             o->title_no_hover = 1;
         } else if (wcscmp(a, L"--title-hover") == 0 &&
@@ -1948,6 +1954,9 @@ static double title_bg_now;
  * (1920/N)x(1080/N) 再双线性放大。默认 2（960x540，已比原来的 8 清晰 16 倍）；
  * `--title-bg-div N` 可覆盖（1 全分辨率 / 2 / 3 / 4 / 8）。 */
 static int title_bg_div = 1;
+/* --dump-text-prims 的节流计时（秒） */
+static double text_prim_dump_t0;
+static int text_prim_dump_on;
 
 static FvpTitleEnter title_enter;
 static FvpTitleEnterGame title_enter_game = FVP_TITLEENTER_GAME_IROSEKA;
@@ -2126,6 +2135,60 @@ static void draw_game_menu(Gfx *gfx, const FvpGameMenu *m)
                                  120, y + 96, px, 220, 220, 230, 255);
         (void)gfx_draw_text_line(gfx, "skip / auto   : not implemented",
                                  120, y + 144, px, 200, 200, 210, 255);
+    }
+}
+
+/* --dump-text-prims：把当前所有 type-5 文本图元的位置写进日志（每 500 ms 一次）。
+ * 只读 gfx 状态，不做任何绘制；用于把"正文在哪"这件事变成可复现的日志证据。 */
+static void dump_text_prims(Gfx *g, double now)
+{
+    int id;
+
+    if (g == NULL || !text_prim_dump_on) {
+        return;
+    }
+    if (now - text_prim_dump_t0 < 0.5) {
+        return;
+    }
+    text_prim_dump_t0 = now;
+    for (id = 1; id < GFX_PRIM_MAX; ++id) {
+        int type = 0;
+        int tw = -1;
+        int x = 0;
+        int y = 0;
+        int parent = -1;
+        int alpha = 0;
+        int ax = 0;
+        int ay = 0;
+        int p = id;
+        int guard = 0;
+
+        if (gfx_get_prim(g, id, GFX_F_TYPE, &type) != 0 || type != 5) {
+            continue;
+        }
+        (void)gfx_get_prim(g, id, GFX_F_TW, &tw);
+        (void)gfx_get_prim(g, id, GFX_F_X, &x);
+        (void)gfx_get_prim(g, id, GFX_F_Y, &y);
+        (void)gfx_get_prim(g, id, GFX_F_PARENT, &parent);
+        (void)gfx_get_prim(g, id, GFX_F_ALPHA, &alpha);
+        ax = x;
+        ay = y;
+        while (p > 0 && p < GFX_PRIM_MAX && guard++ < GFX_PRIM_MAX) {
+            int px = 0;
+            int py = 0;
+
+            (void)gfx_get_prim(g, p, GFX_F_PARENT, &parent);
+            if (parent <= 0) {
+                break;
+            }
+            (void)gfx_get_prim(g, parent, GFX_F_X, &px);
+            (void)gfx_get_prim(g, parent, GFX_F_Y, &py);
+            ax += px;
+            ay += py;
+            p = parent;
+        }
+        fvp_logf("textprim id=%d tw=%d xy=%d,%d abs=%d,%d parent=%d alpha=%d",
+                 id, tw, x, y, ax, ay, parent, alpha);
     }
 }
 
@@ -3238,6 +3301,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                  opts.tex_cache_mb == 0 ? " (unlimited)" : "");
         gfx_typewriter_set_enabled(gfx, opts.typewriter);
     gfx_set_text_fixed_layout(gfx, opts.text_fixed_layout);
+    text_prim_dump_on = opts.dump_text_prims;
+    text_prim_dump_t0 = 0.0;
     fvp_logf("gfx: text %s", opts.text_fixed_layout
                  ? "fixed layout (legacy)" : "prim-driven (original)");
         fvp_logf("gfx: typewriter %s", opts.typewriter ? "on" : "off");
@@ -4062,6 +4127,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         {
             double r0 = now_sec();
             gfx_render(gfx);
+            /* --dump-text-prims：把文本图元的位置写进日志（诊断正文位置用）。 */
+            dump_text_prims(gfx, now);
             /* 标题菜单是引擎侧 UI 覆盖层，必须在 render 之后画。
              * 开场序列期间不画标题（脚本是等开场函数返回后才排标题的逐元素进场，
              * 见 src/titleenter.h，所以 title_anim 也不能在开场期间启动）。 */
