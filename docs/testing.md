@@ -41,7 +41,7 @@
 | INFLATE | `c_assets_guard.exe inflate/rawinflate` + `c_assets fuzz` | 子进程/进程内 | 输出缓冲边界（expect 小于/大于真实长度）+ 40,000 次随机/变异流（带前后守卫页） | 输出缓冲过小必须报错而不是写越界；`guard_violations=0` |
 | 音频 | `fuzz_snd.c`（→ `fuzz_snd.exe`，页保护） | 子进程 | 126 个变异：截断 WAV/Ogg、非法 fmt chunk、bits/channels/rate 伪造、data 长度说谎、Ogg 页头破坏、前缀/全文件翻转、随机垃圾 | 解码成功或拒绝；解码后混音固定 2048 帧；0 崩溃/越界/挂死 |
 | 既有验收（回归） | `compare.py --run`、`verify_assets.py --quick`、`bin/test_snd.exe` | 原样调用 | 真实脚本与资源 | 与现状一致（PASS） |
-| **动画（静态门）** | `verify_gfx.ps1 -SkipDump` | `bin/test_gfx.exe` 回放 528k 步场景 | 真实资产 | 动画默认关闭时参考帧指标必须**一分不变**：24/24 图元位置误差 **0 px**、像素差 **293 (0.0141%)**、PSNR **49.94 dB**、SSIM **0.99971**（2026-11 实测仍 PASS） |
+| **动画（静态门）** | `verify_gfx.ps1 -SkipDump` | `bin/test_gfx.exe` 回放 528k 步场景 | 真实资产 | 动画默认关闭时参考帧指标必须**一分不变**：24/24 图元位置误差 **0 px**、像素差 **289 (0.0139%)**、PSNR **49.95 dB**、SSIM **0.99971**（2026-11 实测仍 PASS） |
 | **长跑（soak）** | `verify_soak.ps1` | 真跑 `bin\fvp.exe --run-seconds N`，期间 2 s 一次采样工作集 | 默认 180 s | 退出码 0、工作集增长 ≤ 96 MiB、
 每个 5 s 窗口 fps ≥ 55 且 slow ≤ 2、`underruns=0`、脚本有产出、日志无 error/fatal。
 实测（2026-11-24，`-Seconds 45`，iroseka，音频开）：退出码 0、工作集 140.1→196.1 MiB

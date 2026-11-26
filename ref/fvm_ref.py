@@ -242,10 +242,10 @@ class VM(object):
                 t.pc = args[0]
             else:
                 t.pc += 5
-        elif op == 0x08:
-            self.push(t, 1); t.pc += 1
-        elif op == 0x09:
-            self.push(t, 0); t.pc += 1
+        elif op == 0x08:  # pushtrue：Variant 类型 1 = bool（不是 int 1）
+            self.push(t, True); t.pc += 1
+        elif op == 0x09:  # pushfalse
+            self.push(t, False); t.pc += 1
         elif op == 0x0a:
             self.push(t, args[0]); t.pc += 5
         elif op == 0x0b:

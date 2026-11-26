@@ -14,7 +14,7 @@
 
 | 现有验收 | 为什么会被影响 |
 |---|---|
-| `verify_gfx.ps1` 的 528,000 步参考帧（像素差 0.0141% / PSNR 49.94） | 参考帧是 Python 原型渲染的**静态**一帧；动画一旦生效，立绘会在同一时刻处于不同位置/透明度，像素必然不同 |
+| `verify_gfx.ps1` 的 528,000 步参考帧（像素差 0.0139% / PSNR 49.95） | 参考帧是 Python 原型渲染的**静态**一帧；动画一旦生效，立绘会在同一时刻处于不同位置/透明度，像素必然不同 |
 | `verify_render_vm.ps1` 的「端到端帧与参考一致」 | 同上 |
 | `compare.py` 的逐字节文本（6,496 B / `7F9837FF…`） | 如果时间模型改变了文本推进节奏，文本行数与内容都可能变 |
 
@@ -89,7 +89,7 @@
 - 原版是 i16 + 整数除法（向零截断），本站是 double 插值：中间帧最多差 1 个坐标单位，
   文档不掩饰这一点
 - 冻结基线不受影响：`compare.py` / `run_all.py` / `verify_gfx` 都在「动画关闭」下跑
-  （`motion: disabled (static prims, pixel baseline kept)`），像素基线仍是 293 px 差
+  （`motion: disabled (static prims, pixel baseline kept)`），像素基线仍是 289 px 差
 
 验证：`tests/test_motion.c` 从 47 项扩到 **85 项**（新增 38 项覆盖端点/越界钳制/
 中点/5 条曲线单调性/形态特征值/端到端补间取值）；`verify_motion.ps1` 仍是

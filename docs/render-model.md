@@ -116,7 +116,7 @@ draw / 父组平移都跟着图元走。`TextPos`(122) 在两部目标作品里 
 | 对话框 / 人名板 | **引擎不画**：框和名牌是脚本自己 `GraphLoad` 的图元 | 旧路径的合成框是我们自己的近似 |
 
 旧路径（外壳 `--text-fixed-layout`）：引擎画合成对话框 + 32 个窗口全部按
-`gfx_layout_default(layer)` 画一遍。**冻结像素基线（`verify_gfx` 293 px）就是旧路径冻结的**，
+`gfx_layout_default(layer)` 画一遍。**冻结像素基线（`verify_gfx` 289 px）就是旧路径冻结的**，
 `tests/test_gfx.c` 里显式调用 `gfx_set_text_fixed_layout(g, 1)` 钉住它，所以基线不变。
 汇总行 `text prims N drawn, M bound (…; mode …)` 给出这一帧用图元画了几个窗口、绑定了几个。
 
@@ -124,7 +124,7 @@ draw / 父组平移都跟着图元走。`TextPos`(122) 在两部目标作品里 
 原版用它做淡入淡出。我们的实现把 alpha 折进颜色通道（`c * alpha / 255`）再画——
 原因是本引擎的字形覆盖是"一次性写屏"：`ink_px()` 在覆盖率 `cov == 255` 时直接写 RGB、
 不参与 DST 混合，所以真正的 src-over 混合需要改造 `ink_px`（连带会改变现有描边像素，
-动 293 px 冻结基线）。因此：
+动 289 px 冻结基线）。因此：
 
 - `alpha == 255`（默认路径与所有冻结基线）→ 一个像素都不变
 - `alpha < 255` → 视觉上是淡出，但**不是**物理正确的 alpha 合成；文档不掩饰这一点
@@ -415,7 +415,7 @@ tw 10: mask=0x07 color=10,1,1    size=64x8  speed=0  ms shadow=0  space=0,0  ski
   两者都只存不画；`draw_text_window()` 里不再有任何阴影层；
 - `test_textattr` 扩到 **56 项**（含 125 的钳制语义、128 的逐分量跳过）。
 
-**验证**：`verify_gfx.ps1 -SkipDump` 仍是 **293 px / PSNR 49.94 dB / SSIM 0.99971 / 24/24 图元
+**验证**：`verify_gfx.ps1 -SkipDump` 仍是 **289 px / PSNR 49.95 dB / SSIM 0.99971 / 24/24 图元
 0 px**（528k 帧上 `shadow=12` 但 `space=0,0`、且两者都不参与绘制，所以像素不变）；
 外壳 45 s 的 `unimpl cmds` 从 20 种降到 **18 种**（128 消失）。
 
@@ -506,7 +506,7 @@ glyphs         0 tofu, 1 from fallback atlas
 - 单测 `tests/test_glyph_fallback.c` **16 项**：造两个临时 GFXF 图集（34px 只有 'B'、
   16px 只有 'A'），验证「命中不兜底 / 缺字走兜底且不画豆腐块 / 都缺才豆腐块 /
   计数每次 render 归零」
-- `verify_gfx` 仍是 **293 px / PSNR 49.94 / SSIM 0.99971**：528k 那一帧的 `tw9` 没有文字，
+- `verify_gfx` 仍是 **289 px / PSNR 49.95 / SSIM 0.99971**：528k 那一帧的 `tw9` 没有文字，
   所以像素不变（这个 bug 同样只有跑到标题出现时才显形）
 
 ### 7.4 `TextFormat`(118) / `TextFunction`(119)：只记录
@@ -600,7 +600,7 @@ gfx 侧 `gfx_text_set_format()` / `gfx_text_set_function()` 只存不画。
 即 **`parent == -1`（从没被 `PrimGroupIn` 放进组）、`graph == 自己的 id`（该 graph
 槽从没 `GraphLoad` 过）、w/h 都是 0**。按第一层的规则 `parent == 0xFFFF → 返回 0`，
 所以 528k 步 132 次调用、2M 步 407 次调用**全部 0 命中** —— 与原版一致，不是移植
-缺陷。这也是"接上 `PrimHit` 之后 `verify_gfx` 的 293 px / PSNR 49.94 / SSIM 0.99971
+缺陷。这也是"接上 `PrimHit` 之后 `verify_gfx` 的 289 px / PSNR 49.95 / SSIM 0.99971
 一分不变"的原因：画面路径根本没被这条命令影响。
 
 （这 11 个图元应该是脚本给"选择支/菜单"预留的槽位，本作跑到 2M 步还没走到需要
@@ -912,7 +912,7 @@ Variant **type 2（int）** 才写字段，所以 `PrimSetText(551, 0, true, tru
 ```
 
 冻结文本基线（`ref/ref-900k.txt`）**逐字节不变**（6496 B / 195 行 / sha256
-`7f9837ff…`），像素基线也不变（293 px / 0.0141% / PSNR 49.94 / SSIM 0.99971）——
+`7f9837ff…`），像素基线也不变（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971）——
 因为 BOOL 只在"handler 的类型检查"这一层可区分，数值语义与 int 1 完全等价。
 
 **仍未解决的部分（诚实记录）**：我们的 30 s 采样窗口里 `PrimSetText(551, …)`
