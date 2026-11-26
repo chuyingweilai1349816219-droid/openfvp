@@ -172,6 +172,32 @@ int fvp_textattr_set_font(FvpTextAttr *attrs, int count, int idx, int id,
     }
     return wrote;
 }
+int fvp_textattr_set_font_ex(FvpTextAttr *attrs, int count, int idx,
+                             int id, int id2, int id_max,
+                             int has_id, int has_id2)
+{
+    int wrote = 0;
+
+    if (attrs == NULL || idx < 0 || idx >= count || idx >= FVP_TEXT_WINDOWS) {
+        return 0;
+    }
+    if (id_max > FVP_TEXT_FONT_MAX) {
+        id_max = FVP_TEXT_FONT_MAX;
+    }
+    if (has_id && id >= FVP_TEXT_FONT_MIN && id <= id_max) {
+        attrs[idx].font_id = id;
+        wrote = 1;
+    }
+    if (has_id2 && id2 >= FVP_TEXT_FONT_MIN && id2 <= id_max) {
+        attrs[idx].font_id2 = id2;
+        wrote = 1;
+    }
+    if (wrote) {
+        attrs[idx].set_mask |= FVP_TEXTATTR_FONT;
+    }
+    return wrote;
+}
+
 
 /* 单字段赋值：值在 [lo,hi] 内才写，返回 1 表示写了。 */
 static int set_in_range(int *dst, int v, int lo, int hi)

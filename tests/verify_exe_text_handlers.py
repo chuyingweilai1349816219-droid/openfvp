@@ -68,7 +68,9 @@ def main():
 
     print('== 2. 四个 handler ==')
     want = {110: ('TextBuff', '0x43c830'), 112: ('TextColor', '0x43c8d0'),
-            120: ('TextOutSize', '0x43c960'), 126: ('TextSize', '0x43cd60')}
+            113: ('TextFont', '0x43da70'), 120: ('TextOutSize', '0x43c960'),
+            125: ('TextShadowDist', '0x43cbb0'), 126: ('TextSize', '0x43cd60'),
+            127: ('TextSkip', '0x43cdd0'), 128: ('TextSpace', '0x43ce10')}
     check(set(hs) == set(want), 'handler 集合 = %r（实际 %r）'
           % (sorted(want), sorted(hs)))
     for cid, (name, pc) in want.items():
@@ -95,6 +97,16 @@ def main():
     r110 = (hs.get(110) or {}).get('rules') or {}
     check('缺省 8' in (r110.get('w') or '') and '缺省 8' in (r110.get('h') or ''),
           'TextBuff w/h 缺省 8')
+    r113 = (hs.get(113) or {}).get('rules') or {}
+    check('动态' in (r113.get('out_of_range') or ''),
+          'TextFont 的上界是动态的（字体表项数-1）')
+    r125 = (hs.get(125) or {}).get('rules') or {}
+    check('钳位' in (r125.get('dist') or ''),
+          'TextShadowDist 是**钳位** 0..0xC（与其他 handler 的"跳过"不同）')
+    r127 = (hs.get(127) or {}).get('rules') or {}
+    check('0..3' in (r127.get('mode') or ''), 'TextSkip mode 0..3')
+    r128 = (hs.get(128) or {}).get('rules') or {}
+    check('-0x20..0x20' in (r128.get('x') or ''), 'TextSpace x -0x20..0x20')
 
     print('== 5. C 侧一致性 ==')
     gfx = read(os.path.join(FVP, 'src', 'gfx.c'))
@@ -111,12 +123,24 @@ def main():
     check('fvp_gfx_is_int(&a[1])' in seg2 and 'fvp_gfx_is_int(&a[2])' in seg2 and
           'fvp_gfx_is_int(&a[3])' in seg2,
           'case 112 逐个判断参数是不是 int')
+    seg3 = sysc[sysc.index('case 113:'):sysc.index('case 125:')]
+    check('fvp_vm_font_count(vm) - 1' in seg3,
+          'case 113 用"字体表项数-1"当动态上界')
+    check('fvp_textattr_set_font_ex' in seg3, 'case 113 用逐分量入口')
+    check('has1' in seg3 and 'has2' in seg3,
+          'case 113 记下每个 id 是不是 int（非 int 不覆盖）')
+    ta = read(os.path.join(FVP, 'src', 'textattr.c'))
+    i3 = ta.index('int fvp_textattr_set_font_ex')
+    seg4 = ta[i3:i3 + 700]
+    check('id >= FVP_TEXT_FONT_MIN && id <= id_max' in seg4,
+          'set_font_ex 用传入的动态上界')
+    check('has_id &&' in seg4 and 'has_id2 &&' in seg4, '非 int 的 id 被跳过')
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 四个文本 handler 的实参规则（逐分量判 int + 范围、不满足保持原值）'
-          '与 exe 一致')
+    print('\nOK: 八个文本 handler 的实参规则（层号 0..0x1F；分量逐分量判 int + 范围，'
+          '不满足保持原值 / TextShadowDist 钳位）与 exe 一致')
     return 0
 
 

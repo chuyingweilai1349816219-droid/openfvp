@@ -45,6 +45,7 @@
 #pragma weak gfx_text_set_out_size
 #pragma weak gfx_text_set_buff
 #pragma weak gfx_text_set_pos
+#pragma weak fvp_textattr_set_font_ex
 #pragma weak gfx_text_set_color_ex
 #pragma weak gfx_text_set_pos_ex
 #pragma weak gfx_text_set_size
@@ -1644,15 +1645,17 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     case 113:
         if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
             int id = (int)args[0].i;
-            int fid = (argc >= 2 && args[1].type == (uint8_t)FVP_INT)
-                          ? (int)args[1].i
-                          : 0;
-            int fid2 = (argc >= 3 && args[2].type == (uint8_t)FVP_INT)
-                           ? (int)args[2].i
-                           : 0;
+            int has1 = (argc >= 2 && args[1].type == (uint8_t)FVP_INT);
+            int has2 = (argc >= 3 && args[2].type == (uint8_t)FVP_INT);
+            int fid = has1 ? (int)args[1].i : 0;
+            int fid2 = has2 ? (int)args[2].i : 0;
+            int fmax = fvp_vm_font_count(vm) - 1;
 
-            if (fvp_textattr_set_font(vm->textattr, FVP_TEXT_WINDOWS, id, fid,
-                                      fid2) &&
+            if (fmax < 0) {
+                fmax = 0;
+            }
+            if (fvp_textattr_set_font_ex(vm->textattr, FVP_TEXT_WINDOWS, id,
+                                         fid, fid2, fmax, has1, has2) &&
                 vm->gfx_bridge != NULL && gfx_text_set_font != NULL &&
                 id >= 0 && id < FVP_TEXT_WINDOWS) {
                 gfx_text_set_font(vm->gfx_bridge->gfx, id,

@@ -980,8 +980,19 @@ MotionMove prim=552 x=1 y=852 z=1 ms=1 mode=3 (instant)
 |---|---|---|
 | `TextBuff(110)` | `0x43C830` | w/h 缺省 8，int 且 ≥0 才覆盖；越界交给 `0x430EA0` 抛异常 |
 | `TextColor(112)` | `0x43C8D0` | R/G/B 各自 int 且 **0..0xFF** |
+| `TextFont(113)` | `0x43DA70` | 两个字体 id 各自 int 且 **-5..(字体表项数-1)**，上界是**动态**的 |
 | `TextOutSize(120)` | `0x43C960` | arg2 **0..0xC**、arg3 **0..0x8** |
+| `TextShadowDist(125)` | `0x43CBB0` | 距离 **钳位** 到 0..0xC（负数→0、>0xC→0xC），非 int→0 |
 | `TextSize(126)` | `0x43CD60` | w **0xC..0x40**、h **0x8..0x20** |
+| `TextSkip(127)` | `0x43CDD0` | mode int **0..3** → `tw+0x5D7` |
+| `TextSpace(128)` | `0x43CE10` | x/y 各自 int **-0x20..0x20** → `tw+0x5A8/0x5AA`（与 TextFormat 的前两个分量同字段） |
+
+注意 `TextShadowDist` 是这一族里**唯一钳位**的（其余都是"越界跳过、保持原值"）。
+
+本轮修的第二处偏差：`TextFont` 原来把非 int 的分量当 **0** 传下去（0 是合法字体号，
+于是覆盖了原值），而且上界用静态 31。原版是"非 int 跳过 + 上界 = 字体表项数-1"。
+现在改成 `fvp_textattr_set_font_ex()`（带 has 标志 + 动态上界），`syscall.c` 的
+case 113 用 `fvp_vm_font_count(vm)-1` 当上界。
 
 我们这轮修掉的一处真实偏差：`TextColor` 原来无条件调 `gfx_text_set_color()`（内部
 `& 255`），于是 `TextColor(0, 300, 0, 0)` 会把 R 写成 44；原版是**保持原值**。现在改成

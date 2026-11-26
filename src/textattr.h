@@ -60,6 +60,8 @@ extern "C" {
  * 列表，所以这里用 FVP_TEXT_FONT_MAX 作保守上界，真正的上界判定留给渲染层。
  * 实测两部作品只用到 -1 / -2（见 docs/vm-commands.md §5）。 */
 #define FVP_TEXT_FONT_MIN (-5)
+/* 上界是**动态**的：原版 handler 0x43DA70 用"字体表项数 - 1"当上界
+ * （`(end-begin)/4 - 1`）。这里的 31 只是数组容量的静态上限。 */
 #define FVP_TEXT_FONT_MAX 31
 /* TextFormat(118) 六个参数的取值范围（静态分析 0x43CC10，逐字段独立判定）：
  *   arg1/arg2 → tw+0x5A8/+0x5AA : -32..32（和 TextSpace 是**同一对字段**）
@@ -129,6 +131,12 @@ int fvp_textattr_set_space(FvpTextAttr *attrs, int count, int idx, int x, int y)
 int fvp_textattr_set_skip(FvpTextAttr *attrs, int count, int idx, int mode);
 int fvp_textattr_set_font(FvpTextAttr *attrs, int count, int idx, int id,
                           int id2);
+
+/* TextFont(113) 的原版逐分量语义：每个 id 要求 int 且在 -5..id_max（id_max =
+ * 字体表项数 - 1），不满足的那一个保持原值；has_* = 0 表示该参数不是 int。 */
+int fvp_textattr_set_font_ex(FvpTextAttr *attrs, int count, int idx,
+                             int id, int id2, int id_max,
+                             int has_id, int has_id2);
 int fvp_textattr_set_format(FvpTextAttr *attrs, int count, int idx, int a,
                             int b, int c, int d, int e, int f);
 int fvp_textattr_set_function(FvpTextAttr *attrs, int count, int idx, int a,

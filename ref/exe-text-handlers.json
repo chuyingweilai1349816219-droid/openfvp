@@ -36,6 +36,48 @@
    }
   },
   {
+   "handler": "0x43da70",
+   "id": 113,
+   "name": "TextFont",
+   "rules": {
+    "font1": "int 且 -5..(字体表项数-1)，否则保持原值",
+    "font2": "int 且 -5..(字体表项数-1)，否则保持原值",
+    "layer": "int 0..0x1F",
+    "out_of_range": "逐分量跳过；上界是**动态**的（0x43DAA3/0x43DAA6：(end-begin)/4-1）"
+   }
+  },
+  {
+   "handler": "0x43cbb0",
+   "id": 125,
+   "name": "TextShadowDist",
+   "rules": {
+    "dist": "**钳位**到 0..0xC（负数→0、>0xC→0xC），非 int→0",
+    "layer": "int 0..0x1F",
+    "out_of_range": "钳位（不是跳过）"
+   }
+  },
+  {
+   "handler": "0x43cdd0",
+   "id": 127,
+   "name": "TextSkip",
+   "rules": {
+    "layer": "int 0..0x1F",
+    "mode": "int 0..3，否则保持原值",
+    "out_of_range": "跳过"
+   }
+  },
+  {
+   "handler": "0x43ce10",
+   "id": 128,
+   "name": "TextSpace",
+   "rules": {
+    "layer": "int 0..0x1F",
+    "out_of_range": "逐分量跳过",
+    "x": "int -0x20..0x20，否则保持原值",
+    "y": "int -0x20..0x20，否则保持原值"
+   }
+  },
+  {
    "handler": "0x43cd60",
    "id": 126,
    "name": "TextSize",
@@ -107,6 +149,98 @@
   {
    "instr": "cmp    $0x8,%eax",
    "pc": "0x43c9ad"
+  },
+  {
+   "instr": "cmpb   $0x2,(%edi)",
+   "pc": "0x43da75"
+  },
+  {
+   "instr": "cmp    $0x1f,%ecx",
+   "pc": "0x43da81"
+  },
+  {
+   "instr": "sar    $0x2,%esi",
+   "pc": "0x43daa3"
+  },
+  {
+   "instr": "dec    %esi",
+   "pc": "0x43daa6"
+  },
+  {
+   "instr": "cmp    $0xfffffffb,%eax",
+   "pc": "0x43dab0"
+  },
+  {
+   "instr": "cmp    %esi,%eax",
+   "pc": "0x43dab5"
+  },
+  {
+   "instr": "call   0x424860",
+   "pc": "0x43dad8"
+  },
+  {
+   "instr": "cmpb   $0x2,(%edx)",
+   "pc": "0x43cbb4"
+  },
+  {
+   "instr": "cmp    $0x1f,%eax",
+   "pc": "0x43cbc0"
+  },
+  {
+   "instr": "mov    0xc(%edx),%eax",
+   "pc": "0x43cbda"
+  },
+  {
+   "instr": "xor    %eax,%eax",
+   "pc": "0x43cbe1"
+  },
+  {
+   "instr": "cmp    $0xc,%eax",
+   "pc": "0x43cbec"
+  },
+  {
+   "instr": "jmp    0x4248b0",
+   "pc": "0x43cbfa"
+  },
+  {
+   "instr": "cmpb   $0x2,(%eax)",
+   "pc": "0x43cdd4"
+  },
+  {
+   "instr": "cmp    $0x1f,%ecx",
+   "pc": "0x43cde0"
+  },
+  {
+   "instr": "cmp    $0x3,%edx",
+   "pc": "0x43cdff"
+  },
+  {
+   "instr": "mov    %al,0x5d7(%ecx)",
+   "pc": "0x43ce06"
+  },
+  {
+   "instr": "cmpb   $0x2,(%eax)",
+   "pc": "0x43ce14"
+  },
+  {
+   "instr": "cmp    $0x1f,%ecx",
+   "pc": "0x43ce20"
+  },
+  {
+   "instr": "cmp    $0xffffffe0,%edx",
+   "pc": "0x43ce3b"
+  },
+  {
+   "instr": "cmp    $0x20,%edx",
+   "pc": "0x43ce40"
+  },
+  {
+   "instr": "mov    %dx,0x5a8(%ecx)",
+   "pc": "0x43ce45"
+  },
+  {
+   "instr": "mov    %ax,0x5aa(%ecx)",
+   "pc": "0x43ce62"
   },
   {
    "instr": "cmpb   $0x2,(%esi)",

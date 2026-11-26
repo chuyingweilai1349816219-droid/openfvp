@@ -4,6 +4,24 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（十三续）：文本 handler 审计扩到 8 个；修掉 TextFont 的"非整数被当 0"偏差
+
+`ref/exe-text-handlers.json` 从 4 个 handler 扩到 **8 个**（44 条关键指令逐条校验）：
+新增 `TextFont(113)`、`TextShadowDist(125)`、`TextSkip(127)`、`TextSpace(128)`。
+
+新读出的规则：
+- `TextFont(113)`：两个字体 id 各自 int 且 **-5..(字体表项数-1)**——上界是**动态**的
+  （`0x43DAA3 sar $2` + `0x43DAA6 dec` = `(end-begin)/4-1`）；
+- `TextShadowDist(125)`：距离**钳位**到 0..0xC（负数→0、>0xC→0xC），非 int→0 ——
+  这是这一族里唯一钳位的；
+- `TextSkip(127)`：mode int 0..3 → `tw+0x5D7`；
+- `TextSpace(128)`：x/y 各自 int -0x20..0x20 → `tw+0x5A8/0x5AA`
+  （与 `TextFormat(118)` 前两个分量同字段）。
+
+**修掉的第二处偏差**：`TextFont` 原来把非 int 分量当 **0** 传下去（0 是合法字体号，
+等于覆盖了原值），上界也用静态 31。现在改成 `fvp_textattr_set_font_ex()`
+（has 标志 + 动态上界 = `fvp_vm_font_count(vm)-1`）。
+
 ## [未发布] — 2026-11-26（十二续）：文本类 handler 实参规则成串冻结；修掉 TextColor 的钳位偏差
 
 四个文本 handler（`TextBuff 110` / `TextColor 112` / `TextOutSize 120` / `TextSize 126`）
