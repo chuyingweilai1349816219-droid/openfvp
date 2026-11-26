@@ -714,6 +714,14 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.49657 GraphLoad(22)：type 0 = 释放槽（0x424150）
+    vgl = os.path.join(HERE, 'verify_exe_graph_load.py')
+    steps.append(Step('verify_exe_graph_load.py', [PY, '-X', 'utf8', vgl], 600,
+                      skip_reason=None,
+                      note='GraphLoad(22) handler 0x43A340: slot 0..0xFFF; arg1 type 0 '
+                           'releases the slot via 0x424150, type 4/5 resolve to a string '
+                           'and load through 0x428BD0'))
+
     # 6.49656 七条 *Test 命令的容器表 + C 侧接线（44/50/56）
     vmt = os.path.join(HERE, 'verify_exe_motion_tests.py')
     steps.append(Step('verify_exe_motion_tests.py', [PY, '-X', 'utf8', vmt], 600,

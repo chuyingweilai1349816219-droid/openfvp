@@ -307,11 +307,17 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             t->temp = fvp_make_int(0);
         }
         break;
-    case 22: /* GraphLoad(slot, name): only a non-empty string loads.  The
-              * engine's null release and int/bool placeholders are no-ops in
-              * the reference prototype (a "null" has no C value). */
-        if (argc > 1 && a[1].type == (uint8_t)FVP_STR && a[1].str->len > 0) {
-            (void)gfx_graph_load(g, id, a[1].str->data);
+    case 22: /* GraphLoad(slot, name)
+              * 原版 handler 0x43A340：id 0..0xFFF；
+              * arg1 为 **type 0（null/false）→ 释放该槽**（0x424150）；
+              * 解出字符串才加载（type 4/5 在引擎侧解析成串）；
+              * 其它类型忽略；加载失败保留原图。 */
+        if (g != NULL && argc > 1) {
+            if (fvp_value_is_null(&a[1])) {
+                (void)gfx_graph_load(g, id, NULL);
+            } else if (a[1].type == (uint8_t)FVP_STR) {
+                (void)gfx_graph_load(g, id, a[1].str->data);
+            }
         }
         break;
     case 42: /* MotionAlpha(id, from, to, ms, mode, flag)

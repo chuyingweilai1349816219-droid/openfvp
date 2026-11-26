@@ -4,6 +4,27 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（四十二续）：GraphLoad(22) 的 type 0 = 释放槽（原来缺这条路径）
+
+接着"高频且无基线"的清单，这轮是 **`GraphLoad(22)`（454 次）**。
+
+handler `0x43A340` 真规则：
+- arg0 槽号 int **0..0xFFF**（允许 0）；
+- arg1 按 Variant 类型分派：**type 0（null/false）→ `0x424150` 释放该槽**；
+  type 4（数据段串偏移）→ `*(engine+0x68DFAC)+payload`；
+  type 5（动态串表槽号）→ `*(engine+0x6A49EC+idx*4)`；其它忽略；
+- 解出非 NULL 串 → `0x428BD0` 加载，随后 `0x437330(engine+0x45C, id)`。
+
+**修掉的缺口**：我们原来只在 arg1 是字符串时加载，`GraphLoad(slot, null)`
+（脚本收回图槽）会**保留旧图**——画面残留。现在 type 0 走 `gfx_graph_load(g, id, NULL)`
+释放槽（这个 API 本来就有，只是没接）。
+
+顺带印证：type 5 的"动态字符串表"就是 `engine+0x6A49EC` 那张表（与读档恢复顺序第 3 步
+同一个容器）。
+
+新增 `ref/exe-graph-load.json` + `scripts/extract-exe-graph-load.py` +
+`tests/verify_exe_graph_load.py`（`run_all` 6.49657，12 条指令 + 与使用矩阵互证）。
+
 ## [未发布] — 2026-11-26（四十一续）：MotionMove(48) 的实参顺序修正（from,from,to,to）
 
 按使用矩阵挑出"还没有 handler 基线"的最高频命令：**`MotionMove(48)`，480 次**。

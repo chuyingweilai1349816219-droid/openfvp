@@ -1254,6 +1254,23 @@ call   0x4387d0            ; register(entry, name)
 id、`missing_in_engine` 为空、除 `AudioLoad(0)` 外每个 id 都能在分派表里找到 handler。
 
 
+### GraphLoad(22) 的实参规则（A 类：`ref/exe-graph-load.json`）
+
+handler `0x43A340`（两部作品合计 454 次）：
+
+| arg | 角色 | 规则 |
+|---|---|---|
+| 0 | slot | int **0..0xFFF**（允许 0；sprite 表就是 4096 项） |
+| 1 | name | 按 Variant 类型分派：**type 0（null/false）→ 释放该槽**（`0x424150`）；type 4（数据段串偏移）→ `*(engine+0x68DFAC)+payload`；type 5（动态串表槽号）→ `*(engine+0x6A49EC+idx*4)`；其它忽略 |
+
+解出非 NULL 串 → `0x428BD0(sprite_entry, str, 0)` 加载，随后 `0x437330(engine+0x45C, id)`。
+
+**我们原来的缺口**：只在 arg1 是字符串时加载，**type 0 的释放没实现**——脚本用
+`GraphLoad(slot, null)` 收回槽时，我们会保留旧图（画面残留）。本轮已补上。
+
+顺带印证：type 5 的"动态字符串表"就是 `engine+0x6A49EC` 那张 0x80 项 × 4 的表
+（与读档恢复顺序第 3 步同一个容器）。
+
 ### MotionMove(48) 的实参布局（A 类：`ref/exe-motion-params.json` 的 `arg_layout`）
 
 `MotionMove` 是两部作品合计 **480 次**的命令，argc **8**。handler `0x43ABD0`：

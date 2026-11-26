@@ -1,0 +1,78 @@
+{
+ "arg0": {
+  "note": "允许 0（sprite 表 4096 项）",
+  "range": [
+   0,
+   4095
+  ],
+  "role": "slot"
+ },
+ "arg1": {
+  "dispatch": {
+   "other": "忽略",
+   "type0": "null/false → 释放该槽（0x424150）",
+   "type4": "数据段字符串偏移 → *(engine+0x68DFAC) + payload",
+   "type5": "动态字符串表槽号 → *(engine+0x6A49EC + idx*4)"
+  },
+  "role": "name"
+ },
+ "argc": 2,
+ "handler": "0x0043a340",
+ "id": 22,
+ "instructions": [
+  {
+   "instr": "cmpb   $0x2,(%esi)",
+   "pc": "0x43a345"
+  },
+  {
+   "instr": "test   %eax,%eax",
+   "pc": "0x43a34d"
+  },
+  {
+   "instr": "cmp    $0xfff,%eax",
+   "pc": "0x43a351"
+  },
+  {
+   "instr": "cmpb   $0x0,0x8(%esi)",
+   "pc": "0x43a358"
+  },
+  {
+   "instr": "imul   $0x51c,%eax,%eax",
+   "pc": "0x43a35e"
+  },
+  {
+   "instr": "call   0x424150",
+   "pc": "0x43a36b"
+  },
+  {
+   "instr": "cmp    $0x4,%dl",
+   "pc": "0x43a377"
+  },
+  {
+   "instr": "mov    0x68dfac(%ecx),%edx",
+   "pc": "0x43a37c"
+  },
+  {
+   "instr": "cmp    $0x5,%dl",
+   "pc": "0x43a387"
+  },
+  {
+   "instr": "mov    0x6a49ec(%ecx,%edx,4),%edx",
+   "pc": "0x43a38f"
+  },
+  {
+   "instr": "call   0x428bd0",
+   "pc": "0x43a3aa"
+  },
+  {
+   "instr": "jmp    0x437330",
+   "pc": "0x43a3c3"
+  }
+ ],
+ "name": "GraphLoad",
+ "note": "GraphLoad(22) 的实参规则（A 类）；由 scripts/extract-exe-graph-load.py 生成",
+ "then": "解出非 NULL 串 → 0x428BD0(sprite_entry, str, 0)，随后 0x437330(engine+0x45C, id)",
+ "unknown": [
+  "engine+0x45C 那个后处理到底做什么"
+ ]
+}
