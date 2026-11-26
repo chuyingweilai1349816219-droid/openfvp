@@ -714,6 +714,15 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.49656 七条 *Test 命令的容器表 + C 侧接线（44/50/56）
+    vmt = os.path.join(HERE, 'verify_exe_motion_tests.py')
+    steps.append(Step('verify_exe_motion_tests.py', [PY, '-X', 'utf8', vmt], 600,
+                      skip_reason=None,
+                      note='*Test family: 44/47/50/53/56/59/145 each query a different '
+                           'container (0x651E04/0x65380C/0x65BA54/0x679A5C/0x67CE64/'
+                           '0x680A6C/0x683F04) and write 1=still-running into '
+                           'thread+0x814; 44/50/56 are wired to our three tween kinds'))
+
     # 6.49655 两部作品实际用到的命令集合 vs 引擎实现（兼容性矩阵）
     vcu = os.path.join(HERE, 'verify_command_usage.py')
     steps.append(Step('verify_command_usage.py', [PY, '-X', 'utf8', vcu], 1200,

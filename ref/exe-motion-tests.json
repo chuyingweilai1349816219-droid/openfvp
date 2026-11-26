@@ -1,0 +1,97 @@
+{
+ "note": "七条 *Test 命令的 handler 结构（A 类）：id 1..0xFFF、各用不同容器、查询后无条件把结果写进线程 +0x814（1 = 还在跑）；由 scripts/extract-exe-motion-tests.py 生成",
+ "result_field": "线程 +0x814（VM 返回值）",
+ "tests": [
+  {
+   "container": "0x651e04",
+   "handler": "0x43a9c0",
+   "id": 44,
+   "id_range": [
+    1,
+    4095
+   ],
+   "name": "MotionAlphaTest",
+   "note": null,
+   "query_fn": "0x422990",
+   "writes_result_unconditionally": true
+  },
+  {
+   "container": "0x65380c",
+   "handler": "0x43ab10",
+   "id": 47,
+   "id_range": [
+    1,
+    4095
+   ],
+   "name": "MotionAnimTest",
+   "note": null,
+   "query_fn": "0x422b60",
+   "writes_result_unconditionally": true
+  },
+  {
+   "container": "0x65ba54",
+   "handler": "0x43ace0",
+   "id": 50,
+   "id_range": [
+    1,
+    4095
+   ],
+   "name": "MotionMoveTest",
+   "note": null,
+   "query_fn": "0x4231a0",
+   "writes_result_unconditionally": true
+  },
+  {
+   "container": "0x679a5c",
+   "handler": "0x43af20",
+   "id": 53,
+   "id_range": [
+    1,
+    4095
+   ],
+   "name": "MotionMoveRTest",
+   "note": null,
+   "query_fn": "0x423fd0",
+   "writes_result_unconditionally": true
+  },
+  {
+   "container": "0x67ce64",
+   "handler": "0x43b0d0",
+   "id": 56,
+   "id_range": [
+    1,
+    4095
+   ],
+   "name": "MotionMoveS2Test",
+   "note": null,
+   "query_fn": "0x423bd0",
+   "writes_result_unconditionally": false
+  },
+  {
+   "container": "0x680a6c",
+   "handler": "0x43ae00",
+   "id": 59,
+   "id_range": [
+    1,
+    4095
+   ],
+   "name": "MotionMoveZTest",
+   "note": null,
+   "query_fn": "0x423fd0",
+   "writes_result_unconditionally": true
+  },
+  {
+   "container": "0x683f04",
+   "handler": "0x437ce0",
+   "id": 145,
+   "id_range": [],
+   "name": "V3DMotionTest",
+   "note": "无 id 参数：直接查 engine+0x683F04 这个 3D 动作容器，结果照旧写线程 +0x814",
+   "query_fn": "0x424050",
+   "writes_result_unconditionally": true
+  }
+ ],
+ "unknown": [
+  "各容器（engine+0x651E04 / 0x65BA54 / 0x680A6C …）内部的动作记录格式"
+ ]
+}

@@ -4,6 +4,28 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（四十续）：七条 *Test 的容器表冻结；44/50/56 接到真实现
+
+上一轮把 `MotionMoveTest(50)` 做真了，这轮把**整个 `*Test` 家族**一次梳清：
+
+| 命令 | handler | 容器 | 接线 |
+|---|---|---|---|
+| `MotionAlphaTest(44)` | `0x43A9C0` | `engine+0x651E04`（与 `MotionAlpha(42)` 同一容器） | `FVP_TWEEN_ALPHA` ✅ |
+| `MotionAnimTest(47)` | `0x43AB10` | `engine+0x65380C` | — 帧动画未建模 |
+| `MotionMoveTest(50)` | `0x43ACE0` | `engine+0x65BA54` | `FVP_TWEEN_MOVE_XY` ✅ |
+| `MotionMoveRTest(53)` | `0x43AF20` | `engine+0x679A5C` | — 旋转未建模 |
+| `MotionMoveS2Test(56)` | `0x43B0D0` | `engine+0x67CE64` | `FVP_TWEEN_SCALE` ✅ |
+| `MotionMoveZTest(59)` | `0x43AE00` | `engine+0x680A6C` | — Z 未建模 |
+| `V3DMotionTest(145)` | `0x437CE0` | `engine+0x683F04` | — 3D 未建模；**无 id 参数** |
+
+共同形状：id 1..0xFFF → 查容器 → `setne` → **无条件**写线程 `+0x814`（1 = 还在跑）。
+
+**交叉印证**：七个容器全部出现在读档恢复顺序（`restore_steps`）里——两套独立抄出的
+数据对得上；`V3DMotionTest` 没有 id 参数这一点也单独记进了基线。
+
+新增 `ref/exe-motion-tests.json` + `scripts/extract-exe-motion-tests.py` +
+`tests/verify_exe_motion_tests.py`（`run_all` 6.49656）。
+
 ## [未发布] — 2026-11-26（三十九续）：MotionMoveTest(50) 真实现（动画开着时不再"秒结束"）
 
 `MotionMoveTest(50)` 两部作品合计 **447 次**。原版 handler `0x43ACE0`：

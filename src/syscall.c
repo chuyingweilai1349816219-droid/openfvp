@@ -1813,7 +1813,20 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         }
         return;
     case 15:  /* DissolveWait: already finished */
-    case 44:  /* MotionAlphaTest */
+    case 44:  /* MotionAlphaTest(id)：原版 0x43A9C0，容器 engine+0x651E04
+               * （与 MotionAlpha(42) 同一个），id 1..0xFFF，1 = 还在跑。 */
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT &&
+            gfx_motion_test != NULL && vm->gfx_bridge != NULL) {
+            int aid = (int)args[0].i;
+
+            if (aid >= 1 && aid <= 0xFFF) {
+                t->temp = fvp_make_int(
+                    gfx_motion_test(vm->gfx_bridge->gfx, aid,
+                                    (int)FVP_TWEEN_ALPHA) ? 1 : 0);
+                return;
+            }
+        }
+        break;
     case 47:  /* MotionAnimTest */
     case 50:  /* MotionMoveTest(id)：原版 0x43ACE0 —— id 1..0xFFF，
                * 把"该图元动作是否还在跑"写进返回值（1 = 还在跑）。 */
@@ -1823,13 +1836,27 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
 
             if (tid >= 1 && tid <= 0xFFF) {
                 t->temp = fvp_make_int(
-                    gfx_motion_test(vm->gfx_bridge->gfx, tid, -1) ? 1 : 0);
+                    gfx_motion_test(vm->gfx_bridge->gfx, tid,
+                                    (int)FVP_TWEEN_MOVE_XY) ? 1 : 0);
                 return;
             }
         }
         break;
     case 53:  /* MotionMoveRTest */
-    case 56:  /* MotionMoveS2Test */
+    case 56:  /* MotionMoveS2Test(id)：原版 0x43B0D0，容器 engine+0x67CE64
+               * （与 MotionMoveS2(54) 同族），id 1..0xFFF，1 = 还在跑。 */
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT &&
+            gfx_motion_test != NULL && vm->gfx_bridge != NULL) {
+            int sid = (int)args[0].i;
+
+            if (sid >= 1 && sid <= 0xFFF) {
+                t->temp = fvp_make_int(
+                    gfx_motion_test(vm->gfx_bridge->gfx, sid,
+                                    (int)FVP_TWEEN_SCALE) ? 1 : 0);
+                return;
+            }
+        }
+        break;
     case 59:  /* MotionMoveZTest */
     case 145: /* V3DMotionTest */
     case 62:  /* MovieState: pretend the WMV already finished */

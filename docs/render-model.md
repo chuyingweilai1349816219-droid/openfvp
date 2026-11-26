@@ -1155,6 +1155,8 @@ call   0x4387d0            ; register(entry, name)
 | `0x43BE40` | `prim+0x30` + x/y/w/h | `0x439BF0(id, 2)` 造 **type-2** 图元；arg1 范围 **-1..0xFF** → `+0x30`；arg2..arg5 → x/y/w/h |
 | `0x43BA20`（**cmd 78 `PrimSetBlend`**） | `prim+0x08`（blend） | id 允许 **0..0xFFF**（这一条允许 0）；arg1 只接受 **0..1**（0 = over / 1 = additive），越界保持原值；不置任何 flags 位 |
 | `0x437990`（**cmd 77 `PrimSetAlpha`**） | `prim+0x07`（alpha） | id **1..0xFFF**；arg1 int 且 **0..0xFF**（`cmpl $0xff; ja` 无符号比较），越界保持原值；不置 flags。**全片最高频命令**（两部作品合计 1052 次） |
+| `0x43A9C0`（**cmd 44 `MotionAlphaTest`**） | 线程 `+0x814` | id 1..0xFFF；查 `engine+0x651E04`（与 `MotionAlpha(42)` 同一容器）。**已接到** `FVP_TWEEN_ALPHA` |
+| `0x43B0D0`（**cmd 56 `MotionMoveS2Test`**） | 线程 `+0x814` | id 1..0xFFF；查 `engine+0x67CE64`（与 `MotionMoveS2(54)` 同族）。**已接到** `FVP_TWEEN_SCALE` |
 | `0x43ACE0`（**cmd 50 `MotionMoveTest`**） | 线程 `+0x814`（返回值） | id 1..0xFFF；`0x4231A0(engine+0x65BA54, id)` 查该图元动作是否还在跑，**无条件**写返回值：1 = 还在跑。两部作品合计 447 次 |
 | `0x43A8B0`（**cmd 42 `MotionAlpha`**） | 尾调 `0x42D460(engine+0x651E04, …)` | id 1..0xFFF；**from/to 各自 int 0..0xFF，缺/越界回退成当前 `prim+0x07`**；**ms 必须 int 1..300000，否则整条忽略**；mode 0..1（缺省 0）；flag = `type != 0`。两部作品合计 553 次 |
 | `0x43B9C0`（**cmd 76 `PrimHit`**） | 线程 `+0x814`（返回值） | id 1..0xFFF；arg1 用 `type != 0` 当布尔；`0x43B8D0(id, flag)` 命中才把返回值置 1（未命中不写）。389 次（标题菜单命中就靠它） |
@@ -1250,3 +1252,23 @@ call   0x4387d0            ; register(entry, name)
 
 门禁 `tests/verify_command_usage.py`（`run_all` 6.49655）钉住：两部作品都是 131 个
 id、`missing_in_engine` 为空、除 `AudioLoad(0)` 外每个 id 都能在分派表里找到 handler。
+
+
+### 七条 `*Test` 命令的容器表（A 类：`ref/exe-motion-tests.json`）
+
+| 命令 | handler | 容器 | 我们的接线 |
+|---|---|---|---|
+| `MotionAlphaTest(44)` | `0x43A9C0` | `engine+0x651E04` | `FVP_TWEEN_ALPHA` ✅ |
+| `MotionAnimTest(47)` | `0x43AB10` | `engine+0x65380C` | — （帧动画未建模，返回 1） |
+| `MotionMoveTest(50)` | `0x43ACE0` | `engine+0x65BA54` | `FVP_TWEEN_MOVE_XY` ✅ |
+| `MotionMoveRTest(53)` | `0x43AF20` | `engine+0x679A5C` | — （旋转未建模） |
+| `MotionMoveS2Test(56)` | `0x43B0D0` | `engine+0x67CE64` | `FVP_TWEEN_SCALE` ✅ |
+| `MotionMoveZTest(59)` | `0x43AE00` | `engine+0x680A6C` | — （Z 未建模） |
+| `V3DMotionTest(145)` | `0x437CE0` | `engine+0x683F04` | — （3D 未建模；**无 id 参数**） |
+
+共同形状：`id 1..0xFFF` → 查询对应容器 → `setne` → **无条件**写线程 `+0x814`
+（1 = 还在跑）。
+
+**交叉印证**：这张表里的七个容器（`0x651E04/0x65380C/0x65BA54/0x679A5C/0x67CE64/
+0x680A6C/0x683F04`）全部出现在读档恢复顺序的 `restore_steps` 里——两套独立抄出的
+数据对得上。
