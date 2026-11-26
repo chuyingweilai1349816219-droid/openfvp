@@ -127,7 +127,36 @@ def main():
           % (clamp.get('width'), clamp.get('height')))
     check(clamp.get('pc') == '0x035da0', '钳位指令在 0x035da0')
 
-    print('== 7. C 侧交叉核对 ==')
+    print('== 7. 帧模型（initstack A|B 与绝对槽号）==')
+    fm = ref.get('frame_model') or {}
+    funcs = {f['role']: f for f in fm.get('functions') or []}
+    want_funcs = {
+        'prim_set_text': ([4, 2], 251, 254),
+        'prim_set_xy': ([3, 2], 252, 254),
+        'text_buff': ([3, 2], 252, 254),
+        'window_setup': ([5, 0], 250, 253),
+    }
+    check(set(funcs) == set(want_funcs),
+          '帧模型样本 = %r（实际 %r）' % (sorted(want_funcs), sorted(funcs)))
+    for role, (init, lo, hi) in want_funcs.items():
+        f = funcs.get(role) or {}
+        check(f.get('initstack') == init,
+              '%s: initstack %r（实际 %r）' % (role, init, f.get('initstack')))
+        check(f.get('slot_min') == lo and f.get('slot_max') == hi,
+              '%s: 用绝对槽 %d..%d（实际 %r..%r）'
+              % (role, lo, hi, f.get('slot_min'), f.get('slot_max')))
+    call = fm.get('window_setup_call') or {}
+    check(len(call.get('pushtrue_sentinels') or []) == 5,
+          '窗口设置调用点连压 5 个 pushtrue 哨兵（实际 %r）'
+          % (call.get('pushtrue_sentinels'),))
+    gap = fm.get('known_gap') or {}
+    check(gap.get('expected_canvas') == {'x': 431, 'y': 880},
+          '正文窗口脚本期望画布 (431, 880)（实际 %r）'
+          % (gap.get('expected_canvas'),))
+    check('compare.py' in (gap.get('why_not_fixed_yet') or ''),
+          'known_gap 写明了为什么暂时不修（会动到冻结文本基线）')
+
+    print('== 8. C 侧交叉核对 ==')
     sysc = read(os.path.join(FVP, 'src', 'syscall.c'))
     seg = sysc[sysc.index('case 86:'):sysc.index('case 87:')]
     check('GFX_F_X' in seg and 'GFX_F_Y' in seg,

@@ -11,6 +11,82 @@
    "value": 522
   }
  ],
+ "frame_model": {
+  "functions": [
+   {
+    "initstack": [
+     4,
+     2
+    ],
+    "pc": "0x035c10",
+    "role": "prim_set_text",
+    "slot_max": 254,
+    "slot_min": 251,
+    "slot_reads": 6,
+    "what": "PrimSetText wrapper"
+   },
+   {
+    "initstack": [
+     3,
+     2
+    ],
+    "pc": "0x035d14",
+    "role": "prim_set_xy",
+    "slot_max": 254,
+    "slot_min": 252,
+    "slot_reads": 5,
+    "what": "PrimSetXY wrapper"
+   },
+   {
+    "initstack": [
+     3,
+     2
+    ],
+    "pc": "0x035d76",
+    "role": "text_buff",
+    "slot_max": 254,
+    "slot_min": 252,
+    "slot_reads": 3,
+    "what": "TextBuff wrapper"
+   },
+   {
+    "initstack": [
+     5,
+     0
+    ],
+    "pc": "0x039f27",
+    "role": "window_setup",
+    "slot_max": 253,
+    "slot_min": 250,
+    "slot_reads": 13,
+    "what": "窗口设置（正文窗口 551 的绑定在这里）"
+   }
+  ],
+  "known_gap": {
+   "engine_logs": {
+    "x": 1,
+    "y": 1
+   },
+   "expected_canvas": {
+    "x": 431,
+    "y": 880
+   },
+   "what": "本引擎 C VM 的旧帧模型把 `copystack N` 限制在 N < initstack 第一个字节，所以脚本对槽 250..254 的默认值写入全部被丢掉：`PrimSetText(551, 0, …)` 实测拿到 (1, 1)，而脚本要的是 (230, 522)（换算后画布 (431, 880)）。",
+   "why_not_fixed_yet": "把槽寻址按 255-A..254 打开后，`tests/compare.py` 的冻结文本基线（ref/ref-900k.txt）出现差异（6496 → 6760 B，第 3 行多一个字符）：说明那份基线本身是用旧帧模型生成的。要修就得同时给出\"新输出更接近原版\"的证据再重新冻结基线，不能悄悄改。"
+  },
+  "note": "`initstack A|B`：A = 参数槽个数、B = 额外局部变量个数。参数占绝对槽 255-A..254（结束于槽 254），额外局部变量占它们下面紧挨的 B 个槽，也可以用 0..B-1 寻址。",
+  "window_setup_call": {
+   "pc": "0x0363ca",
+   "pushtrue_sentinels": [
+    "0x0363c5",
+    "0x0363c6",
+    "0x0363c7",
+    "0x0363c8",
+    "0x0363c9"
+   ],
+   "what": "调用方在 call 0x39F27 之前连压 5 个 `pushtrue`，函数体用 `if (槽 == true) 槽 = 默认值` 吃默认值——说明 `true` 是**显式**哨兵，不是\"没传\"的填充值"
+  }
+ },
  "helpers": [
   {
    "pc": "0x035c10",

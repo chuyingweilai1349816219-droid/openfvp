@@ -52,6 +52,15 @@ BINDINGS = [
     (0x03AA7B, 'chapter', 553, 9),
 ]
 
+# 帧模型证据：窗口 helper 与窗口设置函数的 `initstack A|B` 及其槽号用法
+FRAME_FUNCS = [
+    (0x35C10, 'prim_set_text', 'PrimSetText wrapper'),
+    (0x35D14, 'prim_set_xy', 'PrimSetXY wrapper'),
+    (0x35D76, 'text_buff', 'TextBuff wrapper'),
+    (0x39F27, 'window_setup', '窗口设置（正文窗口 551 的绑定在这里）'),
+]
+WINDOW_SETUP_CALL = 0x363C5   # 调用 0x39F27 之前连压 5 个 pushtrue 哨兵
+
 SCALE_X_AT = 0x35C24   # pushfloat <imm32>（x 的比例）
 SCALE_Y_AT = 0x35C3B   # pushfloat <imm32>（y 的比例）
 CLAMP_AT = 0x35DA0     # pushint16 1024（TextBuff 的钳位）
@@ -182,7 +191,73 @@ def extract(code):
         body_defaults.append({'local': want, 'value': val,
                               'pc': '0x%06x' % hit})
 
+    # ---- 5) 帧模型证据（initstack A|B + 槽号用法）----
+    frame_model = []
+    for fpc, role, what in FRAME_FUNCS:
+        i = code.instr.get(fpc)
+        if i is None or i[1] != 'initstack':
+            perr('0x%06x 不是 initstack（实际 %r）' % (fpc, i))
+        a_decl, b_decl = i[2][0], i[2][1]
+        slots = []
+        p = next_pc(code, fpc)
+        guard = 0
+        while guard < 400:
+            j = code.instr.get(p)
+            if j is None or (j[1] == 'ret' and guard > 2):
+                break
+            if j[1] in ('pushstack', 'copystack') and j[2][0] >= 0xFA:
+                slots.append(j[2][0])
+            p = next_pc(code, p)
+            guard += 1
+        frame_model.append({
+            'pc': '0x%06x' % fpc, 'role': role, 'what': what,
+            'initstack': [a_decl, b_decl],
+            'slot_min': min(slots) if slots else None,
+            'slot_max': max(slots) if slots else None,
+            'slot_reads': len(slots),
+        })
+
+    # 窗口设置函数的调用点：连压 5 个 pushtrue（显式"用默认值"哨兵）
+    sentinels = []
+    p = WINDOW_SETUP_CALL
+    for _ in range(5):
+        j = code.instr.get(p)
+        if j is None or j[1] != 'pushtrue':
+            perr('0x%06x 不是 pushtrue（实际 %r）' % (p, j))
+        sentinels.append('0x%06x' % p)
+        p = next_pc(code, p)
+    j = code.instr.get(p)
+    if j is None or j[1] != 'call' or j[2][0] != 0x39F27:
+        perr('0x%06x 不是 call 0x39F27（实际 %r）' % (p, j))
+
     return {
+        'frame_model': {
+            'note': '`initstack A|B`：A = 参数槽个数、B = 额外局部变量个数。参数占绝对槽 '
+                    '255-A..254（结束于槽 254），额外局部变量占它们下面紧挨的 B 个槽，'
+                    '也可以用 0..B-1 寻址。',
+            'functions': frame_model,
+            'window_setup_call': {
+                'pc': '0x%06x' % p,
+                'pushtrue_sentinels': sentinels,
+                'what': '调用方在 call 0x39F27 之前连压 5 个 `pushtrue`，'
+                        '函数体用 `if (槽 == true) 槽 = 默认值` 吃默认值——'
+                        '说明 `true` 是**显式**哨兵，不是"没传"的填充值',
+            },
+            'known_gap': {
+                'what': '本引擎 C VM 的旧帧模型把 `copystack N` 限制在 N < initstack 第一个字节，'
+                        '所以脚本对槽 250..254 的默认值写入全部被丢掉：'
+                        '`PrimSetText(551, 0, …)` 实测拿到 (1, 1)，而脚本要的是 (230, 522)'
+                        '（换算后画布 (431, 880)）。',
+                'expected_canvas': {'x': int(230 * sx), 'y': int(522 * sy)},
+                'engine_logs': {'x': 1, 'y': 1},
+                'why_not_fixed_yet': '把槽寻址按 255-A..254 打开后，'
+                                     '`tests/compare.py` 的冻结文本基线（ref/ref-900k.txt）'
+                                     '出现差异（6496 → 6760 B，第 3 行多一个字符）：'
+                                     '说明那份基线本身是用旧帧模型生成的。'
+                                     '要修就得同时给出"新输出更接近原版"的证据再重新冻结基线，'
+                                     '不能悄悄改。',
+            },
+        },
         'note': '从 HCB 脚本静态分析抄出的文本窗口几何（A 类）：脚本坐标是设计空间，'
                 '窗口 helper 先把 x 乘 1.875、y 乘 1.6875 再调引擎命令；由 '
                 'scripts/extract-script-window-geometry.py 生成',
@@ -243,6 +318,14 @@ def main(argv=None):
               % (w['role'], w['prim'], w['layer'],
                  w['design']['x'], w['design']['y'],
                  '' if cv is None else '  → 画布 (%d, %d)' % (cv['x'], cv['y'])))
+    print('== 帧模型（initstack A|B 与槽号）==')
+    fm = result['frame_model']
+    for f in fm['functions']:
+        print('  %-16s %s  initstack %s  槽 %s..%s（%d 次读写）'
+              % (f['role'], f['pc'], f['initstack'], f['slot_min'],
+                 f['slot_max'], f['slot_reads']))
+    print('  窗口设置调用点 %s 前 5 条都是 pushtrue 哨兵'
+          % fm['window_setup_call']['pc'])
     print('== 正文窗口默认值 ==')
     for d in result['body_window_defaults']:
         print('  局部变量 %d 默认 %d（%s）' % (d['local'], d['value'], d['pc']))
