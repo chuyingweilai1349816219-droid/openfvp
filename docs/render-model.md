@@ -1105,6 +1105,15 @@ call   0x4387d0            ; register(entry, name)
 ⇒ **图元类型码有了名字**：2 = tile、4 = sprite、5 = text、7 = snow（我们原来的注释只有
 1/2/4/5，现已补 7）。
 
+据此把我们的 5 个实现对齐了一遍（第 204 轮）：
+
+| 命令 | 我们原来 | 改成 |
+|---|---|---|
+| `PrimSetSprt(85)` | graphSlot 不做类型/范围检查 | 只接受 int 且 **-2..0xFFF**（越界保持 0） |
+| `PrimSetText(86)` | 直接把 arg1 当 TW | 只接受 int 且 **0..0x1F**（越界保持 0） |
+| `PrimSetTile(87)` | 只写 tile，**丢掉 x/y/w/h** | tile 限 **-1..0xFF**，并补上 arg2..arg5 → x/y/w/h |
+| `PrimSetUV(88)` | 不截断 | u/v 按 **int16** 截断 |
+
 关键条目（其它）：
 
 | id | 命令 | handler |

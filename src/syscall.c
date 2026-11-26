@@ -542,14 +542,20 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             (void)gfx_set_prim(g, id, GFX_F_SCALE_Y, fvp_gfx_int(&a[3]));
         }
         break;
-    case 85: /* PrimSetSprt(id, graphSlot, x?, y?) */
+    case 85: /* PrimSetSprt(id, graphSlot, x?, y?)
+              * 原版 0x43BD00：graphSlot 只接受 int 且 **-2..0xFFF**（越界保持 0），
+              * 然后 x/y 逐分量。 */
         fvp_gfx_prim_reset(g, id);
         fvp_gfx_prim_reset_shadow(b, id);
         (void)gfx_set_prim(g, id, GFX_F_TYPE, 4);
-        if (argc > 1) {
-            (void)gfx_set_prim(g, id, GFX_F_GRAPH, fvp_gfx_int(&a[1]));
-            if (id >= 0 && id < FVP_GFX_PRIM_MAX) {
-                b->prim_graph[id] = fvp_gfx_int(&a[1]);
+        if (argc > 1 && fvp_gfx_is_int(&a[1])) {
+            int slot = fvp_gfx_int(&a[1]);
+
+            if (slot >= -2 && slot <= 0xFFF) {
+                (void)gfx_set_prim(g, id, GFX_F_GRAPH, slot);
+                if (id >= 0 && id < FVP_GFX_PRIM_MAX) {
+                    b->prim_graph[id] = slot;
+                }
             }
         }
         if (argc > 2 && fvp_gfx_is_int(&a[2])) {
@@ -569,8 +575,14 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
                     argc > 3 ? fvp_gfx_int(&a[3]) : -1);
         }
         (void)gfx_set_prim(g, id, GFX_F_TYPE, 5);
-        (void)gfx_set_prim(g, id, GFX_F_TW,
-                           argc > 1 ? fvp_gfx_int(&a[1]) : 0);
+        /* 原版 0x43BDC0：arg1 只接受 int 且 **0..0x1F**（文本层号），越界保持 0。 */
+        if (argc > 1 && fvp_gfx_is_int(&a[1])) {
+            int layer = fvp_gfx_int(&a[1]);
+
+            if (layer >= 0 && layer <= 0x1F) {
+                (void)gfx_set_prim(g, id, GFX_F_TW, layer);
+            }
+        }
         /* 原版 0x43BDF5：`movb $0xff,0x7(%eax)` —— 建文本图元时 alpha 直接置 255。 */
         (void)gfx_set_prim(g, id, GFX_F_ALPHA, 255);
         if (argc > 2 && fvp_gfx_is_int(&a[2])) {
@@ -580,21 +592,39 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             (void)gfx_set_prim(g, id, GFX_F_Y, fvp_gfx_int(&a[3]));
         }
         break;
-    case 87: /* PrimSetTile(id, tile) */
+    case 87: /* PrimSetTile(id, tile, x?, y?, w?, h?)
+              * 原版 0x43BE40：tile 只接受 int 且 **-1..0xFF**（越界保持 0xFF），
+              * 然后 x/y/w/h 逐分量（arg2..arg5）。 */
         fvp_gfx_prim_reset(g, id);
         fvp_gfx_prim_reset_shadow(b, id);
         (void)gfx_set_prim(g, id, GFX_F_TYPE, 2);
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_TILE,
-                               fvp_gfx_int(&a[1]) & 0xFF);
-        }
-        break;
-    case 88: /* PrimSetUV(id, u, v) */
-        if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_U, fvp_gfx_int(&a[1]));
+            int tile = fvp_gfx_int(&a[1]);
+
+            if (tile >= -1 && tile <= 0xFF) {
+                (void)gfx_set_prim(g, id, GFX_F_TILE, tile & 0xFF);
+            }
         }
         if (argc > 2 && fvp_gfx_is_int(&a[2])) {
-            (void)gfx_set_prim(g, id, GFX_F_V, fvp_gfx_int(&a[2]));
+            (void)gfx_set_prim(g, id, GFX_F_X, FVP_S16(fvp_gfx_int(&a[2])));
+        }
+        if (argc > 3 && fvp_gfx_is_int(&a[3])) {
+            (void)gfx_set_prim(g, id, GFX_F_Y, FVP_S16(fvp_gfx_int(&a[3])));
+        }
+        if (argc > 4 && fvp_gfx_is_int(&a[4])) {
+            (void)gfx_set_prim(g, id, GFX_F_W, FVP_S16(fvp_gfx_int(&a[4])));
+        }
+        if (argc > 5 && fvp_gfx_is_int(&a[5])) {
+            (void)gfx_set_prim(g, id, GFX_F_H, FVP_S16(fvp_gfx_int(&a[5])));
+        }
+        break;
+    case 88: /* PrimSetUV(id, u, v)
+              * 原版 0x43BEF0：要求 prim+4 == 4（sprite），u/v 各写 u16（int16 语义）。 */
+        if (argc > 1 && fvp_gfx_is_int(&a[1])) {
+            (void)gfx_set_prim(g, id, GFX_F_U, FVP_S16(fvp_gfx_int(&a[1])));
+        }
+        if (argc > 2 && fvp_gfx_is_int(&a[2])) {
+            (void)gfx_set_prim(g, id, GFX_F_V, FVP_S16(fvp_gfx_int(&a[2])));
         }
         break;
     case 89: /* PrimSetWH(id, w, h)

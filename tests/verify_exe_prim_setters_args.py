@@ -110,10 +110,22 @@ def main():
         k78 = src.index('case 78:')
         seg78 = src[k78:k78 + 900]
         check('blend >= 0 && blend <= 1' in seg78, 'case 78 只接受 blend 0..1')
-        for case in ('case 81:', 'case 89:', 'case 90:'):
+        for case in ('case 81:', 'case 89:', 'case 90:', 'case 88:'):
             k = src.index(case)
             seg2 = src[k:k + 900]
             check('FVP_S16' in seg2, '%s 用 int16 截断' % case)
+        # 85/86/87 的范围检查与原版 handler 对齐
+        k = src.index('case 85:')
+        seg = src[k:k + 900]
+        check('slot >= -2 && slot <= 0xFFF' in seg, 'case 85 只接受 -2..0xFFF')
+        k = src.index('case 86:')
+        seg = src[k:k + 1100]
+        check('layer >= 0 && layer <= 0x1F' in seg, 'case 86 层号只接受 0..0x1F')
+        k = src.index('case 87:')
+        seg = src[k:k + 1600]
+        check('tile >= -1 && tile <= 0xFF' in seg, 'case 87 tile 只接受 -1..0xFF')
+        for f in ('GFX_F_X', 'GFX_F_Y', 'GFX_F_W', 'GFX_F_H'):
+            check(f in seg, 'case 87 写 %s（原版 arg2..arg5）' % f)
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
