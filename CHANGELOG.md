@@ -4,6 +4,30 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（六十一续）：3M 步全量日志证明 `Motion*` 是正常工作的 —— 卡点是"点不进菜单"
+
+用 `FVP_DEBUG_MOTION` 跑满 3,000,000 步（headless + 2653 张素材），统计结果：
+
+| 量 | 值 |
+|---|---|
+| `motion cmd=` 行（42/48/54 的调用） | **35**（说明动画命令很少） |
+| `motion_add` 行（真正建了补间） | **32** —— 动画**确实是建起来的** |
+| `motion_test prim=265` 行 | 141262，**全部返回 0**（"没有在跑的动作"） |
+| 补间表长度 | 起始 18 → 结束 **0**（全部跑完并回收） |
+
+上一轮"motion_add 为 0"是 40k 窗口的错觉，撤回。也就是说：
+
+- 动画系统**正常**（建表、推进、回收都对）；
+- `0x592DF` 那段循环里 `MotionAlphaTest(265)` 恒为 0 → `eq(temp,false)` 为真 →
+  `jmpcond 0x5930E`（假则跳）→ 走"没有动画"分支；
+- 该分支立刻检查 `global236 != 1`（`ref/script-globals.json`：g236/g232 = **跳过动画开关**），
+  之后回到 `0x592DF` —— 这是一个**等点击的空转循环**（点击只做 `ControlPulse` + `ThreadNext`）。
+
+⇒ headless 现在真正卡在"**点不进菜单**"，而不是动画。下一步：
+1. 确认菜单项的命中方式（`PrimHit(76)` 用 prim 矩形 vs `vm.cx/cy`；iroseka 用了 211 次）；
+2. 用 `FVP_TRACE_CIDS` 看 `76 PrimHit` 有没有被调用、`prim_hit_hits` 是否为 0；
+3. 若是 0，比对 `ref/title-rects.json` 的按钮矩形与我们图元的 (x,y,w,h)。
+
 ## [未发布] — 2026-11-26（六十续）：Motion* 的实参抓到了 —— 脚本多数调用把 ms 传成 `true`（原版同样整条拒掉）
 
 加了两处诊断（都是 env-gated）：
