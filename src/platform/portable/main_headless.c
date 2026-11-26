@@ -215,7 +215,27 @@ int main(int argc, char **argv)
      * 属于合成输入模型的一部分；--click-mask 可改。 */
     vm.click_mask = click_mask;
 
-    gfx = gfx_create(CANVAS_W, CANVAS_H, NULL);
+    {
+        /* 可选素材宿主：`FVP_GAME_DIR=<游戏目录>` 时用 src/gfx.c 里已有的
+         * GfxArchiveHost（读 .bin + HZC1 解码成 RGBA，见 gfx_archive_host_create）。
+         * 没有素材时菜单图元没有尺寸，PrimHit(76) 永远不命中，脚本会停在标题
+         * （CHANGELOG 五十六续）；给了素材才可能走进正文。 */
+        static GfxArchiveHost *arc_host = NULL;
+        const char *gd = getenv("FVP_GAME_DIR");
+        const GfxHost *host = NULL;
+
+        if (gd != NULL && gd[0] != '\0') {
+            arc_host = gfx_archive_host_create(gd);
+            if (arc_host != NULL) {
+                host = gfx_archive_host_iface(arc_host);
+                fprintf(stderr, "fvp-headless: assets <- %s (%d images)\n", gd,
+                        gfx_archive_host_image_count(arc_host));
+            } else {
+                fprintf(stderr, "fvp-headless: cannot open assets in %s\n", gd);
+            }
+        }
+        gfx = gfx_create(CANVAS_W, CANVAS_H, host);
+    }
     if (gfx == NULL) {
         fprintf(stderr, "fvp-headless: gfx_create failed\n");
         fvp_vm_free(&vm);

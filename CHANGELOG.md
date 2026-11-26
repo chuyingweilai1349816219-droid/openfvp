@@ -4,6 +4,34 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（五十八续）：headless 接上了素材宿主接口，卡在**非 ASCII 路径**
+
+发现 `src/gfx.c` 里**已经有完整的素材宿主**：`gfx_archive_host_create(game_dir)` +
+`gfx_archive_host_iface()`（读 `.bin`、`arc_resolve` 解析资源名、HZC1 解码成 RGBA），
+只差 headless 把 `GfxHost` 传给 `gfx_create()`。
+
+本轮接上（`FVP_GAME_DIR=<游戏目录>` 时启用，未设置时行为完全不变）：
+
+```c
+arc_host = gfx_archive_host_create(gd);
+host = gfx_archive_host_iface(arc_host);
+gfx = gfx_create(CANVAS_W, CANVAS_H, host);
+```
+
+实测结果：**素材打不开** ——
+
+```
+fvp-headless: cannot open assets in C:\Users\Mechrevo\Downloads\ʰ쵵HD
+```
+
+路径里的中文在"PowerShell 环境变量 → 便携层 ANSI"这一跳被转坏了（win32 外壳走
+`GetCommandLineW`/宽字符 API，所以它没问题；headless 是 portable 层，直接用 char* 路径）。
+试过在 `Downloads` 与 `out/` 下建 ASCII 名的目录联接（junction），都被沙箱 ACL 拒绝。
+
+下一步（明确）：给便携层加 **UTF-8 路径支持** —— Windows 上把 `fopen` 换成
+`_wfopen`（UTF-8 → UTF-16），或让 headless 用 `--game-dir` 参数并在读到时走同一套宽字符
+封装；之后 `FVP_GAME_DIR` 指向真实目录即可，素材宿主就能工作，`PrimHit` 才可能命中。
+
 ## [未发布] — 2026-11-26（五十七续）：绕过标题的 `FVP_START_PC` 试了，**不行** —— 结论是必须补素材宿主
 
 按五十六续的方案②，给 `bin/fvp-headless.exe` 加了 `FVP_START_PC`（复用 `fvp_vm_start_at`），
