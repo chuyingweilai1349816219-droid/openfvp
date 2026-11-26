@@ -170,14 +170,22 @@ def main():
         m = re.search(r'load: slot globals -> (\d+) cells \(types 0:(\d+) '
                       r'1:(\d+) 2:(\d+) 3:(\d+) 4:(\d+) 5:(\d+) 6:(\d+)\)',
                       text)
-        if not m:
+        a = re.search(r'load: globals applied (\d+) cell\(s\) \(int (\d+) \+ '
+                      r'string (\d+)\), kept (\d+)', text)
+        sm = re.search(r'load: dynamic string slots -> (\d+) \(first slot #(\d+)\)',
+                       text)
+        if not m or not a:
             return None
-        n = int(m.group(1))
-        counts = [int(m.group(i)) for i in range(2, 9)]
-        a = re.search(r'load: globals applied (\d+) int cell\(s\), kept (\d+)', text)
-        applied = int(a.group(1)) if a else -1
-        kept = int(a.group(2)) if a else -1
-        return n, counts, applied, kept
+        return {
+            'n': int(m.group(1)),
+            'counts': [int(m.group(i)) for i in range(2, 9)],
+            'applied': int(a.group(1)),
+            'n_int': int(a.group(2)),
+            'n_str': int(a.group(3)),
+            'kept': int(a.group(4)),
+            'slots': int(sm.group(1)) if sm else -1,
+            'first_slot': int(sm.group(2)) if sm else -1,
+        }
 
     for slot, want_t5 in ((485, 1), (905, 2)):
         log = os.path.join(OUT, 'lr-globals-%d.log' % slot)
@@ -188,19 +196,30 @@ def main():
         g = parse_globals(text)
         check(rc == 0 and g is not None,
               '槽 %d：日志有槽全局变量解码行' % slot)
-        if g:
-            n, counts, applied, kept = g
-            check(n == 1549, '槽 %d：解码 1549 条（实际 %d）' % (slot, n))
-            check(sum(counts) == n, '槽 %d：各类型计数之和 = %d（实际 %d）'
-                  % (slot, n, sum(counts)))
-            check(counts[5] == want_t5,
-                  '槽 %d：type5（动态字符串）%d 条，与不变量分布一致'
-                  % (slot, counts[5]))
-            check(applied == counts[2] and applied + kept == n,
-                  '槽 %d：只回灌 type2=int（applied=%d == type2=%d，applied+kept=%d）'
-                  % (slot, applied, counts[2], applied + kept))
-            check('only type 2 = int is mapped so far' in text,
-                  '槽 %d：日志写明当前只映射 type 2' % slot)
+        if not g:
+            continue
+        n = g['n']
+        counts = g['counts']
+        check(n == 1549, '槽 %d：解码 1549 条（实际 %d）' % (slot, n))
+        check(sum(counts) == n, '槽 %d：各类型计数之和 = %d（实际 %d）'
+              % (slot, n, sum(counts)))
+        check(counts[5] == want_t5,
+              '槽 %d：type5（动态字符串）%d 条，与不变量分布一致'
+              % (slot, counts[5]))
+        check(g['n_int'] == counts[2],
+              '槽 %d：int 单元回灌数 = type2 计数（%d）' % (slot, g['n_int']))
+        check(g['n_str'] == counts[5],
+              '槽 %d：字符串单元回灌数 = type5 计数（%d）' % (slot, g['n_str']))
+        check(g['applied'] == g['n_int'] + g['n_str'] and
+              g['applied'] + g['kept'] == n,
+              '槽 %d：applied=%d = int(%d)+string(%d)，applied+kept=%d'
+              % (slot, g['applied'], g['n_int'], g['n_str'],
+                 g['applied'] + g['kept']))
+        check(g['slots'] == counts[5],
+              '槽 %d：动态字符串表解析出 %d 条（= type5 计数）'
+              % (slot, g['slots']))
+        check('type 1/3/4/6 still unmapped' in text,
+              '槽 %d：日志写明 type 1/3/4/6 仍未映射' % slot)
 
     print('== B. 不带 --load-restart：旧行为（只记日志）==')
     shot_b = os.path.join(OUT, 'loadrestart-b.bmp')

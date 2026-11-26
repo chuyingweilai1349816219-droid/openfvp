@@ -62,6 +62,13 @@ typedef struct FvpSaveTailInfo {
  * 该 u32 的偏移；0 = 找不到 / 多个候选。 */
 int fvp_savetail_find_pool(const unsigned char *tail, size_t len, size_t *off);
 
+/* 槽号感知的解析：type-5 全局变量单元里存的是**槽号**（实测 idx 0/2 而表里只有
+ * 2 条非空串），所以按槽走一遍、把 (槽号, 字符串) 成对带出来。
+ * 返回非空槽个数（0 = 结构不成立，包括"非空槽数与表头计数对不上"）。 */
+int fvp_savetail_slots(int *slot_no, char strs[][FVP_SAVETAIL_STR_MAX],
+                       int max, const unsigned char *tail, size_t len,
+                       FvpEncoding enc);
+
 /* 解析槽尾里那张动态字符串表（内部先 find_pool）。
  * 返回 1 = 结构成立（可能一条字符串都没有，此时 count=0、graph_index=-1）。 */
 int fvp_savetail_parse(FvpSaveTailInfo *out, const unsigned char *tail,

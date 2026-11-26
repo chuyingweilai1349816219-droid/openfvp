@@ -1431,6 +1431,11 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
     FvpSaveSlot sd;
     FvpSaveHist hist;
     static FvpSaveGlobal gcells[FVP_SAVETAIL_MAX_GLOBALS];
+    FvpSaveTailInfo ti;
+    static int slot_no[FVP_SAVETAIL_MAX_STRINGS];
+    static char slot_str[FVP_SAVETAIL_MAX_STRINGS][FVP_SAVETAIL_STR_MAX];
+    int slot_count = 0;
+    int tail_ok = 0;
     int gcount = 0;
     int gtype[7];
     int slot_ok = 0;
@@ -1477,6 +1482,49 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
                      "4:%d 5:%d 6:%d)",
                      gcount, gtype[0], gtype[1], gtype[2], gtype[3], gtype[4],
                      gtype[5], gtype[6]);
+            /* type 5 = 动态字符串表下标：表就紧跟在全局变量与协程上下文之后，
+             * 这里顺手解出来（最多 8 条非空串）。 */
+            memset(&ti, 0, sizeof ti);
+            ti.graph_index = -1;
+            tail_ok = fvp_savetail_parse(&ti, sd.tail, sd.tail_len, save_enc);
+            /* 槽号感知的版本：type-5 的载荷是槽号，不是打包序号。 */
+            {
+                static char sstr[FVP_SAVETAIL_MAX_STRINGS]
+                                 [FVP_SAVETAIL_STR_MAX];
+                static int sslot[FVP_SAVETAIL_MAX_STRINGS];
+                int sn = fvp_savetail_slots(sslot, sstr,
+                                            FVP_SAVETAIL_MAX_STRINGS,
+                                            sd.tail, sd.tail_len, save_enc);
+
+                if (sn > 0) {
+                    int si;
+
+                    for (si = 0; si < sn && si < FVP_SAVETAIL_MAX_STRINGS;
+                         ++si) {
+                        slot_no[si] = sslot[si];
+                        memcpy(slot_str[si], sstr[si], FVP_SAVETAIL_STR_MAX);
+                    }
+                    slot_count = sn;
+                    fvp_logf("load: dynamic string slots -> %d (first slot #%d)",
+                             sn, sslot[0]);
+                }
+            }
+            {
+                int t5i;
+                int t5n = 0;
+
+                for (t5i = 0; t5i < gcount && t5n < 4; ++t5i) {
+                    if (gcells[t5i].type == 5) {
+                        fvp_logf("load: type5 cell #%d idx=%d", t5i,
+                                 (int)gcells[t5i].i);
+                        t5n += 1;
+                    }
+                }
+            }
+            fvp_logf("load: dynamic strings -> %s, %d slot(s)%s%s",
+                     tail_ok ? "parsed" : "not parsed", tail_ok ? ti.count : 0,
+                     (tail_ok && ti.count > 0) ? ", first=\"" : "",
+                     (tail_ok && ti.count > 0) ? ti.str[0] : "");
             fvp_save_slot_free(&sd);
         }
         free(buf);
@@ -1535,17 +1583,45 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
         int applied = 0;
         int kept = 0;
 
+        int str_applied = 0;
+
         for (i = 0; i < gcount && i < FVP_GLOBAL_COUNT; ++i) {
             if (gcells[i].type == 2) {
                 vm->globals[i] = fvp_make_int(gcells[i].i);
                 vm->globals_set[i] = 1;
                 applied += 1;
+            } else if (gcells[i].type == 5) {
+                const char *str = NULL;
+                FvpStr *sv = NULL;
+                int k;
+
+                for (k = 0; k < slot_count; ++k) {
+                    if (slot_no[k] == (int)gcells[i].i) {
+                        str = slot_str[k];
+                        break;
+                    }
+                }
+                if (str == NULL) {
+                    kept += 1;
+                    continue;
+                }
+                sv = fvp_arena_str(&vm->arena, str, strlen(str));
+
+                if (sv != NULL) {
+                    vm->globals[i] = fvp_make_str(sv);
+                    vm->globals_set[i] = 1;
+                    applied += 1;
+                    str_applied += 1;
+                } else {
+                    kept += 1;
+                }
             } else {
                 kept += 1;
             }
         }
-        fvp_logf("load: globals applied %d int cell(s), kept %d (only type 2 = int "
-                 "is mapped so far)", applied, kept);
+        fvp_logf("load: globals applied %d cell(s) (int %d + string %d), kept %d "
+                 "(type 1/3/4/6 still unmapped)", applied,
+                 applied - str_applied, str_applied, kept);
     }
     if (gfx != NULL) {
         fvp_vm_attach_gfx(vm, gfx);

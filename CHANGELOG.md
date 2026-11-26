@@ -4,6 +4,23 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（二十一续）：type5 字符串单元也回灌了；发现它的载荷是"槽号"不是序号
+
+继续把每槽全局变量里的**字符串单元**接上：
+
+- `type 5`（动态字符串表）的载荷**是槽号**而不是打包序号——实测槽 905 的两个 type5
+  单元是 `idx=0` 与 `idx=2`，而表里只有 2 条非空串（槽 #0 与 #2，**槽 #1 是空的**）。
+  原来的 `fvp_savetail_parse()` 只把非空串打包返回，槽号信息丢了，所以 `idx=2` 查不到。
+- 新增槽号感知的 `fvp_savetail_slots()`：逐槽走 128 个槽（空槽 = 2 字节 0，
+  非空槽 = `u16 长度 + 字节`），并校验"非空槽数 == 表头计数"，不成立就放弃。
+- `--load-restart` 现在按槽号查表，用 `fvp_arena_str()` 造 `FvpStr` 写回全局变量。
+
+实测（槽 905）：`applied 297 cell(s) (int 295 + string 2), kept 1252
+(type 1/3/4/6 still unmapped)`；槽 485：`applied 225 (int 224 + string 1)`。
+
+门禁 `verify_load_restart.py` 的 D 节扩到 20 条断言（外加 `int 单元数 == type2`、
+`字符串单元数 == type5`、`动态字符串表条数 == type5`）。
+
 ## [未发布] — 2026-11-26（二十续）：每槽全局变量真的回灌了（第 6 段；当前只映射 type 2 = int）
 
 `--load-restart` 以前只回灌台词历史环 + 保留运行时 globals；本轮把**槽尾第 6 段

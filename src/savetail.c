@@ -135,6 +135,61 @@ static int parse_pool_at(FvpSaveTailInfo *out, const unsigned char *tail,
     return 1;
 }
 
+int fvp_savetail_slots(int *slot_no, char strs[][FVP_SAVETAIL_STR_MAX],
+                       int max, const unsigned char *tail, size_t len,
+                       FvpEncoding enc)
+{
+    size_t off = 0;
+    size_t cur;
+    unsigned int want;
+    int slot;
+    int got = 0;
+
+    if (slot_no == NULL || strs == NULL || max <= 0 || tail == NULL) {
+        return 0;
+    }
+    if (!fvp_savetail_find_pool(tail, len, &off)) {
+        return 0;
+    }
+    want = rd_u32(tail + off + 4);
+    if (want > (unsigned int)max) {
+        return 0;
+    }
+    cur = off + 8;
+    for (slot = 0; slot < (int)FVP_SAVETAIL_SLOT_COUNT; ++slot) {
+        unsigned int n;
+
+        if (cur + 2 > len) {
+            return 0;
+        }
+        n = rd_u16(tail + cur);
+        if (n == 0) {
+            cur += 2;
+            continue;
+        }
+        if (n < 2 || n > FVP_SAVETAIL_STR_MAX || cur + 2u + n > len) {
+            return 0;
+        }
+        if (tail[cur + 2u + n - 1u] != 0) {
+            return 0;
+        }
+        if (got >= max) {
+            return 0;
+        }
+        if (!decode_one(strs[got], FVP_SAVETAIL_STR_MAX, enc,
+                        tail + cur + 2u, (size_t)n - 1u)) {
+            return 0;
+        }
+        slot_no[got] = slot;
+        got += 1;
+        cur += 2u + n;
+    }
+    if ((unsigned int)got != want) {
+        return 0; /* 与表头计数对不上 → 结构不成立 */
+    }
+    return got;
+}
+
 int fvp_savetail_globals(FvpSaveGlobal *out, int max,
                          const unsigned char *tail, size_t len)
 {
