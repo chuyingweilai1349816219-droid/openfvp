@@ -1067,6 +1067,23 @@ handler `0x43C830` 的**实参规则**（同一份基线里，20 条指令逐条
 合计 5.59 MiB，和 `engine` 的 bss 规模对得上（最大一张 5.11 MiB 的 sprite 表，
 正好铺满 `0x101064..0x61D064`）。
 
+### 图元 setter handler 的实参规则（A 类：`ref/exe-prim-setters-args.json`）
+
+上一轮锁定 `0x43BACA..0x43BFDA` 之后，本轮把里面的四个 handler 读完了：
+
+| handler | 写入 | 规则 |
+|---|---|---|
+| `0x43BA90` | `prim+0x20` / `+0x22`（op1/op2） | id 1..0xFFF 且 `prim+4` 必须是 4；arg1/arg2 各自 int → u16，逐分量 `flags \|= 0x02`；末尾无条件 `flags \|= 0x40` |
+| `0x43BAF0` | `prim+0x24`（angle）/ `+0x26,+0x28`（scale） | **angle = v % 3600**（负数归一化）；**scale 钳位 100..10000**（per-mille）；每个已写分量 `flags \|= 0x40` |
+| `0x43BC40` | `prim+0x2E`、x/y | `0x439BF0(id, 7)` 造 **type-7** 图元 → 字段全复位（`+0x12=1000`、scale=1000、alpha=0xFF）→ arg1（0..1）写 `+0x2E` → arg2/arg3 写 x/y |
+| `0x43BD00` | 同上 | `0x439BF0(id, 4)` 造 **type-4** 图元；arg1 范围 -2..0xFFF |
+
+**因此修掉一处偏差**：我们的 `case 82`（`PrimSetRS`）原来把 angle 原样存入、scale 也不钳位。
+现在按原版做 `angle % 3600`（负数归一）与 `scale` 钳位 100..10000。
+
+仍未知（`unknown` 里写着）：这四个 handler 与命令 id 78/81/89/90 的对应还是**推断**，
+以及 `prim+0x06` 的 `0x40` 位在渲染端怎么用。
+
 ### 图元字段的写入点全量扫描（A 类：`ref/exe-prim-setters.json`）
 
 为了把 `PrimSetXY(90)/PrimSetWH(89)/PrimSetOP(81)/PrimSetBlend(78)` 的实参语义从

@@ -4,6 +4,24 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（二十六续）：四个图元 setter handler 的实参规则；修掉 angle/scale 的偏差
+
+上一轮把写入点锁到 `0x43BACA..0x43BFDA`，本轮把里面的四个 handler 读完并冻结：
+
+- `0x43BA90`（op1/op2）：id 1..0xFFF 且 `prim+4` 必须是 4；arg1/arg2 各自 int →
+  u16，逐分量 `flags |= 0x02`；末尾无条件 `flags |= 0x40`；
+- `0x43BAF0`（angle/scale）：**angle = v % 3600**（负数归一化），
+  **scale 钳位 100..10000**（per-mille，同时写 `+0x26/+0x28`）；
+- `0x43BC40` / `0x43BD00`：造 type-7 / type-4 图元（`0x439BF0(id, type)`），
+  字段全复位（`+0x12=1000`、scale=1000、alpha=0xFF）后再写 `+0x2E` 与 x/y。
+
+**顺带修掉一处偏差**：`src/syscall.c` 的 `case 82`（PrimSetRS）原来把 angle 原样存入、
+scale 也不钳位；现在按原版做 `angle % 3600` 与 `scale` 钳位 100..10000。
+
+新增 `ref/exe-prim-setters-args.json` + `scripts/extract-exe-prim-setters-args.py` +
+`tests/verify_exe_prim_setters_args.py`（`run_all` 6.49650，26 条指令逐条核对，
+并与上一轮的写入点扫描交叉核对）。
+
 ## [未发布] — 2026-11-26（二十五续）：图元字段写入点全量扫描（57 条，集中在一小段）
 
 为了处理用户第一优先待办里的 `PrimSetXY(90)/PrimSetWH(89)/PrimSetOP(81)/PrimSetBlend(78)`

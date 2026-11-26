@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Gate for ref/exe-prim-setters-args.json + the C-side PrimSetRS fix."""
+import io
+import json
+import os
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+FVP = os.path.dirname(HERE)
+PY = sys.executable
+EXTRACT = os.path.join(FVP, 'scripts', 'extract-exe-prim-setters-args.py')
+REF = os.path.join(FVP, 'ref', 'exe-prim-setters-args.json')
+SETTERS = os.path.join(FVP, 'ref', 'exe-prim-setters.json')
+SYSCALL = os.path.join(FVP, 'src', 'syscall.c')
+
+fails = []
+
+
+def check(cond, msg):
+    print(('  ok   ' if cond else '  FAIL ') + msg)
+    if not cond:
+        fails.append(msg)
+    return cond
+
+
+def main():
+    asm = os.path.join(FVP, 'work', 'iroseka_HD.asm')
+    if not os.path.isfile(asm):
+        print('SKIP: 缺原版程序清单 %s（work/ 不入库）' % asm)
+        return 0
+    if not os.path.isfile(REF):
+        print('FAIL: 缺基线 %s' % REF)
+        return 1
+
+    print('== 1. 重新提取并与基线逐字节比对 ==')
+    proc = subprocess.run([PY, '-X', 'utf8', EXTRACT, '--check'],
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          timeout=600)
+    print(proc.stdout.decode('utf-8', 'replace').rstrip())
+    check(proc.returncode == 0, 'extract-exe-prim-setters-args.py --check 退出码 0')
+
+    ref = json.loads(io.open(REF, encoding='utf-8').read())
+    hs = ref.get('handlers') or []
+
+    print('== 2. 四个 handler 的规则 ==')
+    check(len(hs) == 4, '四个 handler（实际 %d）' % len(hs))
+    by = {h['handler']: h for h in hs}
+    for addr in ('0x43ba90', '0x43baf0', '0x43bc40', '0x43bd00'):
+        check(addr in by, '含 handler %s' % addr)
+    op = by.get('0x43ba90') or {}
+    check(any('0x20' in w for w in op.get('writes') or []), '0x43BA90 写 op1(+0x20)')
+    rs = by.get('0x43baf0') or {}
+    rules = ' '.join(rs.get('rules') or [])
+    check('3600' in rules, '0x43BAF0 angle 取模 3600')
+    check('100..10000' in rules, '0x43BAF0 scale 钳位 100..10000')
+    check('0x40' in rules, '0x43BAF0 写分量时 flags |= 0x40')
+    for addr, ty in (('0x43bc40', '7'), ('0x43bd00', '4')):
+        h = by.get(addr) or {}
+        r = ' '.join(h.get('rules') or [])
+        check('0x439bf0' in r.lower() or '0x439BF0' in r, '%s 用 0x439BF0 造图元' % addr)
+        check('type-%s' % ty in r or 'type %s' % ty in r, '%s 造 type-%s' % (addr, ty))
+    check(bool(ref.get('unknown')), 'unknown 里保留"命令 id ↔ handler 仍是推断"')
+
+    print('== 3. 与上一轮的写入点扫描交叉核对 ==')
+    if os.path.isfile(SETTERS):
+        st = json.loads(io.open(SETTERS, encoding='utf-8').read())
+        pcs = set(s['pc'] for s in st.get('stores') or [])
+        for want in ('0x43baca', '0x43bada', '0x43bb34', '0x43bb4f', '0x43bd56'):
+            check(want in pcs, '扫描基线里有写入点 %s' % want)
+
+    print('== 4. C 侧：case 82 已按 handler 语义修正 ==')
+    if os.path.isfile(SYSCALL):
+        src = io.open(SYSCALL, encoding='utf-8').read()
+        i = src.index('case 82:')
+        seg = src[i:i + 1200]
+        check('% 3600' in seg, 'case 82 有 angle % 3600')
+        check('ang < 0' in seg and 'ang += 3600' in seg, 'case 82 负数归一化')
+        check('sc < 100' in seg and 'sc > 10000' in seg, 'case 82 scale 钳位 100..10000')
+
+    if fails:
+        print('\nFAIL: %d 项不满足' % len(fails))
+        return 1
+    print('\nOK: 四个图元 setter handler 的实参规则已冻结，case 82 已按原版语义'
+          '（angle mod 3600 / scale 100..10000）修正')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -714,6 +714,14 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.49650 图元 setter handler 的实参规则（angle mod 3600 / scale 100..10000）
+    vpsa = os.path.join(HERE, 'verify_exe_prim_setters_args.py')
+    steps.append(Step('verify_exe_prim_setters_args.py', [PY, '-X', 'utf8', vpsa], 600,
+                      skip_reason=None,
+                      note='prim setter handlers: 0x43BA90 (op1/op2, flags|=2 then |=0x40), '
+                           '0x43BAF0 (angle mod 3600, scale clamped 100..10000), '
+                           '0x43BC40/0x43BD00 (create type-7/type-4 prim, then x/y)'))
+
     # 6.496499 图元字段写入指令全量扫描（定位 prim setter handler 区；缺 work/ 时 SKIP）
     vps = os.path.join(HERE, 'verify_exe_prim_setters.py')
     steps.append(Step('verify_exe_prim_setters.py', [PY, '-X', 'utf8', vps], 600,

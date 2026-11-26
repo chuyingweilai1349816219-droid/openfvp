@@ -494,14 +494,29 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             (void)gfx_set_prim(g, id, GFX_F_OP2, fvp_gfx_int(&a[2]));
         }
         break;
-    case 82: /* PrimSetRS(id, angle, scale) */
+    case 82: /* PrimSetRS(id, angle, scale)
+              * 原版 handler 0x43BAF0（ref/exe-prim-setters-args.json）：
+              *   angle = v % 3600（0xE10，负数也归一化）→ u16 存 prim+0x24；
+              *   scale = 钳位到 100..10000（per-mille）→ prim+0x26 与 +0x28；
+              *   每个写进去的分量都 flags |= 0x40（"已改过"）。 */
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_ANGLE, fvp_gfx_int(&a[1]));
+            int ang = fvp_gfx_int(&a[1]) % 3600;
+
+            if (ang < 0) {
+                ang += 3600;
+            }
+            (void)gfx_set_prim(g, id, GFX_F_ANGLE, ang);
         }
         if (argc > 2 && fvp_gfx_is_int(&a[2])) {
-            int s = fvp_gfx_int(&a[2]);
-            (void)gfx_set_prim(g, id, GFX_F_SCALE_X, s);
-            (void)gfx_set_prim(g, id, GFX_F_SCALE_Y, s);
+            int sc = fvp_gfx_int(&a[2]);
+
+            if (sc < 100) {
+                sc = 100;
+            } else if (sc > 10000) {
+                sc = 10000;
+            }
+            (void)gfx_set_prim(g, id, GFX_F_SCALE_X, sc);
+            (void)gfx_set_prim(g, id, GFX_F_SCALE_Y, sc);
         }
         break;
     case 83: /* PrimSetRS2(id, angle, sx, sy) */
