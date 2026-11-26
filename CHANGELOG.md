@@ -4,6 +4,23 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（二十三续）：type 0 = null/未设（已回灌）；1549 条里已恢复 1481~1485 条
+
+继续按"数据 + exe 消费点"的办法定类型语义：
+
+- **`type 0` = null / false / 未设**（原版 Variant 的 type 0）：载荷无意义——样本里
+  118~345 条带随机载荷、最大 7500 万。恢复成 null，但不动 `globals_set`
+  （它本来就等于"未设"）。
+- **`type 6`**（32~37 条）的载荷是 `0,1,2,3,4,5…` 这种**小整数**，像枚举值，
+  但目前只有这一步证据，仍不映射。
+
+实测：槽 485 → `applied 1485 (null 1252 + int 224 + table str 1 + file str 8)`，
+kept 64；槽 905 → `applied 1481 (null 1174 + int 295 + table str 2 + file str 10)`，
+kept 68。kept 正好 = type1 + type6，两种未映射的类型对得上。
+
+门禁 D 节（24 条断言）新增 `null 单元 == type0`、`applied = 四者之和`、
+`kept == type1 + type6`。
+
 ## [未发布] — 2026-11-26（二十二续）：type 4 = 数据段字符串的**绝对文件偏移**（已回灌）
 
 用真实存档 + HCB 做了个直接判据：5 份可解存档里都有一条 type-4 全局变量的载荷是

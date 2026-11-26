@@ -1194,23 +1194,28 @@ python fvp/tools/tailstat.py <save 目录> [--thumb 200x113]
     143332 → `voice/01001530`、518150 → `……。`、481990 → `None`、
     4199307 → `……。`（`work/probe_type4_hcb.py` 的判据），现在按偏移从
     `hcb->data` 解出字符串回灌（空串也照写）；
-  - `type 0`（样本 1174~1252 条，疑似 unset/null）、`type 1`（31 条，`save.bin` 那边
-    也标成 unknown）、`type 6` 仍未证实，**保持运行时的值不动**（宁可不恢复，也不乱写）。
+  - `type 0` = **null / false / 未设**（原版 Variant 的 type 0；载荷无意义——样本里
+    118~345 条带随机载荷，最大 7500 万）。恢复成 null，但**不动 `globals_set`**
+    （它本来就等于"未设"）；
+  - `type 1`（31 条，`save.bin` 那边也标 unknown）与 `type 6`（32~37 条，载荷是
+    0,1,2,3,4,5… 这种**小整数**，像枚举值）仍未证实，**保持运行时的值不动**
+    （宁可不恢复，也不乱写）。
 
 实测（`--load-restart --debug-load-request`）：
 
 ```
 load: slot globals -> 1549 cells (types 0:1174 1:31 2:295 3:0 4:10 5:2 6:37)
 load: dynamic string slots -> 2 (first slot #0)
-load: globals applied 307 cell(s) (int 295 + table str 2 + file str 10), kept 1242
-      (type 1/3/6 still unmapped)
+load: globals applied 1481 cell(s) (null 1174 + int 295 + table str 2 + file str 10),
+      kept 68 (type 1/3/6 still unmapped)
 ```
 
 门禁 `tests/verify_load_restart.py` 的 D 节用**两个不同槽**钉住：解码条数 = 1549、
 各类型计数之和 = 1549、`type5` 的条数（槽 485 = 1、槽 905 = 2）与
 `ref/exe-save-serialize.json` 里"type5 条数逐份为 1,1,0,0,2,0"的不变量一致、
-`int 单元数 == type2`、动态字符串表单元 == `type5`、**数据段字符串单元 == `type4`**、
-动态字符串表解析条数 == `type5`、`applied + kept == 1549`。
+`null 单元 == type0`、`int 单元 == type2`、动态字符串表单元 == `type5`、
+**数据段字符串单元 == type4**、动态字符串表解析条数 == `type5`、
+`applied = 四者之和`、`kept == type1 + type6`。
 
 ### step-1 已落地：`--load-restart`（2026-11-26）
 

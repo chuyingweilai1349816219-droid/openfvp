@@ -1585,9 +1585,17 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
 
         int str_applied = 0;
         int file_str_applied = 0;
+        int null_applied = 0;
 
         for (i = 0; i < gcount && i < FVP_GLOBAL_COUNT; ++i) {
-            if (gcells[i].type == 2) {
+            if (gcells[i].type == 0) {
+                /* type 0 = null / false / "未设"（原版 Variant 的 type 0；
+                 * 载荷无意义——样本里 118~345 条带随机载荷）。恢复成 null，
+                 * 但**不动 globals_set**：它本来就等于"未设"。 */
+                vm->globals[i] = fvp_make_null();
+                applied += 1;
+                null_applied += 1;
+            } else if (gcells[i].type == 2) {
                 vm->globals[i] = fvp_make_int(gcells[i].i);
                 vm->globals_set[i] = 1;
                 applied += 1;
@@ -1647,10 +1655,11 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
                 kept += 1;
             }
         }
-        fvp_logf("load: globals applied %d cell(s) (int %d + table str %d + file "
-                 "str %d), kept %d (type 1/3/6 still unmapped)", applied,
-                 applied - str_applied - file_str_applied, str_applied,
-                 file_str_applied, kept);
+        fvp_logf("load: globals applied %d cell(s) (null %d + int %d + table "
+                 "str %d + file str %d), kept %d (type 1/3/6 still unmapped)",
+                 applied, null_applied,
+                 applied - null_applied - str_applied - file_str_applied,
+                 str_applied, file_str_applied, kept);
     }
     if (gfx != NULL) {
         fvp_vm_attach_gfx(vm, gfx);

@@ -170,9 +170,9 @@ def main():
         m = re.search(r'load: slot globals -> (\d+) cells \(types 0:(\d+) '
                       r'1:(\d+) 2:(\d+) 3:(\d+) 4:(\d+) 5:(\d+) 6:(\d+)\)',
                       text)
-        a = re.search(r'load: globals applied (\d+) cell\(s\) \(int (\d+) \+ '
-                      r'table str (\d+) \+ file str (\d+)\), kept (\d+)',
-                      text)
+        a = re.search(r'load: globals applied (\d+) cell\(s\) \(null (\d+) \+ '
+                      r'int (\d+) \+ table str (\d+) \+ file str (\d+)\), '
+                      r'kept (\d+)', text)
         sm = re.search(r'load: dynamic string slots -> (\d+) \(first slot #(\d+)\)',
                        text)
         if not m or not a:
@@ -181,10 +181,11 @@ def main():
             'n': int(m.group(1)),
             'counts': [int(m.group(i)) for i in range(2, 9)],
             'applied': int(a.group(1)),
-            'n_int': int(a.group(2)),
-            'n_table': int(a.group(3)),
-            'n_file': int(a.group(4)),
-            'kept': int(a.group(5)),
+            'n_null': int(a.group(2)),
+            'n_int': int(a.group(3)),
+            'n_table': int(a.group(4)),
+            'n_file': int(a.group(5)),
+            'kept': int(a.group(6)),
             'slots': int(sm.group(1)) if sm else -1,
             'first_slot': int(sm.group(2)) if sm else -1,
         }
@@ -214,11 +215,17 @@ def main():
               '槽 %d：动态字符串表单元 = type5 计数（%d）' % (slot, g['n_table']))
         check(g['n_file'] == counts[4],
               '槽 %d：数据段字符串单元 = type4 计数（%d）' % (slot, g['n_file']))
-        check(g['applied'] == g['n_int'] + g['n_table'] + g['n_file'] and
-              g['applied'] + g['kept'] == n,
-              '槽 %d：applied=%d = int(%d)+table(%d)+file(%d)，applied+kept=%d'
-              % (slot, g['applied'], g['n_int'], g['n_table'], g['n_file'],
-                 g['applied'] + g['kept']))
+        check(g['n_null'] == counts[0],
+              '槽 %d：null 单元 = type0 计数（%d）' % (slot, g['n_null']))
+        check(g['applied'] == g['n_null'] + g['n_int'] + g['n_table'] +
+              g['n_file'] and g['applied'] + g['kept'] == n,
+              '槽 %d：applied=%d = null(%d)+int(%d)+table(%d)+file(%d)，'
+              'applied+kept=%d'
+              % (slot, g['applied'], g['n_null'], g['n_int'], g['n_table'],
+                 g['n_file'], g['applied'] + g['kept']))
+        check(g['kept'] == counts[1] + counts[6],
+              '槽 %d：kept=%d = type1(%d)+type6(%d)（仍未映射的两种）'
+              % (slot, g['kept'], counts[1], counts[6]))
         check(g['slots'] == counts[5],
               '槽 %d：动态字符串表解析出 %d 条（= type5 计数）'
               % (slot, g['slots']))
