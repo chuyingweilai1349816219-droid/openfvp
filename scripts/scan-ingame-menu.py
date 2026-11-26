@@ -1,27 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""scan-ingame-menu.py -- 从 HCB 静态抽出「游戏内菜单」的图元/图片表。
+"""scan-ingame-menu.py -- 从 HCB 与 HZC1 头静态抽出「系统菜单 + 确认框」的结构与几何。
 
-为什么要这个：FVP 的 148 条命令表里**没有任何 Menu 系命令**（只有
-MenuMessSkip(41) 与 TitleMenu(141)），exe 里也找不到菜单文案字符串。也就是说
-《五彩斑斓的世界 HD》的游戏内菜单不是外壳画的，而是脚本自己画：
+为什么要这个：FVP 的 148 条命令表里**没有任何 Menu 系命令**（只有 MenuSmessSkip(41)
+与 TitleMenu(141)），exe 里也没有菜单文案字符串。也就是说《五彩斑斓的世界 HD》的
+系统菜单不是外壳画的，而是脚本自己画：
 
-    0x57383  载入 menu_bg / menu_chk / menu_*_mes 到固定图元号
-    0x577C8  按「当前项下标」刷新（选图、挂组、按 enable global 决定光标）
-    0x572C9 / 0x57325  淡入淡出（MotionAlpha(42)）
-    0x57A07+ 输入与命中（InputGetCursX/Y(29/30) + PrimHit(76)）
+    0x54C68  系统菜单入口（输入循环、命中、淡入淡出），由脚本主循环在
+             InputGetState/InputGetDown 的 bit1 触发（0x5B57D..0x5B596）
+    0x54520  载入 8 个环形菜单项 × 3 态（sys_*_1 / _2 / _M）+ 侧窗 sys_window_*
+    0x577C8  按动作号打开确认框（menu_*_mes 提示图 + yes/no 按钮 + 光标）
+    0x57383  载入确认框素材
 
-本脚本只输出「名字 / 图元号 / 偏移 / 开关 global 号」这类结构事实，**不含任何
-图像数据**；产物是 ref/ingame-menu.json，门禁 tests/verify_ingame_menu.py。
+**几何不在脚本里、也不在 exe 里**：每个图元的屏幕位置来自 HZC1 头 `0x18/0x1A`
+（x/y）与 `0x14/0x16`（w/h）；脚本始终用 `PrimSetSprt(..., true, true)` 保留这两个值。
+所以本脚本读 `extract/graph/`（bin_archiver 解包产物）的 44 字节头来取几何，
+只输出数字，不含任何图像数据。
 
 用法：
-    python scripts/scan-ingame-menu.py                 # 人读摘要
+    python scripts/scan-ingame-menu.py                     # 人读摘要
     python scripts/scan-ingame-menu.py --json out/x.json
+    python scripts/scan-ingame-menu.py --extract <dir>      # 指定 HZC1 解包目录
 """
 import argparse
+import bisect
 import hashlib
 import json
 import os
+import struct
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -36,82 +42,162 @@ GAMES = {
                               'hoshimemo_installed', 'Hoshimemo_HD.hcb'),
 }
 
-# 扫描窗口：菜单模块所在的字节区间。窗口外命中说明脚本换了，门禁会报。
-REGION = (0x57300, 0x57800)
-WRAP_LOAD = 0x2354B      # (prim, name, ?, ?) -> GraphLoad("graph/"+name)
-WRAP_GROUP = 0x235E8     # (prim, parent, ?) -> PrimGroupIn(73)
-ANCHOR_HELPER = 0x35AB7  # (prim, 512, 320, on) -> PrimSetOP(×1.875, ×1.6875)
-SHOW_HELPER = 0x23804    # (prim, on) -> PrimSetDraw(79)
-SPRT_HELPER = 0x35BCC    # (prim, slot, x, y) -> PrimSetSprt(85)，x/y 传 true 则不覆盖
-ENTRY = 0x577C8          # (item index) -> 刷新该菜单项
+SYS_REGION = (0x54480, 0x54A00)     # 环形菜单 + 侧窗
+DLG_REGION = (0x57300, 0x57800)     # 确认框
+WRAP_LOAD = 0x2354B
+WRAP_GROUP = 0x235E8
+ANCHOR_HELPER = 0x35AB7
+SHOW_HELPER = 0x23804
+SPRT_HELPER = 0x35BCC
+SYS_ENTRY = 0x54C68
+DLG_ENTRY = 0x577C8
 ITEM_PRIM = 94
 BG_PRIM = 93
 CURSOR_PRIM = 137
 CONFIRM_PRIMS = (95, 96, 97, 98)
+ACTIONS = {1: 'undo', 2: 'title', 3: 'exit', 4: 'qload',
+           5: 'overwrite', 6: 'delete', 7: 'init'}
+ACTION_ZH = {'undo': '前回の選択肢へ戻る', 'title': 'タイトルへ戻る',
+             'exit': 'ゲームを終了', 'qload': 'クイックロード',
+             'overwrite': '記録を上書き', 'delete': '記録を削除',
+             'init': '設定を初期化'}
+
+
+def read_rect(extract, name):
+    """从 extract/graph/<idx>_<name> 的 44 字节头取 [x, y, w, h]。"""
+    if not extract or not os.path.isdir(extract):
+        return None
+    for fn in os.listdir(extract):
+        base = fn.split('_', 1)[1] if '_' in fn else fn
+        if base != name:
+            continue
+        with open(os.path.join(extract, fn), 'rb') as f:
+            h = f.read(0x2C)
+        if h[:4] != b'hzc1' or h[12:16] != b'NVSG':
+            return None
+        w, ht = struct.unpack_from('<H', h, 0x14)[0], struct.unpack_from('<H', h, 0x16)[0]
+        x, y = struct.unpack_from('<H', h, 0x18)[0], struct.unpack_from('<H', h, 0x1A)[0]
+        return [x, y, w, ht]
+    return None
 
 
 def _window(code, lo, hi):
-    pcs = [p for p in sorted(code.instr) if lo <= p < hi]
-    return [(p,) + code.instr[p] for p in pcs]
+    return [(p,) + code.instr[p] for p in sorted(code.instr) if lo <= p < hi]
 
 
-def scan(path):
-    data = open(path, 'rb').read()
-    code = fvm_ref.Code(data, 'cp932')
-    seq = _window(code, *REGION)
+def _call_after(seq, i, target, span=6):
+    for j in range(i + 1, min(i + span, len(seq))):
+        if seq[j][2] == 'call' and seq[j][3] and seq[j][3][0] == target:
+            return seq[j][0]
+        if seq[j][2] in ('ret', 'ret2'):
+            break
+    return None
+
+
+def scan_system_menu(code, extract):
+    seq = _window(code, *SYS_REGION)
+    loads = []
+    for i, (pc, _op, name, args) in enumerate(seq):
+        if name != 'pushstring' or not args or not args[0].startswith('sys_'):
+            continue
+        if _call_after(seq, i, WRAP_LOAD) is None:
+            continue
+        prim = None
+        for j in range(i - 1, max(-1, i - 3), -1):
+            if seq[j][2] in ('pushint16', 'pushint8'):
+                prim = seq[j][3][0]
+                break
+        loads.append(dict(prim=prim, asset=args[0], load_pc='0x%05x' % pc))
+
+    items, order = [], 0
+    by_base = {}
+    for r in loads:
+        a = r['asset']
+        if not a.startswith('sys_') or a.startswith('sys_window') or a.startswith('sys_cap'):
+            continue
+        if a.endswith('_1'):
+            order += 1
+            by_base[a[:-2]] = dict(order=order, action=a[4:-2], prims={}, assets={})
+        base = a[:-2]
+        if base not in by_base:
+            continue
+        slot = {'_1': 'normal', '_2': 'hover', '_M': 'mask'}[a[-2:]]
+        by_base[base]['prims'][slot] = r['prim']
+        by_base[base]['assets'][slot] = a
+    for base, it in by_base.items():
+        it['rect'] = read_rect(extract, it['assets'].get('normal', ''))
+        it['mask_rect'] = read_rect(extract, it['assets'].get('mask', ''))
+        it['hover_rect'] = read_rect(extract, it['assets'].get('hover', ''))
+        items.append(it)
+    items.sort(key=lambda r: r['order'])
+
+    window = []
+    for r in loads:
+        if not r['asset'].startswith('sys_window'):
+            continue
+        window.append(dict(asset=r['asset'], prim=r['prim'],
+                           rect=read_rect(extract, r['asset'])))
+    window.sort(key=lambda r: r['prim'])
+
+    # 打开路径：主循环里的 InputGetState/InputGetDown bit1 -> call SYS_ENTRY
+    openers = []
+    allpcs = sorted(code.instr)
+    for pc in allpcs:
+        op, name, args = code.instr[pc]
+        if name != 'call' or not args or args[0] != SYS_ENTRY:
+            continue
+        back = []
+        i = allpcs.index(pc)
+        for d in range(1, 8):
+            if i - d < 0:
+                break
+            q = allpcs[i - d]
+            back.append('%s%s' % (code.instr[q][1], code.instr[q][2]))
+        openers.append(dict(pc='0x%05x' % pc, before=list(reversed(back))))
+    return items, window, openers
+
+
+def scan_dialog(code, extract):
+    seq = _window(code, *DLG_REGION)
 
     def at(i):
         return seq[i] if 0 <= i < len(seq) else (None, None, None, [])
 
-    items, loads, cur = [], [], None
-    for i, (pc, op, name, args) in enumerate(seq):
-        p1, _, n1, a1 = at(i + 1)
-        p2, _, n2, a2 = at(i + 2)
+    prompts, loads, cur = [], [], None
+    for i, (pc, _op, name, args) in enumerate(seq):
+        _p1, _o1, n1, a1 = at(i + 1)
+        _p2, _o2, n2, a2 = at(i + 2)
         if name == 'pushstack' and args == [254] and n1 == 'pushint8' and n2 == 'eq':
             cur = a1[0]
-        if name != 'pushint8':
+        if name not in ('pushint8', 'pushint16') or n1 != 'pushstring' or not a1:
             continue
-        prim = args[0]
-        if n1 != 'pushstring' or not a1 or not a1[0].startswith('menu'):
+        if not a1[0].startswith('menu'):
             continue
-        # 后面必须紧跟 load 包装调用（pushint8/pushstring/pushtrue/pushtrue/call）
-        call_at = None
-        for j in range(i + 2, min(i + 6, len(seq))):
+        if _call_after(seq, i + 1, WRAP_LOAD) is None:
+            continue
+        parent = enable = None
+        for j in range(i + 2, min(i + 16, len(seq))):
             q = seq[j]
-            if q[2] == 'call':
-                if q[3] and q[3][0] == WRAP_LOAD:
-                    call_at = j
-                break
-        if call_at is None:
-            continue
-        parent = None
-        for j in range(i + 4, min(i + 14, len(seq))):
-            q = seq[j]
-            if q[2] == 'pushint16' and q[3] and q[3][0] in (795, 796):
+            if q[2] == 'pushint16' and q[3] and q[3][0] in (795, 796) and parent is None:
                 parent = q[3][0]
-                break
-            if q[2] == 'pushint8' and j > i + 6:
-                break
-        enable = None
-        for j in range(i + 4, min(i + 16, len(seq))):
-            q = seq[j]
-            if q[2] == 'pushglobal':
+            if q[2] == 'pushglobal' and enable is None:
                 enable = q[3][0]
-                break
-        rec = dict(prim=prim, image=a1[0], load_pc='0x%05x' % pc,
-                   parent=parent, enable_global=enable)
-        loads.append(dict(rec))
-        if prim == ITEM_PRIM:
-            rec['index'] = cur
-            items.append(rec)
+        rec = dict(prim=args[0], image=a1[0], load_pc='0x%05x' % pc,
+                   parent=parent, enable_global=enable,
+                   rect=read_rect(extract, a1[0]))
+        loads.append(rec)
+        if args[0] == ITEM_PRIM:
+            rec['action'] = ACTIONS.get(cur)
+            rec['action_zh'] = ACTION_ZH.get(rec['action'])
+            prompts.append(rec)
+    prompts.sort(key=lambda r: list(ACTIONS).index(next(
+        k for k, v in ACTIONS.items() if v == r['action'])))
 
-    items.sort(key=lambda r: (r['index'] is None, r['index']))
+    strings = [a[0] for _, _, n, a in seq if n == 'pushstring' and a]
+    floats = ['0x%08x' % f for f in
+              sorted({a[0] for _, _, n, a in _window(code, ANCHOR_HELPER, ANCHOR_HELPER + 0x60)
+                      if n == 'pushfloat'})]
 
-    # 谁写这 7 个开关：
-    #   a) 选项面板 switch（`pushstack 253 / pushint8 <选项号> / eq` + `pushstack 254 / popglobal G`）
-    #   b) 配置块拷贝（`pushglobal A / popglobal G`，A 是持久化默认值）
-    #   c) 重置（`pushfalse / popglobal G`，在 0x22F48 的初始化函数里）
-    by_global = {it['enable_global']: it for it in items if it.get('enable_global')}
     allpcs = sorted(code.instr)
     pos = {p: i for i, p in enumerate(allpcs)}
     fn_starts = [p for p in allpcs if code.instr[p][1] == 'initstack']
@@ -123,12 +209,11 @@ def scan(path):
         q = allpcs[i + n]
         return (q,) + code.instr[q]
 
-    import bisect
-
     def fn_of(pc):
         k = bisect.bisect_right(fn_starts, pc) - 1
         return fn_starts[k] if k >= 0 else None
 
+    by_global = {p['enable_global']: p for p in prompts if p.get('enable_global')}
     writes, enable_map, opt = [], [], None
     for pc in allpcs:
         _op, name, args = code.instr[pc]
@@ -147,55 +232,71 @@ def scan(path):
         elif pn == 'pushglobal' and pa:
             value = 'global:%d' % pa[0]
         elif pn == 'pushstack':
-            value = 'arg'          # 值由调用方压栈（选项面板的 switch 走这条）
+            value = 'arg'
         else:
             value = pn or '?'
         fnpc = fn_of(pc)
         writes.append(dict(pc='0x%05x' % pc, global_=g,
-                           fn=('0x%05x' % fnpc) if fnpc is not None else '-',
-                           value=value))
+                           fn=('0x%05x' % fnpc) if fnpc is not None else '-', value=value))
         if pn == 'pushstack' and opt is not None:
             it = by_global[g]
-            enable_map.append(dict(option_id=opt, global_=g, item=it['index'],
+            enable_map.append(dict(option_id=opt, global_=g, action=it['action'],
                                    image=it['image'], write_pc='0x%05x' % pc))
     enable_map.sort(key=lambda r: (r['option_id'] is None, r['option_id']))
-
-    # 配置块拷贝：`pushglobal <持久化默认> / popglobal <运行时>`，按写入顺序给出
-    # option_id ↔ 默认 global 的对应（与选项面板的编号应完全一致，可互相印证）
     copy_by_global = {w['global_']: w['value'] for w in writes
                       if w['value'].startswith('global:')}
     for m in enable_map:
         src = copy_by_global.get(m['global_'])
         m['config_global'] = int(src.split(':')[1]) if src else None
 
-    strings = [a[0] for _, _, n, a in seq if n == 'pushstring' and a]
-    loader_calls = sum(1 for _, _, n, a in seq if n == 'call' and a and a[0] == WRAP_LOAD)
-    group_calls = sum(1 for _, _, n, a in seq if n == 'call' and a and a[0] == WRAP_GROUP)
-    anchor_calls = sum(1 for _, _, n, a in seq if n == 'call' and a and a[0] == ANCHOR_HELPER)
+    # 每个确认动作被哪些代码路径触发
+    sites = []
+    for pc in allpcs:
+        op, name, args = code.instr[pc]
+        if name != 'call' or not args or args[0] != DLG_ENTRY:
+            continue
+        idx = None
+        i = pos[pc]
+        for d in range(1, 6):
+            q = allpcs[i - d]
+            if code.instr[q][1] in ('pushint8', 'pushint16'):
+                idx = code.instr[q][2][0]
+                break
+        sites.append(dict(pc='0x%05x' % pc, action=ACTIONS.get(idx),
+                          fn=('0x%05x' % fn_of(pc))))
+    for p in prompts:
+        p['call_sites'] = [s['pc'] for s in sites if s['action'] == p['action']]
 
-    # 锚点助手体里的浮点常量：1.875 = 1920/1024、1.6875 = 1080/640
-    helper = _window(code, ANCHOR_HELPER, ANCHOR_HELPER + 0x60)
-    floats = sorted({a[0] for _, _, n, a in helper if n == 'pushfloat'})
+    background = next((r for r in loads if r['prim'] == BG_PRIM), None)
+    cursor = next((r for r in loads if r['prim'] == CURSOR_PRIM), None)
+    return dict(prompts=prompts, loads=loads, strings=strings, floats=floats,
+                writes=writes, enable_map=enable_map,
+                background=background, cursor=cursor,
+                confirms=[r for r in loads if r['prim'] in CONFIRM_PRIMS],
+                sites=sites)
 
-    xrefs = ['0x%05x' % pc for pc in sorted(code.instr)
-             if code.instr[pc][1] == 'call' and code.instr[pc][2]
-             and code.instr[pc][2][0] == ENTRY]
 
+def scan(path, extract):
+    data = open(path, 'rb').read()
+    code = fvm_ref.Code(data, 'cp932')
+    sys_items, sys_window, openers = scan_system_menu(code, extract)
+    dlg = scan_dialog(code, extract)
+    dlg_seq = _window(code, *DLG_REGION)
     return dict(
-        hcb_size=len(data),
-        hcb_sha256=hashlib.sha256(data).hexdigest(),
-        region=['0x%05x' % REGION[0], '0x%05x' % REGION[1]],
-        instructions=len(seq),
-        loader_calls=loader_calls,
-        group_calls=group_calls,
-        anchor_calls=anchor_calls,
-        floats=['0x%08x' % f for f in floats],
-        strings=strings,
-        items=items,
-        loads=loads,
-        enable_map=enable_map,
-        writes=writes,
-        entry=dict(fn='0x%05x' % ENTRY, xrefs=xrefs),
+        hcb_size=len(data), hcb_sha256=hashlib.sha256(data).hexdigest(),
+        system=dict(region=['0x%05x' % SYS_REGION[0], '0x%05x' % SYS_REGION[1]],
+                    entry='0x%05x' % SYS_ENTRY, items=sys_items,
+                    window=sys_window, openers=openers,
+                    asset_loads=sum(1 for _, _, n, a in
+                                    _window(code, *SYS_REGION)
+                                    if n == 'call' and a and a[0] == WRAP_LOAD)),
+        dialog=dict(region=['0x%05x' % DLG_REGION[0], '0x%05x' % DLG_REGION[1]],
+                    entry='0x%05x' % DLG_ENTRY, instructions=len(dlg_seq),
+                    prompts=dlg['prompts'], confirms=dlg['confirms'],
+                    background=dlg['background'], cursor=dlg['cursor'],
+                    strings=dlg['strings'], floats=dlg['floats'],
+                    writes=dlg['writes'], enable_map=dlg['enable_map'],
+                    sites=dlg['sites']),
     )
 
 
@@ -203,71 +304,64 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('--game', default='iroseka', choices=sorted(GAMES))
     ap.add_argument('--json', default='')
+    ap.add_argument('--extract', default=os.path.join(ROOT, 'extract', 'graph'),
+                    help='HZC1 解包目录（缺省 extract/graph；不存在则不含几何）')
     a = ap.parse_args(argv)
     path = GAMES[a.game]
     if not os.path.isfile(path):
         print('SKIP: %s not found' % path)
         return 0
-    facts = scan(path)
+    facts = scan(path, a.extract)
+    ext = a.extract if os.path.isdir(a.extract) else None
+
     print('%s: hcb %d B sha256 %s' % (a.game, facts['hcb_size'],
                                       facts['hcb_sha256'][:16]))
-    print('region %s..%s, %d instructions, %d loader call(s), %d group call(s)'
-          % (facts['region'][0], facts['region'][1], facts['instructions'],
-             facts['loader_calls'], facts['group_calls']))
-    print('strings in region: %s' % ', '.join(facts['strings']))
-    for it in facts['items']:
-        print('  item %s  %-16s prim %d parent %s enable global %s  (%s)'
-              % (it['index'], it['image'], it['prim'], it['parent'],
-                 it['enable_global'], it['load_pc']))
-    print('entry %s called from %d site(s)' % (facts['entry']['fn'],
-                                               len(facts['entry']['xrefs'])))
-    for m in facts['enable_map']:
-        print('  option %s -> global[%d] = item %s (%s)  config global %s  @%s'
-              % (m['option_id'], m['global_'], m['item'], m['image'],
-                 m['config_global'], m['write_pc']))
-    print('flag writes: %d site(s) in %d function(s)'
-          % (len(facts['writes']), len({w['fn'] for w in facts['writes']})))
+    print('system menu %s..%s entry %s, %d asset load(s)'
+          % (facts['system']['region'][0], facts['system']['region'][1],
+             facts['system']['entry'], facts['system']['asset_loads']))
+    for it in facts['system']['items']:
+        print('  %d %-9s prims %-3s/%-3s/%-3s  %-16s rect %s  mask %s'
+              % (it['order'], it['action'], it['prims'].get('normal'),
+                 it['prims'].get('hover'), it['prims'].get('mask'),
+                 it['assets'].get('normal'), it['rect'], it['mask_rect']))
+    print('  window: %s' % ', '.join('%s@%s' % (w['asset'], w['prim'])
+                                     for w in facts['system']['window']))
+    print('  openers: %s' % ', '.join(o['pc'] for o in facts['system']['openers']))
+    print('confirm dialog %s..%s entry %s, %d instruction(s)'
+          % (facts['dialog']['region'][0], facts['dialog']['region'][1],
+             facts['dialog']['entry'], facts['dialog']['instructions']))
+    for p in facts['dialog']['prompts']:
+        print('  %-9s %-16s prim %d parent %s global %s rect %s  sites %s'
+              % (p['action'], p['image'], p['prim'], p['parent'],
+                 p['enable_global'], p['rect'], ','.join(p['call_sites'])))
+    print('  yes/no: %s' % ', '.join('%s@%d' % (c['image'], c['prim'])
+                                     for c in facts['dialog']['confirms']))
+    print('  geometry: %s' % ('extract/graph 头' if ext else '未提供 --extract，省略'))
     if a.json:
         payload = dict(
-            schema='fvp-ingame-menu/1', game=a.game,
+            schema='fvp-ingame-menu/2', game=a.game,
             source=dict(file=os.path.basename(path), size=facts['hcb_size'],
                         sha256=facts['hcb_sha256'],
-                        method='HCB 静态解码（ref/fvm_ref.py），只读结构，不含图像'),
-            claim=('游戏内菜单由脚本绘制：命令表 148 条里没有 Menu*（只有 '
-                   'MenuMessSkip(41) 与 TitleMenu(141)），exe 也没有菜单文案字符串'),
-            region=facts['region'],
-            module=dict(load='0x%05x' % WRAP_LOAD, group='0x%05x' % WRAP_GROUP,
-                        anchor='0x%05x' % ANCHOR_HELPER, show='0x%05x' % SHOW_HELPER,
-                        sprt='0x%05x' % SPRT_HELPER,
-                        entry=facts['entry']['fn']),
-            canvas=dict(virt=[1024, 640], real=[1920, 1080], scale=[1.875, 1.6875],
-                        anchor=[512, 320], anchor_px=[960, 540],
-                        floats=facts['floats']),
-            prims=dict(background=BG_PRIM, item=ITEM_PRIM, cursor=CURSOR_PRIM,
-                       confirm=list(CONFIRM_PRIMS),
-                       parents=[795, 796]),
-            items=facts['items'],
-            confirms=[dict(prim=r['prim'], image=r['image'], load_pc=r['load_pc'])
-                      for r in facts['loads'] if r['prim'] in CONFIRM_PRIMS],
-            background=dict(prim=BG_PRIM, image='menu_bg'),
-            cursor=dict(prim=CURSOR_PRIM, image='menu_chk'),
-            enable_map=facts['enable_map'],
-            enable_writes=facts['writes'],
-            strings=facts['strings'],
-            entry=facts['entry'],
-            unknowns=['菜单打开/关闭由哪条脚本路径触发（0x577C8 的 12 个调用点尚未逐个确认）',
-                      '图元号 795/796 两个挂接父组的用途（推测为普通项/危险项两组）',
-                      '菜单项的屏幕坐标：本区间内没有显式 PrimSetXY，位置由上层 Motion/布局决定',
-                      '0x577C8 里 14 个「取反写回」的确切语义（看着像按项切换可用性 + 同步光标，未证实）'],
+                        method='HCB 静态解码 + HZC1 44 字节头；只读结构/坐标，不含图像'),
+            claim=('系统菜单与确认框都由脚本用图片绘制：命令表 148 条里没有 Menu 系命令'
+                   '（只有 MenuMessSkip(41)/TitleMenu(141)），exe 里也没有菜单文案；'
+                   '几何来自 HZC1 头的屏幕坐标字段，不是版面表'),
+            system=dict(facts['system'],
+                        note='8 项环形菜单，每项 normal/hover/mask 三态；'
+                             '打开点在脚本主循环 InputGetState/Down bit1 之后'),
+            dialog=dict(facts['dialog'],
+                        note='7 个确认提示（是图片，不是文字）+ yes/no 两态 + 光标；'
+                             '每项由 enable global 决定是否可用'),
+            canvas=dict(virt=[1024, 640], real=[1920, 1080], scale=[1.875, 1.6875]),
+            unknowns=['菜单项在屏幕上的最终位置由 HZC1 头给出，但 hover 时是否再用'
+                      '脚本微调（PrimSetXY）尚未逐项确认',
+                      '0x577C8 里 14 个「取反写回」的确切语义未证实',
+                      '确认框之外的 save/load 列表几何（slf_*）另属一块，未纳入本轮'],
         )
         with open(a.json, 'w', encoding='utf-8') as fp:
             json.dump(payload, fp, ensure_ascii=False, indent=1)
         print('json -> %s' % a.json)
     return 0
-
-
-def _unused():
-    return None
 
 
 if __name__ == '__main__':

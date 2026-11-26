@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""游戏内菜单结构门禁（ref/ingame-menu.json）。
+"""游戏内菜单结构门禁（ref/ingame-menu.json，schema v2）。
 
-被验证的主张（都来自静态证据，不跑游戏、不抓帧）：
+被验证的主张（全部来自静态证据，不跑游戏、不抓帧）：
 
   1. 命令表 148 条里没有 Menu 系命令，只有 MenuMessSkip(41) 与 TitleMenu(141)
-     —— 所以游戏内菜单不可能是外壳画的；
-  2. exe 里没有菜单文案字符串（菜单文字在图片里：menu_*_mes）；
-  3. HCB 里有一个菜单模块（0x57300..0x57800）：7 个菜单项各自把一张
-     menu_*_mes 载入图元 94、挂到父组 795（第 3 项「終了」挂 796）、
-     由 global 1593..1599 决定该项是否可用；确认框用 95..98（yes/no 各两态）；
-     居中锚点是 PrimSetOP(×1.875, ×1.6875) 于 (512,320) 虚拟坐标 = (960,540)。
+     —— 所以系统菜单不可能是外壳画的；exe 里也没有菜单文案（文字在图片里）；
+  2. **系统菜单**：8 项 × 3 态（normal/hover/mask），图元 141..164 连续，
+     素材 `sys_{save,load,hidewin,undo,config,title,exit,return}_{1,2,M}`；
+     打开点在脚本主循环 `InputGetState/InputGetDown` bit1 之后（5 个调用点）；
+  3. **确认框**：7 张提示图（是图片，不是文字）+ yes/no 两态 + 光标；
+     每项由 `enable_global` 决定是否可用，选项号 47..53 / 配置默认 976..982
+     两条独立路径给出同一张表；
+  4. **几何**来自 HZC1 头 `0x18/0x1A`（屏幕坐标）与 `0x14/0x16`（宽高）：
+     环形菜单的 8 个矩形构成一条自右上到左下的弧，确认框的提示图/背景/按钮
+     全部以 (960,540) 为中心。
 
-有游戏数据时重新静态扫描 HCB 做逐字段比对；没有数据时只校验冻结 JSON 的
+有游戏数据与 HZC1 解包目录时重新扫描逐字段比对；缺失时只校验冻结 JSON 的
 内部一致性与命令表证据（不伪造通过）。
 """
 import argparse
@@ -28,12 +32,15 @@ FVP = os.path.dirname(HERE)
 REF = os.path.join(FVP, 'ref', 'ingame-menu.json')
 SCANNER = os.path.join(FVP, 'scripts', 'scan-ingame-menu.py')
 CMD_TABLE = os.path.join(FVP, 'ref', 'cmd_table.json')
+EXTRACT = os.path.join(FVP, 'extract', 'graph')
 GAME = os.path.join(r'C:\Users\Mechrevo\Downloads', '五彩斑斓的世界HD')
 HCB = os.path.join(GAME, 'iroseka.hcb')
 EXE = os.path.join(GAME, 'iroseka_HD.exe')
 
 MENU_WORDS = ['セーブ', 'ロード', '設定', '終了', '戻す', '上書き',
               '初期化', '削除', 'メニュー']
+SYS_ACTIONS = ['save', 'load', 'hidewin', 'undo', 'config', 'title', 'exit', 'return']
+DLG_ACTIONS = ['undo', 'title', 'exit', 'qload', 'overwrite', 'delete', 'init']
 
 
 def load_scanner():
@@ -57,9 +64,20 @@ def jp_strings(blob):
     return out
 
 
+def strip_rects(node):
+    """重扫比对时忽略几何（几何来自 extract/，没有解包目录时扫不出来）。"""
+    if isinstance(node, dict):
+        return {k: strip_rects(v) for k, v in node.items()
+                if k not in ('rect', 'mask_rect', 'hover_rect')}
+    if isinstance(node, list):
+        return [strip_rects(v) for v in node]
+    return node
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--json', default=REF)
+    ap.add_argument('--extract', default=EXTRACT)
     a = ap.parse_args()
     fails = []
 
@@ -74,86 +92,130 @@ def main():
     with open(a.json, encoding='utf-8') as f:
         ref = json.load(f)
 
-    print('== 冻结基线自洽性')
-    check(ref.get('schema') == 'fvp-ingame-menu/1', 'schema fvp-ingame-menu/1')
+    print('== 冻结基线自洽性 / 系统菜单')
+    check(ref.get('schema') == 'fvp-ingame-menu/2', 'schema fvp-ingame-menu/2')
     src = ref.get('source', {})
     check(src.get('size') == 4275282, 'source size 4275282 (got %s)' % src.get('size'))
     check(len(src.get('sha256', '')) == 64, 'source sha256 recorded')
 
-    items = ref.get('items', [])
-    check(len(items) == 7, '7 menu items (got %d)' % len(items))
-    check([it['index'] for it in items] == list(range(1, 8)),
-          'item indices 1..7 in order')
-    check(all(it['prim'] == 94 for it in items), 'all items load into prim 94')
-    check(len({it['image'] for it in items}) == 7, '7 distinct item images')
-    check(all(it['image'].startswith('menu_') for it in items),
-          'item images are menu_*')
-    check([it['enable_global'] for it in items] == list(range(1593, 1600)),
-          'enable globals 1593..1599 one per item')
-    check([it['parent'] for it in items] == [795, 795, 796, 795, 795, 795, 795],
-          'parent groups 795/796 (item 3 -> 796)')
+    sysm = ref.get('system', {})
+    items = sysm.get('items', [])
+    check(len(items) == 8, '8 ring items (got %d)' % len(items))
+    check([it['order'] for it in items] == list(range(1, 9)), 'orders 1..8')
+    check([it['action'] for it in items] == SYS_ACTIONS,
+          'actions save/load/hidewin/undo/config/title/exit/return')
+    normals = [it['prims']['normal'] for it in items]
+    check(normals == [141 + 3 * k for k in range(8)],
+          'normal prims 141,144,...,162 (got %s)' % normals)
+    check(all(it['prims']['hover'] == it['prims']['normal'] + 1 and
+              it['prims']['mask'] == it['prims']['normal'] + 2 for it in items),
+          'hover = normal+1 and mask = normal+2 for every item')
+    check(all(it['assets']['normal'].startswith('sys_') and
+              it['assets']['normal'].endswith('_1') and
+              it['assets']['hover'].endswith('_2') and
+              it['assets']['mask'].endswith('_M') for it in items),
+          'asset naming sys_<action>_{1,2,M}')
 
-    confirms = ref.get('confirms', [])
-    check([c['prim'] for c in confirms] == [95, 96, 97, 98],
-          'confirm prims 95..98')
+    rects = [it.get('rect') for it in items]
+    check(all(r and len(r) == 4 and r[2] > 0 and r[3] > 0 for r in rects),
+          'every item has a header rect [x,y,w,h]')
+    if all(rects):
+        check(all(0 <= r[0] < 1920 and 0 <= r[1] < 1080 for r in rects),
+              'ring rects inside 1920x1080')
+        ys = [r[1] for r in rects]
+        check(ys == sorted(ys) and len(set(ys)) == 8,
+              'ring descends monotonically (y 229..995)')
+        xs = [r[0] for r in rects]
+        check(xs[0] >= 1500 and xs[-1] <= 900,
+              'arc runs from the right edge (x %d) to the lower left (x %d)'
+              % (xs[0], xs[-1]))
+        diffs = [it['mask_rect'][1] - it['rect'][1] for it in items]
+        check(all(20 <= d <= 24 for d in diffs),
+              'mask strip sits 20..24 px below its item (got %s)' % diffs)
+        check(all(it['mask_rect'][2] == 874 for it in items),
+              'all mask strips are 874 px wide')
+
+    win = sysm.get('window', [])
+    check([w['asset'] for w in win] ==
+          ['sys_window_title', 'sys_window_right', 'sys_window_left'],
+          'window parts title/right/left')
+    check([w['prim'] for w in win] == [172, 420, 421],
+          'window prims 172/420/421')
+    check(len(sysm.get('openers', [])) == 5,
+          '5 call sites open the system menu')
+    check(any(o['pc'] == '0x5b596' for o in sysm.get('openers', [])),
+          'story loop opens it at 0x5B596 (after InputGetState/Down bit1)')
+
+    print('== 冻结基线自洽性 / 确认框')
+    dlg = ref.get('dialog', {})
+    prompts = dlg.get('prompts', [])
+    check(len(prompts) == 7, '7 confirmation prompts (got %d)' % len(prompts))
+    check([p['action'] for p in prompts] == DLG_ACTIONS, 'prompt action order')
+    check(all(p['prim'] == 94 for p in prompts), 'all prompts share prim 94')
+    check([p['parent'] for p in prompts] == [795, 795, 796, 795, 795, 795, 795],
+          'only the exit prompt uses parent group 796')
+    check([p['enable_global'] for p in prompts] == list(range(1593, 1600)),
+          'enable globals 1593..1599')
+    check(len({p['image'] for p in prompts}) == 7, '7 distinct prompt images')
+    check(all(p['image'].endswith('_mes') and p.get('rect') for p in prompts),
+          'prompt images are menu_*_mes with header rects')
+    if all(p.get('rect') for p in prompts):
+        centers = [p['rect'][0] + p['rect'][2] / 2 for p in prompts]
+        check(all(abs(c - 960) <= 12 for c in centers),
+              'prompts horizontally centred on x=960 (centres %s)'
+              % [round(c, 1) for c in centers])
+        check(all(abs(p['rect'][1] - 459) <= 2 for p in prompts),
+              'prompts sit on the same baseline (y 458..460)')
+
+    confirms = dlg.get('confirms', [])
+    check([c['prim'] for c in confirms] == [95, 96, 97, 98], 'confirm prims 95..98')
     check([c['image'] for c in confirms] ==
           ['menu_yes_1', 'menu_yes_2', 'menu_no_1', 'menu_no_2'],
           'confirm images yes_1/yes_2/no_1/no_2')
+    yes = confirms[0].get('rect')
+    no = confirms[2].get('rect')
+    if yes and no:
+        check(yes[0] + yes[2] / 2 < 960 < no[0] + no[2] / 2,
+              'yes button is left of centre, no button right of it')
 
-    prims = ref.get('prims', {})
-    check(prims.get('background') == 93 and ref.get('background', {}).get('image') == 'menu_bg',
-          'background = prim 93 / menu_bg')
-    check(prims.get('cursor') == 137 and ref.get('cursor', {}).get('image') == 'menu_chk',
-          'cursor = prim 137 / menu_chk')
+    bg = dlg.get('background', {})
+    check(bg.get('prim') == 93 and bg.get('image') == 'menu_bg',
+          'dialog background = prim 93 / menu_bg')
+    if bg.get('rect'):
+        check(abs(bg['rect'][0] + bg['rect'][2] / 2 - 960) <= 2 and
+              abs(bg['rect'][1] + bg['rect'][3] / 2 - 540) <= 2,
+              'dialog background centred on (960,540)')
+    cur = dlg.get('cursor', {})
+    check(cur.get('prim') == 137 and cur.get('image') == 'menu_chk',
+          'dialog cursor = prim 137 / menu_chk')
 
-    cv = ref.get('canvas', {})
-    check(cv.get('virt') == [1024, 640] and cv.get('real') == [1920, 1080],
-          'virtual 1024x640 -> real 1920x1080')
-    check(cv.get('scale') == [1.875, 1.6875], 'scale 1.875 / 1.6875')
-    check(cv.get('anchor') == [512, 320], 'anchor at virtual (512,320)')
-    check(cv.get('anchor_px') == [960, 540], 'anchor -> real (960,540)')
-    check(cv.get('floats') == ['0x3fd80000', '0x3ff00000'],
-          'float bit patterns 0x3FD80000 / 0x3FF00000')
-    check(abs(512 * 1.875 - 960) < 1e-9 and abs(320 * 1.6875 - 540) < 1e-9,
-          'anchor math 512*1.875=960, 320*1.6875=540')
-
-    strings = ref.get('strings', [])
-    check(len(strings) == 13, '13 pushstring operands in the module (got %d)'
-          % len(strings))
-    check(sorted(strings) == sorted(set(strings)), 'no duplicate strings')
-
-    # 7 个开关由谁写：选项面板（47..53）、配置块拷贝（976..982）、重置、菜单自身
-    em = ref.get('enable_map', [])
+    print('== 开关：选项号 / 配置默认值 / 运行时开关')
+    em = dlg.get('enable_map', [])
     check(len(em) == 7, '7 enable-map entries (got %d)' % len(em))
-    check([m['option_id'] for m in em] == list(range(47, 54)),
-          'option ids 47..53')
-    check([m['item'] for m in em] == [4, 5, 6, 1, 7, 3, 2],
-          'option order is ring order 4,5,6,1,7,3,2 (not 1..7)')
+    check([m['option_id'] for m in em] == list(range(47, 54)), 'option ids 47..53')
+    check([m['action'] for m in em] ==
+          ['qload', 'overwrite', 'delete', 'undo', 'init', 'exit', 'title'],
+          'option order is NOT ring order (qload..title)')
     check([m['config_global'] for m in em] == list(range(976, 983)),
           'config defaults 976..982 in the same order')
     check(sorted(m['global_'] for m in em) == list(range(1593, 1600)),
-          'the 7 mappings cover globals 1593..1599 exactly once')
-    by_item = {it['index']: it['enable_global'] for it in items}
-    check(all(m['global_'] == by_item[m['item']] for m in em),
-          'every mapping targets the item\'s own enable flag')
-    check(all(m['image'] == items[m['item'] - 1]['image'] for m in em),
-          'image names match the item table')
-
-    w = ref.get('enable_writes', [])
+          'runtime globals 1593..1599 covered exactly once')
+    w = dlg.get('writes', [])
     check(len(w) == 35, '35 flag write sites (got %d)' % len(w))
     kinds = {}
     for x in w:
         kinds[(x['fn'], x['value'])] = kinds.get((x['fn'], x['value']), 0) + 1
-    check(kinds.get(('0x22f48', 'false')) == 7,
-          'init function 0x22F48 clears all 7 flags')
-    check(kinds.get(('0x25e93', 'arg')) == 7,
-          'option switch 0x25E93 sets all 7 from its argument')
-    check(kinds.get(('0x6ce71', 'global:976')) == 1 and
-          sum(v for (fn, _v), v in kinds.items() if fn == '0x6ce71') == 7,
-          'config copy 0x6CE71 fills all 7 from defaults 976..982')
-    check(kinds.get(('0x577c8', 'true')) == 7 and
-          kinds.get(('0x577c8', 'false')) == 7,
-          'menu 0x577C8 toggles each flag (7 true + 7 false)')
+    check(kinds.get(('0x22f48', 'false')) == 7, 'init 0x22F48 clears all 7')
+    check(kinds.get(('0x25e93', 'arg')) == 7, 'option switch 0x25E93 sets all 7')
+    check(sum(v for (fn, _v), v in kinds.items() if fn == '0x6ce71') == 7,
+          'config copy 0x6CE71 fills all 7 from defaults')
+    check(kinds.get(('0x577c8', 'true')) == 7 and kinds.get(('0x577c8', 'false')) == 7,
+          'dialog code toggles each flag (7 true + 7 false)')
+
+    for p in prompts:
+        check(len(p.get('call_sites', [])) >= 1,
+              '%s prompt has at least one trigger site' % p['action'])
+    check(len(dlg.get('strings', [])) == 13, '13 pushstring operands in the dialog')
 
     print('== 命令表证据（菜单不可能是外壳画的）')
     with open(CMD_TABLE, encoding='utf-8') as f:
@@ -167,46 +229,44 @@ def main():
     if os.path.isfile(EXE):
         blob = open(EXE, 'rb').read()
         labels = jp_strings(blob)
-        hits = [w for w in MENU_WORDS if w in labels]
-        check(not hits, 'no standalone cp932 menu label in exe (%s)'
-              % (hits or 'none'))
-        # 「終了」的字节只作为「開くに失敗しました。終了してもよろしいですか？」的一段出现，
-        # 不是独立菜单标签（独立标签会以 0x00 结尾）
+        hits = [x for x in MENU_WORDS if x in labels]
+        check(not hits, 'no standalone cp932 menu label in exe (%s)' % (hits or 'none'))
         raw = '終了'.encode('cp932')
         pos = blob.find(raw)
         tail = blob[pos + len(raw):pos + len(raw) + 4] if pos >= 0 else b''
         check(pos >= 0 and tail == 'して'.encode('cp932'),
               '「終了」 is followed by 「して」 (dialog sentence, not a label)')
-        check(b'MenuMessSkip' in blob, 'exe still exports MenuMessSkip name')
-        check(b'SaveCreate' in blob, 'exe still exports SaveCreate name')
+        check(b'MenuMessSkip' in blob and b'SaveCreate' in blob,
+              'exe still exports MenuMessSkip / SaveCreate names')
     else:
         print('  skip  exe not present')
 
     print('== 重新静态扫描 HCB，逐字段比对')
     if os.path.isfile(HCB):
         mod = load_scanner()
-        facts = mod.scan(HCB)
+        ext = a.extract if os.path.isdir(a.extract) else None
+        facts = mod.scan(HCB, ext)
         check(facts['hcb_size'] == src['size'], 'hcb size unchanged')
         check(hashlib.sha256(open(HCB, 'rb').read()).hexdigest() == src['sha256'],
               'hcb sha256 unchanged')
-        check(facts['region'] == ref['region'], 'scan region unchanged')
-        fres = [dict(index=it['index'], image=it['image'], prim=it['prim'],
-                     parent=it['parent'], enable_global=it['enable_global'],
-                     load_pc=it['load_pc']) for it in facts['items']]
-        check(fres == items, 'items re-derived identically (%d)' % len(fres))
-        check([dict(prim=c['prim'], image=c['image']) for c in
-               [dict(prim=r['prim'], image=r['image'])
-                for r in facts['loads'] if r['prim'] in mod.CONFIRM_PRIMS]]
-              == [dict(prim=c['prim'], image=c['image']) for c in confirms],
-              'confirm map re-derived identically')
-        check(facts['entry']['fn'] == ref['entry']['fn'],
-              'entry %s unchanged' % ref['entry']['fn'])
-        check(facts['entry']['xrefs'] == ref['entry']['xrefs'],
-              '%d call sites to entry unchanged' % len(ref['entry']['xrefs']))
-        check(facts['strings'] == strings, 'string list re-derived identically')
-        check(facts['floats'] == cv['floats'], 'anchor float constants unchanged')
-        check(facts['enable_map'] == em, 'enable map re-derived identically')
-        check(facts['writes'] == w, 'flag write sites re-derived identically')
+        got_sys = strip_rects(facts['system'])
+        ref_sys = strip_rects(sysm)
+        check(got_sys['items'] == ref_sys['items'], 'ring items re-derived identically')
+        check(got_sys['window'] == ref_sys['window'], 'window parts identical')
+        check(got_sys['openers'] == ref_sys['openers'], 'open sites identical')
+        check(got_sys['entry'] == ref_sys['entry'], 'system entry unchanged')
+        got_dlg = strip_rects(facts['dialog'])
+        ref_dlg = strip_rects(dlg)
+        check(got_dlg['prompts'] == ref_dlg['prompts'], 'prompts identical')
+        check(got_dlg['confirms'] == ref_dlg['confirms'], 'yes/no identical')
+        check(got_dlg['enable_map'] == ref_dlg['enable_map'], 'enable map identical')
+        check(got_dlg['writes'] == ref_dlg['writes'], 'flag writes identical')
+        check(got_dlg['sites'] == ref_dlg['sites'], 'trigger sites identical')
+        if ext:
+            rects_now = [it.get('rect') for it in facts['system']['items']]
+            check(rects_now == rects, 'ring rects re-read from HZC1 headers')
+        else:
+            print('  skip  HZC1 extract dir not present (rects not re-derived)')
     else:
         print('  skip  hcb not present')
 

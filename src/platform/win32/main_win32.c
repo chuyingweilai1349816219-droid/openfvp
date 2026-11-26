@@ -3371,9 +3371,11 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         }
     }
     {
-        /* 占位菜单：英文标签对应原版 ring 菜单里的 OPTION/SAVE/LOAD/TITLE/
-         * EXIT 图片，但排版（300 起、行距 64、文字）是我们自己的，**不是**
-         * 原版坐标；原版菜单见 ref/ingame-menu.json（脚本侧 7 项图片）。
+        /* 占位菜单：英文标签对应原版系统菜单里的 SAVE/LOAD/OPTION/TITLE/EXIT 图片，
+         * 但排版（300 起、行距 64、文字）是我们自己的，**不是**原版坐标。
+         * 原版：8 项 sys_* 环形菜单（图元 141..164，坐标在 HZC1 头里）+
+         * 7 张 menu_*_mes 确认框（图元 94 + yes/no 95..98），见
+         * ref/ingame-menu.json 与 tests/verify_ingame_menu.py。
          * 这里保留它只为在没有脚本菜单的情况下仍能点开/验证输入通路。 */
         static const char *const game_menu_labels[] = {
             "SAVE", "LOAD", "OPTION", "TITLE", "QUIT"
@@ -4059,10 +4061,11 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 fvp_logf("menu: auto-opened at %.0f ms (%d item(s))",
                          (now - menu_t0) * 1000.0, gmenu.count);
                 /* 诚实标注：原版没有引擎侧菜单命令（148 条里只有
-                 * MenuMessSkip(41)/TitleMenu(141)），菜单是脚本用
-                 * menu_bg/menu_chk/menu_*_mes 图片自己画的
-                 * （见 ref/ingame-menu.json 与 tests/verify_ingame_menu.py）。
-                 * 这个 5 项文字菜单只是外壳占位，不参与像素基线。 */
+                 * MenuMessSkip(41)/TitleMenu(141)），菜单是脚本画的：
+                 * 8 项 sys_* 环形菜单 + 7 张 menu_*_mes 确认框，
+                 * 坐标在 HZC1 头里（见 ref/ingame-menu.json 与
+                 * tests/verify_ingame_menu.py）。这个 5 项文字菜单只是外壳
+                 * 占位，不参与像素基线。 */
                 fvp_logf("menu: NOTE placeholder overlay, original menu is "
                          "script-side (see ref/ingame-menu.json)");
             }
