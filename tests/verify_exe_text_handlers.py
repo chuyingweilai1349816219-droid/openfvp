@@ -68,7 +68,8 @@ def main():
 
     print('== 2. 四个 handler ==')
     want = {110: ('TextBuff', '0x43c830'), 112: ('TextColor', '0x43c8d0'),
-            113: ('TextFont', '0x43da70'), 120: ('TextOutSize', '0x43c960'),
+            113: ('TextFont', '0x43da70'), 118: ('TextFormat', '0x43cc10'),
+            119: ('TextFunction', '0x43ccf0'), 120: ('TextOutSize', '0x43c960'),
             125: ('TextShadowDist', '0x43cbb0'), 126: ('TextSize', '0x43cd60'),
             127: ('TextSkip', '0x43cdd0'), 128: ('TextSpace', '0x43ce10')}
     check(set(hs) == set(want), 'handler 集合 = %r（实际 %r）'
@@ -107,6 +108,15 @@ def main():
     check('0..3' in (r127.get('mode') or ''), 'TextSkip mode 0..3')
     r128 = (hs.get(128) or {}).get('rules') or {}
     check('-0x20..0x20' in (r128.get('x') or ''), 'TextSpace x -0x20..0x20')
+    r118 = (hs.get(118) or {}).get('rules') or {}
+    check('-0x20..0x20' in (r118.get('a1') or ''), 'TextFormat a1 -0x20..0x20')
+    check('0..0x40' in (r118.get('a3') or '') and '0..0x40' in (r118.get('a4') or ''),
+          'TextFormat a3/a4 0..0x40')
+    check('pen' in (r118.get('a4') or ''), 'TextFormat a4 会抬高 pen')
+    check('-0x10..0x10' in (r118.get('a5') or ''), 'TextFormat a5/a6 -0x10..0x10')
+    r119 = (hs.get(119) or {}).get('rules') or {}
+    check('0..1' in (r119.get('a') or '') and '0..2' in (r119.get('b') or ''),
+          'TextFunction 0..1 / 0..2 / 0..2')
 
     print('== 5. C 侧一致性 ==')
     gfx = read(os.path.join(FVP, 'src', 'gfx.c'))
@@ -129,6 +139,13 @@ def main():
     check('fvp_textattr_set_font_ex' in seg3, 'case 113 用逐分量入口')
     check('has1' in seg3 and 'has2' in seg3,
           'case 113 记下每个 id 是不是 int（非 int 不覆盖）')
+    seg5 = sysc[sysc.index('case 118:'):sysc.index('case 119:')]
+    check('mask |= 1u << k' in seg5 and 'fvp_textattr_set_format_ex' in seg5,
+          'case 118 记下每个分量是否 int（mask）并走 _ex 入口')
+    i119 = sysc.index('case 119:')
+    seg6 = sysc[i119:i119 + 1600]
+    check('fvp_textattr_set_function_ex' in seg6 and 'mask' in seg6,
+          'case 119 同样按"是否 int"掩码走 _ex 入口')
     ta = read(os.path.join(FVP, 'src', 'textattr.c'))
     i3 = ta.index('int fvp_textattr_set_font_ex')
     seg4 = ta[i3:i3 + 700]
@@ -139,7 +156,7 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 八个文本 handler 的实参规则（层号 0..0x1F；分量逐分量判 int + 范围，'
+    print('\nOK: 十个文本 handler 的实参规则（层号 0..0x1F；分量逐分量判 int + 范围，'
           '不满足保持原值 / TextShadowDist 钳位）与 exe 一致')
     return 0
 

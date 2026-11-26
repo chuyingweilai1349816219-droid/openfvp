@@ -83,6 +83,22 @@ HANDLERS = [
         (0x43CE45, 'mov    %dx,0x5a8(%ecx)'),
         (0x43CE62, 'mov    %ax,0x5aa(%ecx)'),
     ]),
+    (0x43CC10, 118, 'TextFormat', [
+        (0x43CC17, 'cmp    %bl,(%eax)'),
+        (0x43CC2A, 'cmp    $0x1f,%ecx'),
+        (0x43CC48, 'cmp    $0xffffffe0,%edx'),
+        (0x43CC7E, 'cmp    $0x40,%edx'),
+        (0x43CC9E, 'cmp    %dx,0x5e8(%ecx)'),
+        (0x43CCBD, 'cmp    $0xfffffff0,%edx'),
+        (0x43CCD6, 'cmp    $0xfffffff0,%edx'),
+    ]),
+    (0x43CCF0, 119, 'TextFunction', [
+        (0x43CCF4, 'cmpb   $0x2,(%eax)'),
+        (0x43CD00, 'cmp    $0x1f,%ecx'),
+        (0x43CD1F, 'cmp    $0x1,%edx'),
+        (0x43CD37, 'cmp    $0x2,%edx'),
+        (0x43CD4F, 'cmp    $0x2,%edx'),
+    ]),
     (0x43CD60, 126, 'TextSize', [
         (0x43CD65, 'cmpb   $0x2,(%esi)'),
         (0x43CD71, 'cmp    $0x1f,%eax'),
@@ -114,6 +130,17 @@ RULES = {
             'out_of_range': '跳过'},
     '128': {'layer': 'int 0..0x1F', 'x': 'int -0x20..0x20，否则保持原值',
             'y': 'int -0x20..0x20，否则保持原值', 'out_of_range': '逐分量跳过'},
+    '118': {'layer': 'int 0..0x1F',
+            'a1': 'tw+0x5A8，int -0x20..0x20',
+            'a2': 'tw+0x5AA，int -0x20..0x20',
+            'a3': 'tw+0x5AE，int 0..0x40',
+            'a4': 'tw+0x5AC，int 0..0x40；新值比 pen(0x5E8) 大时一并抬高 pen',
+            'a5': 'tw+0x5B4，int -0x10..0x10',
+            'a6': 'tw+0x5B0，int -0x10..0x10',
+            'out_of_range': '逐分量跳过（不满足的分量保持原值）'},
+    '119': {'layer': 'int 0..0x1F', 'a': 'tw+0x5A5，int 0..1',
+            'b': 'tw+0x5A4，int 0..2', 'c': 'tw+0x5A6，int 0..2',
+            'out_of_range': '逐分量跳过'},
 }
 
 

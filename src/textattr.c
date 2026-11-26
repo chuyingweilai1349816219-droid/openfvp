@@ -218,8 +218,9 @@ static int set_in_range(int *dst, int v, int lo, int hi)
  *   e → tw+0x5B4（-16..16）                        → fmt_off_a
  *   f → tw+0x5B0（-16..16）                        → fmt_off_b
  * 六个全都超范围时返回 0。 */
-int fvp_textattr_set_format(FvpTextAttr *attrs, int count, int idx, int a,
-                            int b, int c, int d, int e, int f)
+int textattr_format_impl(FvpTextAttr *attrs, int count, int idx,
+                                int a, int b, int c, int d, int e, int f,
+                                unsigned has_mask)
 {
     int wrote = 0;
     FvpTextAttr *ta;
@@ -228,33 +229,60 @@ int fvp_textattr_set_format(FvpTextAttr *attrs, int count, int idx, int a,
         return 0;
     }
     ta = &attrs[idx];
-    wrote |= set_in_range(&ta->space_x, a, FVP_TEXT_SPACE_MIN,
-                          FVP_TEXT_SPACE_MAX);
-    wrote |= set_in_range(&ta->space_y, b, FVP_TEXT_SPACE_MIN,
-                          FVP_TEXT_SPACE_MAX);
-    wrote |= set_in_range(&ta->fmt_pad_a, c, 0, FVP_TEXT_FMT_PAD_MAX);
-    if (set_in_range(&ta->fmt_pad_b, d, 0, FVP_TEXT_FMT_PAD_MAX) != 0) {
-        /* tw+0x5E8：只有比当前值更大才抬（静态分析 0x43CC9B 的 `jge` 跳过写入） */
-        if (d > ta->fmt_width_floor) {
-            ta->fmt_width_floor = d;
-        }
-        wrote |= 1;
+    if (has_mask & 1u) {
+        wrote |= set_in_range(&ta->space_x, a, FVP_TEXT_SPACE_MIN,
+                              FVP_TEXT_SPACE_MAX);
     }
-    wrote |= set_in_range(&ta->fmt_off_a, e, FVP_TEXT_FMT_OFF_MIN,
-                          FVP_TEXT_FMT_OFF_MAX);
-    wrote |= set_in_range(&ta->fmt_off_b, f, FVP_TEXT_FMT_OFF_MIN,
-                          FVP_TEXT_FMT_OFF_MAX);
+    if (has_mask & 2u) {
+        wrote |= set_in_range(&ta->space_y, b, FVP_TEXT_SPACE_MIN,
+                              FVP_TEXT_SPACE_MAX);
+    }
+    if (has_mask & 4u) {
+        wrote |= set_in_range(&ta->fmt_pad_a, c, 0, FVP_TEXT_FMT_PAD_MAX);
+    }
+    if (has_mask & 8u) {
+        if (set_in_range(&ta->fmt_pad_b, d, 0, FVP_TEXT_FMT_PAD_MAX) != 0) {
+            /* tw+0x5E8：只有比当前值更大才抬（静态分析 0x43CC9B 的 `jge` 跳过写入） */
+            if (d > ta->fmt_width_floor) {
+                ta->fmt_width_floor = d;
+            }
+            wrote |= 1;
+        }
+    }
+    if (has_mask & 16u) {
+        wrote |= set_in_range(&ta->fmt_off_a, e, FVP_TEXT_FMT_OFF_MIN,
+                              FVP_TEXT_FMT_OFF_MAX);
+    }
+    if (has_mask & 32u) {
+        wrote |= set_in_range(&ta->fmt_off_b, f, FVP_TEXT_FMT_OFF_MIN,
+                              FVP_TEXT_FMT_OFF_MAX);
+    }
     if (wrote) {
         ta->set_mask |= FVP_TEXTATTR_FORMAT;
     }
     return wrote;
 }
 
+int fvp_textattr_set_format_ex(FvpTextAttr *attrs, int count, int idx,
+                               int a, int b, int c, int d, int e, int f,
+                               unsigned has_mask)
+{
+    return textattr_format_impl(attrs, count, idx, a, b, c, d, e, f,
+                                has_mask & 0x3Fu);
+}
+
+int fvp_textattr_set_format(FvpTextAttr *attrs, int count, int idx, int a,
+                            int b, int c, int d, int e, int f)
+{
+    return textattr_format_impl(attrs, count, idx, a, b, c, d, e, f, 0x3Fu);
+}
+
+
 /* TextFunction(twIdx, a, b, c)：静态分析 **0x43CCF0**，三个开关各自独立判定：
  *   a → tw+0x5A5（0..1）、b → tw+0x5A4（0..2）、c → tw+0x5A6（0..2）。
  * 注意写盘顺序是 +0x5A5 / +0x5A4 / +0x5A6 —— 字段编号与参数顺序不一致。 */
-int fvp_textattr_set_function(FvpTextAttr *attrs, int count, int idx, int a,
-                              int b, int c)
+int textattr_function_impl(FvpTextAttr *attrs, int count, int idx,
+                                  int a, int b, int c, unsigned has_mask)
 {
     int wrote = 0;
     FvpTextAttr *ta;
@@ -263,14 +291,33 @@ int fvp_textattr_set_function(FvpTextAttr *attrs, int count, int idx, int a,
         return 0;
     }
     ta = &attrs[idx];
-    wrote |= set_in_range(&ta->func_a, a, 0, FVP_TEXT_FUNC1_MAX);
-    wrote |= set_in_range(&ta->func_b, b, 0, FVP_TEXT_FUNC2_MAX);
-    wrote |= set_in_range(&ta->func_c, c, 0, FVP_TEXT_FUNC3_MAX);
+    if (has_mask & 1u) {
+        wrote |= set_in_range(&ta->func_a, a, 0, FVP_TEXT_FUNC1_MAX);
+    }
+    if (has_mask & 2u) {
+        wrote |= set_in_range(&ta->func_b, b, 0, FVP_TEXT_FUNC2_MAX);
+    }
+    if (has_mask & 4u) {
+        wrote |= set_in_range(&ta->func_c, c, 0, FVP_TEXT_FUNC3_MAX);
+    }
     if (wrote) {
         ta->set_mask |= FVP_TEXTATTR_FUNCTION;
     }
     return wrote;
 }
+
+int fvp_textattr_set_function_ex(FvpTextAttr *attrs, int count, int idx,
+                                 int a, int b, int c, unsigned has_mask)
+{
+    return textattr_function_impl(attrs, count, idx, a, b, c, has_mask & 0x7u);
+}
+
+int fvp_textattr_set_function(FvpTextAttr *attrs, int count, int idx, int a,
+                              int b, int c)
+{
+    return textattr_function_impl(attrs, count, idx, a, b, c, 0x7u);
+}
+
 
 int fvp_textattr_configured_count(const FvpTextAttr *attrs, int count)
 {

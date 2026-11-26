@@ -4,6 +4,20 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（十四续）：审计收尾到 10 个 handler；TextFormat/TextFunction 也修掉"非整数当 0"
+
+`ref/exe-text-handlers.json` 扩到 **10 个 handler / 56 条关键指令**，补上最后两个：
+
+| 命令 | handler | 规则 |
+|---|---|---|
+| `TextFormat(118)` | `0x43CC10` | a1/a2 -0x20..0x20 → `0x5A8/0x5AA`；a3/a4 0..0x40 → `0x5AE/0x5AC`（a4 还会把笔位 `0x5E8` 抬到不小于它）；a5/a6 -0x10..0x10 → `0x5B4/0x5B0` |
+| `TextFunction(119)` | `0x43CCF0` | a 0..1 → `0x5A5`；b 0..2 → `0x5A4`；c 0..2 → `0x5A6` |
+
+**第三处同类偏差（已修）**：这两个 handler 原来把**非 int 的分量当 0** 传下去，而 0 在
+它们每个范围内（space/pad/off/func 都是 0 起）——等于用"省略"覆盖了原值。改为带
+"分量是否提供"掩码的 `_ex` 入口（`fvp_textattr_set_format_ex` /
+`fvp_textattr_set_function_ex`），`syscall.c` 按 `args[i].type == FVP_INT` 逐位填掩码。
+
 ## [未发布] — 2026-11-26（十三续）：文本 handler 审计扩到 8 个；修掉 TextFont 的"非整数被当 0"偏差
 
 `ref/exe-text-handlers.json` 从 4 个 handler 扩到 **8 个**（44 条关键指令逐条校验）：

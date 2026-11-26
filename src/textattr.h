@@ -139,8 +139,17 @@ int fvp_textattr_set_font_ex(FvpTextAttr *attrs, int count, int idx,
                              int has_id, int has_id2);
 int fvp_textattr_set_format(FvpTextAttr *attrs, int count, int idx, int a,
                             int b, int c, int d, int e, int f);
+
+/* 带"该分量是否提供"掩码的版本：bit i =1 表示第 i 个分量是 int（原版逐分量
+ * `cmpb $0x2` 判断）。没提供的分量保持原值。TextFormat/TextFunction 都用它。 */
+int fvp_textattr_set_format_ex(FvpTextAttr *attrs, int count, int idx,
+                               int a, int b, int c, int d, int e, int f,
+                               unsigned has_mask);
 int fvp_textattr_set_function(FvpTextAttr *attrs, int count, int idx, int a,
                               int b, int c);
+
+int fvp_textattr_set_function_ex(FvpTextAttr *attrs, int count, int idx,
+                                 int a, int b, int c, unsigned has_mask);
 
 /* 被脚本设置过至少一个字段的窗口数（日志 / 验收用）。 */
 int fvp_textattr_configured_count(const FvpTextAttr *attrs, int count);

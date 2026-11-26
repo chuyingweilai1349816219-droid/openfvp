@@ -986,6 +986,8 @@ MotionMove prim=552 x=1 y=852 z=1 ms=1 mode=3 (instant)
 | `TextSize(126)` | `0x43CD60` | w **0xC..0x40**、h **0x8..0x20** |
 | `TextSkip(127)` | `0x43CDD0` | mode int **0..3** → `tw+0x5D7` |
 | `TextSpace(128)` | `0x43CE10` | x/y 各自 int **-0x20..0x20** → `tw+0x5A8/0x5AA`（与 TextFormat 的前两个分量同字段） |
+| `TextFormat(118)` | `0x43CC10` | a1/a2 -0x20..0x20 → `0x5A8/0x5AA`；a3/a4 0..0x40 → `0x5AE/0x5AC`（a4 还会把 pen `0x5E8` 抬到不小于它）；a5/a6 -0x10..0x10 → `0x5B4/0x5B0` |
+| `TextFunction(119)` | `0x43CCF0` | a 0..1 → `0x5A5`；b 0..2 → `0x5A4`；c 0..2 → `0x5A6` |
 
 注意 `TextShadowDist` 是这一族里**唯一钳位**的（其余都是"越界跳过、保持原值"）。
 
@@ -993,6 +995,13 @@ MotionMove prim=552 x=1 y=852 z=1 ms=1 mode=3 (instant)
 于是覆盖了原值），而且上界用静态 31。原版是"非 int 跳过 + 上界 = 字体表项数-1"。
 现在改成 `fvp_textattr_set_font_ex()`（带 has 标志 + 动态上界），`syscall.c` 的
 case 113 用 `fvp_vm_font_count(vm)-1` 当上界。
+
+第三处同类偏差：`TextFormat(118)`/`TextFunction(119)` 同样把**非 int 的分量当 0** 传下去，
+而 0 在它们的每个范围里（space 0、pad 0、off 0、func 0）——等于用"省略"覆盖了原值。
+现在两者都改成带"该分量是否提供"掩码的 `_ex` 入口（`fvp_textattr_set_format_ex` /
+`fvp_textattr_set_function_ex`），`syscall.c` 里按 `args[i].type == FVP_INT` 逐位填掩码。
+顺带确认 `TextFormat` 的 a4 还有个副作用：**新值比笔位 `0x5E8` 大时把笔位抬上去**
+（`0x43CC9E` 的 `cmp %dx,0x5e8` + `jge`），我们的 `fmt_width_floor` 实现的正是这条。
 
 我们这轮修掉的一处真实偏差：`TextColor` 原来无条件调 `gfx_text_set_color()`（内部
 `& 255`），于是 `TextColor(0, 300, 0, 0)` 会把 R 写成 44；原版是**保持原值**。现在改成

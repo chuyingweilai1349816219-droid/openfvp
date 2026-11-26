@@ -45,6 +45,8 @@
 #pragma weak gfx_text_set_out_size
 #pragma weak gfx_text_set_buff
 #pragma weak gfx_text_set_pos
+#pragma weak fvp_textattr_set_format_ex
+#pragma weak fvp_textattr_set_function_ex
 #pragma weak fvp_textattr_set_font_ex
 #pragma weak gfx_text_set_color_ex
 #pragma weak gfx_text_set_pos_ex
@@ -1588,16 +1590,21 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             int id = (int)args[0].i;
             int v[6];
             int k;
+            unsigned mask = 0;
 
             for (k = 0; k < 6; ++k) {
                 int ai = k + 1;
+                int provided = (ai < (int)argc &&
+                                args[ai].type == (uint8_t)FVP_INT);
 
-                v[k] = (ai < (int)argc && args[ai].type == (uint8_t)FVP_INT)
-                           ? (int)args[ai].i
-                           : 0;
+                v[k] = provided ? (int)args[ai].i : 0;
+                if (provided) {
+                    mask |= 1u << k;
+                }
             }
-            if (fvp_textattr_set_format(vm->textattr, FVP_TEXT_WINDOWS, id, v[0],
-                                        v[1], v[2], v[3], v[4], v[5]) &&
+            if (fvp_textattr_set_format_ex(vm->textattr, FVP_TEXT_WINDOWS, id,
+                                           v[0], v[1], v[2], v[3], v[4], v[5],
+                                           mask) &&
                 vm->gfx_bridge != NULL && gfx_text_set_format != NULL &&
                 id >= 0 && id < FVP_TEXT_WINDOWS) {
                 const FvpTextAttr *ta = &vm->textattr[id];
@@ -1614,18 +1621,17 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     case 119:
         if (argc >= 1 && args[0].type == (uint8_t)FVP_INT) {
             int id = (int)args[0].i;
-            int a1 = (argc >= 2 && args[1].type == (uint8_t)FVP_INT)
-                         ? (int)args[1].i
-                         : 0;
-            int a2 = (argc >= 3 && args[2].type == (uint8_t)FVP_INT)
-                         ? (int)args[2].i
-                         : 0;
-            int a3 = (argc >= 4 && args[3].type == (uint8_t)FVP_INT)
-                         ? (int)args[3].i
-                         : 0;
+            int p1 = (argc >= 2 && args[1].type == (uint8_t)FVP_INT);
+            int p2 = (argc >= 3 && args[2].type == (uint8_t)FVP_INT);
+            int p3 = (argc >= 4 && args[3].type == (uint8_t)FVP_INT);
+            int a1 = p1 ? (int)args[1].i : 0;
+            int a2 = p2 ? (int)args[2].i : 0;
+            int a3 = p3 ? (int)args[3].i : 0;
+            unsigned mask = (unsigned)(p1 ? 1 : 0) | (unsigned)(p2 ? 2 : 0) |
+                            (unsigned)(p3 ? 4 : 0);
 
-            if (fvp_textattr_set_function(vm->textattr, FVP_TEXT_WINDOWS, id,
-                                          a1, a2, a3) &&
+            if (fvp_textattr_set_function_ex(vm->textattr, FVP_TEXT_WINDOWS, id,
+                                             a1, a2, a3, mask) &&
                 vm->gfx_bridge != NULL && gfx_text_set_function != NULL &&
                 id >= 0 && id < FVP_TEXT_WINDOWS) {
                 gfx_text_set_function(vm->gfx_bridge->gfx, id,
