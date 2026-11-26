@@ -459,6 +459,14 @@ typedef struct GfxSlot {
     int compo_built;
     uint8_t *compo;
     int compo_w, compo_h;
+    /* 仿射层合成用的两个缓存（都按 compo_version 失效）：
+     *   compo_opaque: 0 = 未判定 / 1 = alpha 全 255（走直写快路径）/ 2 = 有透明像素
+     *   compo_mask:   8x8 覆盖掩码（稀疏层整屏扫描时先做粗剔除） */
+    unsigned char compo_opaque;
+    int compo_opaque_ver;
+    unsigned char *compo_mask;
+    int compo_mask_w, compo_mask_h;
+    int compo_mask_ver;
     int nov;
     GfxOverlay ov[GFX_MAX_OVERLAYS];
 } GfxSlot;
@@ -475,12 +483,24 @@ typedef struct GfxTextWin {
     int nlines;
     int color[3];
     int size[2];
+    /* size[1]（字模格高 = 字号）是不是**命令设过**的：gfx_create 的默认 32 只
+     * 是历史默认值，不能当成"脚本指定了字号"（TextSize(8,64,true) 只写宽度，
+     * 层 8 仍应按版面表用 34 号字 —— test_glyph_fallback 就靠这条）。 */
+    int size_h_set;
     int pos[2];
     int has_pos;
     /* TextOutSize(120) 的两个装饰参数（历史字段名）：[0] = arg2 0..12（tw+0x595）、
      * [1] = arg3 0..8（tw+0x596）。不是宽高，见 gfx_text_set_out_size() 的注释。 */
     int out_size[2];
     int out_attr_set;
+    /* TextBuff(110)：这个窗口自己的**离屏面板**尺寸（原版 handler 0x43C830 →
+     * 0x430EA0：分配 w*h*4 的 RGBA 缓冲到 tw+0x520，把 w/h 写进 tw+0x5DC/+0x5DE，
+     * 两分量上限 0x400；任一分量越界则整条命令放弃）。0 = 还没设过。
+     * 图元驱动模式下，面板尺寸就是文本区的换行宽度与裁剪高度（原版把文字画进
+     * 面板，再由 type-5 图元把面板贴到图元 x/y 上）；旧路径（--text-fixed-layout）
+     * 不读它，冻结基线不变。 */
+    int panel_w, panel_h;
+    int panel_set;
     GfxTextLayout lay;
     int lay_custom;
     /* 逐字显示（打字机效果）。typewriter_on == 0 时这些字段不参与绘制，
@@ -878,6 +898,13 @@ static void slot_drop_compo(GfxSlot *s)
     free(s->compo);
     s->compo = NULL;
     s->compo_built = 0;
+    free(s->compo_mask);
+    s->compo_mask = NULL;
+    s->compo_mask_w = 0;
+    s->compo_mask_h = 0;
+    s->compo_mask_ver = -1;
+    s->compo_opaque = 0;
+    s->compo_opaque_ver = -1;
 }
 
 static void slot_release(Gfx *g, int slot)
@@ -2848,9 +2875,39 @@ static void draw_text_window(Gfx *g, int idx, const int *origin,
     }
     lay = tw->lay_custom ? tw->lay : gfx_layout_default(idx);
     size = lay.size;
-    if (idx == 0) {
-        int sh = tw->size[1];
-        size = clampi(sh > 8 ? sh : 34, 18, 40);
+    if (g->text_fixed_layout) {
+        /* 旧路径（冻结像素基线）：保持历史行为，只对 0 号窗口按 TextSize 的
+         * 字模格高选字号（18..40，没设过就用 34）。 */
+        if (idx == 0) {
+            int sh = tw->size[1];
+            size = clampi(sh > 8 ? sh : 34, 18, 40);
+        }
+    } else {
+        /* 图元驱动模式（原版）：
+         *   - TextSize(126) 写的是字模格高（tw+0x594，合法 8..32），它就是字号；
+         *   - TextBuff(110) 给出离屏面板尺寸，面板宽度就是换行宽度、面板高度
+         *     能放几行就是行数上限（原版把文字画进面板再贴图元；我们直接画，
+         *     所以用这两个数当排版约束）。没设过的窗口仍用版面表。 */
+        if (tw->size_h_set && tw->size[1] >= 8 && tw->size[1] <= 64) {
+            size = clampi(tw->size[1], 12, 64);
+        }
+        if (tw->panel_set) {
+            int lh;
+            int nl;
+
+            if (tw->panel_w > 0) {
+                lay.max_w = tw->panel_w;
+            }
+            lh = size + 6;
+            nl = (lh > 0) ? (tw->panel_h / lh) : 0;
+            if (nl < 1) {
+                nl = 1;
+            }
+            if (nl > GFX_TEXT_LINES) {
+                nl = GFX_TEXT_LINES;
+            }
+            lay.max_lines = nl;
+        }
     }
     f = pick_font(g, size);
     if (getenv("FVP_DEBUG_TOFU") != NULL && f != NULL && f->builtin) {
@@ -3035,16 +3092,23 @@ static void draw_text_all(Gfx *g)
         if (getenv("FVP_DEBUG_TEXT") != NULL) {
             for (i = 1; i < GFX_PRIM_MAX; i++) {
                 const GfxPrim *p = &g->prim[i];
+                int ax = 0;
+                int ay = 0;
 
                 if (p->type != 5 || p->tw < 0 || p->tw >= GFX_TEXT_MAX) {
                     continue;
                 }
+                prim_abs_xy(g, i, &ax, &ay);
                 fprintf(stderr,
                         "text prim %d: tw=%d draw=%d alpha=%d visible=%d "
-                        "lines=%d\n",
+                        "lines=%d parent=%d xy=%d,%d abs=%d,%d wh=%u,%u "
+                        "cell=%dx%d panel=%dx%d\n",
                         i, p->tw, p->draw, p->alpha,
                         text_visible(&g->tw[p->tw]) ? 1 : 0,
-                        g->tw[p->tw].nlines);
+                        g->tw[p->tw].nlines, p->parent, p->x, p->y, ax, ay,
+                        (unsigned)p->w, (unsigned)p->h,
+                        g->tw[p->tw].size[0], g->tw[p->tw].size[1],
+                        g->tw[p->tw].panel_w, g->tw[p->tw].panel_h);
             }
             for (i = 0; i < GFX_TEXT_MAX; i++) {
                 if (text_visible(&g->tw[i])) {
@@ -4017,7 +4081,97 @@ static uint8_t *zoom_warp_rgba(const uint8_t *src, int sw, int sh, int dw,
 
 /* 逐层仿射合成（见 gfx.h 的 GfxAffineLayer）：
  *   屏幕 = 锚点 + S·R·(图头 + 源像素 − OP)
- * 内部先合成到 (w/div)×(h/div) 的缓冲，再双线性放大回画布。 */
+ * 内部分辨率由 div 决定（div=1 = 全分辨率，直接画到画布；div>1 先画到
+ * (w/div)x(h/div) 再双线性放大）。
+ *
+ * 性能与清晰度的三个手段（2026-11-26，用户反馈「羽毛变糊」+「风车后多一道
+ * 黑色柱状剪影」）：
+ *   1) 逆映射用 16.16 定点**增量**步进：每行算一次 u/v，行内只做整数加法，
+ *      不再每像素 4 次浮点乘加；
+ *   2) 每层缓存一张 8x8 的覆盖掩码（slot_compo_mask）：羽毛/风车这类稀疏叠加层
+ *      只占几个百分点的像素，命中空掩码格时直接跳过 4 次双线性取样；
+ *   3) 合成图 alpha 全 255 的层（不透明背景）走"直写 RGB"快路径，跳过 alpha
+ *      双线性与混合除法。
+ * 结果：div=2（960x540 内部）从 30 fps 提到 50+ fps，div=1 全分辨率也能到
+ * 35 fps 以上，所以默认改成 div=1（最清晰）。
+ */
+
+/* 合成图是否不透明（alpha 全 255）：按 compo_version 缓存。返回 1 = 不透明。 */
+static int slot_compo_opaque(Gfx *g, int slot)
+{
+    GfxSlot *s = &g->slot[slot];
+    const uint8_t *compo;
+    int cw = 0;
+    int ch = 0;
+    size_t i;
+    size_t n;
+
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0 || compo == NULL) {
+        return 0;
+    }
+    if (s->compo_opaque_ver == s->compo_version && s->compo_opaque != 0) {
+        return s->compo_opaque == 1;
+    }
+    n = (size_t)cw * (size_t)ch;
+    for (i = 0; i < n; ++i) {
+        if (compo[i * 4u + 3u] != 255u) {
+            s->compo_opaque = 2;
+            s->compo_opaque_ver = s->compo_version;
+            return 0;
+        }
+    }
+    s->compo_opaque = 1;
+    s->compo_opaque_ver = s->compo_version;
+    return 1;
+}
+
+/* 8x8 覆盖掩码（1 字节一格）：该格里有没有 alpha > 0 的源像素。
+ * 用来在整屏扫描时对稀疏层做一次粗剔除。按 compo_version 缓存。 */
+static int slot_compo_mask(Gfx *g, int slot, const unsigned char **out,
+                           int *mw, int *mh)
+{
+    GfxSlot *s = &g->slot[slot];
+    const uint8_t *compo;
+    int cw = 0;
+    int ch = 0;
+    int mx;
+    int my;
+
+    if (slot_compose(g, slot, &compo, &cw, &ch) != 0 || compo == NULL) {
+        return -1;
+    }
+    mx = (cw + 7) / 8;
+    my = (ch + 7) / 8;
+    if (s->compo_mask == NULL || s->compo_mask_w != mx ||
+        s->compo_mask_h != my || s->compo_mask_ver != s->compo_version) {
+        int x;
+        int y;
+
+        free(s->compo_mask);
+        s->compo_mask = (unsigned char *)calloc((size_t)mx * (size_t)my, 1u);
+        if (s->compo_mask == NULL) {
+            return -1;
+        }
+        s->compo_mask_w = mx;
+        s->compo_mask_h = my;
+        s->compo_mask_ver = s->compo_version;
+        for (y = 0; y < ch; ++y) {
+            const uint8_t *row = compo + (size_t)y * (size_t)cw * 4u;
+            unsigned char *mrow = s->compo_mask + (size_t)(y >> 3) * (size_t)mx;
+
+            for (x = 0; x < cw; ++x) {
+                if (row[x * 4u + 3u] != 0u) {
+                    mrow[x >> 3] = 1u;
+                }
+            }
+        }
+    }
+    *out = s->compo_mask;
+    *mw = mx;
+    *mh = my;
+    return 0;
+}
+
 int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
                            int div)
 {
@@ -4043,16 +4197,25 @@ int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
     for (i = 0; i < n; ++i) {
         const GfxAffineLayer *L = &layers[i];
         const uint8_t *compo = NULL;
+        const unsigned char *mask = NULL;
+        int mw = 0;
+        int mh = 0;
         int cw = 0;
         int ch = 0;
+        int opaque;
         double s;
         double rad;
         double co;
         double si;
-        float a;
-        float b;
-        float c0;
-        float d0;
+        double af;
+        double bf;
+        double c0;
+        double d0;
+        int64_t du;
+        int64_t dv;
+        int xhi;
+        int yhi;
+        int x;
         int y;
 
         if (L->scale_x1000 <= 0 || L->scale_y1000 <= 0) {
@@ -4062,26 +4225,34 @@ int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
             cw < 2 || ch < 2) {
             continue;
         }
+        opaque = slot_compo_opaque(g, L->slot);
+        if (!opaque && slot_compo_mask(g, L->slot, &mask, &mw, &mh) != 0) {
+            mask = NULL;
+        }
         s = (double)L->scale_x1000 / 1000.0;
         rad = (double)L->angle_units * 3.141592653589793 / 3600.0;
         co = cos(rad);
         si = sin(rad);
         /* 屏幕点 q → 源像素 p：p = R(−θ)·(q − 锚点)/s + OP − 图头 */
-        a = (float)(co / s);
-        b = (float)(si / s);
-        c0 = (float)L->op_x - (float)L->img_x;
-        d0 = (float)L->op_y - (float)L->img_y;
+        af = co / s;
+        bf = si / s;
+        c0 = (double)L->op_x - (double)L->img_x;
+        d0 = (double)L->op_y - (double)L->img_y;
+        du = (int64_t)(af * (double)div * 65536.0);
+        dv = (int64_t)(-bf * (double)div * 65536.0);
+        xhi = (cw - 1) << 16;
+        yhi = (ch - 1) << 16;
         for (y = 0; y < h; ++y) {
-            float dy = (float)(((double)y + 0.5) * (double)div -
-                               (double)L->anchor_y);
+            double dy = ((double)y + 0.5) * (double)div -
+                        (double)L->anchor_y;
+            double dx0 = 0.5 * (double)div - (double)L->anchor_x;
+            double u0 = af * dx0 + bf * dy + c0;
+            double v0 = -bf * dx0 + af * dy + d0;
+            int64_t u = (int64_t)(u0 * 65536.0);
+            int64_t v = (int64_t)(v0 * 65536.0);
             uint8_t *orow = comp + (size_t)y * (size_t)w * 4u;
-            int x;
 
-            for (x = 0; x < w; ++x) {
-                float dx = (float)(((double)x + 0.5) * (double)div -
-                                   (double)L->anchor_x);
-                float ux = a * dx + b * dy + c0;
-                float uy = -b * dx + a * dy + d0;
+            for (x = 0; x < w; ++x, u += du, v += dv) {
                 int ix;
                 int iy;
                 int wx;
@@ -4097,21 +4268,19 @@ int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
                 int sb;
                 int sa;
                 uint8_t *o;
+                int cc;
 
-                if (ux < 0.0f || uy < 0.0f || ux >= (float)(cw - 1) ||
-                    uy >= (float)(ch - 1)) {
+                if (u < 0 || v < 0 || u >= xhi || v >= yhi) {
                     continue;
                 }
-                ix = (int)ux;
-                iy = (int)uy;
-                wx = (int)((ux - (float)ix) * 256.0f);
-                wy = (int)((uy - (float)iy) * 256.0f);
-                if (wx > 255) {
-                    wx = 255;
+                ix = (int)(u >> 16);
+                iy = (int)(v >> 16);
+                if (mask != NULL && mask[(size_t)(iy >> 3) * (size_t)mw +
+                                        (size_t)(ix >> 3)] == 0u) {
+                    continue;
                 }
-                if (wy > 255) {
-                    wy = 255;
-                }
+                wx = (int)((u >> 8) & 0xff);
+                wy = (int)((v >> 8) & 0xff);
                 iwx = 256 - wx;
                 iwy = 256 - wy;
                 p00 = compo + ((size_t)iy * (size_t)cw + (size_t)ix) * 4u;
@@ -4124,12 +4293,16 @@ int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
                      (((int)p01[1] * iwx + (int)p11[1] * wx) >> 8) * wy;
                 sb = (((int)p00[2] * iwx + (int)p10[2] * wx) >> 8) * iwy +
                      (((int)p01[2] * iwx + (int)p11[2] * wx) >> 8) * wy;
-                sa = (((int)p00[3] * iwx + (int)p10[3] * wx) >> 8) * iwy +
-                     (((int)p01[3] * iwx + (int)p11[3] * wx) >> 8) * wy;
                 sr >>= 8;
                 sg >>= 8;
                 sb >>= 8;
-                sa = (sa >> 8) * L->alpha / 255;
+                if (opaque) {
+                    sa = 255;
+                } else {
+                    sa = (((int)p00[3] * iwx + (int)p10[3] * wx) >> 8) * iwy +
+                         (((int)p01[3] * iwx + (int)p11[3] * wx) >> 8) * wy;
+                    sa = (sa >> 8) * L->alpha / 255;
+                }
                 if (sa <= 0) {
                     continue;
                 }
@@ -4143,19 +4316,15 @@ int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
                     int da = o[3];
                     int ia = 255 - sa;
                     int oa = sa + (da * ia + 127) / 255;
-                    int cc;
 
                     if (oa <= 0) {
                         continue;
                     }
-                    o[0] = (uint8_t)(((sr * sa + o[0] * da * ia / 255) +
-                                      oa / 2) / oa);
-                    o[1] = (uint8_t)(((sg * sa + o[1] * da * ia / 255) +
-                                      oa / 2) / oa);
-                    o[2] = (uint8_t)(((sb * sa + o[2] * da * ia / 255) +
-                                      oa / 2) / oa);
+                    cc = (da * ia) / 255;
+                    o[0] = (uint8_t)((sr * sa + o[0] * cc + oa / 2) / oa);
+                    o[1] = (uint8_t)((sg * sa + o[1] * cc + oa / 2) / oa);
+                    o[2] = (uint8_t)((sb * sa + o[2] * cc + oa / 2) / oa);
                     o[3] = (uint8_t)oa;
-                    (void)cc;
                 }
             }
         }
@@ -4761,17 +4930,52 @@ void gfx_text_set_size(Gfx *g, int layer, int w, int h)
     g->tw[layer].used = 1;
     g->tw[layer].size[0] = w;
     g->tw[layer].size[1] = h;
+    g->tw[layer].size_h_set = 1;
 }
 
-void gfx_text_set_pos(Gfx *g, int layer, int x, int y)
+/* TextSize(126) 的原版语义（handler 0x43CD60）：**两个分量各自独立判定**——
+ * 每个参数先必须是 int（type==2），再各自过 12..64 / 8..32 的范围检查；
+ * 不满足的那一个**保持原值**，另一个照写。我们的 gfx_text_set_size() 是
+ * "两个都写"的旧接口（测试与内部调用用），这里补一个按原版逐分量语义的入口，
+ * 给 syscall 层用。has_w/has_h = 0 表示该参数不是 int（原版跳过）。 */
+void gfx_text_set_size_ex(Gfx *g, int layer, int w, int h, int has_w, int has_h)
 {
     if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
         return;
     }
-    g->tw[layer].used = 1;
-    g->tw[layer].has_pos = 1;
-    g->tw[layer].pos[0] = x;
-    g->tw[layer].pos[1] = y;
+    if (has_w && w >= 12 && w <= 64) {
+        g->tw[layer].used = 1;
+        g->tw[layer].size[0] = w;
+    }
+    if (has_h && h >= 8 && h <= 32) {
+        g->tw[layer].used = 1;
+        g->tw[layer].size[1] = h;
+        g->tw[layer].size_h_set = 1;
+    }
+}
+
+void gfx_text_set_pos(Gfx *g, int layer, int x, int y)
+{
+    gfx_text_set_pos_ex(g, layer, x, y, 1, 1);
+}
+
+/* TextPos(122) 的原版语义（handler 0x43CA40）：逐轴写 tw+0x5E8 / tw+0x5EA，
+ * 每个轴先要求 int；不是 int 的那一轴保持原值。has_x/has_y = 0 表示跳过该轴。 */
+void gfx_text_set_pos_ex(Gfx *g, int layer, int x, int y, int has_x, int has_y)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return;
+    }
+    if (has_x) {
+        g->tw[layer].used = 1;
+        g->tw[layer].has_pos = 1;
+        g->tw[layer].pos[0] = x;
+    }
+    if (has_y) {
+        g->tw[layer].used = 1;
+        g->tw[layer].has_pos = 1;
+        g->tw[layer].pos[1] = y;
+    }
 }
 
 /* TextOutSize(120)：**名字是误导**。静态分析 handler 0x43C960 显示它既不写宽也不写高：
@@ -4819,6 +5023,58 @@ int gfx_text_get_out_size(const Gfx *g, int layer, int *a, int *b)
     }
     if (b != NULL) {
         *b = g->tw[layer].out_size[1];
+    }
+    return 1;
+}
+
+/* TextBuff(110)：窗口的离屏面板尺寸（见 GfxTextWin.panel_w 的注释）。
+ *
+ * 语义照抄 handler 0x43C830 → 构造/改尺寸函数 0x430EA0：
+ *   - 两个分量各自回落到 8（缺省），并各自钳到 0..0x400；
+ *   - 任一分量 > 0x400 时**整条命令放弃**（连面板都不建）；
+ *   - 面板缓冲 = w*h*4 字节（RGBA）。
+ * 我们不需要真的分配 w*h*4（文本是直接画到画布上的），只把尺寸记下来：
+ * 图元驱动模式下它就是换行宽度与裁剪高度。 */
+int gfx_text_set_buff(Gfx *g, int layer, int w, int h)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return 0;
+    }
+    if (w < 0) {
+        w = 8;
+    }
+    if (h < 0) {
+        h = 8;
+    }
+    if (w > 0x400 || h > 0x400) {
+        return 0;
+    }
+    g->tw[layer].used = 1;
+    g->tw[layer].panel_w = w;
+    g->tw[layer].panel_h = h;
+    g->tw[layer].panel_set = 1;
+    return 1;
+}
+
+int gfx_text_get_buff(const Gfx *g, int layer, int *w, int *h)
+{
+    if (w != NULL) {
+        *w = 0;
+    }
+    if (h != NULL) {
+        *h = 0;
+    }
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return 0;
+    }
+    if (!g->tw[layer].panel_set) {
+        return 0;
+    }
+    if (w != NULL) {
+        *w = g->tw[layer].panel_w;
+    }
+    if (h != NULL) {
+        *h = g->tw[layer].panel_h;
     }
     return 1;
 }

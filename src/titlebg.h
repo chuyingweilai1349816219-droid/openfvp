@@ -78,6 +78,14 @@ int fvp_titlebg_layer_state(FvpTitleBgGame game, int idx, int elapsed_ms,
 /* 该作是否走逐层动画（目前只有五彩）。 */
 int fvp_titlebg_uses_layers(FvpTitleBgGame game);
 
+/* 资产名（"title_bg1_A".."title_bg1_D"）→ slot_tag：0 = 背景槽，1..3 = 叠加槽
+ * TITLE_OVL_SLOT+tag-1。**这个编号必须和脚本的 GraphLoad 槽号一致**
+ * （五彩 hcb：258=A、259=B、260=C、261=D，见 ref/title-scene.json 的 loads），
+ * 否则动画层会拿到隔壁层的图（2026-11-26 修：静态路径按显示顺序装叠加层，
+ * 动画按 slot_tag 取图，两套编号不一致 ⇒ 风车被当成 D 层按 4 倍缩放+62° 画）。
+ * 返回 -1 = 名字不认识。 */
+int fvp_titlebg_slot_tag_for_name(const char *name);
+
 #ifdef __cplusplus
 }
 #endif

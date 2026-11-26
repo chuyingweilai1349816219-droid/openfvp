@@ -4,6 +4,41 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26：标题背景动画修两处显示错误 + 全分辨率；文本窗口几何来自 exe
+
+### 修正（五彩斑斓标题背景：多出一道黑色柱状剪影）
+- 根因：`title_draw_overlay()` 先画**静态**叠加层、再调背景动画；而动画路径自己也会
+  把三个叠加层按仿射变换画一遍 ⇒ 风车（B 层）被画两遍，静态那份不跟动画走。
+- `title_draw_bg()` 改为返回 int（1 = 背景+叠加层已整组画完），调用方据此跳过静态
+  叠加层；动画关闭时仍走原路径，静态标题帧与修前**逐字节相同**（0 差异）。
+
+### 修正（图层拿错图：静态按显示顺序装槽、动画按 slot_tag 取图）
+- 新增 `fvp_titlebg_slot_tag_for_name()`（`src/titlebg.c/.h`）：叠加层槽号统一按脚本
+  GraphLoad（258=A / 259=B / 260=C / 261=D）装载与绘制；此前动画里"风车"取到的是
+  C 的图、真风车被当 D 层按 4000‰/62.5° 画。
+
+### 修正（背景动画发糊：1/8 分辨率合成 → 全分辨率）
+- `gfx_draw_affine_layers()` 重写：16.16 定点增量映射、8×8 覆盖掩码剔除稀疏层、
+  不透明层快路径；新增 `slot_compo_opaque()` / `slot_compo_mask()`（按 compo_version
+  缓存，`slot_drop_compo()` 一并释放）。
+- 默认 `div=1`（全分辨率，直接写画布）：实测 **36-41 fps**、清晰度（Laplacian 比）
+  **0.78**（旧 1/8 分辨率约 0.2）；新增 `--title-bg-div N`（1..8）手动覆盖。
+- 门禁 `tests/verify_title_bg_anim.py` 新增**清晰度断言**（动画帧 ≥ 静态帧 45%），
+  iroseka fps 阈值 35→25（全分辨率基线）、hoshimemo 45→38（环境抖动留余量）；
+  五彩 mean_abs 28.04 / fps 41 / sharpness 0.78。
+
+### 实现（文本窗口几何：面板/字模格/光标/上屏都来自 exe）
+- `TextBuff(110)` 接进 gfx：`gfx_text_set_buff()/get_buff()`（缺省 8、上限 0x400、
+  越界整条放弃）；图元驱动模式下面板宽 = 换行宽度、面板高/行高 = 行数上限。
+- `TextSize(126)` 逐分量语义：`gfx_text_set_size_ex()`（先要 int 再各自 12..64 / 8..32，
+  不满足的那个保持原值）；新增 `size_h_set`，避免把构造函数默认 32 当成"脚本指定"。
+- `TextPos(122)` 逐轴语义：`gfx_text_set_pos_ex()`（两款作品 0 次调用）。
+- `TextOutSize(120)` 在 syscall 层改成逐分量传哨兵，非 int 不再写成 1。
+- `tests/test_textprims.c` 29 → **37** 项（面板 set/get/越界/缺省/NULL + 面板文本仍上屏）。
+- 文档：`docs/title-menu.md` §25 重写（两处错误的原因、优化表、实测表、门禁数字）、
+  `docs/c-gfx.md`（仿射合成 + 文本几何接口）、`docs/render-model.md`（文本几何四层）、
+  `docs/win32-shell.md`（`--title-bg-div`）。
+
 ## [1.0.0] — 2026-11-24：第一个正式版（引擎本体 + 工程完整）
 
 引擎本体的第一个正式版。**定位是"引擎与工程完整、已知限制写清楚"，不是"能完整通关"**，

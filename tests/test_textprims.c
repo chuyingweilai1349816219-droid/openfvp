@@ -229,6 +229,47 @@ int main(void)
     gfx_render(g);
     CHECK(1, "NULL calls survive");
 
+    /* --- 10. TextBuff(110)：窗口离屏面板尺寸（原版 0x430EA0）---
+     * 语义：缺省 8、上限 0x400，任一分量越界整条放弃；图元驱动模式下它就是
+     * 文本区尺寸（换行宽度 / 行数上限）。旧路径（fixed）不读它。 */
+    {
+        int bw = -1;
+        int bh = -1;
+
+        CHECK(gfx_text_get_buff(g, 3, &bw, &bh) == 0,
+              "TextBuff unset by default (%d,%d)", bw, bh);
+        CHECK(gfx_text_set_buff(g, 3, 200, 96) == 1, "TextBuff accepted");
+        CHECK(gfx_text_get_buff(g, 3, &bw, &bh) == 1 &&
+                  bw == 200 && bh == 96,
+              "TextBuff round-trip (%d,%d)", bw, bh);
+        CHECK(gfx_text_set_buff(g, 3, 0x401, 96) == 0,
+              ">0x400 rejected (whole call)");
+        CHECK(gfx_text_get_buff(g, 3, &bw, &bh) == 1 &&
+                  bw == 200 && bh == 96,
+              "rejected call keeps old size (%d,%d)", bw, bh);
+        CHECK(gfx_text_set_buff(g, 3, -5, -5) == 1 &&
+                  gfx_text_get_buff(g, 3, &bw, &bh) == 1 &&
+                  bw == 8 && bh == 8,
+              "negative components fall back to 8 (%d,%d)", bw, bh);
+        CHECK(gfx_text_set_buff(g, 99, 40, 40) == 0 &&
+                  gfx_text_set_buff(NULL, 0, 40, 40) == 0,
+              "bad layer / NULL rejected");
+        /* 面板宽度真的参与排版：1600px 宽的面板下，一段长文本不该被换行到
+         * 版面表的 1620 之外；这里只断言"设了面板后仍然画得出来"，具体换行
+         * 由端到端门禁（title/text）与 headless 跑动验证。 */
+        gfx_text_clear(g, 3);
+        gfx_text_append(g, 3, "AAAA AAAA AAAA");
+        if (gfx_set_prim(g, 11, GFX_F_TYPE, 5) == 0 &&
+            gfx_set_prim(g, 11, GFX_F_TW, 3) == 0) {
+            (void)gfx_set_prim(g, 11, GFX_F_PARENT, 0);
+            (void)gfx_set_prim(g, 11, GFX_F_X, 30);
+            (void)gfx_set_prim(g, 11, GFX_F_Y, 30);
+        }
+        gfx_render(g);
+        CHECK(gfx_stats(g)->texts >= 1, "panel text drawn");
+        gfx_text_clear(g, 3);
+    }
+
     gfx_destroy(g);
     printf("\ntest_textprims: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

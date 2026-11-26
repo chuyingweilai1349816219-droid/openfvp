@@ -431,7 +431,14 @@ int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
 void gfx_text_clear(Gfx *g, int layer);
 void gfx_text_set_color(Gfx *g, int layer, int r, int gr, int b);
 void gfx_text_set_size(Gfx *g, int layer, int w, int h);
+/* TextSize(126) 的原版语义：两个分量各自独立判定（先要求 int，再各自过
+ * 12..64 / 8..32 的范围检查），不满足的那一个保持原值。has_w/has_h = 0 表示
+ * 该实参不是 int（原版跳过它）。 */
+void gfx_text_set_size_ex(Gfx *g, int layer, int w, int h, int has_w, int has_h);
 void gfx_text_set_pos(Gfx *g, int layer, int x, int y);
+/* TextPos(122) 的原版语义：逐轴写（面板内光标 tw+0x5E8/+0x5EA），每个轴都要
+ * int；has_x/has_y = 0 表示该实参不是 int（保持原值）。 */
+void gfx_text_set_pos_ex(Gfx *g, int layer, int x, int y, int has_x, int has_y);
 /* TextOutSize(120)：**不是宽高**。静态分析 0x43C960：arg2 int 0..12 → tw+0x595、
  * arg3 int 0..8 → tw+0x596，两个分量各自独立校验（越界只跳过那一个）。
  * 它们属于 tw+0x590 起 0x28 字节的 text-style 块，绘制时被整块拷进绘制结构。
@@ -440,6 +447,18 @@ void gfx_text_set_out_size(Gfx *g, int layer, int a, int b);
 /* 读回 TextOutSize 的两个分量（诊断/汇总用）；返回 1 = 这条命令作用过该层。
  * NULL 安全。 */
 int gfx_text_get_out_size(const Gfx *g, int layer, int *a, int *b);
+
+/* TextBuff(110)：窗口自己的**离屏面板**尺寸（原版 handler 0x43C830 → 0x430EA0
+ * 分配 w*h*4 的 RGBA 缓冲，把 w/h 写进 tw+0x5DC/+0x5DE）。缺省 8、上限 0x400，
+ * 任一分量 > 0x400 时整条命令放弃。
+ *
+ * 图元驱动模式（默认）下它决定**文本区的换行宽度与裁剪高度**：原版把文字画进
+ * 面板，再由 type-5 图元把面板贴到图元 x/y 上；我们的实现直接把字形画到画布，
+ * 所以用面板尺寸当排版宽度/行数上限。旧路径（--text-fixed-layout）不读它。
+ * 返回 1 = 生效，0 = 参数越界/层号非法。 */
+int gfx_text_set_buff(Gfx *g, int layer, int w, int h);
+/* 读回面板尺寸；返回 1 = TextBuff 作用过该层。NULL 安全。 */
+int gfx_text_get_buff(const Gfx *g, int layer, int *w, int *h);
 
 /* Override the built-in layout table for one layer (defaults are the ones
  * proven in the Python renderer; see gfx.c gfx_text_layout_default). */

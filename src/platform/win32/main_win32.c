@@ -141,6 +141,9 @@ typedef struct Options {
      * MotionMoveS2 2000→1000 per-mille / 40000 ms，左上锚、无旋转）。
      * 默认关 → 冻结基线不变；--title-anim 不会自动打开它。 */
     int title_bg_anim;
+    /* --title-bg-div N：仿射层合成的内部分辨率除数（1 全分辨率 / 2 默认 /
+     * 4 / 8）。只影响 --title-bg-anim 的画面清晰度与帧率。 */
+    int title_bg_div;
     double shot_at_ms; /* --shot-at N：跑到 N 毫秒时存一张截图（0 = 不存） */
     /* --shot-every MS --shot-prefix P：一次运行里每隔 MS 毫秒抓一张
      * P-NNNN.bmp（做动画 demo/GIF 用；不是像素基线的一部分）。 */
@@ -471,7 +474,9 @@ static const wchar_t *usage_text(void)
            L"  --title-menu        先显示引擎侧标题菜单（New Game/Continue/Album/Option/Exit），\n"
            L"                      选 New Game 才开始跑脚本（默认关；几何按原版实测）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
-           L"  --title-bg-anim     标题背景按脚本做缩放动画（星空 2000->1000/40 s；默认关）\n"           L"  --load-restart      Load(slot) 时读槽文件 + 复位场景 + 重启脚本（保留 globals/flags）\n"
+           L"  --title-bg-anim     标题背景按脚本做缩放+旋转动画（五彩四层 25 s；星空 2000->1000 40 s；默认关）\n"
+           L"  --title-bg-div N    背景动画的内部分辨率除数（1 = 全分辨率最清晰，2 默认，4/8 更快）\n"
+           L"  --load-restart      Load(slot) 时读槽文件 + 复位场景 + 重启脚本（保留 globals/flags）\n"
            L"  --shot-every MS     运行中每 MS 毫秒抓一张（配 --shot-prefix；做动画 demo）\n"
            L"  --shot-prefix P     --shot-every 的文件名前缀（写 P-0000.bmp ..）\n"           L"  --shot-div N       抓帧时 box 降采样 N 倍（1..8，默认 1）\n"
            L"  --log FILE          日志文件（默认 <exe目录>\\fvp-win32.log）\n"
@@ -550,6 +555,7 @@ static void defaults(Options *o)
     o->opening = 0;
     o->title_anim = -1; /* -1 = 未指定，见 main 里的 --opening 联动 */
     o->title_bg_anim = 0;
+    o->title_bg_div = 1;
     o->preview_slot = -1;
     o->load_slot = -1;
     o->menu_at = -1;
@@ -761,6 +767,10 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->title_anim = 1;
         } else if (wcscmp(a, L"--title-bg-anim") == 0) {
             o->title_bg_anim = 1;
+        } else if (wcscmp(a, L"--title-bg-div") == 0 && i + 1 < argc) {
+            int dv = _wtoi(argv[++i]);
+
+            o->title_bg_div = dv < 1 ? 1 : (dv > 8 ? 8 : dv);
         } else if (wcscmp(a, L"--shot-at") == 0 && i + 1 < argc) {
             o->shot_at_ms = wcstod(argv[++i], NULL);
         } else if (wcscmp(a, L"--shot-every") == 0 && i + 1 < argc) {
@@ -1934,6 +1944,10 @@ static int title_bg_anim_on;
 static FvpTitleBgGame title_bg_game = FVP_TITLEBG_GAME_IROSEKA;
 static double title_bg_t0;
 static double title_bg_now;
+/* 仿射层合成的内部分辨率除数：1 = 全分辨率（最清晰，最慢），N = 先画
+ * (1920/N)x(1080/N) 再双线性放大。默认 2（960x540，已比原来的 8 清晰 16 倍）；
+ * `--title-bg-div N` 可覆盖（1 全分辨率 / 2 / 3 / 4 / 8）。 */
+static int title_bg_div = 1;
 
 static FvpTitleEnter title_enter;
 static FvpTitleEnterGame title_enter_game = FVP_TITLEENTER_GAME_IROSEKA;
@@ -2117,14 +2131,19 @@ static void draw_game_menu(Gfx *gfx, const FvpGameMenu *m)
 
 /* 背景层：整屏大图按 (bg_src_x, bg_src_y) 裁剪到 1920x1080；
  * --title-bg-anim 且该作背景动画已实现时（目前只有星空），按脚本的
- * MotionMoveS2 缩放：只画"屏幕上可见的源区域"，缩放到整屏。 */
-static void title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
+ * MotionMoveS2 缩放：只画"屏幕上可见的源区域"，缩放到整屏。
+ *
+ * 返回 1 = 已经用**仿射层**把背景（含三个叠加层）整组画完；调用方此时
+ * **不能**再走静态叠加层（否则叠加层被画两遍：2026-11-26 用户实测「风车后面
+ * 多出一道黑色柱状剪影」就是这个重复——静态那份 B 没跟着动）。
+ * 返回 0 = 没画（动画关/该作不走分层），走原来的静态路径。 */
+static int title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
 {
     int bsw = 0;
     int bsh = 0;
 
     if (!title_bg_on) {
-        return;
+        return 0;
     }
     if (gfx != NULL && title_bg_anim_on) {
         int elapsed = (int)((title_bg_now - title_bg_t0) * 1000.0 + 0.5);
@@ -2170,8 +2189,8 @@ static void title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
                 L->alpha = 255;
             }
             if (cnt > 0 &&
-                gfx_draw_affine_layers(gfx, layers, cnt, 8)) {
-                return;
+                gfx_draw_affine_layers(gfx, layers, cnt, title_bg_div)) {
+                return 1;
             }
         } else {
             FvpTitleBgState st;
@@ -2182,7 +2201,7 @@ static void title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
                 (void)gfx_draw_image_zoomed(gfx, TITLE_BG_SLOT,
                                             st.scale_x1000, st.scale_y1000,
                                             prof->client_w, prof->client_h);
-                return;
+                return 0; /* 星空：叠加层仍是静态的，照旧另外画 */
             }
         }
     }
@@ -2194,6 +2213,7 @@ static void title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
     } else {
         (void)gfx_draw_image_at(gfx, TITLE_BG_SLOT, 0, 0);
     }
+    return 0;
 }
 
 /* 背景叠加层：素材头里的坐标是"未裁剪大图"坐标系，要减掉背景裁剪起点 */
@@ -2207,12 +2227,18 @@ static void title_draw_overlays(Gfx *gfx, const FvpTitleProfile *prof)
     for (li = 0; li < prof->bg_overlay_count && li < 4; ++li) {
         int ox = 0;
         int oy = 0;
+        int tag;
+        int slot;
 
         if (prof->bg_overlay[li][0] == '\0') {
             continue;
         }
-        (void)gfx_image_offset(gfx, TITLE_OVL_SLOT + li, &ox, &oy);
-        (void)gfx_draw_image_at(gfx, TITLE_OVL_SLOT + li, ox - prof->bg_src_x,
+        /* 槽号按脚本的 GraphLoad 编号（258=A/259=B/260=C/261=D），与装载一致。 */
+        tag = fvp_titlebg_slot_tag_for_name(prof->bg_overlay[li]);
+        slot = (tag >= 1 && tag <= 3) ? TITLE_OVL_SLOT + tag - 1
+                                      : TITLE_OVL_SLOT + li;
+        (void)gfx_image_offset(gfx, slot, &ox, &oy);
+        (void)gfx_draw_image_at(gfx, slot, ox - prof->bg_src_x,
                                 oy - prof->bg_src_y);
     }
 }
@@ -2238,13 +2264,22 @@ static void title_draw_overlay(Gfx *gfx, const FvpTitleMenu *m,
 
         /* 叠放顺序由脚本的 PrimSetZ 决定（ref/title-scene.json 的 layer_z）。
          * 五彩斑斓 A=1000 在最上 → 先画叠加层 D→C→B，再画背景 A；
-         * 星空背景在下 → 先背景后叠加层。 */
+         * 星空背景在下 → 先背景后叠加层。
+         *
+         * 走仿射层动画时（五彩），`title_draw_bg()` 已经把**背景 + 三个叠加层**
+         * 整组画完；这时**必须跳过静态叠加层**，否则叠加层会被画两遍：用户实测
+         * 的「风车后面多出一道黑色柱状剪影」就是静态那份 B 没动、叠在动的那份
+         * 后面。静态路径（动画关）行为完全不变。 */
         if (!bg_on_top) {
-            title_draw_bg(gfx, prof);
-            title_draw_overlays(gfx, prof);
+            if (!title_draw_bg(gfx, prof)) {
+                title_draw_overlays(gfx, prof);
+            }
         } else {
-            title_draw_overlays(gfx, prof);
-            title_draw_bg(gfx, prof);
+            int animated = title_draw_bg(gfx, prof);
+
+            if (!animated) {
+                title_draw_overlays(gfx, prof);
+            }
         }
     }
     if (title_logo_on && title_logo_alpha > 0) {
@@ -2665,14 +2700,21 @@ static int title_load_textures(Gfx *gfx, const FvpTitleProfile *prof)
         int li;
 
         for (li = 0; li < prof->bg_overlay_count && li < 4; ++li) {
+            int tag;
+            int slot;
+
             if (prof->bg_overlay[li][0] == '\0') {
                 continue;
             }
-            if (gfx_graph_load(gfx, TITLE_OVL_SLOT + li,
-                               prof->bg_overlay[li]) == 0) {
+            /* 槽号按脚本的 GraphLoad 编号（258=A / 259=B / 260=C / 261=D），
+             * 不按"显示顺序"；见 fvp_titlebg_slot_tag_for_name 的注释。 */
+            tag = fvp_titlebg_slot_tag_for_name(prof->bg_overlay[li]);
+            slot = (tag >= 1 && tag <= 3) ? TITLE_OVL_SLOT + tag - 1
+                                          : TITLE_OVL_SLOT + li;
+            if (gfx_graph_load(gfx, slot, prof->bg_overlay[li]) == 0) {
                 title_ovl_loaded += 1;
                 fvp_logf("title: bg overlay '%s' loaded (slot 0x%X)",
-                         prof->bg_overlay[li], TITLE_OVL_SLOT + li);
+                         prof->bg_overlay[li], slot);
             }
         }
     }
@@ -3196,6 +3238,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             title_textures = title_load_textures(gfx, title_profile);
             if (opts.title_bg_anim) {
                 title_bg_anim_on = 1;
+                title_bg_div = (opts.title_bg_div >= 1 && opts.title_bg_div <= 8)
+                                   ? opts.title_bg_div
+                                   : 1;
                 title_bg_game = fvp_titlebg_game_from_name(
                     title_profile != NULL ? title_profile->game : NULL);
                 title_bg_t0 = now_sec();

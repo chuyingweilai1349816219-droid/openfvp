@@ -43,8 +43,11 @@
 #pragma weak gfx_text_clear
 #pragma weak gfx_text_set_color
 #pragma weak gfx_text_set_out_size
+#pragma weak gfx_text_set_buff
 #pragma weak gfx_text_set_pos
+#pragma weak gfx_text_set_pos_ex
 #pragma weak gfx_text_set_size
+#pragma weak gfx_text_set_size_ex
 #pragma weak gfx_text_set_speed
 #pragma weak gfx_text_set_shadow
 #pragma weak gfx_text_set_space
@@ -511,6 +514,12 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
     case 86: /* PrimSetText(id, textWindow, x?, y?) */
         fvp_gfx_prim_reset(g, id);
         fvp_gfx_prim_reset_shadow(b, id);
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "PrimSetText prim=%d tw=%d x=%d y=%d\n", id,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : 0,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : -1,
+                    argc > 3 ? fvp_gfx_int(&a[3]) : -1);
+        }
         (void)gfx_set_prim(g, id, GFX_F_TYPE, 5);
         (void)gfx_set_prim(g, id, GFX_F_TW,
                            argc > 1 ? fvp_gfx_int(&a[1]) : 0);
@@ -541,6 +550,11 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         }
         break;
     case 89: /* PrimSetWH(id, w, h) */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "PrimSetWH prim=%d w=%d h=%d\n", id,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : -1,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : -1);
+        }
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
             (void)gfx_set_prim(g, id, GFX_F_W, fvp_gfx_int(&a[1]));
         }
@@ -549,6 +563,11 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         }
         break;
     case 90: /* PrimSetXY(id, x, y) */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "PrimSetXY prim=%d x=%d y=%d\n", id,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : -1,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : -1);
+        }
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
             (void)gfx_set_prim(g, id, GFX_F_X, fvp_gfx_int(&a[1]));
         }
@@ -562,6 +581,9 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         }
         break;
     case 111: /* TextClear(layer) */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "TextClear layer=%d\n", id);
+        }
         gfx_text_clear(g, id);
         if (b->on_text != NULL) {
             b->on_text(b->text_ud, id, NULL, 1);
@@ -573,20 +595,52 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
                                fvp_gfx_int(&a[2]), fvp_gfx_int(&a[3]));
         }
         break;
-    case 120: /* TextOutSize(layer, w, h) */
+    case 120: /* TextOutSize(layer, w, h)：两个分量各自要求 int 才写（原版 handler
+               * 0x43C960 逐分量 cmpb type==2 + 范围检查），越界/非 int 保持原值。 */
         if (getenv("FVP_DEBUG_TEXT") != NULL) {
             fprintf(stderr, "TextOutSize: argc=%u layer=%d a1=%lld a2=%lld\n",
                     (unsigned)argc, id, (long long)fvp_gfx_int(&a[1]),
                     (long long)fvp_gfx_int(&a[2]));
         }
         if (argc > 2) {
-            gfx_text_set_out_size(g, id, fvp_gfx_int(&a[1]),
-                                  fvp_gfx_int(&a[2]));
+            int oa = (argc > 1 && fvp_gfx_is_int(&a[1]))
+                         ? fvp_gfx_int(&a[1])
+                         : -1;
+            int ob = fvp_gfx_is_int(&a[2]) ? fvp_gfx_int(&a[2]) : -1;
+
+            gfx_text_set_out_size(g, id, oa, ob);
         }
         break;
-    case 122: /* TextPos(layer, x, y) */
+    case 122: /* TextPos(layer, x, y)：原版逐轴写 tw+0x5E8/+0x5EA（面板内光标），
+               * 每个轴都要求 int；非 int 的那一轴保持原值。 */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "TextPos layer=%d x=%d y=%d\n", id,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : -1,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : -1);
+        }
         if (argc > 2) {
-            gfx_text_set_pos(g, id, fvp_gfx_int(&a[1]), fvp_gfx_int(&a[2]));
+            int has_x = fvp_gfx_is_int(&a[1]);
+            int has_y = fvp_gfx_is_int(&a[2]);
+
+            gfx_text_set_pos_ex(g, id, has_x ? fvp_gfx_int(&a[1]) : 0,
+                                has_y ? fvp_gfx_int(&a[2]) : 0, has_x, has_y);
+        }
+        break;
+    case 110: /* TextBuff(layer, w, h)：建/改该层的离屏文本面板（原版 0x430EA0）。
+               * 图元驱动模式下 gfx 用它当文本区尺寸（换行宽度 / 行数上限）；
+               * 旧路径 --text-fixed-layout 不读它，冻结基线不变。 */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "TextBuff layer=%d w=%d h=%d\n", id,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : -1,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : -1);
+        }
+        if (argc > 1 && fvp_gfx_is_int(&a[1])) {
+            int bw = fvp_gfx_int(&a[1]);
+            int bh = (argc > 2 && fvp_gfx_is_int(&a[2]))
+                         ? fvp_gfx_int(&a[2])
+                         : 8;
+
+            (void)gfx_text_set_buff(g, id, bw, bh);
         }
         break;
     case 123: /* TextPrint(layer, text) */
@@ -604,10 +658,19 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             }
         }
         break;
-    case 126: /* TextSize(layer, w, h) */
-        if (argc > 2) {
-            gfx_text_set_size(g, id, fvp_gfx_int(&a[1]),
-                              fvp_gfx_int(&a[2]));
+    case 126: /* TextSize(layer, w, h)：原版 handler 0x43CD60 逐分量要求 int +
+               * 范围（12..64 / 8..32），越界/非 int 的那一个保持原值。 */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "TextSize layer=%d w=%d h=%d\n", id,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : -1,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : -1);
+        }
+        if (argc > 1) {
+            int has_w = fvp_gfx_is_int(&a[1]);
+            int has_h = (argc > 2) && fvp_gfx_is_int(&a[2]);
+
+            gfx_text_set_size_ex(g, id, has_w ? fvp_gfx_int(&a[1]) : 0,
+                                 has_h ? fvp_gfx_int(&a[2]) : 0, has_w, has_h);
         }
         break;
     case 129: /* TextSpeed(layer, ms)：存进 32 个窗口属性，同时交给渲染层，

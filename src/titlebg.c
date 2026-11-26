@@ -70,6 +70,25 @@ const FvpTitleBgLayerDef *fvp_titlebg_layer_def(FvpTitleBgGame game, int idx)
     return &IROSEKA_LAYERS[idx];
 }
 
+int fvp_titlebg_slot_tag_for_name(const char *name)
+{
+    int i;
+
+    if (name == NULL) {
+        return -1;
+    }
+    if (strcmp(name, "title_bg1_A") == 0) {
+        return 0;
+    }
+    for (i = 0; i < FVP_TITLEBG_MAX_LAYERS; ++i) {
+        if (IROSEKA_LAYERS[i].slot_tag != 0 &&
+            strcmp(IROSEKA_LAYERS[i].name, name) == 0) {
+            return IROSEKA_LAYERS[i].slot_tag;
+        }
+    }
+    return -1;
+}
+
 /* 0..1 的缓动进度 */
 static double ease_progress(int elapsed_ms, int dur_ms)
 {
