@@ -578,6 +578,27 @@ tw 10: ... space=0,0   ... fmt=0,0,0,0,0,0      func=0,0,0
 > 2 字节，只覆盖 `0x5AC..0x5AD`）。本节的判据不看宽度推断，只按指令形状，所以
 > `0x5AE` 记为 0 读点。冻结在 `ref/exe-text-layout.json` 的 `dead_fields`。
 
+#### 7.4.3 `TextSkip`(127) 相反：它有消费者
+
+`TextSkip` 写 `tw+0x5D7`（0..3），低两位各选**一组输入掩码**：
+
+| 位 | 掩码 | 命中后 |
+|---|---|---|
+| bit0（`0x43108C` `test $0x1`） | `0x90`（bit4+bit7） | 与 `engine+0x43C` 求交（`0x4310A4`）→ 命中就把 `tw+0x5D8` 置 1（`0x4310AC`） |
+| bit1（`0x431096` `test $0x2`） | `0x60`（bit5+bit6） | 同上，`or $0x60` |
+
+`tw+0x5D8` 随后**有读点**：`0x43110D`、`0x43111C` 的比较，以及排版循环里的
+`0x4335BE cmpb $0x0,0x5d8`；另有三处清零（`0x431124`、`0x43239A`、`0x4337C5`）。
+所以 TextSkip 不是死存储 —— 它决定"哪些输入会触发跳过"。
+
+还有一处 `0x42DB78`（`mov 0x5d7(%edi),%al` → 写进流）是**存档序列化**，把 `0x5D7`
+抄进状态块，不是行为读点。
+
+**没做的**：命中之后排版循环具体怎么"跳"（立刻显示全文？跳到下一行？）还没跟完，
+本轮只冻结站点与掩码，不实现渲染行为。
+
+### 7.5 C 侧接线（`FvpTextAttr` / gfx 只存不画）
+
 **改动**：`FvpTextAttr` 新增 `fmt_pad_a/fmt_pad_b/fmt_off_a/fmt_off_b` 与
 `func_a/func_b/func_c`（掩码 `FVP_TEXTATTR_FORMAT` / `FVP_TEXTATTR_FUNCTION`），
 `fvp_textattr_set_format()` 六字段逐字段判范围、`fvp_textattr_set_function()` 三开关；

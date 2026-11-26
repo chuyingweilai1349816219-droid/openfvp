@@ -64,6 +64,29 @@ def load_rows(path):
 # arg4（0x5AC）不在这个表里，它是唯一被消费的参数。
 DEAD_OFFSETS = [0x5A4, 0x5A5, 0x5A6, 0x5A8, 0x5AA, 0x5AE, 0x5B0, 0x5B4]
 
+# TextSkip(127) 不是死存储：tw+0x5D7 的低两位各选一组输入掩码，命中就把
+# tw+0x5D8 置 1；0x5D8 随后被三处比较、三处清零。站点如下（判据同 sites）。
+TEXTSKIP_SITES = [
+    ('0x43ce06', 'mov    %al,0x5d7(%ecx)',
+     'TextSkip handler 写 tw+0x5D7'),
+    ('0x431084', 'mov    0x5d7(%esi),%cl',
+     '读 TextSkip 的两位'),
+    ('0x43108c', 'test   $0x1,%cl',
+     'bit0 -> 掩码 0x90'),
+    ('0x431096', 'test   $0x2,%cl',
+     'bit1 -> 掩码 0x60'),
+    ('0x4310a4', 'test   %edx,0x43c(%ecx)',
+     '与引擎输入掩码 engine+0x43C 求交'),
+    ('0x4310ac', 'movb   $0x1,0x5d8(%esi)',
+     '命中则把 tw+0x5D8 置 1'),
+    ('0x43110d', 'cmp    %bl,0x5d8(%esi)',
+     '0x5D8 的读点（比较）'),
+    ('0x4335be', 'cmpb   $0x0,0x5d8(%esi)',
+     '0x5D8 的读点（排版循环里判断）'),
+    ('0x42db78', 'mov    0x5d7(%edi),%al',
+     '存档序列化：把 0x5D7 的字节抄进流'),
+]
+
 READ_RE = re.compile(r'0x([0-9a-f]+)\(%e[a-z]{2}\),%[a-z0-9]+$')
 WRITE_RE = re.compile(r'%[a-z0-9]+,0x([0-9a-f]+)\(%e[a-z]{2}\)$')
 RMW_RE = re.compile(r'^(add|sub|and|or|xor|inc|dec)')
@@ -99,6 +122,12 @@ def build():
         got = rows.get(pc, '')
         sites.append(dict(pc=pc_s, instr=got, expect=want, role=role,
                           ok=got.startswith(want)))
+    skip = []
+    for pc_s, want, role in TEXTSKIP_SITES:
+        pc = int(pc_s, 16)
+        got = rows.get(pc, '')
+        skip.append(dict(pc=pc_s, instr=got, expect=want, role=role,
+                         ok=got.startswith(want)))
     dead = {}
     if os.path.isfile(FIELDS):
         with open(FIELDS, encoding='utf-8') as f:
@@ -114,7 +143,11 @@ def build():
         claim=('TextFormat(118) 的 arg4 是唯一被消费的参数（行首缩进）；'
                '其余 5 个参数与 TextFunction(119) 的 3 个开关、TextSpace(128) 的 2 个分量'
                '都是死存储：全 exe 没有读点也没有读改写'),
-        sites=sites, fields=dead,
+        sites=sites, fields=dead, textskip=skip,
+        textskip_note=('TextSkip(127) 的两位置 1 后各选一组输入掩码（bit0 -> 0x90、'
+                       'bit1 -> 0x60），与 engine+0x43C 求交；命中则把 tw+0x5D8 置 1，'
+                       '而 0x5D8 在 0x43110D / 0x43111C / 0x4335BE 被读取、在三处被清零。'
+                       '所以它不是死存储；但"命中之后排版循环具体怎么跳过"尚未逐条跟完'),
         dead_fields=[dict(offset='0x%x' % off, reads=r, writes=w, rmw=m)
                      for off, (r, w, m) in
                      ((off, scan_offset(rows, off)) for off in DEAD_OFFSETS)])

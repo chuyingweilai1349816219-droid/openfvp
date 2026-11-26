@@ -94,6 +94,20 @@ def main():
               ('0x5a4', '0x5a5', '0x5a6', '0x5ae', '0x5b0', '0x5b4')),
           '其余 6 个各 2 个写点（handler + 结构拷贝）')
 
+    print('== TextSkip(127) 不是死存储：两位各选一组输入掩码')
+    skip = ref.get('textskip', [])
+    check(len(skip) == 9, '9 个 TextSkip 站点（实际 %d）' % len(skip))
+    check(all(s.get('ok') for s in skip), '每个站点都标注 ok')
+    pcs = [s['pc'] for s in skip]
+    check(pcs[:4] == ['0x43ce06', '0x431084', '0x43108c', '0x431096'],
+          'handler 写点 + 读点 + 两条位测试')
+    check(any('0x43c(%ecx)' in s['instr'] for s in skip),
+          '与 engine+0x43C 输入掩码求交')
+    check(any('0x5d8(%esi)' in s['instr'] and s['instr'].startswith('cmpb') for s in skip),
+          '0x5D8 在排版循环里被比较（0x4335BE）')
+    check('0x5D8' in ref.get('textskip_note', '') and '尚未' in ref.get('textskip_note', ''),
+          'note 里写清"不是死存储"与"跳过方式未跟完"')
+
     print('== 独立来源对账（ref/exe-text-fields.json）')
     if os.path.isfile(FIELDS):
         with open(FIELDS, encoding='utf-8') as fp:
@@ -115,6 +129,7 @@ def main():
         check(got['sites'] == sites, '站点表逐字段相等')
         check(got['fields'] == f, '字段读点相等')
         check(got.get('dead_fields') == dead, '死存储清单逐字段相等')
+        check(got.get('textskip') == skip, 'TextSkip 站点逐字段相等')
         check(got['claim'] == ref.get('claim'), '结论文字未变')
 
     if fails:
