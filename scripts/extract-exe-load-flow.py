@@ -35,6 +35,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import struct
 import sys
 
@@ -45,6 +46,7 @@ import fvm_ref  # noqa: E402
 EXE = os.path.join(r'C:\Users\Mechrevo\Downloads', '五彩斑斓的世界HD',
                    'iroseka_HD.exe')
 OUT_JSON = os.path.join(ROOT, 'ref', 'exe-load-flow.json')
+ASM = os.path.join(ROOT, 'work', 'iroseka_HD.asm')
 BASE = 0x400000
 
 GAMES = {
@@ -224,6 +226,59 @@ def extract(path):
             },
             'load_apply': {
                 'fn': '0x0043ee90',
+                'restore_steps': [
+                    {'pc': '0x0043f136', 'instr': 'mov    %edx,0x6a66d0(%esi)',
+                     'what': 'engine+0x6A66D0 <- u32（线程下标）'},
+                    {'pc': '0x0043f14c', 'instr': 'mov    %ecx,0x6a49e8(%esi)',
+                     'what': 'engine+0x6A49E8 <- u32（0x80 项表的计数）'},
+                    {'pc': '0x0043f163', 'instr': 'call   0x433f60',
+                     'what': '124 × 0x433F60，表 engine+0x6A49EC stride 4'},
+                    {'pc': '0x0043f18c', 'instr': 'call   0x447800',
+                     'what': 'memcpy 0x100 -> engine+0x6A4BEC'},
+                    {'pc': '0x0043f1ae', 'instr': 'call   0x447800',
+                     'what': 'memcpy 0x100 -> engine+0x6A4CEC'},
+                    {'pc': '0x0043f1c4', 'instr': 'mov    %ecx,0x6a4dec(%esi)',
+                     'what': 'engine+0x6A4DEC <- u32'},
+                    {'pc': '0x0043f1d8', 'instr': 'call   0x446210',
+                     'what': '256 × 0x446210，表 engine+0x6A4DF0 stride 0x14'},
+                    {'pc': '0x0043f202', 'instr': 'call   0x447800',
+                     'what': 'memcpy 0x200 -> engine+0x6A61F0'},
+                    {'pc': '0x0043f224', 'instr': 'call   0x447800',
+                     'what': 'memcpy 0x200 -> engine+0x6A63F0'},
+                    {'pc': '0x0043f233', 'instr': 'call   0x438770',
+                     'what': '0x438770(engine+0x6A65FC)'},
+                    {'pc': '0x0043f255', 'instr': 'call   0x447800',
+                     'what': 'memcpy 0x400 -> engine+0x6A44C0（图形槽 -> 图元 id 表）'},
+                    {'pc': '0x0043f264', 'instr': 'mov    %eax,0x6a49c0(%esi)',
+                     'what': 'engine+0x6A49C0 <- u32'},
+                    {'pc': '0x0043f277', 'instr': 'mov    %edx,0x6a49c4(%esi)',
+                     'what': 'engine+0x6A49C4 <- u32'},
+                    {'pc': '0x0043f28b', 'instr': 'call   0x437ee0',
+                     'what': '1200（0x4B0）× 0x437EE0，表 engine+0x6A49C8 stride 0xC'},
+                    {'pc': '0x0043f2a2', 'instr': 'call   0x43ecb0',
+                     'what': '0x43ECB0(engine+0x6A49CC)'},
+                    {'pc': '0x0043f2b5', 'instr': 'call   0x429190',
+                     'what': '4096 × 0x429190，sprite 表 engine+0x101064 stride 0x51C'},
+                    {'pc': '0x0043f2d3', 'instr': 'call   0x42d760',
+                     'what': '64 × 0x42D760，prim_alt 表 engine+0x61D064 stride 0x34'},
+                    {'pc': '0x0043f2fd', 'instr': 'call   0x447800',
+                     'what': 'memcpy 0x34000 -> engine+0x61DD64（主图元表 4096×0x34）'},
+                    {'pc': '0x0043f30c', 'instr': 'call   0x4263a0',
+                     'what': '0x4263A0(engine+0x651D70)'},
+                    {'pc': '0x0043f318', 'instr': 'call   0x4267d0',
+                     'what': '0x4267D0(engine+0x651E04)'},
+                    {'pc': '0x0043f324', 'instr': 'call   0x426c70',
+                     'what': '0x426C70(engine+0x65380C)'},
+                    {'pc': '0x0043f330', 'instr': 'call   0x426ee0',
+                     'what': '0x426EE0(engine+0x65BA54)'},
+                ],
+                'restore_note': '读档的字段恢复是**固定顺序**：先散字段（线程下标/计数），'
+                                '再逐表恢复（0x6A49EC stride4×0x80、0x6A4DF0 '
+                                'stride0x14×0x100、0x6A49C8 stride0xC×0x4B0、'
+                                'sprite 0x101064 stride0x51C×4096、prim_alt '
+                                '0x61D064 stride0x34×64）；主图元表 0x61DD64 是'
+                                '**整块 0x34000 字节 memcpy**；最后恢复其余容器。',
+                'restore_steps_note': '每条的 pc/instr 都在门禁里逐条核对反汇编清单',
                 'note': '真正应用存档的地方：先把槽文件读进 engine+0x0/+0x4 缓冲'
                         '（0x4344c0），复位 256 个线程对象 / 渲染 / 场景，然后按'
                         '**2 字节长度前缀**逐段把数据读进 engine+0xfb4 / 0xfb8 / … 容器'
@@ -286,6 +341,26 @@ def main(argv=None):
     result = extract(EXE)
     text = json.dumps(result, ensure_ascii=False, indent=1,
                       sort_keys=True) + '\n'
+    rows = {}
+    have_asm = os.path.isfile(ASM)
+    for fp_name in ([ASM] if have_asm else []):
+      with io.open(fp_name, encoding='utf-8', errors='replace') as fp:
+        for line in fp:
+            m = re.match(r'^\s+([0-9a-f]+):\t([0-9a-f ]+?)\s*\t(.*)$',
+                         line.rstrip('\n'))
+            if m:
+                rows[int(m.group(1), 16)] = m.group(3).split('#')[0].strip()
+    steps = result['frame_consumers']['load_apply'].get('restore_steps') or []
+    if have_asm:
+        for st in steps:
+            got = rows.get(int(st['pc'], 16))
+            if got != st['instr']:
+                print('FAIL: %s = %r（期望 %r）' % (st['pc'], got, st['instr']))
+                return 1
+        print('restore steps: %d 条逐条核对通过' % len(steps))
+    else:
+        print('restore steps: %d 条（缺反汇编清单，跳过逐条核对）' % len(steps))
+
     print('save path fmt:', result['save_path']['format'])
     print('Load handler:', result['load']['handler'],
           'range', result['load']['arg_range'])

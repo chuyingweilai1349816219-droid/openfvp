@@ -1073,6 +1073,30 @@ python fvp/tools/tailstat.py <save 目录> [--thumb 200x113]
 `0x433C60` 压进 `engine+0xFB4`、接着 `engine+0xFB8`、…… 等容器；流游标就是
 `engine+0x8`（`movl $0x7/+0x8` 那两条常量偏移是段边界）。
 
+**恢复顺序（本轮从 `0x43EE90` 逐条抄出，22 步，门禁逐条核对）**：
+
+| 顺序 | 恢复对象 | 方式 |
+|---|---|---|
+| 1 | `engine+0x6A66D0` | 单字段 u32（线程下标） |
+| 2 | `engine+0x6A49E8` | 单字段 u32（0x80 项表的计数） |
+| 3 | `engine+0x6A49EC` | 124 × `0x433F60`，stride 4 |
+| 4-5 | `engine+0x6A4BEC` / `0x6A4CEC` | 各 memcpy 0x100 |
+| 6 | `engine+0x6A4DEC` | 单字段 u32 |
+| 7 | `engine+0x6A4DF0` | 256 × `0x446210`，stride 0x14 |
+| 8-9 | `engine+0x6A61F0` / `0x6A63F0` | 各 memcpy 0x200 |
+| 10 | `engine+0x6A65FC` | `0x438770` |
+| 11 | `engine+0x6A44C0` | memcpy 0x400（**图形槽 → 图元 id 表**） |
+| 12-13 | `engine+0x6A49C0` / `0x6A49C4` | 单字段 u32 |
+| 14 | `engine+0x6A49C8` | 1200（0x4B0）× `0x437EE0`，stride 0xC |
+| 15 | `engine+0x6A49CC` | `0x43ECB0` |
+| 16 | `engine+0x101064` | 4096 × `0x429190`，stride 0x51C（sprite 表） |
+| 17 | `engine+0x61D064` | 64 × `0x42D760`，stride 0x34（prim_alt 表） |
+| 18 | `engine+0x61DD64` | **整块 memcpy 0x34000**（主图元表 4096×0x34） |
+| 19-22 | `0x651D70` / `0x651E04` / `0x65380C` / `0x65BA54` | 各一个 restore 调用 |
+
+其中 16-18 的步长/项数与 `ref/exe-engine-objects.json`（引擎自建对象表）完全对得上，
+门禁里做了交叉核对。**注意主图元表是整块 memcpy**（不是逐项反序列化）。
+
 **还没逆清**（写在基线 `unknown` 里，不假装知道）：
 
 1. `0x43EE90` 的流式反序列化**每一段**分别对应哪些状态（已确认段格式与容器序列，

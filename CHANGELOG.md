@@ -4,6 +4,24 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（十六续）：读档恢复顺序逐条抄出并冻结（22 步，含主图元表整块 memcpy）
+
+继续读 `0x43EE90`，把"字段恢复"的**固定顺序**抄成 22 条（每条的 pc + 指令在门禁里逐条
+核对反汇编清单），进 `ref/exe-load-flow.json` 的 `load_apply.restore_steps`：
+
+- 散字段：`engine+0x6A66D0`（线程下标）、`+0x6A49E8`（0x80 项表计数）、`+0x6A4DEC`、
+  `+0x6A49C0/+0x6A49C4`；
+- 逐表恢复：`0x6A49EC` 124×`0x433F60`（stride 4）、`0x6A4DF0` 256×`0x446210`
+  （stride 0x14）、`0x6A49C8` 1200×`0x437EE0`（stride 0xC）、
+  **sprite 表 `0x101064` 4096×`0x429190`（stride 0x51C）**、
+  **prim_alt 表 `0x61D064` 64×`0x42D760`（stride 0x34）**；
+- **主图元表 `0x61DD64` 是整块 `memcpy 0x34000` 字节**（4096×0x34），不是逐项反序列化；
+- 其余容器：`0x6A44C0`（图形槽 → 图元 id 表，memcpy 0x400）与
+  `0x651D70/0x651E04/0x65380C/0x65BA54` 四个 restore 调用。
+
+其中 sprite / prim_alt / prim 的步长与项数和 `ref/exe-engine-objects.json` 完全一致，
+门禁做了**跨基线交叉核对**。`docs/save-format.md` 补了这张恢复顺序表。
+
 ## [未发布] — 2026-11-26（十五续）：查清"存档字段在哪应用"——不是 0x4344C0，是 0x43EE90 的流式反序列化
 
 上一轮留给下一轮的问题是"`0x4344C0` 应用存档时到底写哪些字段"。本轮读清了两件事：

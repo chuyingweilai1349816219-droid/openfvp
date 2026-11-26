@@ -155,6 +155,38 @@ def main():
     check('反序列化' in unk or '流式' in unk,
           'unknown 改成"流式反序列化各段对应哪些状态"')
 
+    print('== 5d. 读档恢复顺序（22 步）==')
+    steps = la.get('restore_steps') or []
+    check(len(steps) >= 20, '恢复步骤 >= 20（实际 %d）' % len(steps))
+    joined = ' '.join((x.get('what') or '') for x in steps)
+    check('0x6A66D0' in (steps[0].get('what') or ''),
+          '第一步恢复线程下标 engine+0x6A66D0')
+    check('0x6A44C0' in joined, '恢复图形槽 -> 图元 id 表（0x6A44C0）')
+    check('0x34000' in joined and '0x61DD64' in joined,
+          '主图元表是整块 0x34000 字节 memcpy 到 0x61DD64')
+    check('0x101064' in joined and '0x51C' in joined,
+          'sprite 表按 stride 0x51C 逐项恢复')
+    check('0x61D064' in joined and '0x34' in joined,
+          'prim_alt 表按 stride 0x34 逐项恢复')
+    check('固定顺序' in (la.get('restore_note') or ''),
+          'restore_note 写明这是固定顺序')
+    # 与对象表基线交叉核对：步长/项数必须一致
+    obj = os.path.join(FVP, 'ref', 'exe-engine-objects.json')
+    if os.path.isfile(obj):
+        import json as _json
+        ob = _json.loads(io.open(obj, encoding='utf-8').read())
+        by = {t.get('name'): t for t in ob.get('tables') or []}
+        spr = by.get('sprite') or {}
+        pa = by.get('prim_alt') or {}
+        pr = by.get('prim') or {}
+        check(spr.get('elemsize') == 0x51C and spr.get('count') == 0x1000,
+              'sprite 表（对象表基线）= 0x51C × 4096')
+        check(pa.get('elemsize') == 0x34 and pa.get('count') == 0x40,
+              'prim_alt 表（对象表基线）= 0x34 × 64')
+        check(pr.get('elemsize') == 0x34 and pr.get('count') == 0x1000 and
+              pr.get('bytes') == 0x34000,
+              '主图元表（对象表基线）= 0x34 × 4096 = 0x34000 字节')
+
     print('== 6. 脚本调用点（两作数字冻结）==')
     for g in ('iroseka', 'hoshimemo'):
         s = ref['script_sites'][g]
