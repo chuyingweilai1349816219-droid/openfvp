@@ -675,8 +675,10 @@ def build_steps(args):
     vfs = os.path.join(HERE, 'verify_frame_slots.py')
     steps.append(Step('verify_frame_slots.py', [PY, '-X', 'utf8', vfs], 1800,
                       skip_reason=None,
-                      note='frame slot model: default keeps ref/ref-900k.txt byte-identical '
-                           '(PrimSetText(551) = (1,1), known gap); FVP_FRAME_SLOTS=1 puts the '
+                      note='frame slot model: default keeps ref/ref-900k.txt byte-identical; '
+                           'PrimSetText(551) must NEVER be (1,1) (that was the pushtrue '
+                           'Variant-type-1 sentinel bug) and 552/553 coordinates are the '
+                           'regression guard; FVP_FRAME_SLOTS=1 puts the '
                            'body window at the script value (431,880) and changes the text '
                            'output (6760 B) — re-freezing that baseline needs a decision'))
 
