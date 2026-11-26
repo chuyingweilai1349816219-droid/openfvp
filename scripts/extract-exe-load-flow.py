@@ -210,7 +210,8 @@ def extract(path):
                 'fn': '0x0043ee90',
                 'bytes': u8(data, secs, 0x43EE90, 0x80).hex(),
                 'sequence': ['sprintf(0x4488b7, fmt, root, slot)',
-                             'call 0x4344c0（应用存档：字段映射未逆清）',
+                             'call 0x4344c0（把槽文件读进 engine+0x0/+0x4 缓冲；'
+                             '只读文件，不改任何字段）',
                              '重置 256 个线程对象（0x436270(600) 再 0）',
                              'engine+0x101058=3, +0x10105c=600, +0x101060=0',
                              'call 0x441680(engine+0x120)（文本/渲染复位）',
@@ -221,6 +222,44 @@ def extract(path):
                              'call 0x441350(engine+0x6a7e34, engine+0x6a7e6c)'
                              '（脚本引擎复位：重启线程用）'],
             },
+            'load_apply': {
+                'fn': '0x0043ee90',
+                'note': '真正应用存档的地方：先把槽文件读进 engine+0x0/+0x4 缓冲'
+                        '（0x4344c0），复位 256 个线程对象 / 渲染 / 场景，然后按'
+                        '**2 字节长度前缀**逐段把数据读进 engine+0xfb4 / 0xfb8 / … 容器'
+                        '（0x433c60 push）；流游标就是 engine+0x8。',
+                'file_read_fn': '0x0043c4c0',
+                'file_read_calls': ['0x0045d070 CreateFileW',
+                                    '0x0045d090 GetFileSize',
+                                    '0x0045d08c ReadFile',
+                                    '0x0045d058 CloseHandle',
+                                    '0x0045d084/0x0045d080 映射/解映射'],
+                'segments': [
+                    {'container': 'engine+0xfb4',
+                     'length_read_pc': '0x0043efd5',
+                     'alloc_fn': '0x004470eb',
+                     'memcpy_fn': '0x00447800',
+                     'push_fn': '0x00433c60',
+                     'bytes': u8(data, secs, 0x43EFD5, 0x50).hex()},
+                    {'container': 'engine+0xfb8',
+                     'length_read_pc': '0x0043f028',
+                     'alloc_fn': '0x004470eb',
+                     'memcpy_fn': '0x00447800',
+                     'push_fn': '0x00433c60',
+                     'bytes': u8(data, secs, 0x43F028, 0x50).hex()},
+                ],
+                'cursor_field': 'engine+0x8',
+                'main_steps': [
+                    {'pc': '0x0043eed7', 'what': 'call 0x4344c0：读文件进缓冲'},
+                    {'pc': '0x0043eef0', 'what': '256 × 0x436270(entry, 0x258) 且 '
+                                                 'entry+0x11=0：复位线程对象'},
+                    {'pc': '0x0043ef12', 'what': 'engine+0x101058=3、'
+                                                 '+0x10105c=0x258、+0x101060=0'},
+                    {'pc': '0x0043ef62', 'what': 'call 0x438d20(engine, 0, -1)：'
+                                                 '场景/图元树复位'},
+                    {'pc': '0x0043ef89', 'what': 'call 0x441350：脚本引擎复位'},
+                ],
+            },
             'thread_restart': {
                 'flag': 'thread+0xfd9',
                 'checks': ['0x0043f614', '0x0043f641', '0x0043f68d'],
@@ -229,7 +268,8 @@ def extract(path):
             },
         },
         'unknown': [
-            '0x4344c0 应用存档时到底写哪些字段（globals/flags/文本位图 的对应）',
+            '0x43ee90 的流式反序列化**每一段**分别对应哪些状态（已确认按 2 字节长度'
+            '串逐段读进 engine+0xfb4/0xfb8/… 容器，但段序与字段的对应还没排全）',
             '线程重跑后脚本用哪个全局量判断"该回哪个场景"',
         ],
         'script_sites': script_sites(),

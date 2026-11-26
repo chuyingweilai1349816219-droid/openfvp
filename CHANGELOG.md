@@ -4,6 +4,21 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（十五续）：查清"存档字段在哪应用"——不是 0x4344C0，是 0x43EE90 的流式反序列化
+
+上一轮留给下一轮的问题是"`0x4344C0` 应用存档时到底写哪些字段"。本轮读清了两件事：
+
+- **`0x4344C0(engine, path)` 只负责读文件**：`CreateFileW` → 释放旧缓冲 →
+  `GetFileSize` → 重设缓冲（`engine+0x0/+0x4`）→ `ReadFile` → `CloseHandle`；
+  失败时用 `0x45D968` 的 `'%s'のオープンに失敗しました` 报错并 throw（code 0x80）。
+- **字段应用在 `0x43EE90` 复位之后的流式反序列化里**：每段是"2 字节长度前缀 +
+  数据"，读长度（`0x43EFD5`/`0x43F028`）→ `0x4470EB` 分配 → `0x447800` 拷贝 →
+  `0x433C60` 压进 `engine+0xFB4`、`engine+0xFB8`、…… 容器；流游标是 `engine+0x8`。
+
+基线 `ref/exe-load-flow.json` 新增 `load_apply` 段（文件读取调用链、两段容器、
+五条主步骤、游标字段），`load_impl` 的措辞从"0x4344C0 应用存档"改正为"读文件"，
+`unknown` 改成"流式反序列化每段对应哪些状态"。门禁新增 5c 节（12 条断言）。
+
 ## [未发布] — 2026-11-26（十四续）：审计收尾到 10 个 handler；TextFormat/TextFunction 也修掉"非整数当 0"
 
 `ref/exe-text-handlers.json` 扩到 **10 个 handler / 56 条关键指令**，补上最后两个：

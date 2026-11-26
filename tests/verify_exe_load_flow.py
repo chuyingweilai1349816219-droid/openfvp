@@ -127,6 +127,34 @@ def main():
     check('0x441350' in joined and '脚本引擎复位' in joined,
           '复位序列里 0x441350 = 脚本引擎复位（重启线程）')
 
+    print('== 5c. 归档应用（0x43EE90 的流式反序列化）==')
+    la = fc.get('load_apply') or {}
+    check(la.get('fn') == '0x0043ee90', '应用点在 0x43EE90')
+    check(la.get('file_read_fn') == '0x0043c4c0',
+          '读文件助手是 0x4344C0（只读文件，不改字段）')
+    check('读' in fc['load_impl']['sequence'][1] and
+          '应用存档' not in fc['load_impl']['sequence'][1],
+          'load_impl 的序列把 0x4344C0 记成"读文件"而不是"应用存档"')
+    check('CreateFileW' in ' '.join(la.get('file_read_calls') or []),
+          '读文件助手用 CreateFileW/GetFileSize/ReadFile/CloseHandle')
+    segs = la.get('segments') or []
+    check(len(segs) >= 2, '至少两段（%d）' % len(segs))
+    cont = [x.get('container') for x in segs]
+    check('engine+0xfb4' in cont and 'engine+0xfb8' in cont,
+          '两段容器是 engine+0xFB4 / 0xFB8（实际 %r）' % (cont,))
+    for seg in segs[:2]:
+        check(seg.get('push_fn') == '0x00433c60' and
+              seg.get('alloc_fn') == '0x004470eb' and
+              seg.get('memcpy_fn') == '0x00447800',
+              '%s 段：alloc 0x4470EB → memcpy 0x447800 → push 0x433C60'
+              % seg.get('container'))
+    check(la.get('cursor_field') == 'engine+0x8', '流游标是 engine+0x8')
+    unk = ' '.join(ref.get('unknown') or [])
+    check('0x4344c0 应用存档' not in unk,
+          'unknown 里不再把 0x4344C0 说成"应用存档"')
+    check('反序列化' in unk or '流式' in unk,
+          'unknown 改成"流式反序列化各段对应哪些状态"')
+
     print('== 6. 脚本调用点（两作数字冻结）==')
     for g in ('iroseka', 'hoshimemo'):
         s = ref['script_sites'][g]
