@@ -296,6 +296,8 @@ int gfx_prim_set_clip(Gfx *g, int id, int x, int y, int w, int h);
  * 与 0x4259B0），那一段没解出来，所以现在**矩形内即算命中**（被掩码挖空的像素
  * 也会被算作命中）。这是本函数唯一的近似，别处都照抄原版。 */
 int gfx_prim_hit(Gfx *g, int prim_id, int ignore_draw, int cx, int cy);
+/* 诊断：1 = PrimHit 一律答命中（headless 推进脚本用，默认 0） */
+void gfx_set_prim_hit_all(Gfx *g, int on);
 
 /* ---- graph slots / parts --------------------------------------------- */
 

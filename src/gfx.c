@@ -555,6 +555,10 @@ struct Gfx {
     FvpMotion motion; /* 动画补间表；motion_on = 0 时只走时间轴、不动图元 */
     int motion_on;
     int typewriter_on; /* 逐字显示总开关（外壳 --typewriter，默认关） */
+    /* 诊断开关：1 = PrimHit 一律答"命中"。给
+     * headless 用：它没有真光标，PrimHit 永远 0 会让脚本卡在
+     * 标题菜单，而"把引擎推到正文"是导出帧的前提。 */
+    int prim_hit_all;
     /* 文本渲染模式。
      *
      * 默认（0）= **图元驱动**，也就是原版做法：文本窗口由 `PrimSetText(86)` 建出来的
@@ -3750,6 +3754,11 @@ int gfx_prim_hit(Gfx *g, int prim_id, int ignore_draw, int cx, int cy)
     if (g == NULL || prim_id < 1 || prim_id >= GFX_PRIM_MAX) {
         return 0;
     }
+    /* 诊断（--primhit-all）：不看光标/图元矩形，直接报命中。
+     * 仅用于 headless 推进脚本到正文，默认关。 */
+    if (g->prim_hit_all) {
+        return 1;
+    }
     /* 0x43B904：prim+0x0A == 0xFFFF（不在任何组里）直接未命中 */
     if (g->prim[prim_id].parent < 0) {
         return 0;
@@ -5535,6 +5544,14 @@ size_t gfx_tex_cap_bytes(const Gfx *g)
 /* 文本图元定位（原版做法）：PrimSetText(86) 把文本窗口挂到图元上，位置由图元
  * 决定。默认是**图元驱动**（原版做法）；`fixed` 打开后退回旧路径
      * “合成对话框 + 版面表”，冻结像素基线用它。 */
+void gfx_set_prim_hit_all(Gfx *g, int on)
+{
+    if (g == NULL) {
+        return;
+    }
+    g->prim_hit_all = on ? 1 : 0;
+}
+
 void gfx_text_set_hidden(Gfx *g, int layer, int hidden)
 {
     if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {

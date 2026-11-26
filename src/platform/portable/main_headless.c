@@ -36,6 +36,8 @@ static void usage(FILE *f, const char *argv0)
     fprintf(f, "  --dump-scene FILE export the FVPS v2 scene "
                "(input for bin/fvp.exe --scene)\n");
     fprintf(f, "  --quiet           do not echo text\n");
+    fprintf(f, "  --primhit-all     PrimHit always answers hit "
+               "(diagnostic: push the script past the title menu)\n");
     fprintf(f, "  --click N         synthetic click every N steps\n");
     fprintf(f, "  --text-fixed-layout  legacy text layout (synthetic box;\n");
     fprintf(f, "                    used by tests/verify_headless.py to exercise\n");
@@ -151,6 +153,7 @@ int main(int argc, char **argv)
     unsigned long long click = 0;
     int quiet = 0;
     int text_fixed = 0;
+    int primhit_all = 0; /* --primhit-all：诊断用，PrimHit 一律命中 */
     int click_mask = 0x0B;
     int frame_ms = 16;
     int i;
@@ -187,6 +190,8 @@ int main(int argc, char **argv)
             click = strtoull(argv[++i], NULL, 10);
         } else if (strcmp(a, "--text-fixed-layout") == 0) {
             text_fixed = 1;
+        } else if (strcmp(a, "--primhit-all") == 0) {
+            primhit_all = 1;
         } else if (strcmp(a, "--quiet") == 0) {
             quiet = 1;
         } else if (a[0] == '-' && a[1] != '\0') {
@@ -323,6 +328,9 @@ int main(int argc, char **argv)
      * MotionXxxTest 也永远答"没有在跑的动作"，与脚本期待相反。headless 用
      * ThreadNext 计数当帧时钟（见下），所以这里必须真记录。 */
     gfx_motion_set_enabled(gfx, 1);
+    if (primhit_all) {
+        gfx_set_prim_hit_all(gfx, 1);
+    }
     fvp_vm_attach_gfx(&vm, gfx);
     if (text_out != NULL) {
         sink.f = fopen(text_out, "wb");
