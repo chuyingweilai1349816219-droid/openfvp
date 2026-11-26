@@ -4,6 +4,64 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（九十一续）：`0x5AAEC` 那条线索 = 已知的 `bool_type` 分歧（faithful 模式在 gfx 路径上直接停摆）
+
+上一轮把"槽 1 线程入口 `0x5AAEC` 一进去就 `jmpcond` 到 `ret`"当作新线索。这一轮查证：
+它其实是**已知的 `jmpcond` 类型真假语义分歧**，不是新问题。
+
+### 1. 已有事实（docs/roadmap.md）
+
+VM 里早就有实验开关 `bool_type`（`src/vm.c:445-580,706`）：
+
+- 默认（`bool_type = 0`）：比较/逻辑结果写 int 1/0，`jmpcond` 用**数值真假**——冻结基线用这个；
+- faithful（`bool_type = 1`）：假 → `FVP_NULL`（type 0）、真 → int 1，`jmpcond` **只在 `type == FVP_NULL` 时跳**
+  （照 handler `0x445a30`）。
+
+roadmap 里记着之前的实测：**iroseka 900k 步文本从 195 行掉到 0 行**，第一个分歧点
+正是 **pc `0x05aaf5`**——就是 `0x5AAEC` 那条线程入口的 `jmpcond`。也就是说：
+**"这条线程一进去就返回"是数值真假模型的产物，faithful 模型下它会继续执行。**
+
+### 2. 本轮新数据（gfx 路径）
+
+`bin/fvm.exe`（无 gfx）有 `--bool-type`，但带 gfx 的外壳没有。本轮给
+`bin/fvp-headless.exe` 加了 `--bool-type`（直接写 `vm.bool_type`），实测：
+
+| 配置 | primhit | threadnext | 台词行数 |
+|---|---|---|---|
+| headless 默认 | 0/0 | 41,395 | 0 |
+| headless `--bool-type` | **0/0** | **0** | **0** |
+
+faithful 模式下 `ThreadNext` 变成 **0** —— 脚本在更早的地方就停住了（连主循环的
+让出都没发生），比默认模式更糟。这与 roadmap 的结论一致：**单独打开 `bool_type`
+不成立**，得先把"7×7 类型比较表 + 未赋值 global 读成 null"这套补完（`vm.c` 里已有
+`fvp_pair_cmp_faithful` 与 `globals_set`，但显然还有缺口），再复测。
+
+### 3. 结论
+
+- 上一轮 `0x5AAEC` 的"线程一进去就返回"不是新 bug，是**数值真假模型**的表现；
+  faithful 模型下它会继续跑，但整条脚本反而更早停摆。
+- 因此"265 等待环"的真正前置，可能不是某个缺失的 `Motion*(265)`，而是**整个
+  `jmpcond` 语义模型**与我们冻结基线的取舍冲突：基线是按数值真假冻结的，
+  而原版是类型真假。
+- 下一步（可验证）：把 faithful 模式的 7×7 比较表/global-null 补完，用
+  `fvm.exe --bool-type` 的文本行数与 `headless --bool-type` 的 threadnext 作为
+  两个可量化指标逐步推进；在能把 900k 步文本恢复到 ≥195 行之前，不动默认路径。
+
+### 4. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS**（默认路径未动，冻结基线逐字节一致） |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_prim_refs.py` / `verify_thread_calls.py` / `verify_text_geometry.py` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 5. 诚实说明
+
+- 本轮新增的只有 headless 的 `--bool-type` 开关（默认关，不影响任何基线）与这组对照数据。
+- 没有修好 265；但把"新线索"和"已知分歧"接上了，避免继续把它当成无名 bug 追。
+
 ## [未发布] — 2026-11-26（九十续）：浮游旁白几何的脚本链条解出来并冻结成门禁
 
 用户要求（正文渲染要求 #2）：浮游旁白没有可见对话框，位置取自脚本 `PrimSetText`
