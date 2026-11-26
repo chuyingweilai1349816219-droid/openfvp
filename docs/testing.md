@@ -517,3 +517,10 @@ out\fuzz\fvm_guard.exe out\fuzz\repro\case_12345.hcb --steps 2048
 `bin/fvm.exe --pctrace` 相同，用来定位两个外壳的**第一个分叉点**。第 222 轮用它查出
 headless 之所以 900k 步 0 行文本，是 `0x5834A` 的 `MotionAlphaTest(44)` 在没有动画时钟的
 外壳里答"已结束"，让脚本落进等待循环（详见 CHANGELOG 四十七续）。
+
+> **headless 的 `--savebin`（2026-11-26）**：`bin/fvp-headless.exe` 现在接受
+> `--savebin <save/save.bin>`，把已确证的全局变量/flag 灌进 VM（复用 lib 的
+> `fvp_save_bin_load_file` + `fvp_save_globals_apply` + `fvp_save_flags_apply`，
+> 日志与 `fvm --savebin` 同格式）。实测 iroseka：`save.bin: 1471 records,
+> 145 int applied, 846 unknown(type1), 480 unset, 0 flags bit(s) set`。
+> 用途：验证"原版首次启动会读存档"这类环境差异。

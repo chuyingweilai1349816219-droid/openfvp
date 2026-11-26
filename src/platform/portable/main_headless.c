@@ -20,6 +20,8 @@
 #include "gfx.h"
 #include "hcb.h"
 #include "platform.h"
+#include "save.h"
+#include "save_vm.h"
 #include "vm.h"
 
 #define CANVAS_W 1920
@@ -33,6 +35,7 @@ static void usage(FILE *f, const char *argv0)
     fprintf(f, "  --text-out FILE   write the text lines as they appear\\n");
     fprintf(f, "  --pctrace FILE    write one executed pc per line (diagnostics)\\n");
     fprintf(f, "  --screenshot FILE write the canvas as a 32-bit BMP\n");
+    fprintf(f, "  --savebin FILE    seed globals from a save/save.bin\n");
     fprintf(f, "  --dump-scene FILE export the FVPS v2 scene "
                "(input for bin/fvp.exe --scene)\n");
     fprintf(f, "  --quiet           do not echo text\n");
@@ -141,6 +144,33 @@ static void text_sink(void *ud, int layer, const char *text, int clear)
     sink->lines += 1;
 }
 
+/* --savebin：把 save/save.bin 里已确证的全局变量灌进 VM（与 fvm 的 --savebin 同义）。
+ * 用来验证“原版首次启动会读存档”这个环境差异是否影响脚本分支。 */
+static int headless_seed_globals(const char *path, FvpVM *vm)
+{
+    FvpSaveBin sb;
+    FvpSaveGlobalsStats st;
+    int written;
+
+    memset(&sb, 0, sizeof sb);
+    if (!fvp_save_bin_load_file(&sb, path)) {
+        fprintf(stderr, "fvp-headless: %s is not a valid save.bin\n", path);
+        return 0;
+    }
+    written = fvp_save_globals_apply(&sb, vm->globals, FVP_GLOBAL_COUNT, &st);
+    {
+        int flag_bytes = fvp_save_flags_apply(&sb, vm->flags, FVP_FLAG_BYTES);
+
+        printf("save.bin: %d records, %d int applied, %d unknown(type1), "
+               "%d unset, %d flags bit(s) set\n",
+               st.total, written, st.unknown, st.unset,
+               fvp_flag_count(vm->flags));
+        (void)flag_bytes;
+    }
+    fvp_save_bin_free(&sb);
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
     const char *script = NULL;
@@ -149,6 +179,7 @@ int main(int argc, char **argv)
     const char *pctrace = NULL;
     const char *shot = NULL;
     const char *text_steps = NULL;
+    const char *savebin = NULL;
     const char *dump_scene = NULL; /* --dump-scene: 导出 FVPS v2 场景（--scene 的输入） */
     TextSink sink;
     unsigned long long steps = 200000ULL;
@@ -183,6 +214,8 @@ int main(int argc, char **argv)
             shot = argv[++i];
         } else if (strcmp(a, "--text-out-steps") == 0 && i + 1 < argc) {
             text_steps = argv[++i];
+        } else if (strcmp(a, "--savebin") == 0 && i + 1 < argc) {
+            savebin = argv[++i];
         } else if (strcmp(a, "--dump-scene") == 0 && i + 1 < argc) {
             dump_scene = argv[++i];
         } else if (strcmp(a, "--frame-ms") == 0 && i + 1 < argc) {
@@ -359,6 +392,10 @@ int main(int argc, char **argv)
     if (pctrace != NULL) {
         vm.pctrace = fopen(pctrace, "wb");
     }
+    if (savebin != NULL) {
+        (void)headless_seed_globals(savebin, &vm);
+    }
+
     /* 允许从指定脚本 pc 起步（环境变量 FVP_START_PC，十六进制/十进制均可）：
      * 没有素材宿主时脚本会停在标题/菜单（PrimHit 永远不命中，见 CHANGELOG 五十六续），
      * 想验证正文渲染就得绕过标题。仅诊断/验证用，默认仍从 main_start 起跑。 */

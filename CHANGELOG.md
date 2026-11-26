@@ -4,6 +4,74 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（九十七续）：headless 加 `--savebin`；带真实存档启动仍然 0 行 —— `265` 标为"待新证据"
+
+### 1. 新能力：`bin/fvp-headless.exe --savebin <save/save.bin>`
+
+`bin/fvm.exe` 早就有 `--savebin`（把 `save.bin` 里已确证的全局变量灌进 VM），headless 没有。
+本轮补上：直接复用 lib 里的 `fvp_save_bin_load_file` + `fvp_save_globals_apply` +
+`fvp_save_flags_apply`，日志与 `fvm` 完全同格式。
+
+实跑（iroseka，真实存档）：
+
+```
+save.bin: 1471 records, 145 int applied, 846 unknown(type1), 480 unset, 0 flags bit(s) set
+headless: primhit=0/0 threadnext=41430 motion_active=0 steps=900000
+文本行数：0
+```
+
+（145 int applied 与 win32 外壳加载存档时的数字一致，说明种子生效。）
+
+### 2. 存档确实改变走向，但没改变结局
+
+同一份脚本、同样 `--click 600`，40,000 步内：
+
+| 配置 | threadnext | 第一处分叉 | 900k 文本行数 |
+|---|---:|---|---:|
+| 无存档 | 443 | — | 0 |
+| `--savebin` | 477 | index **11,964**（`0x3A77B` 后走不同分支） | 0 |
+
+也就是说：**"原版首次启动会读 save.bin"这个环境差异确实影响脚本分支**（11,964 步处就分叉），
+但两条路最后都停在同一个地方——`0x592DF` 等 `MotionAlphaTest(265)`。
+
+### 3. 结论：① 标为"需要新证据的开放问题"
+
+到目前为止，围绕 `prim 265` 已经排除：
+
+| 假设 | 排除依据 |
+|---|---|
+| `*Test` 极性反了 | exe `0x43A9C0` 反汇编（`setne` → 1 = 记录存在）+ 反转实验反而更糟 |
+| 记录被"提前回收" | `FVP_MOTION_NO_REAP` 实验无变化 |
+| 菜单在 slot 9 协程 | 35 个 `ThreadStart` 站点槽号 1..15，**没有 9** |
+| 引擎侧批量登记 | 容器只有构造/更新/查询；记录添加函数 `0x42D460` 的唯一调用者是 `MotionAlpha` handler |
+| 缺某个 `Motion*(265)` 未被识别 | 38 个 265 引用点逐个对轨迹：4 个执行、35 个 0 次 |
+| 存档全局变量差异 | 本轮：`--savebin` 确实改分支，但结局不变 |
+
+剩下唯一可能：**原版在首次进标题前执行过一段我们完全没走到的代码**（既不在
+`fvm` 的"残留值"路径上，也不是存档能触发的）。要判定它，需要**原版运行数据**
+（例如原版在同一时刻的 pc 轨迹/内存快照），而不是继续在本仓库里自证。
+
+因此 ① 从"下一轮继续修"改成**开放问题**：记录已有证据链（本仓库 4 份门禁文档 + 12 轮
+CHANGELOG），等有原版运行数据时再收敛；在没有新证据前，继续改代码只会靠猜。
+
+### 4. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS**（冻结文本基线不变） |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_opening_render.py` | **PASS**（两作） |
+| `verify_prim_refs` / `verify_thread_calls` / `verify_text_geometry` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 5. 诚实说明
+
+- 本轮是**新能力 + 一个负面结论**：headless 现在能带存档跑（以后验证读档相关行为会用到），
+  但它没有解锁 265。
+- 我不把这轮算作 ① 的进展；按目标清单，① 仍然是最高优先级但**缺证据**，
+  所以后续轮次会把精力放到 ②③④ 里**不依赖原版运行数据**的部分。
+
 ## [未发布] — 2026-11-26（九十六续）：统一点击掩码后再对齐轨迹 —— 下一处分叉在 265 等待环，且查明记录只能由 Motion 创建
 
 ### 1. 统一输入模型
