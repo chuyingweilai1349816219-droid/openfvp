@@ -46,6 +46,14 @@ SITES = [
     ('0x43705f', 'mov    %dl,0x7(%ecx)', '渲染：alpha 写图元 +0x7'),
     ('0x43a06d', 'movl   $0x3,0x101010(%edi)', 'Dissolve：状态置 3'),
     ('0x43a18c', 'movl   $0x6,0x101010(%edi)', 'Dissolve：状态置 6'),
+    ('0x445477', 'mov    $0x1,%ecx', '调度器：ecx = 运行态标志 1'),
+    ('0x44547c', 'test   $0x10,%al', '调度器：看线程是否在等淡出（bit4）'),
+    ('0x445486', 'cmp    %ecx,0x10146c(%edx)', '调度器：比较"待完成淡出计数"'),
+    ('0x44548e', 'and    $0xffffffef,%eax', '调度器：计数 <= 1 时清 bit4（放行）'),
+    ('0x44549f', 'movb   $0x0,0x810(%esi)', '调度器：清"阻塞"字节'),
+    ('0x4454b0', 'mov    0x81c(%esi),%eax', '调度器：取回 VM pc'),
+    ('0x4454d0', 'call   *%eax', '调度器：执行一条指令'),
+    ('0x4454d2', 'cmpb   $0x0,0x810(%esi)', '调度器：+0x810 又被置 1 就退出（阻塞）'),
 ]
 
 # 下面三个是**脚本侧**地址（HCB 字节码，不在 exe 反汇编里），由
@@ -89,6 +97,16 @@ def build():
         loop=dict(region=['0x59264', '0x5928c'], exit='DissolveWait(15) == false',
                   not_the_265_loop='0x592DF 的 MotionAlphaTest(265) 在这段之后',
                   script=SCRIPT_LOOP),
+        scheduler=dict(
+            fn='0x445440',
+            wait_flag='thread+0x808 bit4 (0x10)',
+            blocked_byte='thread+0x810',
+            release_counter='engine+0x10146c',
+            release_rule='engine+0x10146c <= 1 时清 bit4 并继续执行',
+            writes_return_value=False,
+            note=('线程被放行时只清 bit4 与 +0x810，**不写 +0x818** —— 所以 '
+                  'DissolveWait 之后 pushtemp 读到的是更早一次 syscall 留下的值；'
+                  '循环能否退出取决于变体比较语义（--bool-type 下卡点换到 0x235C9）')),
         sites=sites)
 
 

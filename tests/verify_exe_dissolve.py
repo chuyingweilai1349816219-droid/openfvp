@@ -55,7 +55,7 @@ def main():
     print('== 冻结基线自洽性')
     check(ref.get('schema') == 'fvp-dissolve/1', 'schema fvp-dissolve/1')
     sites = ref.get('sites', [])
-    check(len(sites) == 14, '14 个 exe 站点（实际 %d）' % len(sites))
+    check(len(sites) == 22, '22 个 exe 站点（实际 %d）' % len(sites))
     check(all(s.get('ok') for s in sites), '每个站点都标注 ok')
     pcs = [s['pc'] for s in sites]
     check('0x43752c' in pcs and '0x43a06d' in pcs and '0x436ff0' in pcs,
@@ -90,6 +90,21 @@ def main():
     check('0x592DF' in loop.get('not_the_265_loop', ''),
           'note 说明 265 的循环在这段之后（不是同一个循环）')
 
+    print('== 调度器：放行时不写返回值')
+    sch = ref.get('scheduler', {})
+    check(sch.get('fn') == '0x445440', '调度器函数 0x445440')
+    check(sch.get('wait_flag') == 'thread+0x808 bit4 (0x10)', '等待标志 = +0x808 bit4')
+    check(sch.get('blocked_byte') == 'thread+0x810', '阻塞字节 +0x810')
+    check(sch.get('release_counter') == 'engine+0x10146c',
+          '放行条件看 engine+0x10146C')
+    check(sch.get('writes_return_value') is False,
+          '放行路径**不写**返回值（+0x818）')
+    spcs = [s['pc'] for s in sites]
+    check('0x44548e' in spcs and '0x44549f' in spcs and '0x4454d2' in spcs,
+          '调度器三处站点都在基线里')
+    check('0x235C9' in sch.get('note', ''),
+          'note 记下 --bool-type 下卡点换到 0x235C9')
+
     print('== 重新抽取反汇编对账')
     mod = load_extractor()
     got = mod.build()
@@ -99,6 +114,7 @@ def main():
         check(got['sites'] == sites, '站点逐字段相等')
         check(got['state'] == st, '状态机字段相等')
         check(got['loop'] == loop, '循环描述相等')
+        check(got.get('scheduler') == sch, '调度器描述相等')
 
     if fails:
         print('verify_exe_dissolve: %d check(s) FAILED' % len(fails))

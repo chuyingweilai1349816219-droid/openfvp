@@ -48,6 +48,15 @@
    }
   ]
  },
+ "scheduler": {
+  "fn": "0x445440",
+  "wait_flag": "thread+0x808 bit4 (0x10)",
+  "blocked_byte": "thread+0x810",
+  "release_counter": "engine+0x10146c",
+  "release_rule": "engine+0x10146c <= 1 时清 bit4 并继续执行",
+  "writes_return_value": false,
+  "note": "线程被放行时只清 bit4 与 +0x810，**不写 +0x818** —— 所以 DissolveWait 之后 pushtemp 读到的是更早一次 syscall 留下的值；循环能否退出取决于变体比较语义（--bool-type 下卡点换到 0x235C9）"
+ },
  "sites": [
   {
    "pc": "0x43752c",
@@ -145,6 +154,62 @@
    "instr": "movl   $0x6,0x101010(%edi)",
    "expect": "movl   $0x6,0x101010(%edi)",
    "role": "Dissolve：状态置 6",
+   "ok": true
+  },
+  {
+   "pc": "0x445477",
+   "instr": "mov    $0x1,%ecx",
+   "expect": "mov    $0x1,%ecx",
+   "role": "调度器：ecx = 运行态标志 1",
+   "ok": true
+  },
+  {
+   "pc": "0x44547c",
+   "instr": "test   $0x10,%al",
+   "expect": "test   $0x10,%al",
+   "role": "调度器：看线程是否在等淡出（bit4）",
+   "ok": true
+  },
+  {
+   "pc": "0x445486",
+   "instr": "cmp    %ecx,0x10146c(%edx)",
+   "expect": "cmp    %ecx,0x10146c(%edx)",
+   "role": "调度器：比较\"待完成淡出计数\"",
+   "ok": true
+  },
+  {
+   "pc": "0x44548e",
+   "instr": "and    $0xffffffef,%eax",
+   "expect": "and    $0xffffffef,%eax",
+   "role": "调度器：计数 <= 1 时清 bit4（放行）",
+   "ok": true
+  },
+  {
+   "pc": "0x44549f",
+   "instr": "movb   $0x0,0x810(%esi)",
+   "expect": "movb   $0x0,0x810(%esi)",
+   "role": "调度器：清\"阻塞\"字节",
+   "ok": true
+  },
+  {
+   "pc": "0x4454b0",
+   "instr": "mov    0x81c(%esi),%eax",
+   "expect": "mov    0x81c(%esi),%eax",
+   "role": "调度器：取回 VM pc",
+   "ok": true
+  },
+  {
+   "pc": "0x4454d0",
+   "instr": "call   *%eax",
+   "expect": "call   *%eax",
+   "role": "调度器：执行一条指令",
+   "ok": true
+  },
+  {
+   "pc": "0x4454d2",
+   "instr": "cmpb   $0x0,0x810(%esi)",
+   "expect": "cmpb   $0x0,0x810(%esi)",
+   "role": "调度器：+0x810 又被置 1 就退出（阻塞）",
    "ok": true
   }
  ]
