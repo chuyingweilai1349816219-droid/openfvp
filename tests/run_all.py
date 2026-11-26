@@ -525,7 +525,7 @@ def build_steps(args):
                           note='100-slot ring: count cap, pos wrap, slot = pos-idx, '
                                'kind/type filters, NULL safety'))
 
-    # 4n3. 槽尾字符串池（位置随全局变量条数平移：src/savetail.c）
+    # 4n3. 槽尾动态字符串表（位置 = 0x163A0 + 全局变量字节数：src/savetail.c）
     test_savetail = tools.get('test_savetail')
     if not test_savetail or not os.path.isfile(test_savetail):
         steps.append(Step('test_savetail', None, 0,
@@ -533,11 +533,12 @@ def build_steps(args):
                                       '(run: make test_savetail)'))
     else:
         steps.append(Step('test_savetail', [test_savetail], 120,
-                          note='slot-tail string pool: tag located after the '
-                               'per-slot globals (0x16610 + 1471*8 = 0x19408 in '
-                               'the 6 real saves), not a fixed offset; 0/1471/100 '
-                               'globals synthetic cases, malformed inputs and '
-                               'two-candidate ambiguity rejected'))
+                          note='slot-tail dynamic string table: header (thread '
+                               'index 0x20 + non-empty count) located at '
+                               '0x163A0 + globals_bytes = 0x19408 in the 6 real '
+                               'saves, not a fixed offset; 0/1549/100 globals '
+                               'synthetic cases, empty table, malformed inputs '
+                               'and two-candidate ambiguity rejected'))
 
     # 4n2. 槽尾台词历史环（读档 step-2 第一段：src/savehist.c）
     test_savehist = tools.get('test_savehist')
@@ -734,10 +735,11 @@ def build_steps(args):
                       300, skip_reason=None,
                       note='slot write order 31 segments + read order 20 '
                            'steps frozen in ref/exe-save-serialize.json; data '
-                           'side validated on 6 real saves: tail[0:0x2DF8] = '
-                           '1471 per-slot globals, 128-slot string table at '
-                           '0x19300, string pool tag = 0x16610 + 1471*8 = '
-                           '0x19408, last two bytes 01 01'))
+                           'side validated on 6 real saves: tail[0:0x3068] = '
+                           '1549 per-slot globals, 32 contexts x 0xB1D = 0x163A0, '
+                           'thread index + 128-slot string table at 0x19408, '
+                           'walk + 0x600 = history ring (record offsets match an '
+                           'independent scan), last two bytes 01 01'))
 
     # 6.4968636 台词历史（HistorySet 26 / HistoryGet 25）的 handler + 槽尾历史环
     vhi = os.path.join(HERE, 'verify_exe_history.py')

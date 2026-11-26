@@ -84,7 +84,8 @@ void fvp_save_slot_free(FvpSaveSlot *s);
 /* ---------------------------------------------------------------- save.bin */
 
 typedef struct FvpSaveBin {
-    unsigned int nglobals;   /* 全局变量条数（本作 1471） */
+    unsigned int nglobals;   /* 本文件里的条数（本作 1471 = 数组后半段 G2；
+                              * 槽尾写的是前半段 G1 = 1549） */
     unsigned char *globals;  /* nglobals * 8 字节，{u8 type, 3B pad, u32 value} */
     unsigned char hdr[20];   /* 设置头，+12/+16 是缩略图宽高 */
     unsigned char *readmap;  /* 1 MB 已读文本位图 */

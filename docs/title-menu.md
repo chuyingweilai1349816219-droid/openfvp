@@ -249,7 +249,7 @@ hoshimemo 的 asset 指向各自贴图 → 走贴图模式。
 - Windows 下 CJK 路径只能走宽字符 API，所以**目录枚举与读文件在外壳里做**
   （`FindFirstFileW` + `_wfopen`），`savelist.c` 只吃"槽文件字节"
   （`fvp_savelist_add_slot_bytes`），保持可移植；
-- 槽尾的字符串池（`src/savetail.c`，见 `docs/save-format.md` §2.5.1）里能解出
+- 槽尾的 128 槽动态字符串表（`src/savetail.c`，见 `docs/save-format.md` §2.4.5）里能解出
   当时的**背景图名**（例如 s905 的 `BG063_000b`），行文本会显示成
   `No.905   2023/03/19 23:43   [BG063_000b] プロローグ`；解不出来就不显示；
 - 选中一行只记日志（`save list: selected No.481 ...`）并**停在列表里**——
@@ -372,12 +372,12 @@ C→D→B）。合成结果与原版帧的整帧平均差从 **17.5 降到 13.7*
 
 ### 4.10 存档预览（选中槽的"当时画面"）
 
-存档列表选中某一槽时，外壳把槽尾字符串池里记的**背景图名**（例如 `BG063_000b`）
+存档列表选中某一槽时，外壳把槽尾动态字符串表里记的**背景图名**（例如 `BG063_000b`）
 装进预览槽、等比缩到 640×360 画在右下角，并在底部写出该槽的台词。
 
 - 它**不是读档**：不恢复任何游戏状态，只把"这个存档当时停在哪张图、哪句话"
   还原成一帧；文档与日志都写 preview，`Load(40)` 仍是"未实现"；
-- 内容全部来自存档数据本身（图名来自槽尾字符串池），没有猜测；
+- 内容全部来自存档数据本身（图名来自槽尾动态字符串表），没有猜测；
 - `--preview-slot N`：预选第 N 号槽（截图/门禁用）；
 - 门禁：选中记有图名的槽（iroseka 的 s905）时必须出现
   `save list: preview graph 'BG063_000b' loaded`，且预览区域确实有非黑像素
@@ -464,7 +464,7 @@ iroseka 的菜单是深蓝衬线字。用 `scripts/identify-title-font.py` 把�
 
 存档列表里按 **Enter**（或左键点同一行）会进入"部分恢复"视图：
 
-1. 把该槽字符串池里记的**背景图**整屏铺开（`gfx_draw_image_scaled` 到 1920×1080）；
+1. 把该槽动态字符串表里记的**背景图**整屏铺开（`gfx_draw_image_scaled` 到 1920×1080）；
 2. 在下方画出该槽记录的**台词**；
 3. 左上角常驻标注 `[PARTIAL RESTORE] visual + text only`；
 4. 日志写 `load: partial restore slot=N graph=... (visual+text only, game state NOT restored)`。

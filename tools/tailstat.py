@@ -24,17 +24,18 @@ import sys
 
 HEADER = 7
 
-# 槽尾里的"字符串池"（见 docs/save-format.md §2.5.1 与 src/savetail.c）
+# 槽尾 128 槽动态字符串表的表头（见 docs/save-format.md §2.4.5 与 src/savetail.c）
+# 偏移 = 0x163A0（32 个协程上下文）+ 每槽全局变量字节数；样本 = 0x163A0 + 0x3068。
 POOL_OFFSET = 0x19408
-POOL_TAG = 0x20
-POOL_MAX = 8
+POOL_TAG = 0x20      # 线程下标：0x20 = 存档时没有活跃脚本线程
+POOL_MAX = 8         # 非空字符串条数上限
 
 
 def parse_pool(tail):
-    """按 src/savetail.c 的规则解析字符串池，返回 [(kind, text)] 或 []。
+    """按 src/savetail.c 的规则解析动态字符串表，返回 [(kind, text)] 或 []。
 
-    规则：+0x19408 处 u32 标签 0x20、u32 个数（<=8），随后逐条 u16 长度 +
-    NUL 结尾的 cp932 字符串，条目之间允许 0 填充（跳过去）。
+    规则：表头在 +0x19408 = u32 线程下标（样本 0x20）+ u32 非空条数（<=8），
+    随后逐条 u16 长度 + NUL 结尾的 cp932 字符串，条目之间允许 0 填充（跳过去）。
     """
     if len(tail) < POOL_OFFSET + 8:
         return []
@@ -175,7 +176,7 @@ def main(argv=None):
     for name, ts, strs, tail in slots:
         print('%-9s %s' % (name, tail[:32].hex(' ')))
 
-    print('\n== 槽尾字符串池 @+0x%X（src/savetail.c 的同一规则）==' % POOL_OFFSET)
+    print('\n== 槽尾动态字符串表 @+0x%X（src/savetail.c 的同一规则）==' % POOL_OFFSET)
     for name, ts, strs, tail in slots:
         pool = parse_pool(tail)
         if not pool:

@@ -90,36 +90,43 @@ SEGMENTS = [
      'note': '0x4255C0 抓窗口像素 → 0x447800 拷进缓冲'},
 
     # ---- 槽尾快照（以下全部按顺序写进缩略图之后的 tail）----
-    {'order': 6, 'stage': 'tail', 'label': 'per-slot globals',
+        {'order': 6, 'stage': 'tail', 'label': 'per-slot globals',
      'kind': 'array', 'va': '0x0043e17f',
      'frags': ['8bbec8666a00', '8b9ebcdf6800'],
      'src': 'engine+0x68dfbc', 'count_src': 'engine+0x6a66c8',
      'stride': 8,
-     'note': '每槽全局变量：count × 8B，count 是**运行时**条数。6 份真实存档实测 '
-             'count = 1471（0x2DF8 字节），所以它后面 128 槽字符串表、0x100 块…'
-             '直到字符串池标签的偏移都随 count 平移（标签 = 0x16610 + count*8，'
-             '样本里 = 0x19408）。旧文档写成 count=0 是错的，已按实测改正'},
+     'note': '每槽全局变量：count × 8B（count = engine+0x6A66C8，运行时值）。'
+             '全局变量数组一共 G1+G2 条：槽尾写**前 G1 条**，save.bin 写'
+             '**后 G2 条**（0x439743 的源指针 = 数组 + G1×8、条数 = G2，见 '
+             'sub_readers.savebin_globals_split）。iroseka 样本：G1 = 1549'
+             '（0x3068 字节）、G2 = 1471（save.bin 1471 条），G1+G2 = 3020'
+             '= 脚本里最大全局下标 3019 + 1。旧文档写的 1471 是把 save.bin 那半'
+             '段当成了槽尾段长，已按本条改正'},
     {'order': 7, 'stage': 'tail', 'label': 'coroutine snapshots',
      'kind': 'array_call', 'va': '0x0043e1cb',
      'frags': ['8dbec0df6800', 'bb20000000'],
      'src': 'engine+0x68dfc0', 'count': 32, 'stride': 0xb28,
      'call': '0x00445640',
-     'note': '32 个协程上下文（写死 0x20 条、步长 0xB28）'},
-    {'order': 8, 'stage': 'tail', 'label': 'current thread index',
+     'note': '32 个协程上下文（写死 0x20 条）。内存步长 0xB28，但每个写进文件'
+             '的是固定 0xB1D 字节（见 sub_readers.context）→ 段总长 32×0xB1D '
+             '= 0x163A0'},
+{'order': 8, 'stage': 'tail', 'label': 'current thread index',
      'kind': 'u32', 'va': '0x0043e20a', 'frags': ['8b86d0666a00'],
      'src': 'engine+0x6a66d0', 'size': 4,
      'note': '线程下标（读档重启时被归零的那个字段）'},
     {'order': 9, 'stage': 'tail', 'label': 'u32 at 0x6a49e8',
      'kind': 'u32', 'va': '0x0043e21a', 'frags': ['8bbee8496a00'],
      'src': 'engine+0x6a49e8', 'size': 4, 'note': '语义未解'},
-    {'order': 10, 'stage': 'tail', 'label': 'dynamic string table',
+        {'order': 10, 'stage': 'tail', 'label': 'dynamic string table',
      'kind': 'string_array', 'va': '0x0043e24c',
      'frags': ['8dbeec496a00', 'bb80000000'],
      'src': 'engine+0x6a49ec', 'count': 0x80, 'stride': 4,
      'writer': '0x00434410',
      'note': '128 个 char* 槽，逐条 u16 长度（**含结尾 NUL**，0x434410 的语义）'
-             '+ 字节；空槽只写 2 字节 0'},
-    {'order': 11, 'stage': 'tail', 'label': 'block 0x6a4bec',
+             '+ 字节；空槽只写 2 字节 0。它前面两个 u32 是表头：线程下标'
+             '（0x6A66D0）+ 非空字符串条数（0x6A49E8）——旧文档把这两个 u32 '
+             '误当成"标签 0x20 + 池条数"，见 invariants.dyn_string_table'},
+{'order': 11, 'stage': 'tail', 'label': 'block 0x6a4bec',
      'kind': 'blob', 'va': '0x0043e266', 'frags': ['8d96ec4b6a00'],
      'src': 'engine+0x6a4bec', 'size': 0x100, 'note': '定长 256B，语义未解'},
     {'order': 12, 'stage': 'tail', 'label': 'block 0x6a4cec',
@@ -128,12 +135,14 @@ SEGMENTS = [
     {'order': 13, 'stage': 'tail', 'label': 'u32 at 0x6a4dec',
      'kind': 'u32', 'va': '0x0043e2e2', 'frags': ['8bbeec4d6a00'],
      'src': 'engine+0x6a4dec', 'size': 4, 'note': '语义未解'},
-    {'order': 14, 'stage': 'tail', 'label': 'table 0x6a4df0',
+        {'order': 14, 'stage': 'tail', 'label': 'table 0x6a4df0',
      'kind': 'array_call', 'va': '0x0043e317',
      'frags': ['8dbef04d6a00'], 'src': 'engine+0x6a4df0',
      'count': 0x80, 'stride': 0x14, 'call': '0x00445330',
-     'note': '128 × 20B（子序列化器 0x445330 决定实际字节数）'},
-    {'order': 15, 'stage': 'tail', 'label': 'block 0x6a61f0',
+     'note': '128 项表，内存步长 0x14；每项写进文件的字节数 = 12 + 12×count'
+             '（u32 count + u32 + u32 + count×12 原样搬运，见 '
+             'sub_readers.item128）'},
+{'order': 15, 'stage': 'tail', 'label': 'block 0x6a61f0',
      'kind': 'blob', 'va': '0x0043e330', 'frags': ['8d86f0616a00'],
      'src': 'engine+0x6a61f0', 'size': 0x200, 'note': '定长 512B'},
     {'order': 16, 'stage': 'tail', 'label': 'block 0x6a63f0',
@@ -273,18 +282,85 @@ READER = [
 ]
 
 # 静态分析阶段读到的、数据侧可以验证的推论（门禁会用真实存档核对）
+# 子读/写器：段内长度规则（用判据字节冻结，门禁会重新提取比对）
+SUB_READERS = [
+    {'id': 'context',
+     'label': '协程上下文反序列化器',
+     'fn': '0x00445540', 'span': 0x100,
+     'frags': ['8b742408', '6800080000', '81460800080000',
+               '83460808', 'ff4608', '81460800010000', '81460800020000'],
+     'bytes_fixed': 0xB1D,
+     'layout': '0x800 块 + u32×2 + u32 + u32 + u8 + u32×3 + 0x100 + 0x200',
+     'note': '固定 2845 = 0xB1D 字节；32 条 → 0x163A0。序列化器 0x445640 走'
+             '同一条字段顺序'},
+    {'id': 'item128',
+     'label': '128 项表的单项读入',
+     'fn': '0x00446210', 'span': 0x70,
+     'frags': ['8b74240c', '8b1c01', '8d2c5b', '03ed', '895f08'],
+     'bytes_rule': '12 + 12×count',
+     'layout': 'u32 count + u32 + u32 + count×12 原样搬运',
+     'note': '内存步长 0x14，写盘长度随 count 变'},
+    {'id': 'savebin_globals_split',
+     'label': 'save.bin 写的全局变量区间',
+     'fn': '0x00439743', 'span': 0x30,
+     'frags': ['8bb5cc666a00', '8b85c8666a00', '8d3cc1'],
+     'note': '源指针 = 全局变量数组 + G1×8（G1 = 0x6A66C8），条数 = G2'
+             '（0x6A66CC）→ save.bin 存的是数组后半段，槽尾存前半段'},
+]
+
+# 样本实测值（iroseka 6 份槽 + save.bin；只写布局常量与无版权内容的计数）
+SAMPLES = {
+    'game': 'iroseka',
+    'slots': ['s481', 's485', 's800', 's901', 's905', 's906'],
+    'g1': 1549,
+    'g2': 1471,
+    'g1_plus_g2': 3020,
+    'max_script_global_index': 3019,
+    'globals_bytes': '0x3068',
+    'context_bytes': '0x163a0',
+    'thread_index_u32_offset': '0x19408',
+    'string_table_offset': '0x19410',
+    'slot_count': 0x80,
+    'nonempty_strings': [1, 1, 0, 0, 2, 0],
+    'walk_gap_before_history_ring': '0x600',
+    'history_ring_record_offsets': {
+        's481': '0x20622', 's485': '0x328ce', 's800': '0x328c5',
+        's901': '0x1aead', 's905': '0x20633', 's906': '0x1aead',
+    },
+    'note': '槽尾 = 全局变量 0x3068 → 32 上下文 0x163A0 → 线程下标 0x19408 '
+            '→ 128 槽字符串表 0x19410 → … → 台词历史环（走查 +0x600 处）；'
+            '环记录起点与独立扫描结果逐份一致',
+}
+
+# 静态分析阶段读到的、数据侧可以验证的推论（门禁会用真实存档核对）
 INVARIANTS = [
-    {'id': 'globals_first',
-     'claim': 'tail 从 +0 起就是"每槽全局变量"表：条数 = engine+0x6A66C8，'
-              '每条 8 字节 {u8 type, 3B pad, u32 value}；6 份样本条数都是 1471，'
-              '共 0x2DF8 字节，type 只出现 0/1/2/4/5/6',
-     'verify': '6/6 份存档 tail[0:0x2DF8] 按 8 字节切分后 type ∈ {0,1,2,4,5,6}，'
-               '且 tail[0x18]（第 4 条记录的 type）恒为 2'},
-    {'id': 'string_pool_after_globals',
-     'claim': '字符串池标签 = 0x16610 + 全局变量字节数；样本里 = 0x16610 + 1471×8 '
-              '= 0x19408 —— **不是固定偏移**',
-     'verify': '6/6 份存档在 0x19408 找到 u32 标签 0x20 且条数 ≤ 8；'
-               'src/savetail.c 已改成扫描定位'},
+    {'id': 'globals_split',
+     'claim': '全局变量数组共 G1+G2 条，每条 8 字节：槽尾写前 G1 条，save.bin '
+              '写后 G2 条（0x439743 源 = 数组+G1×8、条数 = G2）。iroseka 样本 '
+              'G1 = 1549（0x3068 字节）、G2 = 1471，G1+G2 = 3020 = 脚本最大'
+              '全局下标 3019 + 1',
+     'verify': '6/6 份存档 tail[0:0x3068] 按 8 字节切分后类型字节 ∈ {0..6}；'
+               '且 0x3068 + 0x163A0 = 0x19408 处能解出线程下标 + 字符串表'},
+    {'id': 'variant_cell',
+     'claim': '全局变量单元是 8 字节 Variant：byte0 = 类型（0..6，操作数栈的'
+              '二元运算分派表 0x481518/0x481450 是 7×7），i32 载荷在 +4；'
+              'type 4 = 数据段字符串偏移，type 5 = 动态字符串表下标',
+     'verify': '6/6 份存档 1549 条记录的类型字节都 ≤ 6；type5 的条数与动态'
+               '字符串表非空槽数逐份相等（1,1,0,0,2,0）'},
+    {'id': 'dyn_string_table',
+     'claim': '槽尾的动态字符串表 = u32 线程下标（0x6A66D0）+ u32 非空条数'
+              '（0x6A49E8）+ 128 槽（u16 长度含 NUL + 字节，空槽 2 字节 0）；'
+              '位置 = 0x163A0（32×0xB1D）+ 全局变量字节数，不是固定偏移',
+     'verify': '6/6 在 0x19408 找到线程下标 0x20 + 条数 0..2，其余空槽全零；'
+               'src/savetail.c 已按 0x163A0 基址扫描定位'},
+    {'id': 'walk_to_ring',
+     'claim': '从 tail 开头按段前向走查（全局 → 32 上下文 → 线程/条数 → 128 槽'
+              '→ 0x100 → 0x100 → u32 → 128 项表 → 0x200 → 0x200 → 1+16×9 →'
+              ' 0x400 调色板）之后还有一段尚未逆清的 0x600 定长块，紧接着就是'
+              '台词历史环',
+     'verify': '6/6 走查 +0x600 恰好落在历史环 count 字段，环 count/pos 合法'
+               '（s905: 11/10），且记录区起点与独立扫描的 '
+               '0x20622/0x328ce/0x328c5/0x1aead/0x20633/0x1aead 逐份一致'},
     {'id': 'tail_end_marker',
      'claim': '文件最后两字节 = (engine+0x458, engine+0x85!=0)',
      'verify': '实测 6 份存档末两字节都是 01 01'},
@@ -295,11 +371,12 @@ INVARIANTS = [
 ]
 
 UNKNOWN = [
-    '各子序列化器（0x438120 / 0x43DCE0 / 0x4292B0 / 0x429570 / 0x42D880 / '
-    '0x4221E0 / 0x441320 / 0x426410 系列 / 0x445330 / 0x445640 / 0x4386D0）'
-    '的**字节数**：段顺序已确证，但每段多长仍要逐个子序列化器逆',
-    'tail 中段的绝对偏移：现在只能前向走到 0x16608（128 槽字符串表末尾），'
-    '之后的段因为子序列化器长度未知，还无法给固定偏移',
+    '调色板（第 19 段）与台词历史环之间那段恒定 0x600 字节的定长块：6 份存档'
+    '里长度一致、内容随存档变化，尚未逆清来源（是不是 0x6A65FC 那组 16 项'
+    '之外的又一张表 / 第二块调色板，待查）',
+    '第 20 段之后各子序列化器（0x43DCE0 外字表 / 0x4292B0 4096 项 / '
+    '0x429570 64 项 / 0x42D880 32 槽 / 0x4221E0 窗口 / 0x441320 脚本对象）'
+    '的字节数',
     'engine+0x6a49e8 / 0x6a4dec / 0x6a65fc+0xc0 / 0x651d64 / 0x458 / 0x85 的语义',
 ]
 
@@ -358,6 +435,22 @@ def reader_checks(data, secs):
     return out
 
 
+def sub_reader_checks(data, secs):
+    """逐条校验子读/写器的判据字节，返回冻结清单。"""
+    out = []
+    for item in SUB_READERS:
+        span = int(item.get('span', 0x40))
+        blob = u8(data, secs, int(item['fn'], 16), span)
+        ok, bad = check_frags(blob, item['frags'])
+        if not ok:
+            raise SystemExit('FAIL: sub_reader %s @%s 判据字节 %s 不符（实际 %s）'
+                             % (item['id'], item['fn'], bad, blob.hex()))
+        rec = dict(item)
+        rec['bytes'] = blob.hex()
+        out.append(rec)
+    return out
+
+
 def extract(path):
     data, secs = load_exe(path)
     out_segments = []
@@ -399,6 +492,8 @@ def extract(path):
                            size=len(body),
                            sha256=hashlib.sha256(body).hexdigest()),
         'helpers': helpers,
+        'sub_readers': sub_reader_checks(data, secs),
+        'samples': SAMPLES,
         'segments': out_segments,
         'tail_starts_after': 'thumbnail（第 5 段）之后',
         'invariants': INVARIANTS,

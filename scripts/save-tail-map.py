@@ -2,9 +2,11 @@
 
 Prior work established these landmarks (docs/save-snapshot.md):
 
-    [0x00000 .. 0x163A0)   32 coroutine contexts, 0xB1D bytes each
-    [0x19408 .. )          string pool: u32 tag 0x20, u32 count, then
-                           count x (u16 length-prefixed) strings
+    [0x00000 .. 0x03068)   per-slot globals: G1 = 1549 x 8 bytes
+    [0x03068 .. 0x19408)   32 coroutine contexts, 0xB1D bytes each
+    [0x19408 .. )          dynamic string table header: u32 thread index (0x20),
+                           u32 non-empty count, then count x (u16 length-prefixed)
+                           strings followed by zeroed empty slots
     [len-1438 .. len)      constant tail (identical across slots), ends 01 01
 
 This tool prints the map for every slot in a save directory and checks the

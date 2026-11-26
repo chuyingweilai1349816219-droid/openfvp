@@ -13,6 +13,7 @@ import struct
 import sys
 
 THUMB = 200 * 113 * 4
+# 128 槽动态字符串表表头 = 0x163A0（32 上下文）+ 全局变量字节数（样本 0x3068）
 POOL_OFF = 0x19408
 
 

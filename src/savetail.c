@@ -1,8 +1,9 @@
-/* FVP engine -- 存档槽尾的字符串池解析（见 savetail.h）。
+/* FVP engine -- 存档槽尾的 128 槽动态字符串表解析（见 savetail.h）。
  *
- * 位置不写死：序列化器里"每槽全局变量"的长度是运行时的条数（6 份样本都是
- * 1471 条 × 8 = 0x2DF8），所以标签在 0x16610 + globals_bytes；这里扫描
- * [0x16610, 0x16610+0x4000) 按 8 字节步进找唯一候选。
+ * 位置不写死：表头跟在"每槽全局变量"（条数 × 8 字节）与 32 个协程上下文
+ * （0x163A0 字节）之后，6 份真实存档实测条数 = 1549（0x3068），于是线程下标
+ * u32 落在 0x163A0 + 0x3068 = 0x19408；换条数就平移。这里扫描
+ * [0x163A0, 0x163A0+0x4000) 按 8 字节步进找唯一候选。
  */
 #include <string.h>
 
@@ -71,15 +72,16 @@ static int decode_one(char *dst, size_t cap, FvpEncoding enc,
     return 1;
 }
 
-/* 解析 off 处的池结构；成功返回 1。count 为 0 也算结构成立（系统存档）。 */
+/* 解析 off（= 线程下标 u32）处的表头；成功返回 1。空表（count=0）也算成立。 */
 static int parse_pool_at(FvpSaveTailInfo *out, const unsigned char *tail,
                          size_t len, size_t off, FvpEncoding enc)
 {
     unsigned int count;
     unsigned int i;
     size_t cur;
+    size_t rest;
 
-    if (off + 8 > len || rd_u32(tail + off) != FVP_SAVETAIL_TAG) {
+    if (off + 8 > len || rd_u32(tail + off) != FVP_SAVETAIL_THREAD_NONE) {
         return 0;
     }
     count = rd_u32(tail + off + 4);
@@ -88,12 +90,17 @@ static int parse_pool_at(FvpSaveTailInfo *out, const unsigned char *tail,
     }
     out->count = 0;
     out->graph_index = -1;
+    out->thread_index = rd_u32(tail + off);
     out->pool_offset = off;
     cur = off + 8;
     for (i = 0; i < count; ++i) {
         unsigned int n;
         size_t pad = 0;
 
+        while (cur < len && tail[cur] == 0 && pad < 8) {
+            cur += 1;
+            pad += 1;
+        }
         if (cur + 2 > len) {
             return 0;
         }
@@ -105,20 +112,24 @@ static int parse_pool_at(FvpSaveTailInfo *out, const unsigned char *tail,
         if (tail[cur + n - 1] != 0) {
             return 0; /* 必须是 NUL 结尾的字符串 */
         }
-        if (decode_one(out->str[out->count], FVP_SAVETAIL_STR_MAX, enc,
-                       tail + cur, (size_t)n - 1u)) {
-            if (out->graph_index < 0 &&
-                looks_like_graph(out->str[out->count])) {
-                out->graph_index = out->count;
-            }
-            out->count += 1;
-        } else {
+        if (!decode_one(out->str[out->count], FVP_SAVETAIL_STR_MAX, enc,
+                        tail + cur, (size_t)n - 1u)) {
             return 0;
         }
+        if (out->graph_index < 0 && looks_like_graph(out->str[out->count])) {
+            out->graph_index = out->count;
+        }
+        out->count += 1;
         cur += n;
-        while (cur < len && tail[cur] == 0 && pad < 8) {
-            cur += 1;
-            pad += 1;
+    }
+    /* 其余空槽：每个 2 字节 0。这条约束把“全零区里的假候选”排除掉。 */
+    rest = 2u * (size_t)(FVP_SAVETAIL_SLOT_COUNT - count);
+    if (cur + rest > len) {
+        return 0;
+    }
+    for (i = 0; i < rest; ++i) {
+        if (tail[cur + i] != 0) {
+            return 0;
         }
     }
     return 1;
@@ -135,21 +146,20 @@ int fvp_savetail_find_pool(const unsigned char *tail, size_t len, size_t *off)
         return 0;
     }
     for (base = FVP_SAVETAIL_POOL_BASE;
-         base + 8 <= len && base < FVP_SAVETAIL_POOL_BASE + FVP_SAVETAIL_SCAN_MAX;
+         base + 8 <= len &&
+         base < FVP_SAVETAIL_POOL_BASE + FVP_SAVETAIL_SCAN_MAX;
          base += 8) {
-        if (rd_u32(tail + base) != FVP_SAVETAIL_TAG) {
+        if (rd_u32(tail + base) != FVP_SAVETAIL_THREAD_NONE) {
             continue;
         }
         if (rd_u32(tail + base + 4) > FVP_SAVETAIL_MAX_STRINGS) {
             continue;
         }
-        /* 结构能走完（文本解码用 GBK/CP932 的打分在 savehist 里；这里只需要
-         * 长度前缀与 NUL 合法，解码用 CP932 抖一下无所谓，只判结构） */
-        if (!parse_pool_at(&tmp, tail, len, base, FVP_ENC_CP932)) {
-            /* 有些条目的文本用 GBK 存储，CP932 解不开 → 换 GBK 再试结构 */
-            if (!parse_pool_at(&tmp, tail, len, base, FVP_ENC_GBK)) {
-                continue;
-            }
+        /* 结构能走完：条数、长度前缀、NUL 结尾、其余空槽全零。
+         * 文本解码先用 CP932，解不开再换 GBK（汉化版把台词写成 GBK）。 */
+        if (!parse_pool_at(&tmp, tail, len, base, FVP_ENC_CP932) &&
+            !parse_pool_at(&tmp, tail, len, base, FVP_ENC_GBK)) {
+            continue;
         }
         if (found > 0) {
             return 0; /* 多个候选 → 放弃（不猜） */
@@ -170,7 +180,7 @@ int fvp_savetail_parse(FvpSaveTailInfo *out, const unsigned char *tail,
     size_t off = 0;
     FvpSaveTailInfo tmp;
 
-    if (out == NULL) {
+    if (out == NULL || tail == NULL) {
         return 0;
     }
     memset(out, 0, sizeof(*out));
@@ -178,12 +188,13 @@ int fvp_savetail_parse(FvpSaveTailInfo *out, const unsigned char *tail,
     if (!fvp_savetail_find_pool(tail, len, &off)) {
         return 0;
     }
-    if (!parse_pool_at(&tmp, tail, len, off, enc)) {
-        /* 用另一种编码再试一次（汉化版把台词写成 GBK） */
-        if (!parse_pool_at(&tmp, tail, len, off, FVP_ENC_GBK)) {
-            return 0;
-        }
+    if (parse_pool_at(&tmp, tail, len, off, enc)) {
+        *out = tmp;
+        return 1;
     }
-    *out = tmp;
-    return out->count > 0;
+    if (parse_pool_at(&tmp, tail, len, off, FVP_ENC_GBK)) {
+        *out = tmp;
+        return 1;
+    }
+    return 0;
 }

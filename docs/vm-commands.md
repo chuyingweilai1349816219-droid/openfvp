@@ -278,7 +278,7 @@ call 0x4387d0
 438f51..438f5f: u32 @offset → engine+0x68dfb4（同时就是 stream.offset = script_len）
 438f65..438f73: u32 @script_len → engine+0x6a66d4   ; = main_start
 438f79..438f88: u16 → engine+0x6a66c8     ; 本例 1549
-438f8e..438f9d: u16 → engine+0x6a66cc     ; 本例 1471
+438f8e..438f9d: u16 → engine+0x6a66cc     ; G2（save.bin 写的后半段条数），本例 1471
 （两者相加 ×8 字节 = 0x68dfbc 处的一张数组，与命令分发无关）
 438ff3: movsbl ...  ; winmode 索引（查 0x45db50 的 16 项表）
 43906f: incl 0x8(%esi)                    ; 跳过 1 字节

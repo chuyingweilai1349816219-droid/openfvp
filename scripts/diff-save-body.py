@@ -2,9 +2,9 @@
 
 The tail map (docs/save-snapshot.md §4.3) fixes these landmarks:
 
-    [0x00000 .. 0x163A0)  32 coroutine contexts
-    [0x163A0 .. 0x19408)  always zero in the samples
-    [0x19408 .. )         dynamic string pool
+    [0x00000 .. 0x03068)  per-slot globals (G1 = 1549 x 8)
+    [0x03068 .. 0x19408)  32 coroutine contexts (0xB1D each)
+    [0x19408 .. )         dynamic string table header + 128 slots
     [len-1438 .. len)     constant tail (identical across slots)
 
 Everything between the pool and the constant tail varies with progress.  This
@@ -41,7 +41,7 @@ def tail_of(path):
 
 
 def pool_end(tail):
-    """字符串池的结束位置：u32 tag 0x20 + u32 count + count 条长度前缀字符串。"""
+    """动态字符串表的结束位置：u32 线程下标 + u32 非空条数 + 条数条长度前缀字符串。"""
     off = POOL_OFF
     if off + 8 > len(tail):
         return off

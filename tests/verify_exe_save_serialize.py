@@ -8,11 +8,13 @@
 
 三层校验：
 1. 重新提取 → 与基线逐字节一致（exe 里那段指令流变了就报错）；
-2. 基线的结构自检（31 段、5 段文件头、26 段槽尾、末两字节写出规则）；
+2. 基线的结构自检（31 段、5 段文件头、26 段槽尾、末两字节写出规则、
+   子读/写器的固定字节数）；
 3. **数据侧**：拿 6 份真实存档按这个模型走一遍，验证可证伪的推论
-   （`tail[0:0x2DF8]` = 1471 条每槽全局变量、128 槽字符串表在 0x19300、
-   字符串池标签 = 0x16610 + 全局变量字节数 = 0x19408、末两字节 01 01），
-   并校验读档侧 20 步游标顺序。缺存档/缺 exe 时 SKIP。
+   （`tail[0:0x3068]` = 1549 条每槽全局变量 → 32 个上下文 0x163A0 →
+   线程下标 @0x19408 → 128 槽动态字符串表 @0x19410 → … → +0x600 处是
+   台词历史环，环记录起点与独立扫描值逐份一致），并校验读档侧 20 步游标顺序。
+   缺存档/缺 exe 时 SKIP。
 
 用法：python tests/verify_exe_save_serialize.py
 """
@@ -33,11 +35,24 @@ EXE = os.path.join(r'C:\Users\Mechrevo\Downloads', '五彩斑斓的世界HD',
 SAVE = os.path.join(r'C:\Users\Mechrevo\Downloads', '五彩斑斓的世界HD', 'save')
 DOC = os.path.join(FVP, 'docs', 'save-format.md')
 SLOTS = ('s481', 's485', 's800', 's901', 's905', 's906')
+
+GLOBALS_PER_SLOT = 1549      # 槽尾写的 G1 条（save.bin 写同一数组的后 1471 条）
+GLOBALS_BYTES = GLOBALS_PER_SLOT * 8          # 0x3068
 CTX_COUNT = 32
-CTX_STRIDE = 0xB28
-CTX_BYTES = CTX_COUNT * CTX_STRIDE
-GLOBALS_PER_SLOT = 1471          # 6 份真实存档里每槽全局变量的条数
-POOL_BASE = 0x16610              # 全局变量 0 条时字符串池标签的偏移
+CTX_ITEM = 0xB1D             # 单个协程上下文写进文件的固定字节数
+CTX_STRIDE_INMEM = 0xB28     # 内存里对象步长（多出的 11 字节不写盘）
+CTX_BYTES = CTX_COUNT * CTX_ITEM              # 0x163A0
+POOL_BASE = 0x163A0          # 线程下标 u32 的基址（全局变量 0 条时）
+THREAD_NONE = 0x20
+SLOT_COUNT = 0x80
+WALK_GAP = 0x600             # 调色板与历史环之间尚未逆清的定长块
+# 独立扫描出来的“历史环第一条记录”偏移（旧报告里的 ring 位置就是这么来的）
+RING_RECORD_OFF = {
+    's481': 0x20622, 's485': 0x328ce, 's800': 0x328c5,
+    's901': 0x1AEAD, 's905': 0x20633, 's906': 0x1AEAD,
+}
+RING_COUNT = {'s481': 1, 's485': 1, 's800': 1, 's901': 1, 's905': 11, 's906': 1}
+STR_COUNT = {'s481': 1, 's485': 1, 's800': 0, 's901': 0, 's905': 2, 's906': 0}
 
 fails = []
 
@@ -61,7 +76,8 @@ def read_header(data):
     return off, strs
 
 
-def parse_string_table(blob, off, n=128):
+def parse_string_table(blob, off, n):
+    """逐槽 u16 长度（含 NUL）+ 字节，空槽 2 字节 0。返回 (end, slots)。"""
     cur = off
     out = []
     for _ in range(n):
@@ -69,7 +85,7 @@ def parse_string_table(blob, off, n=128):
             return None, None
         ln = struct.unpack_from('<H', blob, cur)[0]
         cur += 2
-        if ln > 0x1000 or cur + ln > len(blob):
+        if ln > 0x200 or cur + ln > len(blob):
             return None, None
         s = blob[cur:cur + ln]
         if ln and s[-1] != 0:
@@ -77,6 +93,33 @@ def parse_string_table(blob, off, n=128):
         out.append(s)
         cur += ln
     return cur, out
+
+
+def walk_to_ring(blob):
+    """按修正后的模型从 tail 开头走到台词历史环，返回 (环偏移, 诊断 dict)。"""
+    pos = GLOBALS_BYTES + CTX_BYTES
+    thread = struct.unpack_from('<I', blob, pos)[0]
+    str_cnt = struct.unpack_from('<I', blob, pos + 4)[0]
+    pos += 8
+    end, slots = parse_string_table(blob, pos, SLOT_COUNT)
+    if end is None:
+        return None, {'error': '字符串表解析失败'}
+    nonempty = sum(1 for s in slots if s)
+    pos = end + 0x100 + 0x100
+    u = struct.unpack_from('<I', blob, pos)[0]
+    pos += 4
+    item_counts = []
+    for _ in range(SLOT_COUNT):
+        c = struct.unpack_from('<I', blob, pos)[0]
+        item_counts.append(c)
+        pos += 12 + 12 * c
+        if pos > len(blob):
+            return None, {'error': '128 项表越界'}
+    pos += 0x200 + 0x200 + 1 + 16 * 9 + 0x400
+    diag = {'thread': thread, 'str_count': str_cnt, 'nonempty': nonempty,
+            'u32_0x6a4dec': u, 'items_nonempty': sum(1 for c in item_counts if c),
+            'walk_end': pos, 'ring': pos + WALK_GAP}
+    return pos + WALK_GAP, diag
 
 
 def main():
@@ -126,18 +169,48 @@ def main():
     check(prim['src'] == 'engine+0x61dd64', 'prim 数组来源 engine+0x61DD64')
     ctx = tail[1]
     check(ctx['count'] == 32 and ctx['stride'] == 0xB28,
-          '32 个协程快照 × 0xB28')
+          '32 个协程快照、内存步长 0xB28')
     check(ctx['call'] == '0x00445640', '协程快照子序列化器 0x445640')
     st = [s for s in tail if s['label'] == 'dynamic string table'][0]
     check(st['count'] == 0x80, '动态字符串表 128 槽')
     check(st['writer'] == '0x00434410', '字符串写法 0x434410（u16 长度含 NUL）')
     check(ref['helpers']['string_u16']['empty_sentinel'] == '0x00481364',
           '空串哨兵 0x481364（只写 u16 0）')
-    check(len(ref['unknown']) >= 3, '基线保留未解条目 %d 条'
+    check(len(ref['unknown']) >= 2, '基线保留未解条目 %d 条'
           % len(ref['unknown']))
-    check(len(ref['invariants']) == 4, '4 条数据侧推论写进基线')
+    check(len(ref['invariants']) == 6, '6 条数据侧推论写进基线（实际 %d）'
+          % len(ref['invariants']))
 
-    print('== 2b. 读档侧（反序列化）顺序 ==')
+    print('== 2b. 子读/写器的长度规则 ==')
+    subs = {s['id']: s for s in ref['sub_readers']}
+    check(set(subs) == {'context', 'item128', 'savebin_globals_split'},
+          '冻结 3 个子读/写器（实际 %s）' % sorted(subs))
+    check(subs['context']['bytes_fixed'] == CTX_ITEM,
+          '协程上下文固定 %#x 字节（32 条 = %#x）'
+          % (CTX_ITEM, CTX_BYTES))
+    check(subs['context']['fn'] == '0x00445540',
+          '上下文反序列化器 0x445540')
+    check('12 + 12×count' in subs['item128']['bytes_rule'],
+          '128 项表每项 12 + 12×count 字节')
+    check(subs['item128']['fn'] == '0x00446210', '128 项表读取器 0x446210')
+    check(subs['savebin_globals_split']['fn'] == '0x00439743',
+          'save.bin 全局量区间 0x439743')
+    samples = ref['samples']
+    check(samples['g1'] == GLOBALS_PER_SLOT,
+          '基线样本 G1 = %d 条' % samples['g1'])
+    check(samples['g1'] + samples['g2'] == samples['max_script_global_index'] + 1,
+          'G1+G2 = 最大脚本全局下标 + 1（%d = %d + 1）'
+          % (samples['g1'] + samples['g2'], samples['max_script_global_index']))
+    check(int(samples['globals_bytes'], 16) == GLOBALS_BYTES,
+          'G1×8 = %#x' % GLOBALS_BYTES)
+    check(int(samples['context_bytes'], 16) == CTX_BYTES,
+          '32×0xB1D = %#x' % CTX_BYTES)
+    check(int(samples['thread_index_u32_offset'], 16) ==
+          GLOBALS_BYTES + CTX_BYTES,
+          '线程下标偏移 = 0x3068 + 0x163A0 = %#x'
+          % (GLOBALS_BYTES + CTX_BYTES))
+
+    print('== 2c. 读档侧（反序列化）顺序 ==')
     rd = ref['reader']
     check(len(rd) == 20, '读档侧 %d 步（期望 20）' % len(rd))
     va = [r['va'] for r in rd]
@@ -161,8 +234,8 @@ def main():
     if not os.path.isdir(SAVE):
         print('  SKIP: 缺存档目录 %s' % SAVE)
     else:
-        counts = {'globals': 0, 'e_empty': 0, 'markers': 0, 'len_ok': 0,
-                  'pool': 0}
+        counts = {'globals': 0, 'strings': 0, 'walk': 0, 'markers': 0,
+                  'len_ok': 0}
         for slot in SLOTS:
             path = os.path.join(SAVE, slot + '.bin')
             if not os.path.isfile(path):
@@ -178,68 +251,87 @@ def main():
                 check(False, '%s: 缩略图越界' % slot)
                 continue
             blob = data[thumb_off + thumb:]
-            # 每槽全局变量：1471 条 × 8 字节，type 只出现 0/1/2/4/5/6
-            gbytes = GLOBALS_PER_SLOT * 8
+
+            # 3a. 前 G1 条全局变量：8 字节 Variant，类型字节 0..6
             types = [blob[i * 8] for i in range(GLOBALS_PER_SLOT)]
             globals_ok = (all(t <= 6 for t in types) and
                           types.count(2) > 0 and blob[0x18] == 2)
             if globals_ok:
                 counts['globals'] += 1
-            check(globals_ok, '%s: tail[0:%#x] = %d 条全局变量（type=2 的 %d 条，'
+            check(globals_ok,
+                  '%s: tail[0:%#x] = %d 条全局变量（type2 %d 条、type5 %d 条、'
                   '第 4 条 type=%d）'
-                  % (slot, gbytes, GLOBALS_PER_SLOT, types.count(2),
-                     blob[0x18]))
-            # 128 槽字符串表：0x2DF8 + 0x16500 + 8 + 0x100（样本全空）
-            e_start = gbytes + CTX_BYTES + 8
-            e_end, e_slots = parse_string_table(blob, e_start)
-            e_ok = (e_end == e_start + 0x100 and
-                    sum(1 for t in e_slots if t) == 0)
-            if e_ok:
-                counts['e_empty'] += 1
-            check(e_ok, '%s: 128 槽字符串表 @%#x..%#x 全空'
-                  % (slot, e_start, e_end if e_end else 0))
-            # 字符串池标签：0x16610 + 1471×8 = 0x19408
-            pool_off = POOL_BASE + gbytes
-            tag = struct.unpack_from('<I', blob, pool_off)[0]
-            cnt = struct.unpack_from('<I', blob, pool_off + 4)[0]
-            pool_ok = tag == 0x20 and cnt <= 8
-            if pool_ok:
-                counts['pool'] += 1
-            check(pool_ok, '%s: 字符串池标签 @%#x（0x16610 + %d）=%#x，条数 %d'
-                  % (slot, pool_off, gbytes, tag, cnt))
+                  % (slot, GLOBALS_BYTES, GLOBALS_PER_SLOT, types.count(2),
+                     types.count(5), blob[0x18]))
+
+            # 3b. 动态字符串表：线程下标 0x20 + 条数 = type5 条数
+            tb = GLOBALS_BYTES + CTX_BYTES
+            thread = struct.unpack_from('<I', blob, tb)[0]
+            str_cnt = struct.unpack_from('<I', blob, tb + 4)[0]
+            end, slots = parse_string_table(blob, tb + 8, SLOT_COUNT)
+            strings_ok = (thread == THREAD_NONE and end is not None and
+                          str_cnt == STR_COUNT[slot] and
+                          sum(1 for s in slots if s) == str_cnt and
+                          str_cnt == types.count(5))
+            if strings_ok:
+                counts['strings'] += 1
+            check(strings_ok,
+                  '%s: 线程下标 @%#x = %#x，非空字符串 %d 条（type5 也是 %d 条）'
+                  % (slot, tb, thread, str_cnt, types.count(5)))
+
+            # 3c. 前向走查到历史环：+0x600 后落点 == 独立扫描的记录起点 - 8
+            ring, diag = walk_to_ring(blob)
+            want_rec = RING_RECORD_OFF[slot]
+            rc = struct.unpack_from('<I', blob, ring)[0] if ring else -1
+            rp = struct.unpack_from('<I', blob, ring + 4)[0] if ring else -1
+            walk_ok = (ring is not None and ring + 8 == want_rec and
+                       rc == RING_COUNT[slot] and 0 <= rp < max(rc, 1))
+            if walk_ok:
+                counts['walk'] += 1
+            check(walk_ok,
+                  '%s: 走查终点 %#x + %#x → 历史环 count=%d pos=%d，'
+                  '记录起点 %#x（独立扫描值 %#x）'
+                  % (slot, diag.get('walk_end', 0), WALK_GAP, rc, rp,
+                     (ring or 0) + 8, want_rec))
+
             markers = blob[-2:] == b'\x01\x01'
             if markers:
                 counts['markers'] += 1
             check(markers, '%s: 末两字节 %s' % (slot, blob[-2:].hex()))
             check(len_ok, '%s: 槽头字符串长度不含 NUL（0x43DFCD 的写法）' % slot)
         n = len(SLOTS)
-        check(counts['globals'] == n, '6 份都符合"1471 条全局变量"模型（%d/%d）'
+        check(counts['globals'] == n,
+              '6 份都是"槽尾前 1549 条全局变量"模型（%d/%d）'
               % (counts['globals'], n))
-        check(counts['e_empty'] == n, '6 份的 128 槽字符串表都在 globals 之后'
-              '（%d/%d）' % (counts['e_empty'], n))
+        check(counts['strings'] == n,
+              '6 份的动态字符串表都在 globals+0x163A0（%d/%d）'
+              % (counts['strings'], n))
+        check(counts['walk'] == n,
+              '6 份都能从 tail 开头走到历史环（%d/%d）'
+              % (counts['walk'], n))
         check(counts['markers'] == n, '6 份都符合末两字节标记（%d/%d）'
               % (counts['markers'], n))
         check(counts['len_ok'] == n, '6 份都符合槽头字符串长度约定（%d/%d）'
               % (counts['len_ok'], n))
-        check(counts['pool'] == n, '6 份都在 0x16610+1471×8 处找到字符串池标签'
-              '（%d/%d）' % (counts['pool'], n))
 
     print('== 4. 文档记录 ==')
     doc = io.open(DOC, encoding='utf-8').read()
     check('0x43DE90' in doc, 'save-format 写了序列化器入口 0x43DE90')
     check('128 槽' in doc or '128槽' in doc, '文档写了 128 槽字符串表')
     check('协程快照' in doc, '文档写了协程快照')
-    check('0x16610' in doc, '文档写了字符串池基址 0x16610')
-    check('1471' in doc, '文档写了每槽全局变量 1471 条')
-    check('savetail' in doc or '扫描定位' in doc, '文档写了池位置靠扫描定位')
+    check('1549' in doc, '文档写了每槽全局变量 1549 条')
+    check('0x3068' in doc, '文档写了每槽全局变量 0x3068 字节')
+    check('0x163A0' in doc or '0x163a0' in doc, '文档写了 32 上下文 = 0x163A0')
+    check('0x600' in doc, '文档写了调色板与历史环之间那段 0x600 未解块')
+    check('savetail' in doc or '扫描定位' in doc, '文档写了字符串表位置靠扫描定位')
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
     print('\nOK: 存档槽写/读顺序都已冻结（写 31 段；读 20 步，游标从 7 开始）；'
-          '数据侧 6 份真实存档验证了"tail 开头 = 1471 条全局变量（0x2DF8）→ '
-          '128 槽字符串表（0x19300）→ 字符串池标签（0x19408 = 0x16610 + 1471×8）"；'
-          '各子序列化器的绝对偏移仍列为未解')
+          '数据侧 6 份真实存档验证了"tail 开头 = 1549 条全局变量（0x3068）→ '
+          '32 上下文（0x163A0）→ 线程下标 @0x19408 → 128 槽字符串表 @0x19410 '
+          '→ … → +0x600 处 = 台词历史环，记录起点与独立扫描逐份一致"')
     return 0
 
 

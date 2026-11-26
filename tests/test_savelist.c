@@ -124,8 +124,8 @@ static int write_slot_with_graph(const char *path, int year, int month, int day,
     for (i = 3; i < 16; i += 4) {
         s.thumb[i] = 0xFF;
     }
-    /* 槽尾：0x19440 字节，0x19408 处是字符串池 */
-    s.tail_len = 0x19440;
+    /* 槽尾：0x19800 字节，0x19408 处是字符串池 */
+    s.tail_len = 0x19800;
     s.tail = (unsigned char *)calloc(1, s.tail_len);
     s.tail[0x19408] = 0x20;
     s.tail[0x1940c] = 1;
@@ -186,7 +186,7 @@ static int write_slot_with_gbk_line(const char *path, int year, int month,
     for (i = 3; i < 16; i += 4) {
         s.thumb[i] = 0xFF;
     }
-    s.tail_len = 0x19440;
+    s.tail_len = 0x19800;
     s.tail = (unsigned char *)calloc(1, s.tail_len);
     s.tail[0x19408] = 0x20;
     s.tail[0x1940c] = 1;
@@ -303,12 +303,12 @@ int main(void)
 
     /* --- 8. 槽尾字符串池：解析图名 + 对话行（savetail） --- */
     {
-        unsigned char *t = (unsigned char *)calloc(1, 0x19440);
+        unsigned char *t = (unsigned char *)calloc(1, 0x19800);
         FvpSaveTailInfo info;
         unsigned char *pool;
         size_t off;
 
-        /* tag 0x20 @0x19408, count 2 @0x1940c */
+        /* 线程下标 0x20 @0x19408、条数 2 @0x1940c */
         t[0x19408] = 0x20;
         t[0x1940c] = 2;
         off = 0x19410;
@@ -323,7 +323,7 @@ int main(void)
         (void)pool;
 
         memset(&info, 0, sizeof(info));
-        CHECK(fvp_savetail_parse(&info, t, 0x19440, FVP_ENC_CP932) == 1,
+        CHECK(fvp_savetail_parse(&info, t, 0x19800, FVP_ENC_CP932) == 1,
               "savetail parses synthetic pool");
         CHECK(info.count == 2, "savetail count=%d", info.count);
         CHECK(info.graph_index == 0, "savetail graph_index=%d",
@@ -335,28 +335,30 @@ int main(void)
                      "\xef\xbd\xa1\xef\xbd\xad\xef\xbd\xa1\xef\xbd\xa3") == 0,
               "dialogue line decoded to UTF-8: '%s'", info.str[1]);
 
-        /* 坏 tag */
+        /* 错误线程下标 */
         t[0x19408] = 0x21;
-        CHECK(fvp_savetail_parse(&info, t, 0x19440, FVP_ENC_CP932) == 0,
-              "wrong tag rejected");
+        CHECK(fvp_savetail_parse(&info, t, 0x19800, FVP_ENC_CP932) == 0,
+              "wrong thread index rejected");
         t[0x19408] = 0x20;
-        /* count 0 */
+        /* count 0：空表（先把字符串区清干净，空表要求其余槽全零） */
+        memset(t + 0x19410, 0, 0x300);
         t[0x1940c] = 0;
-        CHECK(fvp_savetail_parse(&info, t, 0x19440, FVP_ENC_CP932) == 0,
-              "count 0 rejected");
+        CHECK(fvp_savetail_parse(&info, t, 0x19800, FVP_ENC_CP932) == 1 &&
+                  info.count == 0 && info.graph_index < 0,
+              "empty table -> count 0");
         t[0x1940c] = 2;
         /* count 太大 */
         t[0x1940d] = 1;
-        CHECK(fvp_savetail_parse(&info, t, 0x19440, FVP_ENC_CP932) == 0,
+        CHECK(fvp_savetail_parse(&info, t, 0x19800, FVP_ENC_CP932) == 0,
               "count > max rejected");
         t[0x1940d] = 0;
         /* tail 太短 */
         CHECK(fvp_savetail_parse(&info, t, 0x19408, FVP_ENC_CP932) == 0,
               "short tail rejected");
         /* NULL 安全 */
-        CHECK(fvp_savetail_parse(NULL, t, 0x19440, FVP_ENC_CP932) == 0,
+        CHECK(fvp_savetail_parse(NULL, t, 0x19800, FVP_ENC_CP932) == 0,
               "NULL out rejected");
-        CHECK(fvp_savetail_parse(&info, NULL, 0x19440, FVP_ENC_CP932) == 0,
+        CHECK(fvp_savetail_parse(&info, NULL, 0x19800, FVP_ENC_CP932) == 0,
               "NULL tail rejected");
         free(t);
     }
