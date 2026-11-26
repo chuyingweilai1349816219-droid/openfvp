@@ -142,6 +142,7 @@ int main(int argc, char **argv)
     int quiet = 0;
     int text_fixed = 0;
     int click_mask = 0x0B;
+    int frame_ms = 16;
     int i;
     FvpEncoding enc = FVP_ENC_CP932;
     char err[512];
@@ -164,6 +165,8 @@ int main(int argc, char **argv)
             text_out = argv[++i];
         } else if (strcmp(a, "--screenshot") == 0 && i + 1 < argc) {
             shot = argv[++i];
+        } else if (strcmp(a, "--frame-ms") == 0 && i + 1 < argc) {
+            frame_ms = (int)strtol(argv[++i], NULL, 0);
         } else if (strcmp(a, "--click-mask") == 0 && i + 1 < argc) {
             click_mask = (int)strtol(argv[++i], NULL, 0);
         } else if (strcmp(a, "--click") == 0 && i + 1 < argc) {
@@ -246,9 +249,40 @@ int main(int argc, char **argv)
         vm.pctrace = fopen(pctrace, "wb");
     }
     fvp_vm_start(&vm);
-    done = fvp_vm_run(&vm, steps);
+    /* 无逐帧循环外壳的动画时钟：原版主循环里所有线程都让出一次就是一帧，
+     * 脚本用 ThreadNext(133) 让出。这里按分块跑，把每块新增的 ThreadNext 次数
+     * 换算成帧并推进补间表（每帧 --frame-ms 毫秒，默认 16 = 60 fps 假设）。
+     * 不做这件事时 MotionXxxTest 永远答还在跑，脚本卡在 ThreadNext 轮询里
+     * （200k 步里 8061 次 ThreadNext，见 CHANGELOG 五十一续）。 */
+    {
+        uint64_t target = 0;
+        uint64_t prev_next = vm.thread_next_calls;
+
+        while (vm.steps < steps) {
+            target += 2000u;
+            if (target > steps) {
+                target = steps;
+            }
+            (void)fvp_vm_run(&vm, target);
+            if (vm.thread_next_calls != prev_next) {
+                uint64_t d = vm.thread_next_calls - prev_next;
+
+                prev_next = vm.thread_next_calls;
+                if (d > 100000u) {
+                    d = 100000u;
+                }
+                gfx_motion_advance(gfx, (int)(d * (uint64_t)frame_ms));
+            }
+            if (vm.steps < target) {
+                break; /* 线程都退出了 */
+            }
+        }
+        done = vm.steps;
+    }
     gfx_render(gfx);
-    printf("headless: steps=%llu in %.1f ms\n", (unsigned long long)done,
+    printf("headless: threadnext=%llu motion_active=%d steps=%llu in %.1f ms\n",
+           (unsigned long long)vm.thread_next_calls, gfx_motion_active(gfx),
+           (unsigned long long)done,
            (fvp_plat_now_sec() - t0) * 1000.0);
 
     if (shot != NULL) {

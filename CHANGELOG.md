@@ -4,6 +4,29 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（五十一续）：headless 的动画时钟用 **ThreadNext = 一帧** 建模
+
+用 --pctrace 对 200k 步做 pc 直方图，卡点看清了：
+
+| pc | 次数 | 指令 |
+|---|---|---|
+| 0x23827 | 8061 | initstack 0|0（小函数入口） |
+| 0x2382A | 8061 | syscall 133 = **ThreadNext**（线程让出 = 原版一帧） |
+| 0x592DF..0x592E7 | 7669 | MotionAlphaTest(265); pushtemp; pushfalse; eq 轮询 |
+
+即：脚本在 ThreadNext 轮询 MotionAlphaTest —— 原版每帧推进一次动画，ThreadNext
+就是帧边界。headless 没有帧循环，补间永远停在进度 0，于是还在跑永远为真。
+
+改动：src/vm.h 加 	hread_next_calls；src/syscall.c case 133 计数；
+src/platform/portable/main_headless.c 分块跑（每 2000 步）并按新增的 ThreadNext 次数
+推进 gfx_motion_advance()，新增 --frame-ms（默认 16 = 60 fps 假设，**合成时间模型，
+不是从画面拟合的**）；收尾打印 	hreadnext= / motion_active=。
+
+效果（900k 步、--click 600）：	hreadnext=41385 motion_active=0 —— 补间全部跑完，
+说明动画时钟这条是真的通了；但 --text-out **仍然 0 行**，所以下一个卡点不是动画等待，
+是别的（候选：TimerGet 在非 timeline 模式下恒 0 的轮询、文本逐字推进的节拍）。
+下一步：对 900k 步再做一次 pc 直方图，看现在的步数集中在哪。
+
 ## [未发布] — 2026-11-26（五十续）：合成点击改成**位掩码**（默认 bit0|bit1|bit3），headless 走出了旧的等待循环
 
 按四十九续的结论动手：

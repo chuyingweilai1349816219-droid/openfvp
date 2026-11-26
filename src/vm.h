@@ -275,6 +275,9 @@ typedef struct FvpVM {
      * 又用 	est（= (a & (1<<b)) != 0）逐位取，所以只返回 1（bit 0）永远
      * 满足不了 poll bit 1 / bit 3 的等待循环。默认 1 = 保持既有行为。 */
     int click_mask;
+    /* ThreadNext(133) 的调用次数。一次 ThreadNext = 所有线程让出一次 = 原版的一帧；
+     * 没有逐帧循环的外壳（headless）用它推算动画时钟该走多少毫秒。 */
+    uint64_t thread_next_calls;
     int64_t cx;
     int64_t cy;
     int64_t key_mask;

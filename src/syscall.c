@@ -1911,6 +1911,7 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         t->temp = fvp_make_int(0);
         return;
     case 133: /* ThreadNext: yield to the scheduler */
+        vm->thread_next_calls += 1u;
         t->blocked = 1;
         return;
     /* 136 ThreadStart(threadNo 0..31, entryOffset)：在槽 threadNo 里从
