@@ -5320,7 +5320,7 @@ static const char *gfx_win32_ansi_path(const char *utf8)
     return utf8;
 }
 
-GfxArchiveHost *gfx_archive_host_create(const char *game_dir)
+GfxArchiveHost *gfx_archive_host_create_ex(const char *game_dir, int ansi)
 {
     static const char *names[6] = {"graph",    "graph_bg",  "graph_bs",
                                    "graph_vis", "graph_vis1", "graph_vis2"};
@@ -5331,7 +5331,7 @@ GfxArchiveHost *gfx_archive_host_create(const char *game_dir)
     if (game_dir == NULL) {
         return NULL;
     }
-    dir = gfx_win32_ansi_path(game_dir);
+    dir = ansi ? game_dir : gfx_win32_ansi_path(game_dir);
     h = (GfxArchiveHost *)calloc(1, sizeof *h);
     if (h == NULL) {
         return NULL;
@@ -5367,6 +5367,11 @@ GfxArchiveHost *gfx_archive_host_create(const char *game_dir)
     h->iface.load_image = NULL; /* filled below */
     h->iface.free_image = NULL;
     return h;
+}
+
+GfxArchiveHost *gfx_archive_host_create(const char *game_dir)
+{
+    return gfx_archive_host_create_ex(game_dir, 0);
 }
 
 int gfx_archive_host_image_count(const GfxArchiveHost *h)

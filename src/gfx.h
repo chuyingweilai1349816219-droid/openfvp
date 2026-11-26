@@ -548,6 +548,9 @@ typedef struct GfxArchiveHost GfxArchiveHost;
 /* game_dir is the directory holding graph.bin / graph_bg.bin / ... .
  * Returns NULL if none of the packages could be opened. */
 GfxArchiveHost *gfx_archive_host_create(const char *game_dir);
+/* ansi != 0: game_dir 已经是系统 ANSI 编码（便携外壳的 argv 就是这样），
+ * 不要再按 UTF-8 转一次（CHANGELOG 五十八/五十九续）。 */
+GfxArchiveHost *gfx_archive_host_create_ex(const char *game_dir, int ansi);
 GfxHost *gfx_archive_host_iface(GfxArchiveHost *h);
 void gfx_archive_host_destroy(GfxArchiveHost *h);
 int gfx_archive_host_image_count(const GfxArchiveHost *h);

@@ -214,6 +214,10 @@ int main(int argc, char **argv)
      * 键位与按钮的完整对应还没逆完，这里只保证"点击能满足脚本轮询的位"，
      * 属于合成输入模型的一部分；--click-mask 可改。 */
     vm.click_mask = click_mask;
+    /* 光标默认放画面中央（原版靠鼠标，headless 没有鼠标）：PrimHit 需要坐标，
+     * 放在 (0,0) 时菜单项永远不命中，脚本停在标题（CHANGELOG 五十九续）。 */
+    vm.cx = CANVAS_W / 2;
+    vm.cy = CANVAS_H / 2;
 
     {
         /* 可选素材宿主：`FVP_GAME_DIR=<游戏目录>` 时用 src/gfx.c 里已有的
@@ -250,7 +254,7 @@ int main(int argc, char **argv)
         }
 
         if (gd != NULL && gd[0] != '\0') {
-            arc_host = gfx_archive_host_create(gd);
+            arc_host = gfx_archive_host_create_ex(gd, 1);
             if (arc_host != NULL) {
                 host = gfx_archive_host_iface(arc_host);
                 fprintf(stderr, "fvp-headless: assets <- %s (%d images)\n", gd,
