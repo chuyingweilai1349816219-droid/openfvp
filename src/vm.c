@@ -1353,6 +1353,23 @@ int fvp_vm_parts_motion_stop(FvpVM *vm, const FvpValue *parts)
     vm->parts_motion[id] = 0u;
     return 1;
 }
+int fvp_vm_parts_motion_test(FvpVM *vm, const FvpValue *parts)
+{
+    int id;
+
+    if (vm == NULL || parts == NULL || parts->type != (uint8_t)FVP_INT) {
+        return 0;
+    }
+    id = (int)parts->i;
+    /* 原版 handler 0x43B4B0：槽号 1..0x3F（0 不合法），越界不写返回值。 */
+    if (id < 1 || id > 0x3F) {
+        return 0;
+    }
+    vm->parts_motion_test_calls += 1u;
+    /* 我们不跑部件动画（parts_motion 只记参数），所以"还在跑"恒为 0。 */
+    return 0;
+}
+
 
 int fvp_vm_parts_rgb(FvpVM *vm, const FvpValue *parts, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b)

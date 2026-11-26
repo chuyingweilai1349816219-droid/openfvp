@@ -1,0 +1,1868 @@
+{
+ "engine_cases": 148,
+ "games": {
+  "hoshimemo": {
+   "commands": [
+    {
+     "count": 17,
+     "handled": true,
+     "handler": "?",
+     "id": 0,
+     "name": "AudioLoad"
+    },
+    {
+     "count": 9,
+     "handled": true,
+     "handler": "0x439ce0",
+     "id": 1,
+     "name": "AudioPlay"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x439d30",
+     "id": 2,
+     "name": "AudioSilentOn"
+    },
+    {
+     "count": 10,
+     "handled": true,
+     "handler": "0x439d60",
+     "id": 3,
+     "name": "AudioState"
+    },
+    {
+     "count": 24,
+     "handled": true,
+     "handler": "0x439dc0",
+     "id": 4,
+     "name": "AudioStop"
+    },
+    {
+     "count": 6,
+     "handled": true,
+     "handler": "0x439e40",
+     "id": 5,
+     "name": "AudioType"
+    },
+    {
+     "count": 22,
+     "handled": true,
+     "handler": "0x439e90",
+     "id": 6,
+     "name": "AudioVol"
+    },
+    {
+     "count": 127,
+     "handled": true,
+     "handler": "0x4373e0",
+     "id": 7,
+     "name": "ColorSet"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x437440",
+     "id": 8,
+     "name": "ControlMask"
+    },
+    {
+     "count": 61,
+     "handled": true,
+     "handler": "0x437460",
+     "id": 9,
+     "name": "ControlPulse"
+    },
+    {
+     "count": 6,
+     "handled": true,
+     "handler": "0x437470",
+     "id": 10,
+     "name": "CursorChange"
+    },
+    {
+     "count": 30,
+     "handled": true,
+     "handler": "0x4374a0",
+     "id": 11,
+     "name": "CursorMove"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x4374f0",
+     "id": 12,
+     "name": "CursorShow"
+    },
+    {
+     "count": 26,
+     "handled": true,
+     "handler": "0x439f00",
+     "id": 13,
+     "name": "Debmess"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43a010",
+     "id": 14,
+     "name": "Dissolve"
+    },
+    {
+     "count": 16,
+     "handled": true,
+     "handler": "0x437520",
+     "id": 15,
+     "name": "DissolveWait"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x43a1a0",
+     "id": 17,
+     "name": "ExitMode"
+    },
+    {
+     "count": 51,
+     "handled": true,
+     "handler": "0x437590",
+     "id": 20,
+     "name": "FloatToInt"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x43f4f0",
+     "id": 21,
+     "name": "GaijiLoad"
+    },
+    {
+     "count": 235,
+     "handled": true,
+     "handler": "0x43a340",
+     "id": 22,
+     "name": "GraphLoad"
+    },
+    {
+     "count": 28,
+     "handled": true,
+     "handler": "0x43a3d0",
+     "id": 23,
+     "name": "GraphRGB"
+    },
+    {
+     "count": 49,
+     "handled": true,
+     "handler": "0x4375e0",
+     "id": 24,
+     "name": "IntToText"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x43a490",
+     "id": 25,
+     "name": "HistoryGet"
+    },
+    {
+     "count": 7,
+     "handled": true,
+     "handler": "0x43a5e0",
+     "id": 26,
+     "name": "HistorySet"
+    },
+    {
+     "count": 18,
+     "handled": true,
+     "handler": "0x4376a0",
+     "id": 27,
+     "name": "InputFlash"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x4376c0",
+     "id": 28,
+     "name": "InputGetCursIn"
+    },
+    {
+     "count": 22,
+     "handled": true,
+     "handler": "0x4376f0",
+     "id": 29,
+     "name": "InputGetCursX"
+    },
+    {
+     "count": 23,
+     "handled": true,
+     "handler": "0x437720",
+     "id": 30,
+     "name": "InputGetCursY"
+    },
+    {
+     "count": 143,
+     "handled": true,
+     "handler": "0x437750",
+     "id": 31,
+     "name": "InputGetDown"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x437860",
+     "id": 33,
+     "name": "InputGetRepeat"
+    },
+    {
+     "count": 82,
+     "handled": true,
+     "handler": "0x437890",
+     "id": 34,
+     "name": "InputGetState"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x4378c0",
+     "id": 35,
+     "name": "InputGetUp"
+    },
+    {
+     "count": 16,
+     "handled": true,
+     "handler": "0x4378f0",
+     "id": 36,
+     "name": "InputGetWheel"
+    },
+    {
+     "count": 9,
+     "handled": true,
+     "handler": "0x43a870",
+     "id": 40,
+     "name": "Load"
+    },
+    {
+     "count": 283,
+     "handled": true,
+     "handler": "0x43a8b0",
+     "id": 42,
+     "name": "MotionAlpha"
+    },
+    {
+     "count": 20,
+     "handled": true,
+     "handler": "0x43a990",
+     "id": 43,
+     "name": "MotionAlphaStop"
+    },
+    {
+     "count": 54,
+     "handled": true,
+     "handler": "0x43a9c0",
+     "id": 44,
+     "name": "MotionAlphaTest"
+    },
+    {
+     "count": 89,
+     "handled": true,
+     "handler": "0x43aa10",
+     "id": 45,
+     "name": "MotionAnim"
+    },
+    {
+     "count": 18,
+     "handled": true,
+     "handler": "0x43aae0",
+     "id": 46,
+     "name": "MotionAnimStop"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x43ab10",
+     "id": 47,
+     "name": "MotionAnimTest"
+    },
+    {
+     "count": 7,
+     "handled": true,
+     "handler": "0x43abd0",
+     "id": 48,
+     "name": "MotionMove"
+    },
+    {
+     "count": 121,
+     "handled": true,
+     "handler": "0x43acb0",
+     "id": 49,
+     "name": "MotionMoveStop"
+    },
+    {
+     "count": 218,
+     "handled": true,
+     "handler": "0x43ace0",
+     "id": 50,
+     "name": "MotionMoveTest"
+    },
+    {
+     "count": 29,
+     "handled": true,
+     "handler": "0x43ae50",
+     "id": 51,
+     "name": "MotionMoveR"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43aef0",
+     "id": 52,
+     "name": "MotionMoveRStop"
+    },
+    {
+     "count": 28,
+     "handled": true,
+     "handler": "0x43af20",
+     "id": 53,
+     "name": "MotionMoveRTest"
+    },
+    {
+     "count": 34,
+     "handled": true,
+     "handler": "0x43af70",
+     "id": 54,
+     "name": "MotionMoveS2"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x43b0a0",
+     "id": 55,
+     "name": "MotionMoveS2Stop"
+    },
+    {
+     "count": 54,
+     "handled": true,
+     "handler": "0x43b0d0",
+     "id": 56,
+     "name": "MotionMoveS2Test"
+    },
+    {
+     "count": 70,
+     "handled": true,
+     "handler": "0x43ad30",
+     "id": 57,
+     "name": "MotionMoveZ"
+    },
+    {
+     "count": 34,
+     "handled": true,
+     "handler": "0x43add0",
+     "id": 58,
+     "name": "MotionMoveZStop"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43ae00",
+     "id": 59,
+     "name": "MotionMoveZTest"
+    },
+    {
+     "count": 10,
+     "handled": true,
+     "handler": "0x43ab60",
+     "id": 60,
+     "name": "MotionPause"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43b120",
+     "id": 61,
+     "name": "Movie"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43b280",
+     "id": 62,
+     "name": "MovieState"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43b300",
+     "id": 63,
+     "name": "MovieStop"
+    },
+    {
+     "count": 20,
+     "handled": true,
+     "handler": "0x43b320",
+     "id": 64,
+     "name": "PartsAssign"
+    },
+    {
+     "count": 59,
+     "handled": true,
+     "handler": "0x43b370",
+     "id": 65,
+     "name": "PartsLoad"
+    },
+    {
+     "count": 21,
+     "handled": true,
+     "handler": "0x43b3e0",
+     "id": 66,
+     "name": "PartsMotion"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43b4b0",
+     "id": 69,
+     "name": "PartsMotionTest"
+    },
+    {
+     "count": 19,
+     "handled": true,
+     "handler": "0x43b500",
+     "id": 70,
+     "name": "PartsRGB"
+    },
+    {
+     "count": 20,
+     "handled": true,
+     "handler": "0x43b590",
+     "id": 71,
+     "name": "PartsSelect"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43b960",
+     "id": 72,
+     "name": "PrimExitGroup"
+    },
+    {
+     "count": 175,
+     "handled": true,
+     "handler": "0x43d6d0",
+     "id": 73,
+     "name": "PrimGroupIn"
+    },
+    {
+     "count": 28,
+     "handled": true,
+     "handler": "0x437960",
+     "id": 75,
+     "name": "PrimGroupOut"
+    },
+    {
+     "count": 178,
+     "handled": true,
+     "handler": "0x43b9c0",
+     "id": 76,
+     "name": "PrimHit"
+    },
+    {
+     "count": 565,
+     "handled": true,
+     "handler": "0x437990",
+     "id": 77,
+     "name": "PrimSetAlpha"
+    },
+    {
+     "count": 63,
+     "handled": true,
+     "handler": "0x43ba20",
+     "id": 78,
+     "name": "PrimSetBlend"
+    },
+    {
+     "count": 179,
+     "handled": true,
+     "handler": "0x4379d0",
+     "id": 79,
+     "name": "PrimSetDraw"
+    },
+    {
+     "count": 109,
+     "handled": true,
+     "handler": "0x43ba60",
+     "id": 80,
+     "name": "PrimSetNull"
+    },
+    {
+     "count": 9,
+     "handled": true,
+     "handler": "0x43ba90",
+     "id": 81,
+     "name": "PrimSetOP"
+    },
+    {
+     "count": 69,
+     "handled": true,
+     "handler": "0x43baf0",
+     "id": 82,
+     "name": "PrimSetRS"
+    },
+    {
+     "count": 82,
+     "handled": true,
+     "handler": "0x43bb80",
+     "id": 83,
+     "name": "PrimSetRS2"
+    },
+    {
+     "count": 74,
+     "handled": true,
+     "handler": "0x43bc40",
+     "id": 84,
+     "name": "PrimSetSnow"
+    },
+    {
+     "count": 32,
+     "handled": true,
+     "handler": "0x43bd00",
+     "id": 85,
+     "name": "PrimSetSprt"
+    },
+    {
+     "count": 13,
+     "handled": true,
+     "handler": "0x43bdc0",
+     "id": 86,
+     "name": "PrimSetText"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43be40",
+     "id": 87,
+     "name": "PrimSetTile"
+    },
+    {
+     "count": 87,
+     "handled": true,
+     "handler": "0x43bef0",
+     "id": 88,
+     "name": "PrimSetUV"
+    },
+    {
+     "count": 18,
+     "handled": true,
+     "handler": "0x43bf50",
+     "id": 89,
+     "name": "PrimSetWH"
+    },
+    {
+     "count": 58,
+     "handled": true,
+     "handler": "0x43bfa0",
+     "id": 90,
+     "name": "PrimSetXY"
+    },
+    {
+     "count": 88,
+     "handled": true,
+     "handler": "0x43bff0",
+     "id": 91,
+     "name": "PrimSetZ"
+    },
+    {
+     "count": 15,
+     "handled": true,
+     "handler": "0x437a20",
+     "id": 92,
+     "name": "Rand"
+    },
+    {
+     "count": 11,
+     "handled": true,
+     "handler": "0x43c060",
+     "id": 93,
+     "name": "SaveCreate"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43c180",
+     "id": 94,
+     "name": "SaveThumbSize"
+    },
+    {
+     "count": 40,
+     "handled": true,
+     "handler": "0x43d710",
+     "id": 95,
+     "name": "SaveData"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43c1e0",
+     "id": 96,
+     "name": "SaveWrite"
+    },
+    {
+     "count": 74,
+     "handled": true,
+     "handler": "0x43c230",
+     "id": 97,
+     "name": "Snow"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43c4f0",
+     "id": 98,
+     "name": "SnowStart"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43c520",
+     "id": 99,
+     "name": "SnowStop"
+    },
+    {
+     "count": 21,
+     "handled": true,
+     "handler": "0x43c550",
+     "id": 100,
+     "name": "SoundLoad"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43c5b0",
+     "id": 101,
+     "name": "SoundMasterVol"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43c5e0",
+     "id": 102,
+     "name": "SoundPlay"
+    },
+    {
+     "count": 14,
+     "handled": true,
+     "handler": "0x43c680",
+     "id": 104,
+     "name": "SoundStop"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43c6e0",
+     "id": 105,
+     "name": "SoundType"
+    },
+    {
+     "count": 15,
+     "handled": true,
+     "handler": "0x43c730",
+     "id": 106,
+     "name": "SoundTypeVol"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43c780",
+     "id": 107,
+     "name": "SoundVol"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x43c7f0",
+     "id": 109,
+     "name": "SysProjFolder"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43c830",
+     "id": 110,
+     "name": "TextBuff"
+    },
+    {
+     "count": 51,
+     "handled": true,
+     "handler": "0x43c890",
+     "id": 111,
+     "name": "TextClear"
+    },
+    {
+     "count": 79,
+     "handled": true,
+     "handler": "0x43c8d0",
+     "id": 112,
+     "name": "TextColor"
+    },
+    {
+     "count": 20,
+     "handled": true,
+     "handler": "0x43da70",
+     "id": 113,
+     "name": "TextFont"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43daf0",
+     "id": 114,
+     "name": "TextFontCount"
+    },
+    {
+     "count": 10,
+     "handled": true,
+     "handler": "0x437ac0",
+     "id": 115,
+     "name": "TextFontGet"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x43db30",
+     "id": 116,
+     "name": "TextFontName"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43dbd0",
+     "id": 117,
+     "name": "TextFontSet"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x43cc10",
+     "id": 118,
+     "name": "TextFormat"
+    },
+    {
+     "count": 7,
+     "handled": true,
+     "handler": "0x43ccf0",
+     "id": 119,
+     "name": "TextFunction"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43c960",
+     "id": 120,
+     "name": "TextOutSize"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43c9c0",
+     "id": 121,
+     "name": "TextPause"
+    },
+    {
+     "count": 37,
+     "handled": true,
+     "handler": "0x43ca90",
+     "id": 123,
+     "name": "TextPrint"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x437a50",
+     "id": 124,
+     "name": "TextRepaint"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43cbb0",
+     "id": 125,
+     "name": "TextShadowDist"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43cd60",
+     "id": 126,
+     "name": "TextSize"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x43cdd0",
+     "id": 127,
+     "name": "TextSkip"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x43ce10",
+     "id": 128,
+     "name": "TextSpace"
+    },
+    {
+     "count": 20,
+     "handled": true,
+     "handler": "0x43ce70",
+     "id": 129,
+     "name": "TextSpeed"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x43e8f0",
+     "id": 130,
+     "name": "TextSuspendChr"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x437a60",
+     "id": 131,
+     "name": "TextTest"
+    },
+    {
+     "count": 87,
+     "handled": true,
+     "handler": "0x437af0",
+     "id": 132,
+     "name": "ThreadExit"
+    },
+    {
+     "count": 23,
+     "handled": true,
+     "handler": "0x437b60",
+     "id": 133,
+     "name": "ThreadNext"
+    },
+    {
+     "count": 103,
+     "handled": true,
+     "handler": "0x437c00",
+     "id": 136,
+     "name": "ThreadStart"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x437c70",
+     "id": 137,
+     "name": "ThreadWait"
+    },
+    {
+     "count": 23,
+     "handled": true,
+     "handler": "0x43cec0",
+     "id": 138,
+     "name": "TimerGet"
+    },
+    {
+     "count": 47,
+     "handled": true,
+     "handler": "0x43cf90",
+     "id": 139,
+     "name": "TimerSet"
+    },
+    {
+     "count": 7,
+     "handled": true,
+     "handler": "0x437950",
+     "id": 141,
+     "name": "TitleMenu"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x43cfe0",
+     "id": 142,
+     "name": "V3DMotion"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43d070",
+     "id": 143,
+     "name": "V3DMotionPause"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x437cd0",
+     "id": 144,
+     "name": "V3DMotionStop"
+    },
+    {
+     "count": 14,
+     "handled": true,
+     "handler": "0x437ce0",
+     "id": 145,
+     "name": "V3DMotionTest"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x437d10",
+     "id": 146,
+     "name": "V3DSet"
+    },
+    {
+     "count": 16,
+     "handled": true,
+     "handler": "0x43d0d0",
+     "id": 147,
+     "name": "WindowMode"
+    }
+   ],
+   "distinct_ids": 131,
+   "hcb_sha256": "e23b7958f897392e3535370956b7c9a722c562f0a6d65e91d589cfdd2b741802",
+   "instructions": 1135159,
+   "missing_in_engine": [],
+   "syscalls": 4983
+  },
+  "iroseka": {
+   "commands": [
+    {
+     "count": 17,
+     "handled": true,
+     "handler": "?",
+     "id": 0,
+     "name": "AudioLoad"
+    },
+    {
+     "count": 9,
+     "handled": true,
+     "handler": "0x439ce0",
+     "id": 1,
+     "name": "AudioPlay"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x439d30",
+     "id": 2,
+     "name": "AudioSilentOn"
+    },
+    {
+     "count": 10,
+     "handled": true,
+     "handler": "0x439d60",
+     "id": 3,
+     "name": "AudioState"
+    },
+    {
+     "count": 24,
+     "handled": true,
+     "handler": "0x439dc0",
+     "id": 4,
+     "name": "AudioStop"
+    },
+    {
+     "count": 6,
+     "handled": true,
+     "handler": "0x439e40",
+     "id": 5,
+     "name": "AudioType"
+    },
+    {
+     "count": 21,
+     "handled": true,
+     "handler": "0x439e90",
+     "id": 6,
+     "name": "AudioVol"
+    },
+    {
+     "count": 117,
+     "handled": true,
+     "handler": "0x4373e0",
+     "id": 7,
+     "name": "ColorSet"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x437440",
+     "id": 8,
+     "name": "ControlMask"
+    },
+    {
+     "count": 62,
+     "handled": true,
+     "handler": "0x437460",
+     "id": 9,
+     "name": "ControlPulse"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x437470",
+     "id": 10,
+     "name": "CursorChange"
+    },
+    {
+     "count": 6,
+     "handled": true,
+     "handler": "0x4374a0",
+     "id": 11,
+     "name": "CursorMove"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x4374f0",
+     "id": 12,
+     "name": "CursorShow"
+    },
+    {
+     "count": 29,
+     "handled": true,
+     "handler": "0x439f00",
+     "id": 13,
+     "name": "Debmess"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43a010",
+     "id": 14,
+     "name": "Dissolve"
+    },
+    {
+     "count": 16,
+     "handled": true,
+     "handler": "0x437520",
+     "id": 15,
+     "name": "DissolveWait"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x43a1a0",
+     "id": 17,
+     "name": "ExitMode"
+    },
+    {
+     "count": 57,
+     "handled": true,
+     "handler": "0x437590",
+     "id": 20,
+     "name": "FloatToInt"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x43f4f0",
+     "id": 21,
+     "name": "GaijiLoad"
+    },
+    {
+     "count": 219,
+     "handled": true,
+     "handler": "0x43a340",
+     "id": 22,
+     "name": "GraphLoad"
+    },
+    {
+     "count": 21,
+     "handled": true,
+     "handler": "0x43a3d0",
+     "id": 23,
+     "name": "GraphRGB"
+    },
+    {
+     "count": 47,
+     "handled": true,
+     "handler": "0x4375e0",
+     "id": 24,
+     "name": "IntToText"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x43a490",
+     "id": 25,
+     "name": "HistoryGet"
+    },
+    {
+     "count": 7,
+     "handled": true,
+     "handler": "0x43a5e0",
+     "id": 26,
+     "name": "HistorySet"
+    },
+    {
+     "count": 18,
+     "handled": true,
+     "handler": "0x4376a0",
+     "id": 27,
+     "name": "InputFlash"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x4376c0",
+     "id": 28,
+     "name": "InputGetCursIn"
+    },
+    {
+     "count": 29,
+     "handled": true,
+     "handler": "0x4376f0",
+     "id": 29,
+     "name": "InputGetCursX"
+    },
+    {
+     "count": 30,
+     "handled": true,
+     "handler": "0x437720",
+     "id": 30,
+     "name": "InputGetCursY"
+    },
+    {
+     "count": 147,
+     "handled": true,
+     "handler": "0x437750",
+     "id": 31,
+     "name": "InputGetDown"
+    },
+    {
+     "count": 6,
+     "handled": true,
+     "handler": "0x437860",
+     "id": 33,
+     "name": "InputGetRepeat"
+    },
+    {
+     "count": 91,
+     "handled": true,
+     "handler": "0x437890",
+     "id": 34,
+     "name": "InputGetState"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x4378c0",
+     "id": 35,
+     "name": "InputGetUp"
+    },
+    {
+     "count": 16,
+     "handled": true,
+     "handler": "0x4378f0",
+     "id": 36,
+     "name": "InputGetWheel"
+    },
+    {
+     "count": 9,
+     "handled": true,
+     "handler": "0x43a870",
+     "id": 40,
+     "name": "Load"
+    },
+    {
+     "count": 270,
+     "handled": true,
+     "handler": "0x43a8b0",
+     "id": 42,
+     "name": "MotionAlpha"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43a990",
+     "id": 43,
+     "name": "MotionAlphaStop"
+    },
+    {
+     "count": 54,
+     "handled": true,
+     "handler": "0x43a9c0",
+     "id": 44,
+     "name": "MotionAlphaTest"
+    },
+    {
+     "count": 120,
+     "handled": true,
+     "handler": "0x43aa10",
+     "id": 45,
+     "name": "MotionAnim"
+    },
+    {
+     "count": 22,
+     "handled": true,
+     "handler": "0x43aae0",
+     "id": 46,
+     "name": "MotionAnimStop"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43ab10",
+     "id": 47,
+     "name": "MotionAnimTest"
+    },
+    {
+     "count": 473,
+     "handled": true,
+     "handler": "0x43abd0",
+     "id": 48,
+     "name": "MotionMove"
+    },
+    {
+     "count": 72,
+     "handled": true,
+     "handler": "0x43acb0",
+     "id": 49,
+     "name": "MotionMoveStop"
+    },
+    {
+     "count": 229,
+     "handled": true,
+     "handler": "0x43ace0",
+     "id": 50,
+     "name": "MotionMoveTest"
+    },
+    {
+     "count": 38,
+     "handled": true,
+     "handler": "0x43ae50",
+     "id": 51,
+     "name": "MotionMoveR"
+    },
+    {
+     "count": 15,
+     "handled": true,
+     "handler": "0x43aef0",
+     "id": 52,
+     "name": "MotionMoveRStop"
+    },
+    {
+     "count": 24,
+     "handled": true,
+     "handler": "0x43af20",
+     "id": 53,
+     "name": "MotionMoveRTest"
+    },
+    {
+     "count": 78,
+     "handled": true,
+     "handler": "0x43af70",
+     "id": 54,
+     "name": "MotionMoveS2"
+    },
+    {
+     "count": 9,
+     "handled": true,
+     "handler": "0x43b0a0",
+     "id": 55,
+     "name": "MotionMoveS2Stop"
+    },
+    {
+     "count": 55,
+     "handled": true,
+     "handler": "0x43b0d0",
+     "id": 56,
+     "name": "MotionMoveS2Test"
+    },
+    {
+     "count": 33,
+     "handled": true,
+     "handler": "0x43ad30",
+     "id": 57,
+     "name": "MotionMoveZ"
+    },
+    {
+     "count": 28,
+     "handled": true,
+     "handler": "0x43add0",
+     "id": 58,
+     "name": "MotionMoveZStop"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43ae00",
+     "id": 59,
+     "name": "MotionMoveZTest"
+    },
+    {
+     "count": 10,
+     "handled": true,
+     "handler": "0x43ab60",
+     "id": 60,
+     "name": "MotionPause"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43b120",
+     "id": 61,
+     "name": "Movie"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43b280",
+     "id": 62,
+     "name": "MovieState"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43b300",
+     "id": 63,
+     "name": "MovieStop"
+    },
+    {
+     "count": 13,
+     "handled": true,
+     "handler": "0x43b320",
+     "id": 64,
+     "name": "PartsAssign"
+    },
+    {
+     "count": 38,
+     "handled": true,
+     "handler": "0x43b370",
+     "id": 65,
+     "name": "PartsLoad"
+    },
+    {
+     "count": 14,
+     "handled": true,
+     "handler": "0x43b3e0",
+     "id": 66,
+     "name": "PartsMotion"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43b4b0",
+     "id": 69,
+     "name": "PartsMotionTest"
+    },
+    {
+     "count": 12,
+     "handled": true,
+     "handler": "0x43b500",
+     "id": 70,
+     "name": "PartsRGB"
+    },
+    {
+     "count": 13,
+     "handled": true,
+     "handler": "0x43b590",
+     "id": 71,
+     "name": "PartsSelect"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43b960",
+     "id": 72,
+     "name": "PrimExitGroup"
+    },
+    {
+     "count": 174,
+     "handled": true,
+     "handler": "0x43d6d0",
+     "id": 73,
+     "name": "PrimGroupIn"
+    },
+    {
+     "count": 23,
+     "handled": true,
+     "handler": "0x437960",
+     "id": 75,
+     "name": "PrimGroupOut"
+    },
+    {
+     "count": 211,
+     "handled": true,
+     "handler": "0x43b9c0",
+     "id": 76,
+     "name": "PrimHit"
+    },
+    {
+     "count": 487,
+     "handled": true,
+     "handler": "0x437990",
+     "id": 77,
+     "name": "PrimSetAlpha"
+    },
+    {
+     "count": 51,
+     "handled": true,
+     "handler": "0x43ba20",
+     "id": 78,
+     "name": "PrimSetBlend"
+    },
+    {
+     "count": 174,
+     "handled": true,
+     "handler": "0x4379d0",
+     "id": 79,
+     "name": "PrimSetDraw"
+    },
+    {
+     "count": 83,
+     "handled": true,
+     "handler": "0x43ba60",
+     "id": 80,
+     "name": "PrimSetNull"
+    },
+    {
+     "count": 44,
+     "handled": true,
+     "handler": "0x43ba90",
+     "id": 81,
+     "name": "PrimSetOP"
+    },
+    {
+     "count": 71,
+     "handled": true,
+     "handler": "0x43baf0",
+     "id": 82,
+     "name": "PrimSetRS"
+    },
+    {
+     "count": 77,
+     "handled": true,
+     "handler": "0x43bb80",
+     "id": 83,
+     "name": "PrimSetRS2"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x43bc40",
+     "id": 84,
+     "name": "PrimSetSnow"
+    },
+    {
+     "count": 25,
+     "handled": true,
+     "handler": "0x43bd00",
+     "id": 85,
+     "name": "PrimSetSprt"
+    },
+    {
+     "count": 13,
+     "handled": true,
+     "handler": "0x43bdc0",
+     "id": 86,
+     "name": "PrimSetText"
+    },
+    {
+     "count": 11,
+     "handled": true,
+     "handler": "0x43be40",
+     "id": 87,
+     "name": "PrimSetTile"
+    },
+    {
+     "count": 100,
+     "handled": true,
+     "handler": "0x43bef0",
+     "id": 88,
+     "name": "PrimSetUV"
+    },
+    {
+     "count": 19,
+     "handled": true,
+     "handler": "0x43bf50",
+     "id": 89,
+     "name": "PrimSetWH"
+    },
+    {
+     "count": 105,
+     "handled": true,
+     "handler": "0x43bfa0",
+     "id": 90,
+     "name": "PrimSetXY"
+    },
+    {
+     "count": 80,
+     "handled": true,
+     "handler": "0x43bff0",
+     "id": 91,
+     "name": "PrimSetZ"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x437a20",
+     "id": 92,
+     "name": "Rand"
+    },
+    {
+     "count": 11,
+     "handled": true,
+     "handler": "0x43c060",
+     "id": 93,
+     "name": "SaveCreate"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43c180",
+     "id": 94,
+     "name": "SaveThumbSize"
+    },
+    {
+     "count": 41,
+     "handled": true,
+     "handler": "0x43d710",
+     "id": 95,
+     "name": "SaveData"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43c1e0",
+     "id": 96,
+     "name": "SaveWrite"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x43c230",
+     "id": 97,
+     "name": "Snow"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43c4f0",
+     "id": 98,
+     "name": "SnowStart"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43c520",
+     "id": 99,
+     "name": "SnowStop"
+    },
+    {
+     "count": 21,
+     "handled": true,
+     "handler": "0x43c550",
+     "id": 100,
+     "name": "SoundLoad"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43c5b0",
+     "id": 101,
+     "name": "SoundMasterVol"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43c5e0",
+     "id": 102,
+     "name": "SoundPlay"
+    },
+    {
+     "count": 14,
+     "handled": true,
+     "handler": "0x43c680",
+     "id": 104,
+     "name": "SoundStop"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43c6e0",
+     "id": 105,
+     "name": "SoundType"
+    },
+    {
+     "count": 15,
+     "handled": true,
+     "handler": "0x43c730",
+     "id": 106,
+     "name": "SoundTypeVol"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43c780",
+     "id": 107,
+     "name": "SoundVol"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x43c7f0",
+     "id": 109,
+     "name": "SysProjFolder"
+    },
+    {
+     "count": 6,
+     "handled": true,
+     "handler": "0x43c830",
+     "id": 110,
+     "name": "TextBuff"
+    },
+    {
+     "count": 55,
+     "handled": true,
+     "handler": "0x43c890",
+     "id": 111,
+     "name": "TextClear"
+    },
+    {
+     "count": 66,
+     "handled": true,
+     "handler": "0x43c8d0",
+     "id": 112,
+     "name": "TextColor"
+    },
+    {
+     "count": 19,
+     "handled": true,
+     "handler": "0x43da70",
+     "id": 113,
+     "name": "TextFont"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43daf0",
+     "id": 114,
+     "name": "TextFontCount"
+    },
+    {
+     "count": 10,
+     "handled": true,
+     "handler": "0x437ac0",
+     "id": 115,
+     "name": "TextFontGet"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x43db30",
+     "id": 116,
+     "name": "TextFontName"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43dbd0",
+     "id": 117,
+     "name": "TextFontSet"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43cc10",
+     "id": 118,
+     "name": "TextFormat"
+    },
+    {
+     "count": 5,
+     "handled": true,
+     "handler": "0x43ccf0",
+     "id": 119,
+     "name": "TextFunction"
+    },
+    {
+     "count": 6,
+     "handled": true,
+     "handler": "0x43c960",
+     "id": 120,
+     "name": "TextOutSize"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43c9c0",
+     "id": 121,
+     "name": "TextPause"
+    },
+    {
+     "count": 48,
+     "handled": true,
+     "handler": "0x43ca90",
+     "id": 123,
+     "name": "TextPrint"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x437a50",
+     "id": 124,
+     "name": "TextRepaint"
+    },
+    {
+     "count": 6,
+     "handled": true,
+     "handler": "0x43cbb0",
+     "id": 125,
+     "name": "TextShadowDist"
+    },
+    {
+     "count": 8,
+     "handled": true,
+     "handler": "0x43cd60",
+     "id": 126,
+     "name": "TextSize"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x43cdd0",
+     "id": 127,
+     "name": "TextSkip"
+    },
+    {
+     "count": 4,
+     "handled": true,
+     "handler": "0x43ce10",
+     "id": 128,
+     "name": "TextSpace"
+    },
+    {
+     "count": 19,
+     "handled": true,
+     "handler": "0x43ce70",
+     "id": 129,
+     "name": "TextSpeed"
+    },
+    {
+     "count": 3,
+     "handled": true,
+     "handler": "0x43e8f0",
+     "id": 130,
+     "name": "TextSuspendChr"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x437a60",
+     "id": 131,
+     "name": "TextTest"
+    },
+    {
+     "count": 21,
+     "handled": true,
+     "handler": "0x437af0",
+     "id": 132,
+     "name": "ThreadExit"
+    },
+    {
+     "count": 26,
+     "handled": true,
+     "handler": "0x437b60",
+     "id": 133,
+     "name": "ThreadNext"
+    },
+    {
+     "count": 39,
+     "handled": true,
+     "handler": "0x437c00",
+     "id": 136,
+     "name": "ThreadStart"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x437c70",
+     "id": 137,
+     "name": "ThreadWait"
+    },
+    {
+     "count": 23,
+     "handled": true,
+     "handler": "0x43cec0",
+     "id": 138,
+     "name": "TimerGet"
+    },
+    {
+     "count": 47,
+     "handled": true,
+     "handler": "0x43cf90",
+     "id": 139,
+     "name": "TimerSet"
+    },
+    {
+     "count": 6,
+     "handled": true,
+     "handler": "0x437950",
+     "id": 141,
+     "name": "TitleMenu"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x43cfe0",
+     "id": 142,
+     "name": "V3DMotion"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x43d070",
+     "id": 143,
+     "name": "V3DMotionPause"
+    },
+    {
+     "count": 2,
+     "handled": true,
+     "handler": "0x437cd0",
+     "id": 144,
+     "name": "V3DMotionStop"
+    },
+    {
+     "count": 16,
+     "handled": true,
+     "handler": "0x437ce0",
+     "id": 145,
+     "name": "V3DMotionTest"
+    },
+    {
+     "count": 1,
+     "handled": true,
+     "handler": "0x437d10",
+     "id": 146,
+     "name": "V3DSet"
+    },
+    {
+     "count": 16,
+     "handled": true,
+     "handler": "0x43d0d0",
+     "id": 147,
+     "name": "WindowMode"
+    }
+   ],
+   "distinct_ids": 131,
+   "hcb_sha256": "8c362ff7178628bef90f0d7bf35a48be5ee22f9f762d4c76e86799f6f063c0ff",
+   "instructions": 948219,
+   "missing_in_engine": [],
+   "syscalls": 5064
+  }
+ },
+ "note": "两部作品实际用到的 syscall id 与引擎实现情况的对照（A 类统计）；由 scripts/audit-command-usage.py 生成",
+ "summary": {
+  "hoshimemo": {
+   "distinct_ids": 131,
+   "missing": 0
+  },
+  "iroseka": {
+   "distinct_ids": 131,
+   "missing": 0
+  }
+ }
+}

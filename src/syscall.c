@@ -1980,6 +1980,13 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             return;
         }
         break;
+    case 69: /* PartsMotionTest(partsId)：原版 0x43B4B0，槽号 1..0x3F；
+              * 结果写进线程 +0x814，也就是 VM 的返回值槽。 */
+        if (argc >= 1) {
+            t->temp = fvp_make_int(fvp_vm_parts_motion_test(vm, &args[0]));
+            return;
+        }
+        break;
     case 70:
         if (argc >= 4) {
             (void)fvp_vm_parts_rgb(vm, &args[0], &args[1], &args[2], &args[3]);

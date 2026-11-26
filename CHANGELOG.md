@@ -4,6 +4,28 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（三十六续）：两部作品用到的 131 条命令**全部实现**（最后一条 PartsMotionTest(69)）
+
+做了一次真正的多作品兼容性审计：用 `ref/fvm_ref.py` 把两部作品的脚本全量解码，
+统计 `syscall` 立即数，再和 `src/syscall.c` 的 `case` 集合做差。
+
+| 作品 | 指令数 | syscall | 用到的 id | 未实现 |
+|---|---|---|---|---|
+| 五彩斑斓的世界 HD | 948,219 | 5,064 | **131** | 1 → **0** |
+| 星空的记忆 HD | 1,135,159 | 4,983 | **131** | 1 → **0** |
+
+唯一缺口是 **`PartsMotionTest(69)`**。读 handler `0x43B4B0`：
+- 槽号必须 int 且在 **1..0x3F**；
+- `0x422800(engine+0x651D70, idx)` 查该槽部件动作是否还在跑；
+- 结果 `setne` 后写进**当前线程 +0x814**（即 VM 的返回值槽）。
+
+已实现（`fvp_vm_parts_motion_test`）：我们本来就不跑部件动画，所以该查询恒为 0
+——与模型一致，也不会让脚本卡在等动画的循环里；越界不写返回值。
+
+新增 `ref/command-usage.json` + `scripts/audit-command-usage.py` +
+`tests/verify_command_usage.py`（`run_all` 6.49655）：钉住两部作品都是 131 个 id、
+`missing_in_engine` 为空、除已知的 `AudioLoad(0)` 外每个 id 都能在分派表里找到 handler。
+
 ## [未发布] — 2026-11-26（三十五续）：雪系统记录的字段访问图冻结（snow 还差粒子公式）
 
 接着上一轮的 snow 结论，把绘制函数 `0x42AA10` 里**所有** `0x5xxx(%edi)` 访问全量抄出来，

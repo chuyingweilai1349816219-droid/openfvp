@@ -714,6 +714,15 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.49655 两部作品实际用到的命令集合 vs 引擎实现（兼容性矩阵）
+    vcu = os.path.join(HERE, 'verify_command_usage.py')
+    steps.append(Step('verify_command_usage.py', [PY, '-X', 'utf8', vcu], 1200,
+                      skip_reason=None,
+                      note='both games use 131 distinct command ids; every one of them '
+                           'is implemented in src/syscall.c (PartsMotionTest(69) was the '
+                           'last gap and is implemented now); AudioLoad(0) is the only '
+                           'id still missing from the dispatch baseline'))
+
     # 6.49654 雪系统记录的字段访问图（snow = prim type 7）
     vss = os.path.join(HERE, 'verify_exe_snow_system.py')
     steps.append(Step('verify_exe_snow_system.py', [PY, '-X', 'utf8', vss], 600,

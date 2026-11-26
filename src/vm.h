@@ -318,6 +318,7 @@ typedef struct FvpVM {
     uint64_t parts_motion_calls;
     uint64_t parts_motion_pause_calls;
     uint64_t parts_motion_stop_calls;
+uint64_t parts_motion_test_calls; /* PartsMotionTest(69) 调用次数 */
     uint64_t parts_rgb_calls;
     uint64_t prim_group_move_calls;
 
@@ -579,6 +580,9 @@ int fvp_vm_parts_motion(FvpVM *vm, const FvpValue *parts, const FvpValue *arg2,
 int fvp_vm_parts_motion_pause(FvpVM *vm, const FvpValue *parts,
                               const FvpValue *on);
 int fvp_vm_parts_motion_stop(FvpVM *vm, const FvpValue *parts);
+/* PartsMotionTest(69)：handler 0x43B4B0，槽号 1..0x3F；返回"该槽的动作是否还在跑"。
+ * 我们不跑部件动画，所以恒为 0（不会让脚本卡在等动画的循环里）。 */
+int fvp_vm_parts_motion_test(FvpVM *vm, const FvpValue *parts);
 /* PartsRGB(70)：partsId 0..0x3F + 三个 0..200 分量（缺省 100）。 */
 int fvp_vm_parts_rgb(FvpVM *vm, const FvpValue *parts, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
