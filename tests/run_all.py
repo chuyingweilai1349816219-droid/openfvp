@@ -714,6 +714,15 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.496499 图元字段写入指令全量扫描（定位 prim setter handler 区；缺 work/ 时 SKIP）
+    vps = os.path.join(HERE, 'verify_exe_prim_setters.py')
+    steps.append(Step('verify_exe_prim_setters.py', [PY, '-X', 'utf8', vps], 600,
+                      skip_reason=None,
+                      note='every instruction that stores into the 0x34-stride prim '
+                           'struct: 57 stores, all inside 0x43BACA..0x43BFDA (the '
+                           'prim setter handler block); command id -> handler mapping '
+                           'still needs the dispatch table'))
+
     # 6.496498 全局变量 Variant 的类型语义（exe handler + 存档数据双证据；缺 work/ 时 SKIP）
     vvt = os.path.join(HERE, 'verify_exe_variant_types.py')
     steps.append(Step('verify_exe_variant_types.py', [PY, '-X', 'utf8', vvt], 600,

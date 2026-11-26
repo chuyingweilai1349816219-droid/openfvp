@@ -1,0 +1,377 @@
+{
+ "clusters": [
+  {
+   "count": 57,
+   "from": "0x43baca",
+   "to": "0x43bfda"
+  }
+ ],
+ "fields": {
+  "0x06": "flags",
+  "0x14": "x",
+  "0x16": "y",
+  "0x18": "w",
+  "0x1a": "h",
+  "0x1c": "blend_a",
+  "0x1e": "blend_b",
+  "0x20": "op1",
+  "0x22": "op2",
+  "0x24": "angle",
+  "0x26": "scale_x",
+  "0x28": "scale_y",
+  "0x2a": "first_child",
+  "0x32": "text_layer"
+ },
+ "note": "写 0x34 步长图元结构体字段的指令全量扫描（A 类事实）；由 scripts/extract-exe-prim-setters.py 生成。命令 id 与 handler 的对应仍未钉死（要命令分派表）",
+ "scan_range": [
+  "0x43a000",
+  "0x43c900"
+ ],
+ "stores": [
+  {
+   "field": "op1",
+   "instr": "mov    %cx,0x20(%eax)",
+   "offset": "0x20",
+   "pc": "0x43baca"
+  },
+  {
+   "field": "op2",
+   "instr": "mov    %dx,0x22(%eax)",
+   "offset": "0x22",
+   "pc": "0x43bada"
+  },
+  {
+   "field": "angle",
+   "instr": "mov    %dx,0x24(%ecx)",
+   "offset": "0x24",
+   "pc": "0x43bb34"
+  },
+  {
+   "field": "scale_x",
+   "instr": "mov    %ax,0x26(%ecx)",
+   "offset": "0x26",
+   "pc": "0x43bb4f"
+  },
+  {
+   "field": "scale_y",
+   "instr": "mov    %ax,0x28(%ecx)",
+   "offset": "0x28",
+   "pc": "0x43bb53"
+  },
+  {
+   "field": "scale_x",
+   "instr": "mov    %ax,0x26(%ecx)",
+   "offset": "0x26",
+   "pc": "0x43bb6b"
+  },
+  {
+   "field": "scale_y",
+   "instr": "mov    %ax,0x28(%ecx)",
+   "offset": "0x28",
+   "pc": "0x43bb6f"
+  },
+  {
+   "field": "angle",
+   "instr": "mov    %dx,0x24(%ecx)",
+   "offset": "0x24",
+   "pc": "0x43bbd0"
+  },
+  {
+   "field": "scale_x",
+   "instr": "mov    %ax,0x26(%ecx)",
+   "offset": "0x26",
+   "pc": "0x43bbf9"
+  },
+  {
+   "field": "scale_y",
+   "instr": "mov    %si,0x28(%ecx)",
+   "offset": "0x28",
+   "pc": "0x43bc14"
+  },
+  {
+   "field": "scale_y",
+   "instr": "mov    %si,0x28(%ecx)",
+   "offset": "0x28",
+   "pc": "0x43bc2d"
+  },
+  {
+   "field": "x",
+   "instr": "mov    %dx,0x14(%eax)",
+   "offset": "0x14",
+   "pc": "0x43bc8d"
+  },
+  {
+   "field": "blend_b",
+   "instr": "mov    %dx,0x1e(%eax)",
+   "offset": "0x1e",
+   "pc": "0x43bca2"
+  },
+  {
+   "field": "h",
+   "instr": "mov    %dx,0x1a(%eax)",
+   "offset": "0x1a",
+   "pc": "0x43bca6"
+  },
+  {
+   "field": "op2",
+   "instr": "mov    %dx,0x22(%eax)",
+   "offset": "0x22",
+   "pc": "0x43bcaa"
+  },
+  {
+   "field": "y",
+   "instr": "mov    %cx,0x16(%eax)",
+   "offset": "0x16",
+   "pc": "0x43bcb3"
+  },
+  {
+   "field": "blend_a",
+   "instr": "mov    %cx,0x1c(%eax)",
+   "offset": "0x1c",
+   "pc": "0x43bcb7"
+  },
+  {
+   "field": "w",
+   "instr": "mov    %cx,0x18(%eax)",
+   "offset": "0x18",
+   "pc": "0x43bcbb"
+  },
+  {
+   "field": "op1",
+   "instr": "mov    %cx,0x20(%eax)",
+   "offset": "0x20",
+   "pc": "0x43bcbf"
+  },
+  {
+   "field": "angle",
+   "instr": "mov    %cx,0x24(%eax)",
+   "offset": "0x24",
+   "pc": "0x43bcc3"
+  },
+  {
+   "field": "scale_x",
+   "instr": "mov    %dx,0x26(%eax)",
+   "offset": "0x26",
+   "pc": "0x43bcc9"
+  },
+  {
+   "field": "scale_y",
+   "instr": "mov    %cx,0x28(%eax)",
+   "offset": "0x28",
+   "pc": "0x43bccd"
+  },
+  {
+   "field": "x",
+   "instr": "mov    %dx,0x14(%eax)",
+   "offset": "0x14",
+   "pc": "0x43bce3"
+  },
+  {
+   "field": "y",
+   "instr": "mov    %cx,0x16(%eax)",
+   "offset": "0x16",
+   "pc": "0x43bcf1"
+  },
+  {
+   "field": "x",
+   "instr": "mov    %dx,0x14(%eax)",
+   "offset": "0x14",
+   "pc": "0x43bd56"
+  },
+  {
+   "field": "y",
+   "instr": "mov    %dx,0x16(%eax)",
+   "offset": "0x16",
+   "pc": "0x43bd5a"
+  },
+  {
+   "field": "blend_a",
+   "instr": "mov    %dx,0x1c(%eax)",
+   "offset": "0x1c",
+   "pc": "0x43bd69"
+  },
+  {
+   "field": "blend_b",
+   "instr": "mov    %dx,0x1e(%eax)",
+   "offset": "0x1e",
+   "pc": "0x43bd6d"
+  },
+  {
+   "field": "w",
+   "instr": "mov    %dx,0x18(%eax)",
+   "offset": "0x18",
+   "pc": "0x43bd71"
+  },
+  {
+   "field": "h",
+   "instr": "mov    %dx,0x1a(%eax)",
+   "offset": "0x1a",
+   "pc": "0x43bd75"
+  },
+  {
+   "field": "op1",
+   "instr": "mov    %dx,0x20(%eax)",
+   "offset": "0x20",
+   "pc": "0x43bd79"
+  },
+  {
+   "field": "op2",
+   "instr": "mov    %dx,0x22(%eax)",
+   "offset": "0x22",
+   "pc": "0x43bd7d"
+  },
+  {
+   "field": "angle",
+   "instr": "mov    %dx,0x24(%eax)",
+   "offset": "0x24",
+   "pc": "0x43bd81"
+  },
+  {
+   "field": "scale_x",
+   "instr": "mov    %dx,0x26(%eax)",
+   "offset": "0x26",
+   "pc": "0x43bd8a"
+  },
+  {
+   "field": "scale_y",
+   "instr": "mov    %dx,0x28(%eax)",
+   "offset": "0x28",
+   "pc": "0x43bd8e"
+  },
+  {
+   "field": "x",
+   "instr": "mov    %cx,0x14(%eax)",
+   "offset": "0x14",
+   "pc": "0x43bda3"
+  },
+  {
+   "field": "y",
+   "instr": "mov    %dx,0x16(%eax)",
+   "offset": "0x16",
+   "pc": "0x43bdb1"
+  },
+  {
+   "field": "text_layer",
+   "instr": "mov    %cx,0x32(%eax)",
+   "offset": "0x32",
+   "pc": "0x43bde9"
+  },
+  {
+   "field": "x",
+   "instr": "mov    %dx,0x14(%eax)",
+   "offset": "0x14",
+   "pc": "0x43bded"
+  },
+  {
+   "field": "y",
+   "instr": "mov    %cx,0x16(%eax)",
+   "offset": "0x16",
+   "pc": "0x43bdf1"
+  },
+  {
+   "field": "text_layer",
+   "instr": "mov    %dx,0x32(%eax)",
+   "offset": "0x32",
+   "pc": "0x43be11"
+  },
+  {
+   "field": "x",
+   "instr": "mov    %cx,0x14(%eax)",
+   "offset": "0x14",
+   "pc": "0x43be1f"
+  },
+  {
+   "field": "y",
+   "instr": "mov    %dx,0x16(%eax)",
+   "offset": "0x16",
+   "pc": "0x43be2d"
+  },
+  {
+   "field": "x",
+   "instr": "mov    %dx,0x14(%eax)",
+   "offset": "0x14",
+   "pc": "0x43be7a"
+  },
+  {
+   "field": "y",
+   "instr": "mov    %cx,0x16(%eax)",
+   "offset": "0x16",
+   "pc": "0x43be7e"
+  },
+  {
+   "field": "w",
+   "instr": "mov    %dx,0x18(%eax)",
+   "offset": "0x18",
+   "pc": "0x43be82"
+  },
+  {
+   "field": "h",
+   "instr": "mov    %cx,0x1a(%eax)",
+   "offset": "0x1a",
+   "pc": "0x43be86"
+  },
+  {
+   "field": "x",
+   "instr": "mov    %cx,0x14(%eax)",
+   "offset": "0x14",
+   "pc": "0x43beb6"
+  },
+  {
+   "field": "y",
+   "instr": "mov    %dx,0x16(%eax)",
+   "offset": "0x16",
+   "pc": "0x43bec3"
+  },
+  {
+   "field": "w",
+   "instr": "mov    %cx,0x18(%eax)",
+   "offset": "0x18",
+   "pc": "0x43bed0"
+  },
+  {
+   "field": "h",
+   "instr": "mov    %dx,0x1a(%eax)",
+   "offset": "0x1a",
+   "pc": "0x43bedd"
+  },
+  {
+   "field": "blend_a",
+   "instr": "mov    %cx,0x1c(%eax)",
+   "offset": "0x1c",
+   "pc": "0x43bf2a"
+  },
+  {
+   "field": "blend_b",
+   "instr": "mov    %dx,0x1e(%eax)",
+   "offset": "0x1e",
+   "pc": "0x43bf3c"
+  },
+  {
+   "field": "w",
+   "instr": "mov    %cx,0x18(%eax)",
+   "offset": "0x18",
+   "pc": "0x43bf80"
+  },
+  {
+   "field": "h",
+   "instr": "mov    %dx,0x1a(%eax)",
+   "offset": "0x1a",
+   "pc": "0x43bf92"
+  },
+  {
+   "field": "x",
+   "instr": "mov    %cx,0x14(%eax)",
+   "offset": "0x14",
+   "pc": "0x43bfcc"
+  },
+  {
+   "field": "y",
+   "instr": "mov    %dx,0x16(%eax)",
+   "offset": "0x16",
+   "pc": "0x43bfda"
+  }
+ ],
+ "unknown": [
+  "命令 78/81/89/90 各自对应哪个 handler（需要命令分派表地址）"
+ ]
+}

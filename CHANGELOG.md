@@ -4,6 +4,22 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（二十五续）：图元字段写入点全量扫描（57 条，集中在一小段）
+
+为了处理用户第一优先待办里的 `PrimSetXY(90)/PrimSetWH(89)/PrimSetOP(81)/PrimSetBlend(78)`
+实参语义，先做了一次**全量扫描**：在 `0x43A000..0x43C900` 里找出所有往 0x34 步长
+图元结构体写字段的指令。
+
+结果：**57 条，全部集中在 `0x43BACA..0x43BFDA`**（跨度 < 0x600 字节），覆盖
+`x/y/w/h`、`op1/op2`、`0x1C/0x1E`、`angle`、`scale_x/scale_y`。
+
+新增基线 `ref/exe-prim-setters.json` + `scripts/extract-exe-prim-setters.py` +
+`tests/verify_exe_prim_setters.py`（`run_all` 6.496499），并与
+`ref/exe-prim-hierarchy.json` 的偏移/步长交叉核对。
+
+**没做的**：命令 id → handler 的映射还没钉死（要命令分派表），所以本轮只冻结
+"哪里写了什么字段"这类事实，不给"哪个 handler 是命令几"的猜测。
+
 ## [未发布] — 2026-11-26（二十四续）：`type 6` 语义查清（0x6A4DF0 表的索引）；Variant 类型表冻结成 A 类基线
 
 上一轮留下的两个"还没解"的类型，这一轮把 type 6 查清了：
