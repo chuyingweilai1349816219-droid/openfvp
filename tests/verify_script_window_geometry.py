@@ -151,9 +151,9 @@ def main():
               '%s: 用绝对槽 %d..%d（实际 %r..%r）'
               % (role, lo, hi, f.get('slot_min'), f.get('slot_max')))
     call = fm.get('window_setup_call') or {}
-    check(len(call.get('pushtrue_sentinels') or []) == 5,
-          '窗口设置调用点连压 5 个 pushtrue 哨兵（实际 %r）'
-          % (call.get('pushtrue_sentinels'),))
+    check(len(call.get('pushfalse_sentinels') or []) == 5,
+          '窗口设置调用点连压 5 个 pushfalse 哨兵（实际 %r）'
+          % (call.get('pushfalse_sentinels'),))
     gap = fm.get('known_gap') or {}
     check(gap.get('expected_canvas') == {'x': 431, 'y': 880},
           '正文窗口脚本期望画布 (431, 880)（实际 %r）'

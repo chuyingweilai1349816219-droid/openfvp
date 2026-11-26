@@ -74,7 +74,7 @@ bgm.bin        448 MB  / bgm2.bin 634 MB / voice.bin 1.04 GB / se*.bin 175 MB
 | 0x04/0x05 | ret / ret2 | – |
 | 0x06 | jmp | u32 |
 | 0x07 | jmpcond | u32 |
-| 0x08/0x09 | pushtrue / pushfalse | – |
+| 0x08/0x09 | pushfalse / pushtrue | – |
 | 0x0a/0x0b/0x0c | pushint32 / 16 / 8 | u32/u16/u8 |
 | 0x0d | pushfloat | u32 |
 | 0x0e | **pushstring** | u8 长度（含 NUL）+ 字节 + NUL |

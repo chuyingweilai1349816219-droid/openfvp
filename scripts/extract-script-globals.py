@@ -48,7 +48,7 @@ GAMES = {
 }
 OUT_JSON = os.path.join(ROOT, 'ref', 'script-globals.json')
 LIT_OPS = ('pushint8', 'pushint16', 'pushint32', 'pushfloat', 'pushstring',
-           'pushtrue', 'pushfalse')
+           'pushfalse', 'pushtrue')
 
 
 def classify(cfg, pc):
@@ -72,8 +72,8 @@ def scan(path, cfg):
                 prev_pc = order[i - 1]
                 pnm = code.instr[prev_pc]
                 if pnm[1] in LIT_OPS:
-                    if pnm[1] in ('pushtrue', 'pushfalse'):
-                        val = (pnm[1] == 'pushtrue')
+                    if pnm[1] in ('pushfalse', 'pushtrue'):
+                        val = (pnm[1] == 'pushfalse')
                     else:
                         val = pnm[2][0] if pnm[2] else None
             writes[args[0]].append({

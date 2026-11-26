@@ -309,7 +309,7 @@
     "pc": "0x3d21b",
     "before": [
      "pushglobal[55]",
-     "pushfalse[]",
+     "pushtrue[]",
      "neq[]",
      "jmpcond[250395]",
      "syscall[9]",

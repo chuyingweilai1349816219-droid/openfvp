@@ -46,8 +46,8 @@ OUT_JSON = os.path.join(ROOT, 'ref', 'script-argc.json')
 CMD_TABLE = os.path.join(ROOT, 'ref', 'cmd_table.json')
 
 PUSHES = {
-    'pushint8', 'pushint16', 'pushint32', 'pushfloat', 'pushstring', 'pushtrue',
-    'pushfalse', 'pushglobal', 'pushstack', 'pushtop', 'pushtemp',
+    'pushint8', 'pushint16', 'pushint32', 'pushfloat', 'pushstring', 'pushfalse',
+    'pushtrue', 'pushglobal', 'pushstack', 'pushtop', 'pushtemp',
 }
 PRODUCERS = {
     'call', 'add', 'sub', 'mul', 'div', 'mod', 'neg', 'eq', 'neq', 'gt', 'le',

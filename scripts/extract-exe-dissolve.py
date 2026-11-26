@@ -59,9 +59,12 @@ SITES = [
 # 下面三个是**脚本侧**地址（HCB 字节码，不在 exe 反汇编里），由
 # work/dis_menu.py 解出来；冻结在这里是为了让读文档的人能直接对着看。
 SCRIPT_LOOP = [
-    dict(pc='0x59264', instr='pushtrue', role='loop 入口：压 true 当实参'),
+    dict(pc='0x59264', instr='pushfalse (op 0x08)', role='loop 入口：压 **false/null**（类型字节 0）当实参'),
     dict(pc='0x59265', instr='syscall 15 (DissolveWait)', role='唯一的出口判定'),
-    dict(pc='0x5926b', instr='jmpcond 0x59291', role='DissolveWait==false 才跳出循环'),
+    dict(pc='0x59268', instr='pushtemp (op 0x14)', role='取回 syscall 返回；先清 +0x814，所以"没写返回"= 类型 0'),
+    dict(pc='0x59269', instr='pushtrue (op 0x09)', role='比较对象：**true**（类型字节 1）'),
+    dict(pc='0x5926a', instr='eq (op 0x22)', role='矩阵 [7*typeA+typeB]：(1,1)->恒 1；(0,1)->默认 0'),
+    dict(pc='0x5926b', instr='jmpcond 0x59291', role='eq 结果为 0（即返回类型不是 1）才跳出循环'),
     dict(pc='0x5928c', instr='jmp 0x59264', role='否则回到 loop 入口'),
 ]
 
@@ -88,13 +91,26 @@ def build():
     return dict(
         schema='fvp-dissolve/1',
         source='iroseka_HD.asm（objdump 反汇编）+ pctrace 实测',
-        claim=('带 gfx 的外壳卡在 0x59264..0x5928C 的 DissolveWait 循环；exe 的 '
-               'DissolveWait 对非空实参不写返回值（只置线程标志），所以循环出口取决于'
-               '线程 temp 的残留值（变体比较语义），不是 MotionAlphaTest(265)'),
+        claim=('带 gfx 的外壳卡在 0x59264..0x5928C 的 DissolveWait 循环。这个循环是'
+               '**查询式**等待：实参是 `pushfalse`（op 0x08，类型字节 0），handler 走'
+               '"查询"分支——状态非 0 时只把返回**类型**写成 1（true），状态为 0 时'
+               '什么都不写（类型保持 0 = false）。脚本再拿 `pushtrue` 去 eq：(1,1) 在'
+               '矩阵里恒为 1 → 继续循环；(0,1) 用默认 helper 返回 0 → 跳出。所以出口'
+               '由**类型字节**决定，与线程 temp 的残留值无关'),
         state=dict(addr='engine+0x101010', idle=0, phases=[1, 2, 3, 4, 5, 6],
                    duration='engine+0x101018', elapsed='engine+0x10101c',
                    fade_prim='engine+0x100fdc', fade_alpha_offset=7),
-        loop=dict(region=['0x59264', '0x5928c'], exit='DissolveWait(15) == false',
+        wait_modes=dict(
+            query=dict(arg='type 0（pushfalse）', state_nonzero='只写 +0x814 = 1（类型 true）',
+                       state_zero='什么都不写 → 类型保持 0 = false',
+                       use='0x59264 的轮询：`while (DissolveWait(false))`'),
+            wait=dict(arg='type != 0（pushtrue 等）',
+                      action='+0x808 |= 0x10、+0x810 = 1（挂起线程，等淡出结束）',
+                      use='真正"等淡出播完"的用法'),
+            note='两个分支都**不写 +0x818**（返回值载荷）；查询分支的语义完全由 +0x814 '
+                 '的类型字节承载'),
+        loop=dict(region=['0x59264', '0x5928c'],
+                  exit='DissolveWait(15) 返回的类型字节为 0（即淡出状态 engine+0x101010 == 0）',
                   not_the_265_loop='0x592DF 的 MotionAlphaTest(265) 在这段之后',
                   script=SCRIPT_LOOP),
         scheduler=dict(
@@ -104,9 +120,9 @@ def build():
             release_counter='engine+0x10146c',
             release_rule='engine+0x10146c <= 1 时清 bit4 并继续执行',
             writes_return_value=False,
-            note=('线程被放行时只清 bit4 与 +0x810，**不写 +0x818** —— 所以 '
-                  'DissolveWait 之后 pushtemp 读到的是更早一次 syscall 留下的值；'
-                  '循环能否退出取决于变体比较语义（--bool-type 下卡点换到 0x235C9）')),
+            note=('线程被放行时只清 bit4 与 +0x810，**不写 +0x818**；DissolveWait 的两个'
+                  '分支也都不写载荷。所以 eq 实际只比较**类型字节**（见 wait_modes），'
+                  '放行与否不改变比较结果')),
         sites=sites)
 
 

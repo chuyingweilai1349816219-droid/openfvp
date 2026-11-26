@@ -160,7 +160,7 @@ UNKNOWN = [
 ]
 
 PUSH_TYPES = {
-    'pushfalse': 'null', 'pushtrue': 'bool', 'pushint32': 'int',
+    'pushtrue': 'null', 'pushfalse': 'bool', 'pushint32': 'int',
     'pushint16': 'int', 'pushint8': 'int', 'pushfloat': 'float',
     'pushstring': 'str', 'pushglobal': 'global', 'pushstack': 'stack',
 }

@@ -83,12 +83,26 @@ def main():
     print('== 脚本侧循环')
     loop = ref.get('loop', {})
     check(loop.get('region') == ['0x59264', '0x5928c'], '循环区间 0x59264..0x5928C')
-    check(loop.get('exit') == 'DissolveWait(15) == false', '唯一出口')
+    check('类型字节' in loop.get('exit', '') and '0x101010' in loop.get('exit', ''),
+          '唯一出口：DissolveWait 返回的类型字节为 0（状态归零）')
     script = loop.get('script', [])
-    check([s['pc'] for s in script] == ['0x59264', '0x59265', '0x5926b', '0x5928c'],
-          '4 个脚本站点齐备')
+    check([s['pc'] for s in script] ==
+          ['0x59264', '0x59265', '0x59268', '0x59269', '0x5926a', '0x5926b', '0x5928c'],
+          '7 个脚本站点齐备')
     check('0x592DF' in loop.get('not_the_265_loop', ''),
           'note 说明 265 的循环在这段之后（不是同一个循环）')
+
+    print('== DissolveWait 的两种模式')
+    wm = ref.get('wait_modes', {})
+    check(wm.get('query', {}).get('arg', '').startswith('type 0'),
+          '查询模式实参 = type 0（pushfalse）')
+    check('0x814' in wm.get('query', {}).get('state_nonzero', ''),
+          '查询模式：状态非 0 时只写返回类型 +0x814')
+    check('已挂起' not in wm.get('query', {}).get('state_zero', '') and
+          'false' in wm.get('query', {}).get('state_zero', ''),
+          '查询模式：状态为 0 时什么都不写 → 类型保持 0 = false')
+    check('0x808' in wm.get('wait', {}).get('action', ''),
+          '等待模式：置线程标志 +0x808 bit4')
 
     print('== 调度器：放行时不写返回值')
     sch = ref.get('scheduler', {})
@@ -102,8 +116,8 @@ def main():
     spcs = [s['pc'] for s in sites]
     check('0x44548e' in spcs and '0x44549f' in spcs and '0x4454d2' in spcs,
           '调度器三处站点都在基线里')
-    check('0x235C9' in sch.get('note', ''),
-          'note 记下 --bool-type 下卡点换到 0x235C9')
+    check('类型字节' in sch.get('note', ''),
+          'note 说明放行不改变比较结果（比较只看类型字节）')
 
     print('== 重新抽取反汇编对账')
     mod = load_extractor()

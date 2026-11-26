@@ -22,8 +22,8 @@ OPDEF = {
     0x05: ('ret2', ''),
     0x06: ('jmp', 'd'),
     0x07: ('jmpcond', 'd'),
-    0x08: ('pushtrue', ''),
-    0x09: ('pushfalse', ''),
+    0x08: ('pushfalse', ''),
+    0x09: ('pushtrue', ''),
     0x0a: ('pushint32', 'd'),
     0x0b: ('pushint16', 'w'),
     0x0c: ('pushint8', 'b'),
@@ -242,10 +242,10 @@ class VM(object):
                 t.pc = args[0]
             else:
                 t.pc += 5
-        elif op == 0x08:  # pushtrue：Variant 类型 1 = bool（不是 int 1）
-            self.push(t, True); t.pc += 1
-        elif op == 0x09:  # pushfalse
+        elif op == 0x08:  # pushfalse：handler 0x444940 只写类型字节 0（= false / null）
             self.push(t, False); t.pc += 1
+        elif op == 0x09:  # pushtrue：handler 0x444960 只写类型字节 1
+            self.push(t, True); t.pc += 1
         elif op == 0x0a:
             self.push(t, args[0]); t.pc += 5
         elif op == 0x0b:

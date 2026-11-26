@@ -11,7 +11,7 @@
 **确定的事实**抽出来冻结：
 
   1. 标题素材名（`title_*` 字符串常量）与它们被 GraphLoad 进的**槽位号**
-     （调用形如 `pushint16 slot; pushstring name; pushint8 kind; pushtrue; call helper`）；
+     （调用形如 `pushint16 slot; pushstring name; pushint8 kind; pushfalse; call helper`）；
   2. 菜单项素材家族：`title_start` 与 `title_start1..5` 这样的"基名 + 状态变体"；
   3. 标题区域的输入/命中命令调用点（`InputGetCursX/Y`、`InputGetDown`、`PrimHit`）
      以及 `PrimHit` 用到的**图元号**——命中就是"按图元矩形判定"，所以图元号 =
@@ -84,7 +84,7 @@ def extract(path, argc_table, region):
         if name == 'call' and i >= 4:
             window = [code.instr[order[i - k]][1] for k in range(4, 0, -1)]
             vals = [code.instr[order[i - k]][2] for k in range(4, 0, -1)]
-            if window == ['pushint16', 'pushstring', 'pushint8', 'pushtrue']:
+            if window == ['pushint16', 'pushstring', 'pushint8', 'pushfalse']:
                 nm = str(vals[1][0]) if vals[1] else ''
                 if nm.startswith('title_') and vals[0]:
                     loads.append({'slot': vals[0][0], 'name': nm,

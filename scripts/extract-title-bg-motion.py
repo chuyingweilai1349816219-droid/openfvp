@@ -66,7 +66,7 @@ def f32(bits):
 def simulate(code, order, idx):
     """反扫到上一个非纯指令，整段模拟出值栈。"""
     pure = {'pushint8', 'pushint16', 'pushint32', 'pushfloat', 'pushstring',
-            'pushtrue', 'pushfalse', 'pushstack', 'copystack', 'add', 'sub',
+            'pushfalse', 'pushtrue', 'pushstack', 'copystack', 'add', 'sub',
             'mul', 'div', 'neg', 'eq', 'neq', 'lt', 'gt', 'le', 'ge',
             'logand', 'logor', 'not', 'test'}
     j = idx
@@ -82,7 +82,7 @@ def simulate(code, order, idx):
             st.append(f32(args[0]))
         elif nm == 'pushstring':
             st.append(str(args[0]))
-        elif nm in ('pushtrue', 'pushfalse'):
+        elif nm in ('pushfalse', 'pushtrue'):
             st.append(None)
         elif nm == 'pushstack':
             reg = args[0] if args else None
@@ -206,7 +206,7 @@ def extract(name, cfg):
             continue
         window = [code.instr[order[i - k]][1] for k in range(4, 0, -1)]
         vals = [code.instr[order[i - k]][2] for k in range(4, 0, -1)]
-        if window != ['pushint16', 'pushstring', 'pushint8', 'pushtrue']:
+        if window != ['pushint16', 'pushstring', 'pushint8', 'pushfalse']:
             continue
         slot = vals[0][0] if vals[0] else None
         asset = str(vals[1][0]) if vals[1] else ''

@@ -101,8 +101,8 @@ def main():
             if t == 6:
                 check('type 6' not in src and 'type == 6' not in src,
                       'type 6 确实没有回灌分支（要先恢复 0x6A4DF0 表）')
-        check('type 1/3/6 still unmapped' in src,
-              '日志写明 type 1/3/6 仍未映射')
+        check('bool true' in src and 'float' in src and 'still unmapped' in src,
+              '日志写明 type 1 = bool、type 3 = float，表索引仍未映射')
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))

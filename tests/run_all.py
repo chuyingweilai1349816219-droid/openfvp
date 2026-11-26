@@ -882,6 +882,15 @@ def build_steps(args):
                            'wrapped on and restored; +0x5A8/+0x5AA (TextSpace) are '
                            'written but never read'))
 
+    # 6.4966c3 VM 指令表 + 变体比较矩阵（0x4815E0 表、0x481518 矩阵、
+    # pushfalse/pushtrue 的类型字节证据，以及 --faithful-ops 的 A/B）
+    vmo = os.path.join(HERE, 'verify_vm_ops.py')
+    steps.append(Step('verify_vm_ops.py', [PY, '-X', 'utf8', vmo], 900,
+                      skip_reason=None,
+                      note='VM opcode table and 7x7 comparison matrices read from '
+                           'iroseka_HD.exe; 0x08=pushfalse(type 0), 0x09=pushtrue'
+                           '(type 1); --faithful-ops A/B on bin/fvm.exe'))
+
     # 6.4966d 文本窗口默认值（来自 exe 构造函数 0x430EA0；缺 work/ 时 SKIP）
     vtd = os.path.join(HERE, 'verify_exe_text_defaults.py')
     steps.append(Step('verify_exe_text_defaults.py', [PY, '-X', 'utf8', vtd], 600,

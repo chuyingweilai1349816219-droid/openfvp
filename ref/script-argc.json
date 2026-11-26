@@ -35,7 +35,7 @@
     "141": {
      "name": "TitleMenu",
      "prev_instr_hist": {
-      "pushtrue": 7
+      "pushfalse": 7
      },
      "table_argc": 1
     }
@@ -1296,7 +1296,7 @@
     "141": {
      "name": "TitleMenu",
      "prev_instr_hist": {
-      "pushtrue": 6
+      "pushfalse": 6
      },
      "table_argc": 1
     }

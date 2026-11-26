@@ -225,9 +225,9 @@ def scan_dialog(code, extract):
             continue
         g = args[0]
         _pm, _om, pn, pa = step(pc, -1)
-        if pn == 'pushfalse':
+        if pn == 'pushtrue':
             value = 'false'
-        elif pn == 'pushtrue':
+        elif pn == 'pushfalse':
             value = 'true'
         elif pn == 'pushglobal' and pa:
             value = 'global:%d' % pa[0]

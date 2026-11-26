@@ -17,7 +17,7 @@
      留在栈上（`pushtemp` / 前一条 syscall 的返回值），不是表错——所以冻结成
      已知项，任何**新增**异常都会失败；
   3. `TitleMenu(141)`：表里的 argc 是 **1**，且它在脚本里每个调用点的**紧邻前一条
-     指令都是 `pushtrue`**（两部作品分别 6 处 / 7 处）。这条把"TitleMenu 靠 6 个
+     指令都是 `pushfalse`**（两部作品分别 6 处 / 7 处）。这条把"TitleMenu 靠 6 个
      参数传布局"的猜测正式否掉：它就是"进/不进标题菜单"的一个布尔。
 
 缺 HCB 时打印 SKIP 并返回 0（与其它依赖游戏数据的门禁同口径）。
@@ -99,7 +99,7 @@ def main():
               '两部作品的异常清单完全相同（iroseka=%s hoshimemo=%s）'
               % (seen['iroseka'], seen['hoshimemo']))
 
-    print('== 3. TitleMenu(141)：argc=1，紧邻前一条指令是 pushtrue ==')
+    print('== 3. TitleMenu(141)：argc=1，紧邻前一条指令是 pushfalse ==')
     for name in sorted(GAMES):
         r = ref['games'].get(name) or {}
         f = (r.get('focus') or {}).get('141')
@@ -108,8 +108,8 @@ def main():
         check(f['table_argc'] == 1,
               '%s：表里 TitleMenu argc == 1（实际 %r）' % (name, f['table_argc']))
         hist = f.get('prev_instr_hist') or {}
-        check(list(hist.keys()) == ['pushtrue'],
-              '%s：TitleMenu 的所有调用点紧邻前一条都是 pushtrue（实际 %r）'
+        check(list(hist.keys()) == ['pushfalse'],
+              '%s：TitleMenu 的所有调用点紧邻前一条都是 pushfalse（实际 %r）'
               % (name, hist))
         check(sum(hist.values()) >= 5,
               '%s：TitleMenu 调用点 >= 5 个（实际 %d）'

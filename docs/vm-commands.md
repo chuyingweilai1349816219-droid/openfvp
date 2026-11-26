@@ -124,11 +124,56 @@ hoshimemo 51 处、sakura 65 处（`work/jmpcond_pred.py` 静态统计，官方�
  5 ret2         0x444900     15 pushglobal  0x445B90     25 neg         0x444A20     35 neq        0x445020
  6 jmp          0x445A10     16 pushstack   0x445C20     26 add         0x444A60     36 gt         0x445060
  7 jmpcond      0x445A30     17 garr_read   0x445CB0     27 sub         0x444C50     37 le         0x445180
- 8 pushtrue     0x444940     18 larr_read   0x445D30     28 mul         0x444CE0     38 lt         0x4451C0
- 9 pushfalse    0x444960     19 pushtop     0x444980     29 div         0x444D70     39 ge         0x4452E0
+ 8 pushfalse    0x444940     18 larr_read   0x445D30     28 mul         0x444CE0     38 lt         0x4451C0
+ 9 pushtrue     0x444960     19 pushtop     0x444980     29 div         0x444D70     39 ge         0x4452E0
 ```
 
 （顺序即本站 `ref/fvm_ref.py` 的 `OPDEF`；名字是我们起的，语义以 handler 为准。）
+
+### 0.1 指令表与类型字节：字节级基线（2026-11-27 重抄，`ref/exe-vm-ops.json`）
+
+上面那张表以前是手工誊的，`0x08`/`0x09` 两个名字**写反了**。本轮从 PE 字节重抄
+一遍，冻结成 `ref/exe-vm-ops.json`（生成器 `scripts/extract-exe-vm-ops.py`，
+门禁 `tests/verify_vm_ops.py`）。四条硬证据：
+
+| 事实 | 字节 | 结论 |
+| --- | --- | --- |
+| 派发 | `0x4454C7` = `8b 04 95 e0 15 48 00`（`mov 0x4815E0(,%edx,4),%eax`） | 表基址 `0x4815E0`，`op = code[pc++]`，40 项 `0x00..0x27` |
+| `0x08` | `0x444940` 整段 21 字节，唯一写内存的指令是 `c6 44 c1 08 00` | **`pushfalse`**：只写类型字节 **0** |
+| `0x09` | `0x444960` 同形，只写 `c6 44 c1 08 01` | **`pushtrue`**：只写类型字节 **1** |
+| `0x14` | `0x4449F0` 读 `+0x814/+0x818` 压栈后 `movb $0x0,0x814` | `pushtemp` 之后返回槽**清 0**：没写返回 = 类型 0 = false |
+
+于是"类型字节就是布尔值"：`0 = false`（同时是 null）、`1 = true`，载荷不参与。
+`jmpcond`（`0x445A30`）判的就是 `cmpb $0x0,(%edx)` —— 所以 **`int 0` 也算真**，
+条件必须是 bool 值；`test`（`0x444E40`）只在两侧都是 type 2 时做 `(1<<b)&a`。
+
+比较类 opcode 通过三张 7×7 表分派（`idx = 7*typeA + typeB`，默认项 `0x444F50`
+恒返回 0，再逐项覆盖）：
+
+| 表 | 地址 | 用于 | 覆盖项 |
+| --- | --- | --- | --- |
+| A | `0x481388` | `0x25`（`sete`） | (2,2)(2,3)(3,2)(3,3)(4,4)(4,5)(5,4)(5,5) |
+| B | `0x481450` | `0x24`（`setne`） | 同上八项 |
+| C | `0x481518` | `0x22` eq（`setne`）/ `0x23` neq（`sete`） | (0,0)、(1,1)…(1,4)、(1,6)、(2,1)、(2,2)、(3,1)、(3,3)、(4,1)、(4,4)、(4,5)、(5,1)、(5,4)、(5,5)、(6,1) |
+
+eq 表里 **`true` 与除 null/动态串以外的任何值都判等**（十项全被改写成"恒返回 1"），
+这不是笔误，是原版行为。它正是 ① 那条轮询能工作的原因：
+
+```text
+0x59264  pushfalse            ; 查询模式实参（类型 0）
+0x59265  syscall 15           ; DissolveWait：状态非 0 → 只写返回类型 1；状态 0 → 什么都不写
+0x59268  pushtemp             ; 取回返回，并清 +0x814
+0x59269  pushtrue             ; 比较对象：true
+0x5926a  eq                   ; (1,1)→恒真（继续轮询）；(0,1)→默认 0（跳出）
+0x5926b  jmpcond 0x59291      ; 返回类型 0 才出循环
+```
+
+`--faithful-ops` 开关（`bin/fvm.exe` / `bin/fvp-headless.exe` / 外壳）：按上面四条
+字节语义执行 `0x08`/`0x09`、`pushtemp` 清槽、`DissolveWait` 查询式返回、`*Test`
+返回"没在跑"。默认关着是因为 `ref/ref-900k.txt` 那份冻结文本基线是在旧语义下生成的
+（旧语义把 `0x08` 当 true、`0x09` 当 false，等于给每个轮询换了比较对象）。A/B 实测：
+默认 195 行 6496 B（与基线逐字节一致），`--faithful-ops` 184 行 —— 两者内容不同，
+把忠实语义转成默认之前必须逐段解释差异，见 docs/roadmap.md。
 
 **比较 opcode 用哪张表、`sete` 还是 `setne`（2026-11-24 钉死）**：六个 handler 除了
 "表 + setcc"两点外完全一样：
@@ -322,8 +367,8 @@ handler 里读 `0x4(argv)`、`0xc(argv)`、`0x14(argv)`… 分别对应 arg1、a
 
 | type | 含义 | 证据 |
 |---|---|---|
-| 0 | false / null（pushfalse；也用作“可选参数省略”） | 0x444940 `movb $0x0,0x8(...)` |
-| 1 | true（pushtrue） | 0x444960 `movb $0x1,0x8(...)` |
+| 0 | false / null（pushfalse；也用作“可选参数省略”） | 0x444940（op 0x08）整段只写 `movb $0x0,0x8(%ecx,%eax,8)`（`c6 44 c1 08 00`） |
+| 1 | true（pushtrue） | 0x444960（op 0x09）整段只写 `movb $0x1,0x8(%ecx,%eax,8)`（`c6 44 c1 08 01`） |
 | 2 | int | pushint8/16/32；大量 handler `cmpb $0x2` |
 | 3 | float | 0x445b10 `movb $0x3,...` + flds/fstps |
 | 4 | 字符串字面量：value = 相对脚本基址的偏移 | 0x445b50 写 type=4、value=pc（字符串内联在脚本里） |
@@ -334,8 +379,8 @@ handler 里读 `0x4(argv)`、`0xc(argv)`、`0x14(argv)`… 分别对应 arg1、a
 
 | 原版 type | 含义 | 本站 |
 |---|---|---|
-| 0 | false / null / 可选参数省略 | `FVP_NULL`（`fvp_make_null()`，`pushfalse` 0x09 压它） |
-| 1 | true | 还是 `FVP_INT` = 1（`pushtrue` 0x08；没有证据表明原版对 type 1 的算术有特殊规则，不硬造） |
+| 0 | false / null / 可选参数省略 | `FVP_NULL`（`fvp_make_null()`，`pushfalse` 0x08 压它） |
+| 1 | true | `FVP_BOOL`（`fvp_value_bool()`，`pushtrue` 0x09 压它） |
 | 2 | int | `FVP_INT` |
 | 3 | float | `FVP_FLOAT` |
 | 4/5/6 | 字符串三态 | `FVP_STR`（指向 UTF-8 字符串） |
@@ -572,7 +617,7 @@ parts 表与 prim 表在引擎结构里是连着的：`0x61D064 + id*0x34`（64 
 | 39 | LipSync | 2 | handler **0x43A830**：arg1 int **1..0xFFF**；`cmpb $0x0,0x8` 只看第二参数**是不是 null**（null → 0、其它 → 1），再 `0x428870(表, id, on)`：在 4 个槽里按 id 匹配，**on → 状态字节 = 2**，**off → `0x4283A0` 停 + 状态字节 = 1** | 记 `lip_sync_id` / `lip_sync_on` + 计数；**第二参数是 null → on=0（停），显式 int 0 也算 on=1** |
 
 两条的 **null 分支**依赖"值类型 0 = null"。本站值模型现在有 `FVP_NULL`（≡ 原版
-type 0，`pushfalse` 0x09 压出来的就是它），所以 `LipAnim` 的"只停"和 `LipSync` 的
+type 0，`pushfalse` 0x08 压出来的就是它），所以 `LipAnim` 的"只停"和 `LipSync` 的
 `on = 0` 都**能走到**；数值/字符串上下文里 `FVP_NULL` 与 int 0 等价（这是保住
 `ref/ref-900k.txt` 逐字节基准的前提，见 `tests/test_nullvalue.c` 的说明）。
 `ControlMask` / `CursorShow` 的 null 分支也一起打通了；`GraphLoad` 本来就是

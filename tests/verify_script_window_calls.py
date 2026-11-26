@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Gate for ref/script-window-calls.json（脚本侧文本窗口几何）+ pushtrue 类型语义。
+"""Gate for ref/script-window-calls.json（脚本侧文本窗口几何）+ pushfalse 类型语义。
 
 用户两次反馈"正文位置不对"。渲染侧已经冻结在 ref/exe-text-draw.json（面板 1:1 画在
 type-5 图元的绝对 (x,y) 上），所以位置只能来自脚本给图元的几何。本门禁复核三件事：
@@ -8,7 +8,7 @@ type-5 图元的绝对 (x,y) 上），所以位置只能来自脚本给图元的
   1. 重新提取脚本 → 与 ref/script-window-calls.json 逐字节一致（A 类）；
   2. 6 个调用点里只有 1 个传显式几何，其画布落点是 (461.25, 435.375)；
      其余 5 个吃缺省 (230,522,736,120) → (431.25, 880.875)、面板 1380×1024；
-  3. C 侧：`pushtrue` 必须压 **原版 Variant type 1（FVP_BOOL）**，不能压 int 1 ——
+  3. C 侧：`pushfalse` 必须压 **原版 Variant type 1（FVP_BOOL）**，不能压 int 1 ——
      否则 `PrimSetXY(prim, true, y)` / `PrimSetWH(prim, true, true)` 这类
      "这一维不改" 的哨兵会把 x/y 写成 1（0x444960 只写类型字节 0x1）。
 """
@@ -103,13 +103,13 @@ def main():
         check('prim+0x14' in json.dumps(td.get('position') or {}, ensure_ascii=False),
               'ref/exe-text-draw.json：落点以 prim+0x14/+0x16 为基准')
 
-    print('== 5. C 侧：pushtrue 必须是 Variant type 1 ==')
+    print('== 5. C 侧：pushfalse 必须是 Variant type 1 ==')
     src = io.open(VM_C, encoding='utf-8', errors='replace').read()
     i = src.find('case 0x08:')
-    check(i >= 0, 'src/vm.c 有 pushtrue (0x08) 分支')
+    check(i >= 0, 'src/vm.c 有 pushfalse (0x08) 分支')
     seg = src[i:i + 700] if i >= 0 else ''
-    check('fvp_value_bool()' in seg, 'pushtrue 压的是 fvp_value_bool()')
-    check('fvp_make_int(1)' not in seg, 'pushtrue 不再压 int 1')
+    check('fvp_value_bool()' in seg, 'pushfalse 压的是 fvp_value_bool()')
+    check('fvp_make_int(1)' not in seg, 'pushfalse 不再压 int 1')
     h = io.open(FVP_H, encoding='utf-8', errors='replace').read()
     check('FVP_BOOL' in h, 'fvp.h 定义 FVP_BOOL（原版 Variant type 1）')
     src_c = io.open(os.path.join(FVP, 'src', 'fvp.c'), encoding='utf-8',
@@ -128,7 +128,7 @@ def main():
     if fails:
         print('FAIL: %d 项' % len(fails))
         return 1
-    print('PASS: script-window-calls + pushtrue 类型语义')
+    print('PASS: script-window-calls + pushfalse 类型语义')
     return 0
 
 

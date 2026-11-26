@@ -41,6 +41,9 @@ static void usage(FILE *f, const char *argv0)
     fprintf(f, "  --quiet           do not echo text\n");
     fprintf(f, "  --bool-type       faithful bool semantics "
                "(comparisons push FVP_NULL for false; changes output)\n");
+    fprintf(f, "  --faithful-ops    execute op 0x08/0x09, pushtemp and the "
+               "DissolveWait/Motion*Test returns as the exe bytes say "
+               "(ref/exe-vm-ops.json)\n");
     fprintf(f, "  --primhit-all     PrimHit always answers hit "
                "(diagnostic: push the script past the title menu)\n");
     fprintf(f, "  --click N         synthetic click every N steps\n");
@@ -188,6 +191,7 @@ int main(int argc, char **argv)
     int text_fixed = 0;
     int primhit_all = 0;
     int bool_type = 0; /* --bool-type：原版的“类型即真假”语义（默认关，影响冻结基线） */ /* --primhit-all：诊断用，PrimHit 一律命中 */
+    int faithful_ops = 0; /* --faithful-ops：按 exe 字节执行 0x08/0x09 等（见 ref/exe-vm-ops.json） */
     int click_mask = 0x0B;
     int frame_ms = 16;
     int i;
@@ -230,6 +234,8 @@ int main(int argc, char **argv)
             primhit_all = 1;
         } else if (strcmp(a, "--bool-type") == 0) {
             bool_type = 1;
+        } else if (strcmp(a, "--faithful-ops") == 0) {
+            faithful_ops = 1;
         } else if (strcmp(a, "--quiet") == 0) {
             quiet = 1;
         } else if (a[0] == '-' && a[1] != '\0') {
@@ -370,6 +376,7 @@ int main(int argc, char **argv)
         gfx_set_prim_hit_all(gfx, 1);
     }
     vm.bool_type = bool_type;
+    vm.faithful_ops = faithful_ops;
     fvp_vm_attach_gfx(&vm, gfx);
     if (text_out != NULL) {
         sink.f = fopen(text_out, "wb");

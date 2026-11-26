@@ -68,7 +68,7 @@ OPEN_PRIMS = (250, 257)
 # 可以在实参块里出现的"纯"指令（不改变控制流、不读内存）。
 PURE = {
     'pushint8', 'pushint16', 'pushint32', 'pushfloat', 'pushstring',
-    'pushtrue', 'pushfalse',
+    'pushfalse', 'pushtrue',
     'add', 'sub', 'mul', 'div', 'mod', 'neg',
     'eq', 'neq', 'lt', 'gt', 'le', 'ge', 'logand', 'logor', 'not', 'test',
     'bitand', 'bitor', 'bitxor', 'shl', 'shr',
@@ -105,7 +105,7 @@ def c_trunc(v):
 def simulate(code, order, idx):
     """把 `order[idx]`（syscall / call）之前的实参块用栈机算出来。
 
-    返回实参列表（pushtrue/pushfalse → None），算不出来返回 None。
+    返回实参列表（pushfalse/pushtrue → None），算不出来返回 None。
     """
     j = idx
     while j > 0 and code.instr[order[j - 1]][1] in PURE:
@@ -120,7 +120,7 @@ def simulate(code, order, idx):
                 st.append(f32(args[0]))
             elif nm == 'pushstring':
                 st.append(str(args[0]))
-            elif nm in ('pushtrue', 'pushfalse'):
+            elif nm in ('pushfalse', 'pushtrue'):
                 st.append(None)
             elif nm == 'neg':
                 st.append(-st.pop())
@@ -284,7 +284,7 @@ def find_loads(code, order):
             continue
         win = [code.instr[order[i - k]][1] for k in range(4, 0, -1)]
         vals = [code.instr[order[i - k]][2] for k in range(4, 0, -1)]
-        if win != ['pushint16', 'pushstring', 'pushint8', 'pushtrue']:
+        if win != ['pushint16', 'pushstring', 'pushint8', 'pushfalse']:
             continue
         if not vals[0] or not vals[1]:
             continue

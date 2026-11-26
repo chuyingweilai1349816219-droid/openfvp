@@ -80,7 +80,7 @@ OUT_JSON = os.path.join(ROOT, 'ref', 'title-enter.json')
 
 PURE = {
     'pushint8', 'pushint16', 'pushint32', 'pushfloat', 'pushstring',
-    'pushtrue', 'pushfalse',
+    'pushfalse', 'pushtrue',
     'add', 'sub', 'mul', 'div', 'mod', 'neg',
     'eq', 'neq', 'lt', 'gt', 'le', 'ge', 'logand', 'logor', 'not', 'test',
     'bitand', 'bitor', 'bitxor', 'shl', 'shr',
@@ -115,7 +115,7 @@ def simulate(code, order, idx, locals_at):
             st.append(f32(args[0]))
         elif nm == 'pushstring':
             st.append(str(args[0]))
-        elif nm in ('pushtrue', 'pushfalse'):
+        elif nm in ('pushfalse', 'pushtrue'):
             st.append(None)
         elif nm == 'pushstack':
             v = locals_at(order[k], args[0] if args else None)

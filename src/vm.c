@@ -714,14 +714,14 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         }
         break;
     }
-    case 0x08: /* pushtrue：原版 0x444960 写的是 Variant type **1**，不是 int 1。
-                * 这个区别是"true 哨兵 = 这一维不改"的全部依据：各 PrimSet* /
-                * Motion* handler 只对 Variant type 2（int）写字段。 */
-        fvp_thread_push(t, fvp_value_bool());
+    case 0x08: /* 原版 0x444940：整段只写 Variant type **0**（= false，也代表 null）。
+                * 历史行为（faithful_ops == 0）把它当成 pushtrue，是为了保住冻结
+                * 文本基线；--faithful-ops 打开后按 exe 字节执行。 */
+        fvp_thread_push(t, vm->faithful_ops ? fvp_make_null() : fvp_value_bool());
         t->pc += 1u;
         break;
-    case 0x09: /* pushfalse：原版 0x444940 写的是 Variant type 0，不是 int 0 */
-        fvp_thread_push(t, fvp_make_null());
+    case 0x09: /* 原版 0x444960：整段只写 Variant type **1**（= true） */
+        fvp_thread_push(t, vm->faithful_ops ? fvp_value_bool() : fvp_make_null());
         t->pc += 1u;
         break;
     case 0x0a:
@@ -816,8 +816,14 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         t->pc += 1u;
         break;
     }
-    case 0x14: /* pushtemp */
+    case 0x14: /* pushtemp：原版 0x4449F0 把返回槽 +0x814/+0x818 压栈后，还要把
+                * +0x814 **清 0**（`movb $0x0,0x814(%ecx)`）。清 0 是"这次 syscall
+                * 没写返回 → 类型 0 = false"的全部依据；少了它
+                * `DissolveWait(false)` 的查询式轮询会读到上一次的残留类型。 */
         fvp_thread_push(t, t->temp);
+        if (vm->faithful_ops) {
+            t->temp = fvp_make_null();
+        }
         t->pc += 1u;
         break;
     case 0x15: { /* popglobal */

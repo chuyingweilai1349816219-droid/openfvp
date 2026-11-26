@@ -79,6 +79,13 @@
 #pragma weak snd_set_vol
 #pragma weak snd_stop
 
+/* engine+0x101010：屏幕溶解（Dissolve(14) / DissolveWait(15)）的状态。
+ * 原版 0 = 空闲、1..6 = 阶段，由逐帧 tick 0x436FC0 推进，结束归 0。
+ * 本引擎还没有实现淡出画面，Dissolve(14) 仍是空桩，所以这里恒为 0；
+ * DissolveWait 的"查询"模式因此在状态 0 上立刻返回 false（见 case 15）。
+ * 接淡出时只要在 tick 里改这个变量即可，脚本侧不用动。 */
+static int dissolve_state = 0;
+
 /* 取 UTF-8 串的第一个码点（外字登记用；非法/空串返回 0）。 */
 static uint32_t fvp_utf8_first(const char *s)
 {
@@ -1889,24 +1896,34 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
                                   (int)args[0].i, (int)args[1].i);
         }
         return;
-    case 15:  /* DissolveWait(arg)：原版 handler 0x437520，逐条：
-               *   cmpl $0,0x101010(engine) ; je ret      ← 溶解系统未初始化 → 什么都不写
-               *   cmpb $0,(arg)         ; jne 0x43754F   ← arg0.type == 0 (null) → 返回槽写 1
-               *   movb $1,thread+0x814                    ←   "1 = 溶解已结束"
-               *   orl $0x10,thread+0x808 ; movb $1,thread+0x810   ← arg 非 null → 只置待位，**不写返回值**
+    case 15:  /* DissolveWait(arg)：原版 handler 0x437520（ref/exe-dissolve.json 的
+               * wait_modes），**两套用法**：
+               *   cmpl $0,0x101010(engine) ; je ret      ← 溶解状态 0 → 什么都不写
+               *   cmpb $0,(arg) ; jne 0x43754F            ← 实参 type 0（pushfalse / null）
+               *   movb $1,thread+0x814                    ←   查询：只写返回**类型** 1（true）
+               *   orl $0x10,+0x808 ; movb $1,+0x810       ← 实参非 null：置挂起位，等待
                *
-               * 以前我们不管实参一律写 1，结果 0x59264 那条
-               * `pushtrue; syscall 15; pushtemp; pushfalse; eq; jmpcond` 走错分支
-               * （见 CHANGELOG 九十五续的轨迹对齐）。 */
-        if (argc >= 1 && args[0].type == (uint8_t)FVP_NULL) {
-            t->temp = fvp_make_int(1);
-        } else if (vm->gfx_bridge == NULL) {
-            /* 无 gfx 的基线 VM（bin/fvm.exe）保持历史行为：一律写 1。
-             * 冻结文本基线（ref/ref-900k.txt、ref-2m.txt）就是这条路径产出的，
-             * 改它会让 verify_threads / 部分 compare 基线变红；而带 gfx 的
-             * 外壳（fvp.exe / fvp-headless.exe）走上面那条忠实分支。 */
-            t->temp = fvp_make_int(1);
+               * 脚本 `0x59264..0x5928C` 用的是**查询**式（实参 pushfalse），配
+               * `eq(返回类型, pushtrue)`：状态非 0 → 类型 1 → (1,1) 恒真 → 继续轮询；
+               * 状态 0 → 类型 0 → (0,1) 落默认 → 跳出。
+               *
+               * 本引擎的 Dissolve(14) 还是空桩（没有屏幕淡出，见 docs/status.md），
+               * 状态恒 0，所以查询立刻返回 false —— 脚本按原版的有序路径往下走，
+               * 只是少了开场那层淡出画面。 */
+        if (dissolve_state != 0 && vm->faithful_ops) {
+            if (argc >= 1 && args[0].type == (uint8_t)FVP_NULL) {
+                t->temp = fvp_value_bool();          /* 查询：还在溶解 */
+            } else if (argc >= 1) {
+                t->blocked = 1;                      /* 等待：挂起，等淡出结束 */
+            }
+            return;
         }
+        if (vm->faithful_ops) {
+            return;                                  /* 状态 0：什么都不写 = false */
+        }
+        /* 历史行为（faithful_ops == 0）：不管实参一律写 int 1。冻结文本基线
+         * 就是这条路径产出的，所以默认保持不动。 */
+        t->temp = fvp_make_int(1);
         return;
     case 44:  /* MotionAlphaTest(id)：原版 0x43A9C0，容器 engine+0x651E04
                * （与 MotionAlpha(42) 同一个），id 1..0xFFF，1 = 还在跑。 */
@@ -1952,10 +1969,36 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             }
         }
         break;
-    case 59:  /* MotionMoveZTest */
+    case 59:  /* MotionMoveZTest(id)：原版 0x43AE00 —— 实参必须是 int 1..0xFFF，
+               * 查动作容器 engine+0x680A6C，把 `还在跑` 写成**类型字节** 1（跑）
+               * 或 0（没跑）：`test %eax,%eax ; setne %al ; mov %al,0x814`。
+               * 没有动作表时原版什么都不写 → 类型 0 = false。 */
     case 145: /* V3DMotionTest */
-    case 62:  /* MovieState: pretend the WMV already finished */
-        t->temp = fvp_make_int(1);
+        if (!vm->faithful_ops) {
+            t->temp = fvp_make_int(1);   /* 历史行为，见 ref/exe-vm-ops.json */
+            return;
+        }
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_INT &&
+            gfx_motion_test != NULL && vm->gfx_bridge != NULL) {
+            int zid = (int)args[0].i;
+
+            if (zid >= 1 && zid <= 0xFFF) {
+                t->temp = gfx_motion_test(vm->gfx_bridge->gfx, zid,
+                                          (int)FVP_TWEEN_MOVE_XY)
+                              ? fvp_value_bool()
+                              : fvp_make_null();
+                return;
+            }
+        }
+        t->temp = fvp_make_null();   /* 没有动作容器 = 没在跑 */
+        return;
+    case 62:  /* MovieState(slot 0..1)：原版 0x43B280 读 WMV 上下文
+               * （engine+0x481368 → +0x8C → +0x2D4，字节 +0x24/+0x25）：
+               * 该字节非 0 才写返回 1。本引擎不放 WMV，字节恒 0 → 什么都不写
+               * （类型 0 = false = "没在播"）。历史行为恒写 1，任何
+               * `while (MovieState() == true) yield;` 都会空转，所以挂在
+               * --faithful-ops 后面。 */
+        t->temp = (vm->faithful_ops) ? fvp_make_null() : fvp_make_int(1);
         return;
     /* 41 MenuMessSkip / 108 SysAtSkipName / 141 TitleMenu：静态分析 0x437950 就是
      * 一条 `ret $0x4` —— 原版这三个 handler 是**纯空操作**（不读参数、不写状态、
@@ -2444,8 +2487,13 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     if (!vm->gfx_handled) {
         fvp_vm_count_unknown(vm, cid);
     }
+    /* `*Test` 类命令问的是"这条动作还在跑吗"。没有渲染层就没有动作容器，
+     * 忠实答案必须是 **0（没在跑）** —— 原版 handler 查一张动作表，表里没有
+     * 这一项时写的就是类型 0。历史行为写 1（"当作还在跑"），于是
+     * `while (MotionAlphaTest(35) == true) yield;`（0x37C5A）永远出不来 ——
+     * ① 的卡点之一。 */
     if (fvp_sys_is_test(cid)) {
-        t->temp = fvp_make_int(1);
+        t->temp = (vm->faithful_ops) ? fvp_make_null() : fvp_make_int(1);
     } else if (cid < FVP_CMD_COUNT && fvp_cmd_returns[cid]) {
         t->temp = fvp_make_int(0);
     }

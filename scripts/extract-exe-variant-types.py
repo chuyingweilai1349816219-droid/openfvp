@@ -45,11 +45,16 @@ TYPES = [
     {'type': 0, 'name': 'null / false / 未设', 'applied': True,
      'evidence': '载荷无意义（样本 118~345 条带随机载荷，最大 7500 万）；'
                  'src/fvp.h 的原版 Variant 注释与 save.bin 加载器都把 type 0 当"未设"'},
-    {'type': 1, 'name': '？', 'applied': False,
-     'evidence': 'save.bin 加载器也标 unknown；暂无消费点'},
+    {'type': 1, 'name': 'bool true', 'applied': True,
+     'evidence': 'op 0x09 pushtrue（handler 0x444960）整段只写 `c6 44 c1 08 01`，'
+                 '即类型字节 1、载荷不动；`jmpcond` 拿非零类型字节当真。'
+                 '见 ref/exe-vm-ops.json 的 push_constants'},
     {'type': 2, 'name': 'int', 'applied': True,
      'evidence': 'handler 里满地的 cmpb $0x2（101 处）；载荷 = i32'},
-    {'type': 3, 'name': '？', 'applied': False, 'evidence': '未解'},
+    {'type': 3, 'name': 'float', 'applied': True,
+     'evidence': 'op 0x0d pushfloat（handler 0x445B10）写 `c6 44 c1 08 03` 后用 '
+                 'flds 读 4 字节、fstps 存进载荷；比较表 (3,3) 走 0x444FC0 的 '
+                 'fucompp（浮点相等）'},
     {'type': 4, 'name': '数据段字符串的绝对偏移', 'applied': True,
      'evidence': '143332→"voice/01001530"、518150→"……。"、481990→"None"、'
                  '4199307→"……。"（iroseka.hcb 里都是合法 CP932 NUL 结尾串）'},

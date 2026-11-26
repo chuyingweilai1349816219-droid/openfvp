@@ -552,8 +552,8 @@ bin\test_titlemenu.exe
 |---|---|
 | exe 的 MSVC RTTI 类名 | 61 个类里**没有** `TitleMenu`（有 `FontList`/`FontRasterizer`/`TextFont`/`HGraphPrim`/`HTextStyler`/`TextureRenderer`/各种 `HPrimMove*`）→ 不是 C++ 类画的 |
 | HCB 内嵌命令表 | 有 `TitleMenu` 这一项，`argc = 1`（与 `ref/cmd_table.json` 一致） |
-| 脚本里的 6 个调用点（五彩斑斓） | 每个 `syscall 141` 的**紧邻前一条指令都是 `pushtrue`**，即只传 1 个布尔 → 不是 6 个布局参数 |
-| 星空のメモリア | 同样：`argc = 1`，7 个调用点全部紧邻 `pushtrue` |
+| 脚本里的 6 个调用点（五彩斑斓） | 每个 `syscall 141` 的**紧邻前一条指令都是 `pushfalse`**，即只传 1 个布尔 → 不是 6 个布局参数 |
+| 星空のメモリア | 同样：`argc = 1`，7 个调用点全部紧邻 `pushfalse` |
 | 命令 handler | `TitleMenu`(141) 的 handler 与 `MenuMessSkip`(41)、`SysAtSkipName`(108) 是**同一个函数** `0x437950`（纯空操作）→ 这个命令在本作里不做任何事 |
 
 **所以那条"从 6 处 `03 8D 00` 调用点实参里能拿到按钮命中矩形"的猜测是错的**，
@@ -1506,7 +1506,7 @@ OP 轴心缩放时显示哪一块"（现在标题背景是静态中心裁剪 240
 590ca  pushint8 1 ; call 0x584D8          ; 建标题场景（实参 1）
 590dc  pushglobal 236 ; pushint8 1 ; eq
 590e2  jmpcond 0x59120                   ; 236==1 ? 不跳 : 跳到 0x59120
-590e7  pushint8 0/0/0 ; pushtrue ; call 0x3F6A0   ; ← 脚本自己的开场
+590e7  pushint8 0/0/0 ; pushfalse ; call 0x3F6A0   ; ← 脚本自己的开场
 59120  pushint16 500 …                   ; 500 ms 等待
 ```
 

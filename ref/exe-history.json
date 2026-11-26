@@ -270,11 +270,11 @@
      "pc": "0x0007fdbe",
      "recent_pushes": [
       {
-       "op": "pushtrue",
+       "op": "pushfalse",
        "type": "bool"
       },
       {
-       "op": "pushtrue",
+       "op": "pushfalse",
        "type": "bool"
       },
       {
@@ -442,11 +442,11 @@
      "pc": "0x0004fa2a",
      "recent_pushes": [
       {
-       "op": "pushtrue",
+       "op": "pushfalse",
        "type": "bool"
       },
       {
-       "op": "pushtrue",
+       "op": "pushfalse",
        "type": "bool"
       },
       {
@@ -480,11 +480,11 @@
      "pc": "0x00068954",
      "recent_pushes": [
       {
-       "op": "pushtrue",
+       "op": "pushfalse",
        "type": "bool"
       },
       {
-       "op": "pushtrue",
+       "op": "pushfalse",
        "type": "bool"
       },
       {
@@ -652,11 +652,11 @@
      "pc": "0x0003a8ef",
      "recent_pushes": [
       {
-       "op": "pushtrue",
+       "op": "pushfalse",
        "type": "bool"
       },
       {
-       "op": "pushtrue",
+       "op": "pushfalse",
        "type": "bool"
       },
       {

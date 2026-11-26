@@ -555,6 +555,7 @@ int main(int argc, char **argv)
     int quiet = 0;
     int timeline = 0;
     int bool_type = 0;
+    int faithful_ops = 0;
     int threads = 1; /* 1/0 = 开/关协程槽；-1 表示命令行显式 --no-threads */
     int crlf = 1;
     int i;
@@ -632,6 +633,11 @@ int main(int argc, char **argv)
             timeline = 1;
         } else if (strcmp(a, "--bool-type") == 0) {
             bool_type = 1;
+        } else if (strcmp(a, "--faithful-ops") == 0) {
+            /* 按 exe 字节执行 0x08/0x09、pushtemp 清槽、DissolveWait 查询、
+             * Motion*Test 的 0/1（见 ref/exe-vm-ops.json）。默认关：冻结文本
+             * 基线是在历史语义下生成的。 */
+            faithful_ops = 1;
         } else if (strcmp(a, "--threads") == 0) {
             threads = 1;
         } else if (strcmp(a, "--no-threads") == 0) {
@@ -717,6 +723,7 @@ int main(int argc, char **argv)
     fvp_vm_init(&vm, &hcb, quiet);
     vm.timeline_on = timeline;
     vm.bool_type = bool_type;
+    vm.faithful_ops = faithful_ops;
     vm.threads_on = (threads < 0) ? 0 : threads;
     if (save_history_path != NULL &&
         !fvp_seed_history(save_history_path, &vm, enc)) {

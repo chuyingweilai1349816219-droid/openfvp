@@ -68,7 +68,7 @@ VM **240,201 步**、43 行台词、`unimpl cmds none` |
 | **字形兜底** | `test_glyph_fallback` | 造两个临时 GFXF 图集（34px 只有 B、16px 只有 A），走 `gfx_text_append` + `gfx_render` | 16 项 | ① 目标图集有的字直接命中、不算兜底 ② 目标图集缺、别的图集有 → `fallback_glyphs=1`、`tofu_glyphs=0`（按字号缩放） ③ 都缺 → `tofu_glyphs=1` ④ 计数每次 render 归零 |
 | **逐字显示（打字机）** | `test_typewriter` | `Gfx` + `gfx_text_append/advance`，不比对像素 | 46 项 | ① 默认关闭：整行一次可见、`advance` 是空操作 ② 打开后从 0 字开始、按 TextSpeed 的每字毫秒推进、余数不丢 ③ `speed 0` = 立刻显示完 ④ ASCII/2 字节/3 字节混排的 UTF-8 码点计数 ⑤ 关掉时立刻拉满 ⑥ 多窗口各自推进 ⑦ 负速度/NULL/越界安全 ⑧ **TextOutSize(120) 的两个装饰分量：上界 (12,8)、越界整对跳过、分量独立（a 越界时 b 仍生效）、未作用过时 getter 返回 0、越界层/NULL 不崩**。**默认关闭时像素基线与 `verify_gfx` 一致**（静态门另测） |
 | **文本渲染模式（图元驱动 / 旧版面）/ 图元 alpha** | `test_textprims` | 内建 8×16 字体 + 400×1000 画布，像素级断言（`gfx_canvas_rgba` 区域亮度和） | 20 项 | ① 默认关：文本画在 `gfx_layout_default(层号)` 位置、图元区域为 0 ② 建文本图元后开关仍关 → 仍在默认位置 ③ 打开 `gfx_set_text_prims` → 文本出现在图元绝对坐标、默认位置**不再**重复画 ④ 连渲两次像素和相同（确定性）⑤ 图元 `alpha=128` 比 `255` 暗（alpha 折进颜色的近似实现）⑥ 关掉开关回到默认位置 ⑦ `draw=0` 的文本图元不画、`tw<0` 不计入绑定数 ⑧ NULL 安全 |
-| **null / type-0 值模型** | `test_nullvalue` | 直接构造 `FvpValue` / `FvpVM`，外加五个只含 1~4 条指令的最小 `.hcb` 端到端跑 | 80 项 | ① `fvp_make_null()` 的 payload 归零、`is_null` 认得它、`is_null(NULL ptr)` 安全 ② `truth(null)=0` ③ **`eq`/`cmp`/`to_str` 与 int 0 等价**（冻结基准不动的根据）④ `LipSync(39)`：null → `on=0`，显式 int 0 / 1 / float 全 → `on=1` ⑤ `LipAnim(38)`：arg2 null → 走"只停"分支、正常 6 参数走启动分支、非法参数整条拒绝且不计数 ⑥ `ControlMask(8)`：null → 1、int 0/1 → 0 ⑦ `CursorShow`：null → 0、其它 → 1 ⑧ **端到端** `pushfalse` 栈顶类型是 `FVP_NULL` ⑨ **`--bool-type` 开关**：`pushint8 0; jmpcond` 默认跳（pc=13）/ 类型模型不跳（pc=11），`pushfalse; jmpcond` 两种都跳（pc=12）⑩ **忠实比较**：`eq(0,null)` 默认真 / 忠实假 ⑪ **0x25 真实语义**：`le(1,null)` 默认假、忠实模型按"表 A + sete"得**真** |
+| **null / type-0 值模型** | `test_nullvalue` | 直接构造 `FvpValue` / `FvpVM`，外加五个只含 1~4 条指令的最小 `.hcb` 端到端跑 | 80 项 | ① `fvp_make_null()` 的 payload 归零、`is_null` 认得它、`is_null(NULL ptr)` 安全 ② `truth(null)=0` ③ **`eq`/`cmp`/`to_str` 与 int 0 等价**（冻结基准不动的根据）④ `LipSync(39)`：null → `on=0`，显式 int 0 / 1 / float 全 → `on=1` ⑤ `LipAnim(38)`：arg2 null → 走"只停"分支、正常 6 参数走启动分支、非法参数整条拒绝且不计数 ⑥ `ControlMask(8)`：null → 1、int 0/1 → 0 ⑦ `CursorShow`：null → 0、其它 → 1 ⑧ **端到端** op `0x09`（旧解码器称 `pushfalse`，实际是 `pushtrue`；测试跑在默认语义下，那里它压 `FVP_NULL`）栈顶类型是 `FVP_NULL` ⑨ **`--bool-type` 开关**：`pushint8 0; jmpcond` 默认跳（pc=13）/ 类型模型不跳（pc=11），`pushtrue; jmpcond` 两种都跳（pc=12）⑩ **忠实比较**：`eq(0,null)` 默认真 / 忠实假 ⑪ **0x25 真实语义**：`le(1,null)` 默认假、忠实模型按"表 A + sete"得**真** |
 | 检测器自检 | `fuzz_selftest.c` | 两个分配器构建 | 故意在 32 字节块后写 1 字节 | 页保护构建必须以访问违例退出，金丝雀构建必须以 72 退出——否则「0 故障」没有意义 |
 
 一次完整运行（默认参数）：
@@ -506,7 +506,7 @@ out\fuzz\fvm_guard.exe out\fuzz\repro\case_12345.hcb --steps 2048
 |---|---|
 | `compare.py --run` 194 行 / 6489 B，冻结基线 195 行 / 6496 B | C 输出是**冻结基线的字节前缀**（缺 `[0] 0\r\n` 7 字节）；`--steps 1000000` 时冻结基线成为 C 输出的前缀 —— **内容没错，第 195 行落在 900k 步之后**。二分到 `3640b01`（MotionMoveTest 真实现） |
 | `bin/fvp-headless.exe --text-out` 0 行、截图全黑 | `TextPrint(123)` 在 headless 里从未进入 syscall 分发（插桩计数 0）；fvm 同参数 194 行。根因未定 |
-| `verify_frame_slots.py` 断言 `551 = (1,1)` | 那正是第 220 轮修掉的 `pushtrue` 哨兵 bug，断言已改成"551 绝不允许 (1,1)" |
+| `verify_frame_slots.py` 断言 `551 = (1,1)` | 那正是第 220 轮修掉的 `pushfalse` 哨兵 bug，断言已改成"551 绝不允许 (1,1)" |
 
 所以流程改成：**每轮开始 `mingw32-make -f Makefile` 全量重建 → 再跑五门禁**；
 门禁里凡是用 `bin/*.exe` 的项，都必须在同一次构建里产出。

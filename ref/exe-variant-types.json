@@ -107,9 +107,9 @@
    "type": 0
   },
   {
-   "applied": false,
-   "evidence": "save.bin 加载器也标 unknown；暂无消费点",
-   "name": "？",
+   "applied": true,
+   "evidence": "op 0x09 pushtrue（handler 0x444960）整段只写 `c6 44 c1 08 01`，即类型字节 1、载荷不动；`jmpcond` 拿非零类型字节当真。见 ref/exe-vm-ops.json 的 push_constants",
+   "name": "bool true",
    "type": 1
   },
   {
@@ -119,9 +119,9 @@
    "type": 2
   },
   {
-   "applied": false,
-   "evidence": "未解",
-   "name": "？",
+   "applied": true,
+   "evidence": "op 0x0d pushfloat（handler 0x445B10）写 `c6 44 c1 08 03` 后用 flds 读 4 字节、fstps 存进载荷；比较表 (3,3) 走 0x444FC0 的 fucompp（浮点相等）",
+   "name": "float",
    "type": 3
   },
   {

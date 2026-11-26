@@ -1680,7 +1680,8 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
             }
         }
         fvp_logf("load: globals applied %d cell(s) (null %d + int %d + table "
-                 "str %d + file str %d), kept %d (type 1/3/6 still unmapped)",
+                 "str %d + file str %d), kept %d (bool true / float / "
+                 "0x6A4DF0 表索引 still unmapped)",
                  applied, null_applied,
                  applied - null_applied - str_applied - file_str_applied,
                  str_applied, file_str_applied, kept);

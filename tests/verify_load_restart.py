@@ -241,8 +241,8 @@ def main():
         check(g['slots'] == counts[5],
               '槽 %d：动态字符串表解析出 %d 条（= type5 计数）'
               % (slot, g['slots']))
-        check('type 1/3/6 still unmapped' in text,
-              '槽 %d：日志写明 type 1/3/6 仍未映射' % slot)
+        check('still unmapped' in text and 'bool true' in text,
+              '槽 %d：日志写明 type 1 = bool / type 3 = float，表索引仍未映射' % slot)
 
     print('== B. 不带 --load-restart：旧行为（只记日志）==')
     shot_b = os.path.join(OUT, 'loadrestart-b.bmp')

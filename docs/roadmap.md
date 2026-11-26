@@ -240,7 +240,7 @@ iroseka 的文本只推进到 **1,170 行**就停住了（`--click` 从 4000 调
 ### 值模型的第二步：类型即布尔（**第一步已落地，第二步待做**）
 
 **已落地（2026-11-24）**：`FvpType` 增加 `FVP_NULL`（≡ 原版 `Variant.type = 0`），
-`pushfalse`(0x09) 压它；`ControlMask` / `CursorShow` / `LipAnim` / `LipSync` 的
+`pushtrue`(0x09) 压它；`ControlMask` / `CursorShow` / `LipAnim` / `LipSync` 的
 null 分支因此第一次可达。为保住 900k 步冻结基准，`FVP_NULL` 在
 `truth`/`eq`/`cmp`/`to_str` 里仍按 **int 0** 处理（`docs/vm-commands.md` §2 有对照表，
 `tests/test_nullvalue.c` 66 项守着）。**注意：这一步只是把类型引进来了，没有改

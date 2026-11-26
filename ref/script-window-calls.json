@@ -299,7 +299,7 @@
   "layer": 0,
   "pc": "0x039f27",
   "prim": 551,
-  "sentinel": "pushtrue = 「用缺省值」",
+  "sentinel": "pushfalse = 「用缺省值」",
   "slots": [
    250,
    254

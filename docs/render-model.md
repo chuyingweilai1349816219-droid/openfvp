@@ -334,7 +334,7 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
    用 `cmd_argc.json` 时 60 万步内出现 16 次下溢，用 `cmd_table.json` 时 **0 次**）。
    渲染层所有参数都因此可信。
 2. **`*Test` 类命令必须返回 1。** 脚本的等待循环是
-   `pushint16 252; syscall 44 (MotionAlphaTest); pushtemp; pushfalse; eq; jmpcond ...`
+   `pushint16 252; syscall 44 (MotionAlphaTest); pushtemp; pushtrue; eq; jmpcond ...`
    —— 返回 1 时跳出等待、返回 0 时死循环（实测返回 0 会一直卡在 `0x5843b` 的 poll 循环，
    90 万步都进不了正片）。`ThreadExit` 也不能无条件结束主线程：C 版里主线程不在 32 个协程槽里，
    `ThreadExit` 只收槽里的子线程（[`docs/05-threads.md`](05-threads.md) §10）。
@@ -927,7 +927,7 @@ surface 矩形），再决定实现。
 `scripts/extract-script-window-calls.py`，门禁 `tests/verify_script_window_calls.py`）。
 
 函数本身（`initstack 5|0`，5 个参数占绝对槽 250..254，每个参数都是
-`if (槽 == true) 槽 = 缺省值`）：
+`if (槽 == false) 槽 = 缺省值`）：
 
 | 参数 | 槽 | 缺省值（脚本里的字面量） | 缺省值画布坐标 |
 |---|---|---|---|
@@ -941,12 +941,12 @@ surface 矩形），再决定实现。
 
 | 调用点 pc | 实参（设计坐标） | 画布落点 | 面板 |
 |---|---|---|---|
-| `0x0363CA` | 全 `pushtrue` | (431.25, 880.875) | 1380×1024 |
-| `0x0365E7` | 4 个 `pushtrue` + `1` | (431.25, 880.875) | 1380×1024 |
+| `0x0363CA` | 全 `pushfalse` | (431.25, 880.875) | 1380×1024 |
+| `0x0365E7` | 4 个 `pushfalse` + `1` | (431.25, 880.875) | 1380×1024 |
 | **`0x0367BD`** | **246, 258, 800, 320** | **(461.25, 435.375)** | **1500×1024** |
-| `0x036933` | 全 `pushtrue` | (431.25, 880.875) | 1380×1024 |
-| `0x03B1A0` | 全 `pushtrue` | (431.25, 880.875) | 1380×1024 |
-| `0x052F06` | 全 `pushtrue` | (431.25, 880.875) | 1380×1024 |
+| `0x036933` | 全 `pushfalse` | (431.25, 880.875) | 1380×1024 |
+| `0x03B1A0` | 全 `pushfalse` | (431.25, 880.875) | 1380×1024 |
+| `0x052F06` | 全 `pushfalse` | (431.25, 880.875) | 1380×1024 |
 
 ⇒ **"正文浮在 CG 上"= 只有那一个调用点传了显式几何**（画布 y = 435.375），
 它前后都是吃缺省的常规对话框 (431.25, 880.875)。这和用户 2026-11-26 的补充
@@ -959,15 +959,19 @@ surface 矩形），再决定实现。
 （`……` 三个点落在 32 px 字格的下半部分，横向还有字形左侧留白），量级合理；
 而缺省窗口 (431.25, 880.875) 在垂直方向差 **424 px**，不可能是它。
 
-**根因不在渲染侧，在我们 VM 的 `pushtrue`**：原版 `pushtrue`（`0x444960`）只写
-Variant 的**类型字节 0x1**，即 `true` 是一个独立类型；而各 `PrimSet*` handler 只对
-Variant **type 2（int）** 才写字段，所以 `PrimSetText(551, 0, true, true)` /
-`PrimSetXY(551, true, y)` 里的 `true` 是"这一维不改"的哨兵。我们以前把 `pushtrue`
-压成 int 1，于是这些哨兵真的把 x/y 写成了 **1** —— 这就是"正文跑到 (1,1)"的全部原因。
+**根因不在渲染侧，在我们 VM 的常量操作码**（2026-11-27 更正：这里的哨兵是
+**op `0x08` = `pushfalse`**，handler `0x444940`，它整段只写 Variant 的
+**类型字节 0x0**，也就是 `false/null` 这个独立类型）。各 `PrimSet*` handler 只对
+Variant **type 2（int）** 才写字段，所以 `PrimSetText(551, 0, false, false)` /
+`PrimSetXY(551, false, y)` 里的哨兵是"这一维不改"。我们以前把 `0x08` 压成 int 1，
+于是这些哨兵真的把 x/y 写成了 **1** —— 这就是"正文跑到 (1,1)"的全部原因。
+（旧注释把 `0x08` 叫 `pushtrue`，名字是错的：`pushtrue` 是 `0x09`/`0x444960`，
+写类型字节 1。见 docs/vm-commands.md §0.1 与 `ref/exe-vm-ops.json`。）
 
 本轮修法：`fvp.h` 加 `FVP_BOOL`（对应原版 Variant type 1）、`fvp_make_bool()`
 → `fvp_value_bool()`；`fvp.c` 的 `fvp_as_number()` 把 BOOL 当 1（比较/算术一字不变），
-`fvp_value_truth()` 把 BOOL 当真；`vm.c` 的 `pushtrue` 改压 BOOL。
+`fvp_value_truth()` 把 BOOL 当真；`vm.c` 的 op `0x08` 改压 `FVP_NULL`（`--faithful-ops`
+下；默认路径为保冻结基线仍压 BOOL，见 `vm.h` 的开关说明）。
 实测效果（同一份 `--dump-text-prims`）：
 
 ```
@@ -1002,15 +1006,15 @@ VM 帧模型**。脚本侧的证据（全部在 `ref/script-window-geometry.json
 ⇒ **`initstack A|B`：A = 参数槽个数，B = 额外局部变量个数；参数占绝对槽
 `255-A..254`（固定以槽 254 收尾），额外局部变量占它们下面紧挨的 B 个槽。**
 
-另外 `true` 是**调用方显式压入的哨兵**：窗口设置函数的调用点 `0x363C5..0x363C9`
-连压 5 个 `pushtrue`，函数体再 `if (槽 == true) 槽 = 默认值` 吃默认值
+另外 `false` 是**调用方显式压入的哨兵**：窗口设置函数的调用点 `0x363C5..0x363C9`
+连压 5 个 `pushfalse`，函数体再 `if (槽 == false) 槽 = 默认值` 吃默认值
 （`0x39F33` → 230、`0x39F41` → 522、`0x39F4F` → 736、`0x39F6F` → 120）。所以
 "没传的实参"在脚本语义里是 **0**，不是 `true`。
 
 #### 两个独立样本复核（2026-11-26，第 179 轮）
 
 为了确认"参数槽 = `255-A..254`"不是只看一个函数得出的，又扫了两个高频函数，它们都用
-同一个 `if (槽 == true) 槽 = 默认值` 惯用法：
+同一个 `if (槽 == false) 槽 = 默认值` 惯用法：
 
 | 函数 | `initstack` | 用到的绝对槽 | 结论 |
 |---|---|---|---|
@@ -1476,7 +1480,7 @@ handler `0x43A340`（两部作品合计 454 次）：
 的显式几何——面板原点画布 (461.25, 435.375)、面板 1500×540。来源链条（HCB 静态）：
 
 ```
-0x367B0  pushint16 246 / 258 / 800 / 320 ; pushtrue
+0x367B0  pushint16 246 / 258 / 800 / 320 ; pushfalse
 0x367BD  call 0x39F27            ; 几何 helper（缺省 230/522/736/120）
 0x39F82  pushint16 551 ; pushint8 0 ; x ; y ; call 0x35C10   ; PrimSetText(551,0,x,y)
 0x39F90  pushint8 0 ; w ; h ; call 0x35D76                   ; TextBuff(0,w,h)

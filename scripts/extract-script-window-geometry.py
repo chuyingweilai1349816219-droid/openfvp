@@ -62,7 +62,7 @@ FRAME_FUNCS = [
     (0x23804, 'probe_2args', 'initstack 2|0：参数槽 253/254（写 254）'),
     (0x3F389, 'probe_8args', 'initstack 8|0：参数 1 是槽 251（写 251）'),
 ]
-WINDOW_SETUP_CALL = 0x363C5   # 调用 0x39F27 之前连压 5 个 pushtrue 哨兵
+WINDOW_SETUP_CALL = 0x363C5   # 调用 0x39F27 之前连压 5 个 pushfalse 哨兵
 
 SCALE_X_AT = 0x35C24   # pushfloat <imm32>（x 的比例）
 SCALE_Y_AT = 0x35C3B   # pushfloat <imm32>（y 的比例）
@@ -82,9 +82,9 @@ def arg_text(instr):
         return None, 'float(%g)' % f32(args[0])
     if name == 'pushstack':
         return None, 'stack%d' % args[0]
-    if name == 'pushtrue':
-        return None, 'true'
     if name == 'pushfalse':
+        return None, 'true'
+    if name == 'pushtrue':
         return None, 'false'
     return None, name
 
@@ -222,13 +222,13 @@ def extract(code):
             'slot_reads': len(slots),
         })
 
-    # 窗口设置函数的调用点：连压 5 个 pushtrue（显式"用默认值"哨兵）
+    # 窗口设置函数的调用点：连压 5 个 pushfalse（显式"用默认值"哨兵）
     sentinels = []
     p = WINDOW_SETUP_CALL
     for _ in range(5):
         j = code.instr.get(p)
-        if j is None or j[1] != 'pushtrue':
-            perr('0x%06x 不是 pushtrue（实际 %r）' % (p, j))
+        if j is None or j[1] != 'pushfalse':
+            perr('0x%06x 不是 pushfalse（实际 %r）' % (p, j))
         sentinels.append('0x%06x' % p)
         p = next_pc(code, p)
     j = code.instr.get(p)
@@ -243,8 +243,8 @@ def extract(code):
             'functions': frame_model,
             'window_setup_call': {
                 'pc': '0x%06x' % p,
-                'pushtrue_sentinels': sentinels,
-                'what': '调用方在 call 0x39F27 之前连压 5 个 `pushtrue`，'
+                'pushfalse_sentinels': sentinels,
+                'what': '调用方在 call 0x39F27 之前连压 5 个 `pushfalse`，'
                         '函数体用 `if (槽 == true) 槽 = 默认值` 吃默认值——'
                         '说明 `true` 是**显式**哨兵，不是"没传"的填充值',
             },
@@ -332,7 +332,7 @@ def main(argv=None):
         print('  %-16s %s  initstack %s  槽 %s..%s（%d 次读写）'
               % (f['role'], f['pc'], f['initstack'], f['slot_min'],
                  f['slot_max'], f['slot_reads']))
-    print('  窗口设置调用点 %s 前 5 条都是 pushtrue 哨兵'
+    print('  窗口设置调用点 %s 前 5 条都是 pushfalse 哨兵'
           % fm['window_setup_call']['pc'])
     print('== 正文窗口默认值 ==')
     for d in result['body_window_defaults']:

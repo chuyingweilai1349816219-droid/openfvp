@@ -291,6 +291,17 @@ typedef struct FvpVM {
      * 「值模型的第二步」）。打开后：比较/逻辑/位测试类 opcode 为假时压
      * FVP_NULL（type 0）、为真时压 int 1；jmpcond 只在 type == FVP_NULL 时跳。 */
     int bool_type;
+    /* 指令级忠实开关（默认 0 = 历史行为，保住冻结文本基线）。
+     *
+     * 2026-11-27 的 exe 字节证据（ref/exe-vm-ops.json）：
+     *   - `0x444940`（op 0x08）整段只写类型字节 0 → **pushfalse/null**；
+     *   - `0x444960`（op 0x09）整段只写类型字节 1 → **pushtrue**；
+     *   - `0x4449F0`（op 0x14 pushtemp）压栈后把返回槽 +0x814 **清 0**；
+     *   - `Motion*Test` 把"还在跑"写成类型字节 1/0，不写 int。
+     * 我们此前把 0x08/0x09 的名字与语义写反、pushtemp 不清槽、`*Test` 恒返回 1，
+     * 导致 `DissolveWait` 的查询式轮询与 `MotionAlphaTest/ZTest` 的等待环永远
+     * 出不来（① 的卡点）。asm 1 = 按上面的字节语义执行。 */
+    int faithful_ops;
     FvpArena arena;         /* runtime strings (concat, int -> str) */
     FvpTextLine *text;
     size_t ntext;

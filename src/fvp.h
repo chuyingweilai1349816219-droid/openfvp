@@ -29,12 +29,13 @@ typedef enum FvpType {
     FVP_FLOAT = 1,
     FVP_STR = 2,
     /* 原版 Variant 的 type 0：false / null /「可选参数省略」。
-     * pushfalse(0x09) 压出来的是它（原版 0x444940 `movb $0x0,...`）。
+     * pushfalse(0x08) 压出来的是它（原版 0x444940 `movb $0x0,...`：
+     * 整段函数只写类型字节，载荷不动）。
      * 在数值/字符串上下文里与 int 0 等价（见 fvp.c 的说明），
      * 但 handler 可以用 fvp_value_is_null() 区分"省略"与"显式 0"——
      * LipAnim(38)/LipSync(39)/ControlMask(8)/CursorShow 都靠这个区别。 */
     FVP_NULL = 3,
-    /* 原版 Variant 的 **type 1**：`true`。pushtrue(0x08) 压出来的是它
+    /* 原版 Variant 的 **type 1**：`true`。pushtrue(0x09) 压出来的是它
      * （原版 0x444960：`c6 44 c1 08 01` = 只写类型字节 0x1，载荷不动）。
      *
      * 为什么必须与 int 1 区分：原版每个 PrimSet / Motion 类 handler 都做

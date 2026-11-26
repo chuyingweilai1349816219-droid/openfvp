@@ -12,7 +12,7 @@
   * 函数内部把坐标交给 helper `0x35C10/(89)/(90)/94/(110)`，helper 再乘
     **x×1.875 = 1920/1024**、**y×1.6875 = 1080/640**（`pushfloat 0x3FF00000 / 0x3FD80000`）；
   * 全部 6 个调用点里**只有 1 个**传了显式几何（`0x0367BD`：246,258,800,320），
-    其余 5 个都用 `pushtrue` 哨兵吃缺省值。
+    其余 5 个都用 `pushfalse` 哨兵吃缺省值。
 
 产物只含结构与常量（不含任何台词），并且给出"设计坐标 → 画布坐标"的换算结果。
 
@@ -79,9 +79,9 @@ def arg_of(instr):
         return ('int', int(args[0]))
     if name == 'pushfloat':
         return ('float', f32(args[0]))
-    if name == 'pushtrue':
-        return ('true', None)
     if name == 'pushfalse':
+        return ('true', None)
+    if name == 'pushtrue':
         return ('false', None)
     if name == 'pushstack':
         return ('stack', int(args[0]))
@@ -229,7 +229,7 @@ def extract(code):
             'prim': 551,
             'layer': 0,
             'defaults': defaults,
-            'sentinel': 'pushtrue = 「用缺省值」',
+            'sentinel': 'pushfalse = 「用缺省值」',
         },
         'scale': {'x': sx, 'y': sy,
                   'design': [DESIGN_W, DESIGN_H],
