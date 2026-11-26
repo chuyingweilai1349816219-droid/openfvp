@@ -4,6 +4,25 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（二十续）：每槽全局变量真的回灌了（第 6 段；当前只映射 type 2 = int）
+
+`--load-restart` 以前只回灌台词历史环 + 保留运行时 globals；本轮把**槽尾第 6 段
+（每槽全局变量）**解出来并回灌：
+
+- `src/savetail.c` 新增 `fvp_savetail_globals()`：单元 = 8 字节 Variant
+  （`byte0 = type`、`i32 载荷 +4`），**条数不写死**——用 `0x163A0 + count*8 =
+  动态字符串表头偏移` 从已有的表头扫描结果反推（样本 1549 条）；
+- `--load-restart` 在 VM 重建后应用：**只写 type 2 = int**（语义已确认）；
+  type 0（疑似 unset/null）、1（save.bin 那边也标 unknown）、4/5（字符串）与 6
+  保持运行时值不动，日志写明 "only type 2 = int is mapped so far"。
+
+实测（槽 905）：`1549 cells (types 0:1174 1:31 2:295 3:0 4:10 5:2 6:37)` →
+`applied 295 int cell(s), kept 1254`。
+
+门禁 `verify_load_restart.py` 新增 D 节（12 条断言，两个不同槽）：
+解码条数 1549、类型计数求和 1549、`type5` 条数（槽 485=1 / 905=2）与
+`ref/exe-save-serialize.json` 的 "1,1,0,0,2,0" 不变量一致、`applied == type2`。
+
 ## [未发布] — 2026-11-26（十九续）：存档"写↔读"一一对应冻结成基线（31 段 ↔ 读取点）
 
 序列化器 `0x43DE90` 的 31 段与读档 `0x43EE90` 的读取点**一一对应、顺序相同**。

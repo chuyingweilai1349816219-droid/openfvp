@@ -1178,6 +1178,30 @@ python fvp/tools/tailstat.py <save 目录> [--thumb 200x113]
   `save.bin` 才是全局变量与 flag**；两者是分开的文件，`Load(slot)` 主要作用在
   引擎快照上，脚本靠启动时已灌入的 `save.bin` 全局变量选场景。
 
+### step-2 已落地：每槽全局变量回灌（2026-11-26，第 192 轮）
+
+槽尾**第 6 段 = 每槽全局变量**（`count × 8B` Variant）现在真的解出来了：
+
+- **条数不写死**：`0x163A0 + count*8 = 动态字符串表头偏移`，所以 `fvp_savetail_globals()`
+  用已有的表头扫描结果反推 `count`（样本 1549）；
+- **单元格式**：`byte0 = type(0..6)`、`i32 载荷在 +4`；
+- **只回灌 type 2 = int**：`type 0`（样本 1174~1252 条，疑似 unset/null）、`type 1`
+  （31 条，`save.bin` 那边也标成 unknown）、`type 4`（数据段字符串偏移）、`type 5`
+  （动态字符串表下标）、`type 6` 的语义都还没证实，**保持运行时的值不动**（宁可不恢复，
+  也不乱写）；字符串表接上之后再扩。
+
+实测（`--load-restart --debug-load-request`）：
+
+```
+load: slot globals -> 1549 cells (types 0:1174 1:31 2:295 3:0 4:10 5:2 6:37)
+load: globals applied 295 int cell(s), kept 1254 (only type 2 = int is mapped so far)
+```
+
+门禁 `tests/verify_load_restart.py` 的 D 节用**两个不同槽**钉住：解码条数 = 1549、
+各类型计数之和 = 1549、`type5` 的条数（槽 485 = 1、槽 905 = 2）与
+`ref/exe-save-serialize.json` 里"type5 条数逐份为 1,1,0,0,2,0"的不变量一致、
+`applied == type2` 且 `applied + kept == 1549`。
+
 ### step-1 已落地：`--load-restart`（2026-11-26）
 
 按上面的复位序列做了第一版（默认关，`--load-restart` 打开）：

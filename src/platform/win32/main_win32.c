@@ -44,6 +44,7 @@
 #include "../../titlemenu.h"
 #include "../../openseq.h"
 #include "../../savehist.h"
+#include "../../savetail.h"
 #include "../../savelist.h"
 #include "../../gamemenu.h"
 #include "../../titleanim.h"
@@ -1412,9 +1413,13 @@ static unsigned char *shell_read_file(const wchar_t *path, size_t *len_out)
 /* --load-restart：读槽文件 → 复位场景（prims/motion/text）→ 重建 VM 并从入口重启，
  * 保留调用前已灌入的全局变量与 flag。对应 exe 的读档复位序列：
  *   0x438D20（场景/图元树复位） + 0x441350（脚本引擎复位）+ 线程 +0xFD9 重启。
- * 槽尾"引擎快照"目前只回灌**台词历史环**（第 20 段，格式与读档路径 0x43F25A
- * 已从静态分析冻结，见 ref/exe-history.json / src/savehist.c）；其余段的字段
- * 语义还没逆清，仍不应用。 */
+ * 槽尾"引擎快照"目前回灌两段：
+ *   - 第 6 段 **每槽全局变量**（count × 8B Variant，格式见
+ *     ref/exe-save-serialize.json 的 variant_cell 不变量），count 由槽尾里
+ *     动态字符串表的位置反推（0x163A0 + count*8 = 表头偏移）；
+ *   - 第 20 段 **台词历史环**（格式与读档路径 0x43F25A 已冻结，
+ *     见 ref/exe-history.json / src/savehist.c）。
+ * 其余段的字段语义还没逆清，仍不应用。 */
 static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
                               const Options *opts, int slot,
                               FvpEncoding save_enc)
@@ -1425,6 +1430,9 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
     size_t len = 0;
     FvpSaveSlot sd;
     FvpSaveHist hist;
+    static FvpSaveGlobal gcells[FVP_SAVETAIL_MAX_GLOBALS];
+    int gcount = 0;
+    int gtype[7];
     int slot_ok = 0;
     int hist_ok = 0;
     FvpValue *gcopy = NULL;
@@ -1453,6 +1461,22 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
                      hist_ok ? "found" : "not found",
                      hist_ok ? "" : " (history snapshot skipped)",
                      (double)sd.tail_len / 1024.0);
+            /* 槽尾第 6 段 = 每槽全局变量（count × 8B Variant）。count 由
+             * 动态字符串表的位置反推：0x163A0 + count*8 = 表头偏移。 */
+            memset(gtype, 0, sizeof gtype);
+            gcount = fvp_savetail_globals(gcells, FVP_SAVETAIL_MAX_GLOBALS,
+                                          sd.tail, sd.tail_len);
+            for (i = 0; i < gcount; ++i) {
+                int t = gcells[i].type;
+
+                if (t >= 0 && t < 7) {
+                    gtype[t] += 1;
+                }
+            }
+            fvp_logf("load: slot globals -> %d cells (types 0:%d 1:%d 2:%d 3:%d "
+                     "4:%d 5:%d 6:%d)",
+                     gcount, gtype[0], gtype[1], gtype[2], gtype[3], gtype[4],
+                     gtype[5], gtype[6]);
             fvp_save_slot_free(&sd);
         }
         free(buf);
@@ -1503,6 +1527,26 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
     free(gcopy);
     free(gcset);
     free(gflags);
+    /* 用槽里的每槽全局变量覆盖——**只应用语义已确认的 type 2 = int**；
+     * type 0（1252 条，= unset/null）、type 1、3、4（数据段字符串偏移）、
+     * 5（动态字符串表下标）、6 的含义还没证实，保持运行时的值不动
+     * （宁可不恢复，也不乱写；与 save.bin 那边"type1 = unknown"的处理一致）。 */
+    if (gcount > 0) {
+        int applied = 0;
+        int kept = 0;
+
+        for (i = 0; i < gcount && i < FVP_GLOBAL_COUNT; ++i) {
+            if (gcells[i].type == 2) {
+                vm->globals[i] = fvp_make_int(gcells[i].i);
+                vm->globals_set[i] = 1;
+                applied += 1;
+            } else {
+                kept += 1;
+            }
+        }
+        fvp_logf("load: globals applied %d int cell(s), kept %d (only type 2 = int "
+                 "is mapped so far)", applied, kept);
+    }
     if (gfx != NULL) {
         fvp_vm_attach_gfx(vm, gfx);
     }

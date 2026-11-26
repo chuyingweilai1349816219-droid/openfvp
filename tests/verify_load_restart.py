@@ -163,6 +163,45 @@ def main():
         check('newest="　谁这样说道。"' in text_c,
               '最新一条台词是存档里的中文台词（编码自动判定）')
 
+        print('== D. 每槽全局变量（第 6 段）解码与回灌 ==')
+
+
+    def parse_globals(text):
+        m = re.search(r'load: slot globals -> (\d+) cells \(types 0:(\d+) '
+                      r'1:(\d+) 2:(\d+) 3:(\d+) 4:(\d+) 5:(\d+) 6:(\d+)\)',
+                      text)
+        if not m:
+            return None
+        n = int(m.group(1))
+        counts = [int(m.group(i)) for i in range(2, 9)]
+        a = re.search(r'load: globals applied (\d+) int cell\(s\), kept (\d+)', text)
+        applied = int(a.group(1)) if a else -1
+        kept = int(a.group(2)) if a else -1
+        return n, counts, applied, kept
+
+    for slot, want_t5 in ((485, 1), (905, 2)):
+        log = os.path.join(OUT, 'lr-globals-%d.log' % slot)
+        shot = os.path.join(OUT, 'lr-globals-%d.bmp' % slot)
+        rc = run(['--load-restart', '--debug-load-request', str(slot)], log,
+                 shot, 3)
+        text = read_log(log)
+        g = parse_globals(text)
+        check(rc == 0 and g is not None,
+              '槽 %d：日志有槽全局变量解码行' % slot)
+        if g:
+            n, counts, applied, kept = g
+            check(n == 1549, '槽 %d：解码 1549 条（实际 %d）' % (slot, n))
+            check(sum(counts) == n, '槽 %d：各类型计数之和 = %d（实际 %d）'
+                  % (slot, n, sum(counts)))
+            check(counts[5] == want_t5,
+                  '槽 %d：type5（动态字符串）%d 条，与不变量分布一致'
+                  % (slot, counts[5]))
+            check(applied == counts[2] and applied + kept == n,
+                  '槽 %d：只回灌 type2=int（applied=%d == type2=%d，applied+kept=%d）'
+                  % (slot, applied, counts[2], applied + kept))
+            check('only type 2 = int is mapped so far' in text,
+                  '槽 %d：日志写明当前只映射 type 2' % slot)
+
     print('== B. 不带 --load-restart：旧行为（只记日志）==')
     shot_b = os.path.join(OUT, 'loadrestart-b.bmp')
     log_b = os.path.join(OUT, 'loadrestart-b.log')

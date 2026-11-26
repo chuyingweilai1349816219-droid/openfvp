@@ -135,6 +135,36 @@ static int parse_pool_at(FvpSaveTailInfo *out, const unsigned char *tail,
     return 1;
 }
 
+int fvp_savetail_globals(FvpSaveGlobal *out, int max,
+                         const unsigned char *tail, size_t len)
+{
+    size_t off = 0;
+    size_t i;
+    long count;
+
+    if (out == NULL || tail == NULL || max <= 0) {
+        return 0;
+    }
+    if (!fvp_savetail_find_pool(tail, len, &off)) {
+        return 0;
+    }
+    if (off < (size_t)FVP_SAVETAIL_POOL_BASE) {
+        return 0;
+    }
+    count = (long)((off - (size_t)FVP_SAVETAIL_POOL_BASE) / 8u);
+    if (count <= 0 || count > (long)max ||
+        (size_t)count * 8u > len) {
+        return 0;
+    }
+    for (i = 0; i < (size_t)count; ++i) {
+        const unsigned char *cell = tail + i * 8u;
+
+        out[i].type = (int)cell[0];
+        out[i].i = (int32_t)rd_u32(cell + 4);
+    }
+    return (int)count;
+}
+
 int fvp_savetail_find_pool(const unsigned char *tail, size_t len, size_t *off)
 {
     size_t base;

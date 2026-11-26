@@ -33,6 +33,21 @@
 #define FVP_SAVETAIL_THREAD_NONE 0x20u /* 线程下标 0x20 = 存档时没有活跃脚本线程 */
 #define FVP_SAVETAIL_SLOT_COUNT 128u   /* 动态字符串表的槽数 */
 #define FVP_SAVETAIL_MAX_STRINGS 8
+#define FVP_SAVETAIL_MAX_GLOBALS 2048 /* 每槽全局变量条数上限（样本 1549） */
+
+/* 一个全局变量单元（8 字节 Variant）：type = byte0，payload = i32 @+4。
+ * 映射（ref/exe-save-serialize.json 的 variant_cell 不变量 + 原版 handler 的
+ * `cmpb $0x2` 判 int）：0 = null/false、1 = float、2 = int、3 = ？（未解）、
+ * 4 = 数据段字符串偏移、5 = 动态字符串表下标、6 = ？（未解）。 */
+typedef struct FvpSaveGlobal {
+    int type;
+    int32_t i;
+} FvpSaveGlobal;
+
+/* 解析槽尾里"每槽全局变量"数组的头 count 条（count 由 find_pool 的偏移反推）。
+ * 返回解析到的条数（0 = 结构不成立）。 */
+int fvp_savetail_globals(FvpSaveGlobal *out, int max,
+                         const unsigned char *tail, size_t len);
 #define FVP_SAVETAIL_STR_MAX 160
 
 typedef struct FvpSaveTailInfo {
