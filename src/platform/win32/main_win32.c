@@ -1584,6 +1584,7 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
         int kept = 0;
 
         int str_applied = 0;
+        int file_str_applied = 0;
 
         for (i = 0; i < gcount && i < FVP_GLOBAL_COUNT; ++i) {
             if (gcells[i].type == 2) {
@@ -1615,13 +1616,41 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
                 } else {
                     kept += 1;
                 }
+            } else if (gcells[i].type == 4 && hcb != NULL &&
+                       hcb->data != NULL && gcells[i].i >= 0 &&
+                       (size_t)gcells[i].i < hcb->data_len) {
+                /* type 4 = 数据段字符串的**绝对文件偏移**（NUL 结尾、CP932）：
+                 * 实测 143332 -> "voice/01001530"、518150 -> "……。"、
+                 * 481990 -> "None"（work/probe_type4_hcb.py 的判据）。 */
+                const unsigned char *base = hcb->data + gcells[i].i;
+                size_t room = hcb->data_len - (size_t)gcells[i].i;
+                size_t n = 0;
+                FvpStr *sv;
+
+                while (n < room && n < 512u && base[n] != 0) {
+                    n += 1;
+                }
+                /* n == 0 且偏移在范围内 = 空字符串（合法值）。 */
+                sv = (n < room)
+                         ? (n == 0 ? fvp_arena_str(&vm->arena, "", 0)
+                                   : fvp_decode(&vm->arena, save_enc, base, n))
+                         : NULL;
+                if (sv != NULL) {
+                    vm->globals[i] = fvp_make_str(sv);
+                    vm->globals_set[i] = 1;
+                    applied += 1;
+                    file_str_applied += 1;
+                } else {
+                    kept += 1;
+                }
             } else {
                 kept += 1;
             }
         }
-        fvp_logf("load: globals applied %d cell(s) (int %d + string %d), kept %d "
-                 "(type 1/3/4/6 still unmapped)", applied,
-                 applied - str_applied, str_applied, kept);
+        fvp_logf("load: globals applied %d cell(s) (int %d + table str %d + file "
+                 "str %d), kept %d (type 1/3/6 still unmapped)", applied,
+                 applied - str_applied - file_str_applied, str_applied,
+                 file_str_applied, kept);
     }
     if (gfx != NULL) {
         fvp_vm_attach_gfx(vm, gfx);

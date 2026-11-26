@@ -4,6 +4,22 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（二十二续）：type 4 = 数据段字符串的**绝对文件偏移**（已回灌）
+
+用真实存档 + HCB 做了个直接判据：5 份可解存档里都有一条 type-4 全局变量的载荷是
+**143332**，而 `iroseka.hcb[143332]` 正好是 NUL 结尾的 CP932 串 `voice/01001530`；
+另外 518150 → `……。`、481990 → `None`、4199307 → `……。`——四个偏移全部解出合法字符串。
+
+于是把 `type 4` 接上：载荷 = **HCB 文件里的绝对偏移**，从 `hcb->data` 读到 NUL，
+按存档编码解成 UTF-8 写回全局变量（空串也照写）。
+
+实测：槽 485 → `applied 233 (int 224 + table str 1 + file str 8)`；
+槽 905 → `applied 307 (int 295 + table str 2 + file str 10)`。
+（`type 0/1/6` 仍未映射，日志照实写明。）
+
+门禁 `verify_load_restart.py` 的 D 节改为按三类单元核对：
+`int == type2`、`table str == type5`、`file str == type4`、`applied = 三者之和`。
+
 ## [未发布] — 2026-11-26（二十一续）：type5 字符串单元也回灌了；发现它的载荷是"槽号"不是序号
 
 继续把每槽全局变量里的**字符串单元**接上：

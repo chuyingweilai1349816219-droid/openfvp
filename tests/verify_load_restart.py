@@ -171,7 +171,8 @@ def main():
                       r'1:(\d+) 2:(\d+) 3:(\d+) 4:(\d+) 5:(\d+) 6:(\d+)\)',
                       text)
         a = re.search(r'load: globals applied (\d+) cell\(s\) \(int (\d+) \+ '
-                      r'string (\d+)\), kept (\d+)', text)
+                      r'table str (\d+) \+ file str (\d+)\), kept (\d+)',
+                      text)
         sm = re.search(r'load: dynamic string slots -> (\d+) \(first slot #(\d+)\)',
                        text)
         if not m or not a:
@@ -181,8 +182,9 @@ def main():
             'counts': [int(m.group(i)) for i in range(2, 9)],
             'applied': int(a.group(1)),
             'n_int': int(a.group(2)),
-            'n_str': int(a.group(3)),
-            'kept': int(a.group(4)),
+            'n_table': int(a.group(3)),
+            'n_file': int(a.group(4)),
+            'kept': int(a.group(5)),
             'slots': int(sm.group(1)) if sm else -1,
             'first_slot': int(sm.group(2)) if sm else -1,
         }
@@ -208,18 +210,20 @@ def main():
               % (slot, counts[5]))
         check(g['n_int'] == counts[2],
               '槽 %d：int 单元回灌数 = type2 计数（%d）' % (slot, g['n_int']))
-        check(g['n_str'] == counts[5],
-              '槽 %d：字符串单元回灌数 = type5 计数（%d）' % (slot, g['n_str']))
-        check(g['applied'] == g['n_int'] + g['n_str'] and
+        check(g['n_table'] == counts[5],
+              '槽 %d：动态字符串表单元 = type5 计数（%d）' % (slot, g['n_table']))
+        check(g['n_file'] == counts[4],
+              '槽 %d：数据段字符串单元 = type4 计数（%d）' % (slot, g['n_file']))
+        check(g['applied'] == g['n_int'] + g['n_table'] + g['n_file'] and
               g['applied'] + g['kept'] == n,
-              '槽 %d：applied=%d = int(%d)+string(%d)，applied+kept=%d'
-              % (slot, g['applied'], g['n_int'], g['n_str'],
+              '槽 %d：applied=%d = int(%d)+table(%d)+file(%d)，applied+kept=%d'
+              % (slot, g['applied'], g['n_int'], g['n_table'], g['n_file'],
                  g['applied'] + g['kept']))
         check(g['slots'] == counts[5],
               '槽 %d：动态字符串表解析出 %d 条（= type5 计数）'
               % (slot, g['slots']))
-        check('type 1/3/4/6 still unmapped' in text,
-              '槽 %d：日志写明 type 1/3/4/6 仍未映射' % slot)
+        check('type 1/3/6 still unmapped' in text,
+              '槽 %d：日志写明 type 1/3/6 仍未映射' % slot)
 
     print('== B. 不带 --load-restart：旧行为（只记日志）==')
     shot_b = os.path.join(OUT, 'loadrestart-b.bmp')
