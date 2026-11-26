@@ -1053,6 +1053,14 @@ def build_steps(args):
                            '5 and 12 call sites in both games (4 ring openers are '
                            'InputGetDown bit1)'))
 
+    # 6.51 输入掩码使用表（脚本只测 11 个掩码值；mask=1 是第 0 位）
+    vib = os.path.join(HERE, 'verify_input_bits.py')
+    steps.append(Step('verify_input_bits.py', [PY, '-X', 'utf8', vib], 300,
+                      skip_reason=None,
+                      note='input masks actually tested by the scripts: 11 values '
+                           '(0,1,2,3,4,5,6,7,8,10,16), bit0 dominates (153/147), '
+                           'ring menu openers use mask 1'))
+
     # 6.5 游戏内菜单（外壳侧占位实现，--menu-at 打开）
     vg = os.path.join(HERE, 'verify_gamemenu.py')
     steps.append(Step('verify_gamemenu.py', [PY, vg], 900,

@@ -103,7 +103,7 @@ def main():
         check(len(ring) == 5, '%s: 环形入口 5 个调用点（实际 %d）' % (game, len(ring)))
         check(len(driven) == 4, '%s: 其中 4 个由输入触发（实际 %d）' % (game, len(driven)))
         check(all(o.get('masks') == [1] for o in driven),
-              '%s: 输入触发的掩码都是 bit1（实际 %s）'
+              '%s: 输入触发的掩码都是 1（即第 0 位；实际 %s）'
               % (game, [o.get('masks') for o in driven]))
         check(any(not o.get('input_driven') for o in ring),
               '%s: 还有 1 个非输入（ControlPulse 路径）调用点' % game)
