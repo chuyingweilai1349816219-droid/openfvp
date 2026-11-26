@@ -1,0 +1,1356 @@
+{
+ "schema": "fvp-ui-cross/1",
+ "note": "两作的游戏内 UI 素材名对账（只有名字/图元号/偏移）",
+ "games": {
+  "iroseka": {
+   "size": 4275282,
+   "sha256": "8c362ff7178628bef90f0d7bf35a48be5ee22f9f762d4c76e86799f6f063c0ff",
+   "loads": [
+    {
+     "asset": "menu_byebye",
+     "family": "menu",
+     "prim": 99,
+     "load_pc": "0x23dbd"
+    },
+    {
+     "asset": "fc_wincls_1",
+     "family": "fc",
+     "prim": 52,
+     "load_pc": "0x385ec"
+    },
+    {
+     "asset": "fc_qload_1",
+     "family": "fc",
+     "prim": 55,
+     "load_pc": "0x3860d"
+    },
+    {
+     "asset": "fc_qsave_1",
+     "family": "fc",
+     "prim": 58,
+     "load_pc": "0x3862d"
+    },
+    {
+     "asset": "fc_back_1",
+     "family": "fc",
+     "prim": 61,
+     "load_pc": "0x3864d"
+    },
+    {
+     "asset": "fc_play_1",
+     "family": "fc",
+     "prim": 64,
+     "load_pc": "0x3866c"
+    },
+    {
+     "asset": "fc_voice_1",
+     "family": "fc",
+     "prim": 67,
+     "load_pc": "0x3868b"
+    },
+    {
+     "asset": "fc_skip_1",
+     "family": "fc",
+     "prim": 70,
+     "load_pc": "0x386ab"
+    },
+    {
+     "asset": "fc_system_1",
+     "family": "fc",
+     "prim": 73,
+     "load_pc": "0x386ca"
+    },
+    {
+     "asset": "fc_lock_1",
+     "family": "fc",
+     "prim": 76,
+     "load_pc": "0x386eb"
+    },
+    {
+     "asset": "fc_save_1",
+     "family": "fc",
+     "prim": 82,
+     "load_pc": "0x3870a"
+    },
+    {
+     "asset": "fc_load_1",
+     "family": "fc",
+     "prim": 79,
+     "load_pc": "0x38729"
+    },
+    {
+     "asset": "fc_wincls_2",
+     "family": "fc",
+     "prim": 53,
+     "load_pc": "0x38748"
+    },
+    {
+     "asset": "fc_qload_2",
+     "family": "fc",
+     "prim": 56,
+     "load_pc": "0x38769"
+    },
+    {
+     "asset": "fc_qsave_2",
+     "family": "fc",
+     "prim": 59,
+     "load_pc": "0x38789"
+    },
+    {
+     "asset": "fc_back_2",
+     "family": "fc",
+     "prim": 62,
+     "load_pc": "0x387a9"
+    },
+    {
+     "asset": "fc_play_2",
+     "family": "fc",
+     "prim": 65,
+     "load_pc": "0x387c8"
+    },
+    {
+     "asset": "fc_voice_2",
+     "family": "fc",
+     "prim": 68,
+     "load_pc": "0x387e7"
+    },
+    {
+     "asset": "fc_skip_2",
+     "family": "fc",
+     "prim": 71,
+     "load_pc": "0x38807"
+    },
+    {
+     "asset": "fc_system_2",
+     "family": "fc",
+     "prim": 74,
+     "load_pc": "0x38826"
+    },
+    {
+     "asset": "fc_lock_2",
+     "family": "fc",
+     "prim": 77,
+     "load_pc": "0x38847"
+    },
+    {
+     "asset": "fc_save_2",
+     "family": "fc",
+     "prim": 83,
+     "load_pc": "0x38866"
+    },
+    {
+     "asset": "fc_load_2",
+     "family": "fc",
+     "prim": 80,
+     "load_pc": "0x38885"
+    },
+    {
+     "asset": "fc_play_3",
+     "family": "fc",
+     "prim": 85,
+     "load_pc": "0x388a4"
+    },
+    {
+     "asset": "fc_skip_3",
+     "family": "fc",
+     "prim": 86,
+     "load_pc": "0x388c3"
+    },
+    {
+     "asset": "fc_lock_3",
+     "family": "fc",
+     "prim": 87,
+     "load_pc": "0x388e2"
+    },
+    {
+     "asset": "fc_lock_4",
+     "family": "fc",
+     "prim": 88,
+     "load_pc": "0x38901"
+    },
+    {
+     "asset": "fc_wincls_help",
+     "family": "fc",
+     "prim": 54,
+     "load_pc": "0x38920"
+    },
+    {
+     "asset": "fc_qload_help",
+     "family": "fc",
+     "prim": 57,
+     "load_pc": "0x38944"
+    },
+    {
+     "asset": "fc_qsave_help",
+     "family": "fc",
+     "prim": 60,
+     "load_pc": "0x38967"
+    },
+    {
+     "asset": "fc_back_help",
+     "family": "fc",
+     "prim": 63,
+     "load_pc": "0x3898a"
+    },
+    {
+     "asset": "fc_play_help",
+     "family": "fc",
+     "prim": 66,
+     "load_pc": "0x389ac"
+    },
+    {
+     "asset": "fc_voice_help",
+     "family": "fc",
+     "prim": 69,
+     "load_pc": "0x389ce"
+    },
+    {
+     "asset": "fc_skip_help",
+     "family": "fc",
+     "prim": 72,
+     "load_pc": "0x389f1"
+    },
+    {
+     "asset": "fc_system_help",
+     "family": "fc",
+     "prim": 75,
+     "load_pc": "0x38a13"
+    },
+    {
+     "asset": "fc_lock_help",
+     "family": "fc",
+     "prim": 78,
+     "load_pc": "0x38a37"
+    },
+    {
+     "asset": "fc_load_help",
+     "family": "fc",
+     "prim": 81,
+     "load_pc": "0x38a59"
+    },
+    {
+     "asset": "fc_save_help",
+     "family": "fc",
+     "prim": 84,
+     "load_pc": "0x38a7b"
+    },
+    {
+     "asset": "sys_save_1",
+     "family": "sys",
+     "prim": 141,
+     "load_pc": "0x54526"
+    },
+    {
+     "asset": "sys_save_2",
+     "family": "sys",
+     "prim": 142,
+     "load_pc": "0x54547"
+    },
+    {
+     "asset": "sys_save_M",
+     "family": "sys",
+     "prim": 143,
+     "load_pc": "0x54568"
+    },
+    {
+     "asset": "sys_load_1",
+     "family": "sys",
+     "prim": 144,
+     "load_pc": "0x54591"
+    },
+    {
+     "asset": "sys_load_2",
+     "family": "sys",
+     "prim": 145,
+     "load_pc": "0x545b2"
+    },
+    {
+     "asset": "sys_load_M",
+     "family": "sys",
+     "prim": 146,
+     "load_pc": "0x545d3"
+    },
+    {
+     "asset": "sys_hidewin_1",
+     "family": "sys",
+     "prim": 147,
+     "load_pc": "0x545fc"
+    },
+    {
+     "asset": "sys_hidewin_2",
+     "family": "sys",
+     "prim": 148,
+     "load_pc": "0x54620"
+    },
+    {
+     "asset": "sys_hidewin_M",
+     "family": "sys",
+     "prim": 149,
+     "load_pc": "0x54644"
+    },
+    {
+     "asset": "sys_undo_1",
+     "family": "sys",
+     "prim": 150,
+     "load_pc": "0x54670"
+    },
+    {
+     "asset": "sys_undo_2",
+     "family": "sys",
+     "prim": 151,
+     "load_pc": "0x54691"
+    },
+    {
+     "asset": "sys_undo_M",
+     "family": "sys",
+     "prim": 152,
+     "load_pc": "0x546b2"
+    },
+    {
+     "asset": "sys_config_1",
+     "family": "sys",
+     "prim": 153,
+     "load_pc": "0x546db"
+    },
+    {
+     "asset": "sys_config_2",
+     "family": "sys",
+     "prim": 154,
+     "load_pc": "0x546fe"
+    },
+    {
+     "asset": "sys_config_M",
+     "family": "sys",
+     "prim": 155,
+     "load_pc": "0x54721"
+    },
+    {
+     "asset": "sys_title_1",
+     "family": "sys",
+     "prim": 156,
+     "load_pc": "0x5474c"
+    },
+    {
+     "asset": "sys_title_2",
+     "family": "sys",
+     "prim": 157,
+     "load_pc": "0x5476e"
+    },
+    {
+     "asset": "sys_title_M",
+     "family": "sys",
+     "prim": 158,
+     "load_pc": "0x54790"
+    },
+    {
+     "asset": "sys_exit_1",
+     "family": "sys",
+     "prim": 159,
+     "load_pc": "0x547ba"
+    },
+    {
+     "asset": "sys_exit_2",
+     "family": "sys",
+     "prim": 160,
+     "load_pc": "0x547db"
+    },
+    {
+     "asset": "sys_exit_M",
+     "family": "sys",
+     "prim": 161,
+     "load_pc": "0x547fc"
+    },
+    {
+     "asset": "sys_return_1",
+     "family": "sys",
+     "prim": 162,
+     "load_pc": "0x54825"
+    },
+    {
+     "asset": "sys_return_2",
+     "family": "sys",
+     "prim": 163,
+     "load_pc": "0x54848"
+    },
+    {
+     "asset": "sys_return_M",
+     "family": "sys",
+     "prim": 164,
+     "load_pc": "0x5486b"
+    },
+    {
+     "asset": "sys_window_right",
+     "family": "sys",
+     "prim": 420,
+     "load_pc": "0x548c7"
+    },
+    {
+     "asset": "sys_window_left",
+     "family": "sys",
+     "prim": 421,
+     "load_pc": "0x5490d"
+    },
+    {
+     "asset": "sys_window_title",
+     "family": "sys",
+     "prim": 172,
+     "load_pc": "0x54971"
+    },
+    {
+     "asset": "sys_cap_000",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x549b3"
+    },
+    {
+     "asset": "sys_cap_001",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x549db"
+    },
+    {
+     "asset": "sys_cap_002",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54a03"
+    },
+    {
+     "asset": "sys_cap_003",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54a2b"
+    },
+    {
+     "asset": "sys_cap_004",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54a53"
+    },
+    {
+     "asset": "sys_cap_005",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54a7b"
+    },
+    {
+     "asset": "sys_cap_006",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54aa3"
+    },
+    {
+     "asset": "sys_cap_007",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54acb"
+    },
+    {
+     "asset": "sys_cap_008",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54af3"
+    },
+    {
+     "asset": "sys_cap_010",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54b1b"
+    },
+    {
+     "asset": "sys_cap_011",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54b43"
+    },
+    {
+     "asset": "sys_cap_012",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54b6b"
+    },
+    {
+     "asset": "sys_cap_013",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54b93"
+    },
+    {
+     "asset": "sys_cap_014",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54bbb"
+    },
+    {
+     "asset": "sys_cap_015",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54be3"
+    },
+    {
+     "asset": "sys_cap_016",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54c0b"
+    },
+    {
+     "asset": "sys_cap_017",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x54c33"
+    },
+    {
+     "asset": "menu_bg",
+     "family": "menu",
+     "prim": 93,
+     "load_pc": "0x573c2"
+    },
+    {
+     "asset": "menu_chk",
+     "family": "menu",
+     "prim": 137,
+     "load_pc": "0x573e7"
+    },
+    {
+     "asset": "menu_undo_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x57465"
+    },
+    {
+     "asset": "menu_title_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x574ac"
+    },
+    {
+     "asset": "menu_exit_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x574f4"
+    },
+    {
+     "asset": "menu_qload_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x5753b"
+    },
+    {
+     "asset": "menu_ow_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x57583"
+    },
+    {
+     "asset": "menu_del_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x575c8"
+    },
+    {
+     "asset": "menu_init_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x5760e"
+    },
+    {
+     "asset": "menu_yes_1",
+     "family": "menu",
+     "prim": 95,
+     "load_pc": "0x57657"
+    },
+    {
+     "asset": "menu_yes_2",
+     "family": "menu",
+     "prim": 96,
+     "load_pc": "0x576ac"
+    },
+    {
+     "asset": "menu_no_1",
+     "family": "menu",
+     "prim": 97,
+     "load_pc": "0x57701"
+    },
+    {
+     "asset": "menu_no_2",
+     "family": "menu",
+     "prim": 98,
+     "load_pc": "0x57755"
+    },
+    {
+     "asset": "slf_prt_sheet",
+     "family": "slf",
+     "prim": 2501,
+     "load_pc": "0x6e311"
+    },
+    {
+     "asset": "slf_load_bg",
+     "family": "slf",
+     "prim": 2500,
+     "load_pc": "0x6e335"
+    },
+    {
+     "asset": "slf_save_bg",
+     "family": "slf",
+     "prim": 2500,
+     "load_pc": "0x6e351"
+    }
+   ]
+  },
+  "hoshimemo": {
+   "size": 4618610,
+   "sha256": "e23b7958f897392e3535370956b7c9a722c562f0a6d65e91d589cfdd2b741802",
+   "loads": [
+    {
+     "asset": "menu_byebye",
+     "family": "menu",
+     "prim": 99,
+     "load_pc": "0x379d2"
+    },
+    {
+     "asset": "fc_wincls_1",
+     "family": "fc",
+     "prim": 52,
+     "load_pc": "0x4d82a"
+    },
+    {
+     "asset": "fc_qload_1",
+     "family": "fc",
+     "prim": 55,
+     "load_pc": "0x4d84b"
+    },
+    {
+     "asset": "fc_qsave_1",
+     "family": "fc",
+     "prim": 58,
+     "load_pc": "0x4d86b"
+    },
+    {
+     "asset": "fc_back_1",
+     "family": "fc",
+     "prim": 61,
+     "load_pc": "0x4d88b"
+    },
+    {
+     "asset": "fc_play_1",
+     "family": "fc",
+     "prim": 64,
+     "load_pc": "0x4d8aa"
+    },
+    {
+     "asset": "fc_voice_1",
+     "family": "fc",
+     "prim": 67,
+     "load_pc": "0x4d8c9"
+    },
+    {
+     "asset": "fc_skip_1",
+     "family": "fc",
+     "prim": 70,
+     "load_pc": "0x4d8e9"
+    },
+    {
+     "asset": "fc_system_1",
+     "family": "fc",
+     "prim": 73,
+     "load_pc": "0x4d908"
+    },
+    {
+     "asset": "fc_lock_1",
+     "family": "fc",
+     "prim": 76,
+     "load_pc": "0x4d929"
+    },
+    {
+     "asset": "fc_save_1",
+     "family": "fc",
+     "prim": 82,
+     "load_pc": "0x4d948"
+    },
+    {
+     "asset": "fc_load_1",
+     "family": "fc",
+     "prim": 79,
+     "load_pc": "0x4d967"
+    },
+    {
+     "asset": "fc_wincls_2",
+     "family": "fc",
+     "prim": 53,
+     "load_pc": "0x4d986"
+    },
+    {
+     "asset": "fc_qload_2",
+     "family": "fc",
+     "prim": 56,
+     "load_pc": "0x4d9a7"
+    },
+    {
+     "asset": "fc_qsave_2",
+     "family": "fc",
+     "prim": 59,
+     "load_pc": "0x4d9c7"
+    },
+    {
+     "asset": "fc_back_2",
+     "family": "fc",
+     "prim": 62,
+     "load_pc": "0x4d9e7"
+    },
+    {
+     "asset": "fc_play_2",
+     "family": "fc",
+     "prim": 65,
+     "load_pc": "0x4da06"
+    },
+    {
+     "asset": "fc_voice_2",
+     "family": "fc",
+     "prim": 68,
+     "load_pc": "0x4da25"
+    },
+    {
+     "asset": "fc_skip_2",
+     "family": "fc",
+     "prim": 71,
+     "load_pc": "0x4da45"
+    },
+    {
+     "asset": "fc_system_2",
+     "family": "fc",
+     "prim": 74,
+     "load_pc": "0x4da64"
+    },
+    {
+     "asset": "fc_lock_2",
+     "family": "fc",
+     "prim": 77,
+     "load_pc": "0x4da85"
+    },
+    {
+     "asset": "fc_save_2",
+     "family": "fc",
+     "prim": 83,
+     "load_pc": "0x4daa4"
+    },
+    {
+     "asset": "fc_load_2",
+     "family": "fc",
+     "prim": 80,
+     "load_pc": "0x4dac3"
+    },
+    {
+     "asset": "fc_play_3",
+     "family": "fc",
+     "prim": 85,
+     "load_pc": "0x4dae2"
+    },
+    {
+     "asset": "fc_skip_3",
+     "family": "fc",
+     "prim": 86,
+     "load_pc": "0x4db01"
+    },
+    {
+     "asset": "fc_lock_3",
+     "family": "fc",
+     "prim": 87,
+     "load_pc": "0x4db20"
+    },
+    {
+     "asset": "fc_lock_4",
+     "family": "fc",
+     "prim": 88,
+     "load_pc": "0x4db3f"
+    },
+    {
+     "asset": "fc_wincls_help",
+     "family": "fc",
+     "prim": 54,
+     "load_pc": "0x4db5e"
+    },
+    {
+     "asset": "fc_qload_help",
+     "family": "fc",
+     "prim": 57,
+     "load_pc": "0x4db82"
+    },
+    {
+     "asset": "fc_qsave_help",
+     "family": "fc",
+     "prim": 60,
+     "load_pc": "0x4dba5"
+    },
+    {
+     "asset": "fc_back_help",
+     "family": "fc",
+     "prim": 63,
+     "load_pc": "0x4dbc8"
+    },
+    {
+     "asset": "fc_play_help",
+     "family": "fc",
+     "prim": 66,
+     "load_pc": "0x4dbea"
+    },
+    {
+     "asset": "fc_voice_help",
+     "family": "fc",
+     "prim": 69,
+     "load_pc": "0x4dc0c"
+    },
+    {
+     "asset": "fc_skip_help",
+     "family": "fc",
+     "prim": 72,
+     "load_pc": "0x4dc2f"
+    },
+    {
+     "asset": "fc_system_help",
+     "family": "fc",
+     "prim": 75,
+     "load_pc": "0x4dc51"
+    },
+    {
+     "asset": "fc_lock_help",
+     "family": "fc",
+     "prim": 78,
+     "load_pc": "0x4dc75"
+    },
+    {
+     "asset": "fc_load_help",
+     "family": "fc",
+     "prim": 81,
+     "load_pc": "0x4dc97"
+    },
+    {
+     "asset": "fc_save_help",
+     "family": "fc",
+     "prim": 84,
+     "load_pc": "0x4dcb9"
+    },
+    {
+     "asset": "sys_save_1",
+     "family": "sys",
+     "prim": 141,
+     "load_pc": "0x6b8e7"
+    },
+    {
+     "asset": "sys_save_2",
+     "family": "sys",
+     "prim": 142,
+     "load_pc": "0x6b908"
+    },
+    {
+     "asset": "sys_load_1",
+     "family": "sys",
+     "prim": 144,
+     "load_pc": "0x6b931"
+    },
+    {
+     "asset": "sys_load_2",
+     "family": "sys",
+     "prim": 145,
+     "load_pc": "0x6b952"
+    },
+    {
+     "asset": "sys_hidewin_1",
+     "family": "sys",
+     "prim": 147,
+     "load_pc": "0x6b97b"
+    },
+    {
+     "asset": "sys_hidewin_2",
+     "family": "sys",
+     "prim": 148,
+     "load_pc": "0x6b99f"
+    },
+    {
+     "asset": "sys_undo_1",
+     "family": "sys",
+     "prim": 150,
+     "load_pc": "0x6b9cb"
+    },
+    {
+     "asset": "sys_undo_2",
+     "family": "sys",
+     "prim": 151,
+     "load_pc": "0x6b9ec"
+    },
+    {
+     "asset": "sys_config_1",
+     "family": "sys",
+     "prim": 153,
+     "load_pc": "0x6ba15"
+    },
+    {
+     "asset": "sys_config_2",
+     "family": "sys",
+     "prim": 154,
+     "load_pc": "0x6ba38"
+    },
+    {
+     "asset": "sys_title_1",
+     "family": "sys",
+     "prim": 156,
+     "load_pc": "0x6ba63"
+    },
+    {
+     "asset": "sys_title_2",
+     "family": "sys",
+     "prim": 157,
+     "load_pc": "0x6ba85"
+    },
+    {
+     "asset": "sys_exit_1",
+     "family": "sys",
+     "prim": 159,
+     "load_pc": "0x6baaf"
+    },
+    {
+     "asset": "sys_exit_2",
+     "family": "sys",
+     "prim": 160,
+     "load_pc": "0x6bad0"
+    },
+    {
+     "asset": "sys_return_1",
+     "family": "sys",
+     "prim": 162,
+     "load_pc": "0x6baf9"
+    },
+    {
+     "asset": "sys_return_2",
+     "family": "sys",
+     "prim": 163,
+     "load_pc": "0x6bb1c"
+    },
+    {
+     "asset": "sys_window_right",
+     "family": "sys",
+     "prim": 420,
+     "load_pc": "0x6bb78"
+    },
+    {
+     "asset": "sys_window_left",
+     "family": "sys",
+     "prim": 421,
+     "load_pc": "0x6bbbd"
+    },
+    {
+     "asset": "sys_cap_000",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bc2b"
+    },
+    {
+     "asset": "sys_cap_001",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bc53"
+    },
+    {
+     "asset": "sys_cap_002",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bc7b"
+    },
+    {
+     "asset": "sys_cap_003",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bca3"
+    },
+    {
+     "asset": "sys_cap_004",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bccb"
+    },
+    {
+     "asset": "sys_cap_005",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bcf3"
+    },
+    {
+     "asset": "sys_cap_006",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bd1b"
+    },
+    {
+     "asset": "sys_cap_007",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bd43"
+    },
+    {
+     "asset": "sys_cap_008",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bd6b"
+    },
+    {
+     "asset": "sys_cap_010",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bd93"
+    },
+    {
+     "asset": "sys_cap_011",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bdbb"
+    },
+    {
+     "asset": "sys_cap_012",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6bde3"
+    },
+    {
+     "asset": "sys_cap_013",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6be0b"
+    },
+    {
+     "asset": "sys_cap_014",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6be33"
+    },
+    {
+     "asset": "sys_cap_015",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6be5b"
+    },
+    {
+     "asset": "sys_cap_016",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6be83"
+    },
+    {
+     "asset": "sys_cap_017",
+     "family": "sys",
+     "prim": 171,
+     "load_pc": "0x6beab"
+    },
+    {
+     "asset": "menu_bg",
+     "family": "menu",
+     "prim": 93,
+     "load_pc": "0x6e2d6"
+    },
+    {
+     "asset": "menu_chk",
+     "family": "menu",
+     "prim": 137,
+     "load_pc": "0x6e2f5"
+    },
+    {
+     "asset": "menu_undo_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x6e36d"
+    },
+    {
+     "asset": "menu_title_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x6e3b4"
+    },
+    {
+     "asset": "menu_exit_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x6e3fc"
+    },
+    {
+     "asset": "menu_qload_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x6e443"
+    },
+    {
+     "asset": "menu_ow_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x6e48b"
+    },
+    {
+     "asset": "menu_del_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x6e4d0"
+    },
+    {
+     "asset": "menu_init_mes",
+     "family": "menu",
+     "prim": 94,
+     "load_pc": "0x6e516"
+    },
+    {
+     "asset": "menu_yes_1",
+     "family": "menu",
+     "prim": 95,
+     "load_pc": "0x6e559"
+    },
+    {
+     "asset": "menu_yes_2",
+     "family": "menu",
+     "prim": 96,
+     "load_pc": "0x6e5aa"
+    },
+    {
+     "asset": "menu_no_1",
+     "family": "menu",
+     "prim": 97,
+     "load_pc": "0x6e5fb"
+    },
+    {
+     "asset": "menu_no_2",
+     "family": "menu",
+     "prim": 98,
+     "load_pc": "0x6e64b"
+    },
+    {
+     "asset": "slf_prt_sheet",
+     "family": "slf",
+     "prim": 2501,
+     "load_pc": "0x8511f"
+    },
+    {
+     "asset": "slf_prt_mask",
+     "family": "slf",
+     "prim": 2502,
+     "load_pc": "0x85138"
+    },
+    {
+     "asset": "slf_load_bg",
+     "family": "slf",
+     "prim": 2500,
+     "load_pc": "0x8515b"
+    },
+    {
+     "asset": "slf_save_bg",
+     "family": "slf",
+     "prim": 2500,
+     "load_pc": "0x85177"
+    }
+   ]
+  }
+ },
+ "families": {
+  "iroseka": {
+   "menu": [
+    "menu_bg",
+    "menu_byebye",
+    "menu_chk",
+    "menu_del_mes",
+    "menu_exit_mes",
+    "menu_init_mes",
+    "menu_no_1",
+    "menu_no_2",
+    "menu_ow_mes",
+    "menu_qload_mes",
+    "menu_title_mes",
+    "menu_undo_mes",
+    "menu_yes_1",
+    "menu_yes_2"
+   ],
+   "fc": [
+    "fc_back_1",
+    "fc_back_2",
+    "fc_back_help",
+    "fc_load_1",
+    "fc_load_2",
+    "fc_load_help",
+    "fc_lock_1",
+    "fc_lock_2",
+    "fc_lock_3",
+    "fc_lock_4",
+    "fc_lock_help",
+    "fc_play_1",
+    "fc_play_2",
+    "fc_play_3",
+    "fc_play_help",
+    "fc_qload_1",
+    "fc_qload_2",
+    "fc_qload_help",
+    "fc_qsave_1",
+    "fc_qsave_2",
+    "fc_qsave_help",
+    "fc_save_1",
+    "fc_save_2",
+    "fc_save_help",
+    "fc_skip_1",
+    "fc_skip_2",
+    "fc_skip_3",
+    "fc_skip_help",
+    "fc_system_1",
+    "fc_system_2",
+    "fc_system_help",
+    "fc_voice_1",
+    "fc_voice_2",
+    "fc_voice_help",
+    "fc_wincls_1",
+    "fc_wincls_2",
+    "fc_wincls_help"
+   ],
+   "sys": [
+    "sys_cap_000",
+    "sys_cap_001",
+    "sys_cap_002",
+    "sys_cap_003",
+    "sys_cap_004",
+    "sys_cap_005",
+    "sys_cap_006",
+    "sys_cap_007",
+    "sys_cap_008",
+    "sys_cap_010",
+    "sys_cap_011",
+    "sys_cap_012",
+    "sys_cap_013",
+    "sys_cap_014",
+    "sys_cap_015",
+    "sys_cap_016",
+    "sys_cap_017",
+    "sys_config_1",
+    "sys_config_2",
+    "sys_config_M",
+    "sys_exit_1",
+    "sys_exit_2",
+    "sys_exit_M",
+    "sys_hidewin_1",
+    "sys_hidewin_2",
+    "sys_hidewin_M",
+    "sys_load_1",
+    "sys_load_2",
+    "sys_load_M",
+    "sys_return_1",
+    "sys_return_2",
+    "sys_return_M",
+    "sys_save_1",
+    "sys_save_2",
+    "sys_save_M",
+    "sys_title_1",
+    "sys_title_2",
+    "sys_title_M",
+    "sys_undo_1",
+    "sys_undo_2",
+    "sys_undo_M",
+    "sys_window_left",
+    "sys_window_right",
+    "sys_window_title"
+   ],
+   "slf": [
+    "slf_load_bg",
+    "slf_prt_sheet",
+    "slf_save_bg"
+   ]
+  },
+  "hoshimemo": {
+   "menu": [
+    "menu_bg",
+    "menu_byebye",
+    "menu_chk",
+    "menu_del_mes",
+    "menu_exit_mes",
+    "menu_init_mes",
+    "menu_no_1",
+    "menu_no_2",
+    "menu_ow_mes",
+    "menu_qload_mes",
+    "menu_title_mes",
+    "menu_undo_mes",
+    "menu_yes_1",
+    "menu_yes_2"
+   ],
+   "fc": [
+    "fc_back_1",
+    "fc_back_2",
+    "fc_back_help",
+    "fc_load_1",
+    "fc_load_2",
+    "fc_load_help",
+    "fc_lock_1",
+    "fc_lock_2",
+    "fc_lock_3",
+    "fc_lock_4",
+    "fc_lock_help",
+    "fc_play_1",
+    "fc_play_2",
+    "fc_play_3",
+    "fc_play_help",
+    "fc_qload_1",
+    "fc_qload_2",
+    "fc_qload_help",
+    "fc_qsave_1",
+    "fc_qsave_2",
+    "fc_qsave_help",
+    "fc_save_1",
+    "fc_save_2",
+    "fc_save_help",
+    "fc_skip_1",
+    "fc_skip_2",
+    "fc_skip_3",
+    "fc_skip_help",
+    "fc_system_1",
+    "fc_system_2",
+    "fc_system_help",
+    "fc_voice_1",
+    "fc_voice_2",
+    "fc_voice_help",
+    "fc_wincls_1",
+    "fc_wincls_2",
+    "fc_wincls_help"
+   ],
+   "sys": [
+    "sys_cap_000",
+    "sys_cap_001",
+    "sys_cap_002",
+    "sys_cap_003",
+    "sys_cap_004",
+    "sys_cap_005",
+    "sys_cap_006",
+    "sys_cap_007",
+    "sys_cap_008",
+    "sys_cap_010",
+    "sys_cap_011",
+    "sys_cap_012",
+    "sys_cap_013",
+    "sys_cap_014",
+    "sys_cap_015",
+    "sys_cap_016",
+    "sys_cap_017",
+    "sys_config_1",
+    "sys_config_2",
+    "sys_exit_1",
+    "sys_exit_2",
+    "sys_hidewin_1",
+    "sys_hidewin_2",
+    "sys_load_1",
+    "sys_load_2",
+    "sys_return_1",
+    "sys_return_2",
+    "sys_save_1",
+    "sys_save_2",
+    "sys_title_1",
+    "sys_title_2",
+    "sys_undo_1",
+    "sys_undo_2",
+    "sys_window_left",
+    "sys_window_right"
+   ],
+   "slf": [
+    "slf_load_bg",
+    "slf_prt_mask",
+    "slf_prt_sheet",
+    "slf_save_bg"
+   ]
+  }
+ }
+}

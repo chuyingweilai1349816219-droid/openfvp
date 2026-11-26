@@ -1027,6 +1027,14 @@ def build_steps(args):
                            '7 confirm prompts menu_*_mes (prim 94, yes/no 95..98); '
                            '98 UI asset load sites, geometry from HZC1 headers'))
 
+    # 6.48 跨作品 UI 素材对账（两作同一套命名；差异只有 _M / window_title / prt_mask）
+    vuc = os.path.join(HERE, 'verify_ui_cross.py')
+    steps.append(Step('verify_ui_cross.py', [PY, '-X', 'utf8', vuc], 300,
+                      skip_reason=None,
+                      note='UI asset names across both games: 98 vs 90 loads, '
+                           'identical menu_/fc_, iroseka-only 8 sys_*_M + window_title, '
+                           'hoshimemo-only slf_prt_mask'))
+
     # 6.5 游戏内菜单（外壳侧占位实现，--menu-at 打开）
     vg = os.path.join(HERE, 'verify_gamemenu.py')
     steps.append(Step('verify_gamemenu.py', [PY, vg], 900,
