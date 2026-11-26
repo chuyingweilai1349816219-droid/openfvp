@@ -26,6 +26,11 @@ typedef struct FvpFrame {
 
 /* 帧槽模型开关：`FVP_FRAME_SLOTS=1` 打开修正版（参数槽 255-A..254、局部变量块在
  * 参数块下面）。默认关闭，保证 ref/ref-900k.txt 这份冻结文本基线逐字节不变。
+ *
+ * 2026-11-26 第 181 轮结论（tests/verify_text_from_hcb.py，run_all 6.49649）：
+ * 修正版把正文窗口位置修对了（(431,880)），但文本通道会**每行多读一个字符**
+ * （195 行里有 70 行在 HCB 字符串里找不到），所以**不能**切默认、也不能重新冻结
+ * 文本基线——先找"多读一位"的根因再说。
  * 证据与遗留问题见 ref/script-window-geometry.json 的 frame_model 段。 */
 #define FVP_FRAME_ARG_END 254
 

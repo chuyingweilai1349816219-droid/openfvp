@@ -689,6 +689,15 @@ def build_steps(args):
                            'the panel), position = prim + OP (or surface +0x518/+0x51a) + the '
                            'parent-chain sum -> the panel is drawn 1:1 at the prim (x,y)'))
 
+    # 6.49649 文本必须来自 HCB 字符串（冻结基线 0 编造；FVP_FRAME_SLOTS=1 多读字符）
+    vth = os.path.join(HERE, 'verify_text_from_hcb.py')
+    steps.append(Step('verify_text_from_hcb.py', [PY, '-X', 'utf8', vth], 900,
+                      skip_reason=None,
+                      note='every text line of the frozen baseline must exist verbatim in the '
+                           'HCB (0 fabricated); the FVP_FRAME_SLOTS=1 model over-reads one '
+                           'character per line (70 lines not in the HCB), so that baseline '
+                           'must not be re-frozen as-is'))
+
     # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
     vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
     steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,
