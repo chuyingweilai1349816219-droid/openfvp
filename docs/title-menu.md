@@ -1378,3 +1378,36 @@ OP 轴心缩放时显示哪一块"（现在标题背景是静态中心裁剪 240
 结论：卡死既不是 `*Test` 极性，也不是记录回收；缺的是**脚本自己的菜单交互**
 （悬停/选中时给菜单组 265 排动画）。我们的外壳用引擎侧菜单，脚本菜单路径没走，
 所以记录永远不出现。默认路径两个开关都关，门禁数字不变。
+
+## 附录 C：`MotionAlphaTest` 的 exe 语义（2026-11-26，逐条反汇编）
+
+```
+43a9c0  mov  0x4(%esp),%eax      ; arg0
+43a9c4  cmpb $0x2,(%eax)         ; 类型必须 2（int）
+43a9c7  jne  0x43aa04            ; 否则不写返回值
+43a9c9  mov  0x4(%eax),%eax      ; id
+43a9cc  cmp  $0x1,%eax
+43a9d1  cmp  $0xfff,%eax
+43a9f3  call 0x422990            ; 容器里查这条 id 的记录
+43a9f8  test %eax,%eax
+43a9fa  setne %al                ; 找到 = 1，没找到 = 0
+43a9fd  mov  %al,0x814(%esi)
+```
+
+所以 `*Test` 的语义是「容器里有没有这条记录」，**1 = 有**，与 `src/motion.c`
+里 `fvp_motion_test()` 的实现一致。`FVP_MOTION_TEST_INVERT` 那个实验里"脚本能离开
+等待循环"是假象：把**所有** `*Test` 都反转之后，脚本把"动画已结束"当成初值，
+随后空转到标题退场清理（`0x235C9` helper 190 次）。
+
+另：把光标放到 New Game 矩形中心（`FVP_CURSOR=1615,535`，矩形来自
+`ref/title-rects.json`）跑 headless，`primhit` 仍是 **0/0** —— 脚本没走到菜单命中轮询，
+它还在 `0x592DF` 等 `MotionAlphaTest(265)`。所以"脚本菜单交互没发生"不是卡死的原因，
+更准确的是：卡在菜单交互**之前**的 265 等待上。
+
+### 附录 C 补充：`fvm.exe` 不是流程参照
+
+`src/syscall.c` 的 `case 44`（MotionAlphaTest）要求 `vm->gfx_bridge != NULL` 才写返回值；
+无 gfx 的 `bin/fvm.exe` 因此走不到写入，脚本读到的 temp 是上一条命令的残留值，
+这就是它能"跑出" 194 行台词的原因。冻结文本基线 `ref/ref-900k.txt` 由这条路径产出，
+按约束保持不动，但**不能用它判断脚本流程是否正确**；带 gfx 的 headless 只跑到
+`0x592DF` 才是语义上诚实的结果。

@@ -4,6 +4,94 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（八十六续）：`*Test` 语义按 exe 逐条确认（极性没问题）+ 光标命中实验的负面结果
+
+### 1. 用 exe 反汇编把 `MotionAlphaTest` 的语义钉死
+
+`0x43A9C0`（handler）逐条：
+
+```
+43a9c0  mov  0x4(%esp),%eax        ; arg0
+43a9c4  cmpb $0x2,(%eax)           ; 类型必须是 2（int）
+43a9c7  jne  0x43aa04              ; 否则直接返回（不写返回值）
+43a9c9  mov  0x4(%eax),%eax        ; 图元 id
+43a9cc  cmp  $0x1,%eax             ; 1 <= id
+43a9d1  cmp  $0xfff,%eax           ; id <= 0xFFF
+43a9d8  mov  0x6a66d0(%ecx),%edx   ; 容器选择
+43a9e5  lea  0x68dfc0(...),%esi    ; thread 记录槽
+43a9ec  push %eax  /  add $0x651e04,%ecx
+43a9f3  call 0x422990              ; 容器里查这条 id 的记录
+43a9f8  test %eax,%eax
+43a9fa  setne %al                  ; ← 找到 = 1，没找到 = 0
+43a9fd  mov  %al,0x814(%esi)       ; 写进 thread 的返回值槽
+```
+
+结论：**`*Test` = "容器里有没有这条记录"，1 = 有**。我们 `src/motion.c: fvp_motion_test()`
+的极性是对的（上一轮用 `FVP_MOTION_TEST_INVERT` 得到的"能离开循环"是假象——翻转后所有
+`*Test` 都反了，脚本随即空转到清理 helper 190 次）。
+
+### 2. 光标命中实验（想走"脚本自己的菜单"这条路的第一次尝试）
+
+读 `ref/title-rects.json`：五彩斑斓的菜单项矩形（画布坐标）——
+
+| 项 | x | y | w | h | 中心 |
+|---|---:|---:|---:|---:|---|
+| `title_start`（New Game） | 1445 | 495 | 340 | 80 | (1615,535) |
+| `title_continue` | 1495 | 595 | 290 | 80 | (1640,635) |
+| `title_album` | 1560 | 695 | 225 | 80 | (1672,735) |
+| `title_option` | 1560 | 795 | 225 | 90 | (1672,840) |
+| `title_end` | 1645 | 895 | 140 | 80 | (1715,935) |
+
+用 `FVP_CURSOR=1615,535`（正对 New Game 中心）+ `--click 600` 跑 headless：
+
+```
+headless: primhit=0/0 threadnext=41395 motion_active=0 steps=900000
+台词行数：0
+```
+
+**`primhit` 仍然是 0/0** —— 脚本**根本没走到菜单命中轮询**，它还在 `0x592DF` 那个
+等 `MotionAlphaTest(265)` 的循环里。所以"把光标放到菜单上"这一步现在还影响不到它：
+`0x592DF` 在菜单轮询**之前**。
+
+### 2b. 附带结论：`fvm.exe` 的 194 行输出**不是**可用的流程参照
+
+`src/syscall.c` 里 `case 44`（MotionAlphaTest）要求 `vm->gfx_bridge != NULL` 才写返回值；
+无 gfx 的 `bin/fvm.exe` 走不到写入，脚本随后 `pushtemp` 读到的是**上一条命令留下的
+temp 值**。这就是为什么 `fvm.exe --click 600` 能"跑出" 194 行台词，而带 gfx 的
+headless 在同一循环里 0 行：前者靠残留值越过了 `0x592DF`，后者按语义老老实实等。
+
+因此：**不要拿 `fvm.exe` 的输出当原版流程基准**（冻结文本基线
+`ref/ref-900k.txt` 是这条路径产出的，保持不动，但它的语义前提要在文档里写明）。
+`--pctrace` 交叉验证过：fvm 的 194 行里包含 `0x592DF` 之后的代码，而带 gfx 的
+headless 只跑到 `0x592DF`。
+
+### 3. 结论与下一步
+
+- `*Test` 极性、记录回收、光标命中三件事都排除了（各有实验/反汇编证据）。
+- 现在唯一的缺口是：**谁在循环之前给 265 建动作记录**。脚本里 265 的 Motion 命令都在
+  循环之后或未执行的路径里；引擎侧 `TitleMenu(141)` 在我们的实现里是空操作。
+- 下一轮的工具准备：给 `fvp_motion_add()` 加一个诊断（打印调用点 pc + 参数），
+  跑一遍"原版可对照的存档场景"或 `fvm.exe`（无 gfx）看它是否给 265 建记录——
+  `fvm.exe` 能跑出 194 行台词，说明**它的路径里有人建了记录**；对比两条路径的
+  `motion_add` 调用点就能定位到那段代码。
+
+### 4. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS** |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_prim_refs.py` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 5. 诚实说明
+
+- 本轮没有代码改动（只有文档/记录），所以门禁数字与上一轮完全一致；这不是"偷懒"，
+  而是把上一轮遗留的"是不是极性搞错"这个问题用 exe 反汇编彻底关掉。
+- 光标实验是负面结果：`primhit` 0/0 说明脚本压根没到菜单轮询，别把"菜单交互没发生"
+  当成"卡死原因"的最终结论——更准确的说法是"卡在菜单交互**之前**的 265 等待上"。
+
 ## [未发布] — 2026-11-26（八十五续）：两个 `*Test` 语义实验 —— 卡死不是极性、而是"脚本自己的菜单交互"没发生
 
 上一轮把 `0x592DF` 的等待循环解出来了：它在等 `MotionAlphaTest(265)` 为真（= 该图元有动作记录），
