@@ -1879,7 +1879,11 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
                                   (int)args[0].i, (int)args[1].i);
         }
         return;
-    case 15:  /* DissolveWait: already finished */
+    case 15:  /* DissolveWait：返回 1 = 溶解已结束（参考实现 ref/fvm_ref.py 的
+               * cmd_15 → 1）。以前它和 case 44 共用一个分支，走不到返回就被当成
+               * "未实现命令"计数了（verify_multigame 的 `unimpl cmds 15×4`）。 */
+        t->temp = fvp_make_int(1);
+        return;
     case 44:  /* MotionAlphaTest(id)：原版 0x43A9C0，容器 engine+0x651E04
                * （与 MotionAlpha(42) 同一个），id 1..0xFFF，1 = 还在跑。 */
         if (argc >= 1 && args[0].type == (uint8_t)FVP_INT &&

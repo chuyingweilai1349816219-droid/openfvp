@@ -3,6 +3,32 @@
 > 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
+
+## [未发布] — 2026-11-26（六十五续）：`DissolveWait(15)` 原来没返回值 —— 多游戏矩阵的 `unimpl cmds` 归零
+
+多游戏矩阵（`tests/verify_multigame.py`）里唯一一条确定性可修的失败项定位到了：
+桌面外壳日志 `unimpl cmds 1 distinct: 15×4`，即 **`DissolveWait(15)`** 被调用 4 次且被判为未实现。
+
+根因：[`src/syscall.c`](src/syscall.c) 里 `case 15` 与 `case 44` 共用分支（注释写"already finished"），
+而 `case 44` 的守卫要求 gfx 上下文；不满足就 `break` 到末尾，于是 15 掉进"未实现命令"计数。
+
+修法（按参考实现 `ref/fvm_ref.py` 的 `cmd_15 → 1` 语义）：
+
+```c
+case 15:  /* DissolveWait：1 = 溶解已结束 */
+    t->temp = fvp_make_int(1);
+    return;
+```
+
+验证（桌面外壳跑 Hoshimemo 8 s）：
+
+```
+vm  501959 steps total, 0 text lines, 1 threads left
+unimpl cmds    none        ← 由 1 变 0
+```
+
+`verify_multigame.py` 的失败清单因此只剩两条：900k 步预算（第 195 行，1M 步可完整重现）
+与开场白场抽帧的时序容差。
 ## [未发布] — 2026-11-26（六十四续）：多游戏矩阵（优先级①）现状盘点
 
 回到目标的第一优先级做了一次盘点：	ests/verify_multigame.py（iroseka + Hoshimemo 的桌面/控制台两路）
