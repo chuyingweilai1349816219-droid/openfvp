@@ -120,12 +120,14 @@ def main():
     check(defaults == {250: 230, 251: 522},
           '正文窗口默认设计坐标 (230, 522)（实际 %r）' % (defaults,))
 
-    print('== 6. TextBuff 钳位 ==')
-    clamp = ref.get('textbuff_clamp') or {}
-    check(clamp.get('width') == 1024 and clamp.get('height') == 1024,
-          'TextBuff 宽高各自钳到 1024（实际 %r, %r）'
-          % (clamp.get('width'), clamp.get('height')))
-    check(clamp.get('pc') == '0x035da0', '钳位指令在 0x035da0')
+    print('== 6. TextBuff 面板尺寸下限 ==')
+    sz = ref.get('textbuff_min_size') or {}
+    check(sz.get('width') == 1024 and sz.get('height') == 1024,
+          'TextBuff helper 的尺寸下限是 1024（实际 %r, %r）'
+          % (sz.get('width'), sz.get('height')))
+    check(sz.get('pc') == '0x035da0', '下限判断指令在 0x035da0')
+    check('1380' in (sz.get('note') or ''),
+          'note 里记着实测 1380×1024（宽 > 1024 时原样传下去）')
 
     print('== 7. 帧模型（initstack A|B 与绝对槽号）==')
     fm = ref.get('frame_model') or {}

@@ -4,6 +4,14 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（六续）：TextBuff 面板尺寸是**下限 1024**，不是"钳到 1024"
+
+`FVP_FRAME_SLOTS=1` 下 script 真的给正文层建了面板：**`TextBuff layer=0 w=1380 h=1024`**
+（设计 736×120 → 1380×202，宽原样 / 高抬到 1024）。回看 helper `0x35D95..0x35DA3`：
+`pushstack w; pushint16 1024; le; jmpcond` —— w ≤ 1024 时把 w 设成 1024、w > 1024 时
+原样传下去，是**下限**不是上限。基线里的 `textbuff_clamp` 因此改名
+`textbuff_min_size` 并写清语义；门禁同步。
+
 ## [未发布] — 2026-11-26（五续）：帧槽修正模型落地成 `FVP_FRAME_SLOTS` 开关（默认关）
 
 ### 证据（A 类，进 `ref/script-window-geometry.json` 的 `frame_model`）

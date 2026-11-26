@@ -158,9 +158,9 @@
   "scale_y": 1.6875,
   "scale_y_from": "1080/640"
  },
- "textbuff_clamp": {
+ "textbuff_min_size": {
   "height": 1024,
-  "note": "TextBuff helper 把换算后的宽高各自钳到 1024 再调 TextBuff；所以全屏面板的实测值就是 1024×1024，而不是设计尺寸",
+  "note": "TextBuff helper 对换算后的宽高各自做的其实是**下限**判断（`pushstack w; pushint16 1024; le; jmpcond`：w ≤ 1024 时把 w 设成 1024，w > 1024 时原样传下去）。实测印证：正文层 TextBuff 拿到 1380×1024（设计 736×120 → 1380×202，宽原样、高被抬到 1024），名字/章节层被抬到 1024×1024。",
   "pc": "0x035da0",
   "width": 1024
  },
