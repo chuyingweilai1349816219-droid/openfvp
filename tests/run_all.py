@@ -525,6 +525,19 @@ def build_steps(args):
                           note='100-slot ring: count cap, pos wrap, slot = pos-idx, '
                                'kind/type filters, NULL safety'))
 
+    # 4n2. 槽尾台词历史环（读档 step-2 第一段：src/savehist.c）
+    test_savehist = tools.get('test_savehist')
+    if not test_savehist or not os.path.isfile(test_savehist):
+        steps.append(Step('test_savehist', None, 0,
+                          skip_reason='bin/test_savehist.exe missing '
+                                      '(run: make test_savehist)'))
+    else:
+        steps.append(Step('test_savehist', [test_savehist], 120,
+                          note='slot-tail dialogue history ring: synthetic '
+                               'locate/parse, malformed inputs rejected, '
+                               'count==100 treated as ambiguous, apply into '
+                               'FvpHistory; real s905 slot -> count=11/pos=10'))
+
     # 4o. 命中测试（PrimHit 76 → gfx_prim_hit）
     test_prim_hit = tools.get('test_prim_hit')
     if not test_prim_hit or not os.path.isfile(test_prim_hit):

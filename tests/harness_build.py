@@ -25,11 +25,12 @@ OUT = os.path.join(FVP, 'out', 'fuzz')
 CORE_SRC = [os.path.join(SRC, n) for n in
             ('fvp.c', 'encoding.c', 'hcb.c', 'vm.c', 'syscall.c', 'flags.c',
              'textattr.c', 'save.c', 'save_vm.c', 'thumb.c', 'motion.c',
-             'timer.c', 'history.c')]
+             'timer.c', 'history.c', 'savehist.c')]
 CORE_HDR = [os.path.join(SRC, n) for n in
             ('fvp.h', 'encoding.h', 'hcb.h', 'vm.h', 'syscall.h',
              'flags.h', 'textattr.h', 'save.h', 'save_vm.h', 'thumb.h',
-             'motion.h', 'timer.h', 'history.h', 'gen_cmd_table.h',
+             'motion.h', 'timer.h', 'history.h', 'savehist.h',
+             'gen_cmd_table.h',
              'gen_cp932.h', 'gen_gbk.h')]
 ALLOC = os.path.join(TESTS, 'fuzz_alloc.h')
 
@@ -162,6 +163,7 @@ def public_tools():
         'test_timer': os.path.join(FVP, 'bin', 'test_timer.exe'),
         'test_typewriter': os.path.join(FVP, 'bin', 'test_typewriter.exe'),
         'test_history': os.path.join(FVP, 'bin', 'test_history.exe'),
+        'test_savehist': os.path.join(FVP, 'bin', 'test_savehist.exe'),
         'test_prim_hit': os.path.join(FVP, 'bin', 'test_prim_hit.exe'),
         'test_glyph_fallback': os.path.join(FVP, 'bin', 'test_glyph_fallback.exe'),
     }

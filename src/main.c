@@ -19,6 +19,7 @@
 #include "fvp.h"
 #include "hcb.h"
 #include "save.h"
+#include "savehist.h"
 #include "save_vm.h"
 #include "vm.h"
 
@@ -35,6 +36,7 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --eol crlf|lf    line endings for --text-out (default crlf)\n"
             "  --pctrace FILE   log executed pc values (debug aid)\n"
             "  --savebin FILE   seed globals from a save/save.bin\n"
+"  --save-history FILE  restore the dialogue history ring from a save slot\n"
             "  --pc N           start at an explicit pc (research hook)\n"
             "  --timeline       use the virtual clock (ThreadSleep/ThreadWait wake by ms)\n"
             "  --bool-type      jmpcond 只认 type==0 为假、比较类把真假写进类型（原版语义，\n"
@@ -491,6 +493,47 @@ static int fvp_seed_globals(const char *path, FvpVM *vm)
     return 1;
 }
 
+/* 从槽文件回灌**台词历史环**（槽尾第 20 段）：exe 读档路径 0x43F25A 起先读
+ * count/pos 再 100 次调 0x437EE0。段偏移还没算出来，所以按结构判据定位
+ * （src/savehist.h 顶部）。返回 1 成功。 */
+static int fvp_seed_history(const char *path, FvpVM *vm, FvpEncoding enc)
+{
+    unsigned char *buf;
+    size_t len = 0;
+    FvpSaveSlot sd;
+    FvpSaveHist sh;
+    int ok = 0;
+
+    buf = fvp_read_whole_file(path, &len);
+    if (buf == NULL) {
+        fprintf(stderr, "fvm: cannot read %s\n", path);
+        return 0;
+    }
+    memset(&sd, 0, sizeof sd);
+    fvp_savehist_init(&sh);
+    if (!fvp_save_slot_load(&sd, buf, len, 0, 0)) {
+        fprintf(stderr, "fvm: %s is not a valid save slot\n", path);
+    } else if (!fvp_savehist_locate(&sh, sd.tail, sd.tail_len, sd.str[2],
+                                    sd.len[2], enc)) {
+        fprintf(stderr, "fvm: %s: no history ring found in the slot tail "
+                "(or more than one candidate)\n", path);
+    } else if (!fvp_savehist_apply(&sh, &vm->history)) {
+        fprintf(stderr, "fvm: %s: history apply failed\n", path);
+    } else {
+        const FvpSaveHistRec *r = &sh.rec[sh.pos];
+
+        printf("save slot: history ring at tail+%#x, count=%u pos=%u, "
+               "newest=\"%s\"\n", (unsigned)sh.offset, sh.count, sh.pos,
+               r->text1 != NULL ? r->text1
+                                : (r->text0 != NULL ? r->text0 : ""));
+        ok = 1;
+    }
+    fvp_savehist_free(&sh);
+    fvp_save_slot_free(&sd);
+    free(buf);
+    return ok;
+}
+
 int main(int argc, char **argv)
 {
     const char *script = NULL;
@@ -498,6 +541,7 @@ int main(int argc, char **argv)
     const char *text_out = NULL;
     const char *pctrace_path = NULL;
     const char *savebin_path = NULL;
+    const char *save_history_path = NULL;
     long start_pc = -1;
     const char *dump_globals_path = NULL;
     uint64_t steps = 2000000u;
@@ -597,6 +641,12 @@ int main(int argc, char **argv)
                 return 2;
             }
             start_pc = strtol(argv[++i], NULL, 0);
+        } else if (strcmp(a, "--save-history") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "fvm: missing --save-history value\n");
+                return 2;
+            }
+            save_history_path = argv[++i];
         } else if (strcmp(a, "--savebin") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "fvm: missing --savebin value\n");
@@ -659,6 +709,14 @@ int main(int argc, char **argv)
     vm.timeline_on = timeline;
     vm.bool_type = bool_type;
     vm.threads_on = (threads < 0) ? 0 : threads;
+    if (save_history_path != NULL &&
+        !fvp_seed_history(save_history_path, &vm, enc)) {
+        fprintf(stderr, "fvm: history restore from %s failed\n",
+                save_history_path);
+        fvp_vm_free(&vm);
+        fvp_hcb_free(&hcb);
+        return 2;
+    }
     if (savebin_path != NULL && !fvp_seed_globals(savebin_path, &vm)) {
         fvp_vm_free(&vm);
         fvp_hcb_free(&hcb);

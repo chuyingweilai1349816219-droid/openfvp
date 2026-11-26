@@ -51,6 +51,31 @@
 
 ## [未发布] — 文本呈现命令（1.0.0 之后）
 
+### 实现（读档 step-2 第一段：槽尾「台词历史环」回灌 + `fvm --save-history`）
+
+- 上一轮把槽尾第 20 段认成台词历史环后，这一轮**把它真的读回来**：
+  新增 `src/savehist.c/.h`（`fvp_savehist_locate` / `fvp_savehist_apply`），
+  对应原版读档路径 `0x43F25A`（先读 count/pos 写回 `engine+0x6A49C0/C4`，
+  再 100 次调 `0x437EE0` 逐条读回）。`--load-restart` 现在在场景复位后、
+  `fvp_vm_start` 前回灌，日志 `history: restored count=11 pos=10 filled=11
+  scan=tail+0x20633 newest="　谁这样说道。"`。
+- 无窗口可复现：`fvm --script <hcb> --save-history <sNNN.bin> --dump-history
+  --steps 0` 直接打印回灌后的 11 条台词。
+- **定位靠结构判据、不靠固定偏移**（第 11 段起子序列化器长度还没逆出来）：
+  前面 8 字节像 `(count,pos)`、100 条能解析完、未写槽必须是 `{0,0,-1}`、
+  文本能按 GBK/CP932 之一解成"像人话"的串、父串非空时最新一条 `text1` 必须
+  等于槽头第 3 条字符串；**候选不唯一时整段放弃**。
+  `count == 100`（环写满）的候选**一律拒收**：pos 任意、100 条都有历史值，
+  判据区分度不够（实测 s485 数据里有 3 个 count=100 的假候选）。
+- **编码要自动判定**：汉化版脚本是 CP932、槽里的台词却是 GBK，所以不能沿用
+  `--encoding`；两种编码都解一遍，按"汉字/假名/全角标点加分、半角片假名与
+  U+FFFD 扣分"选分数高的。
+- 验收：`tests/test_savehist.c`（53 项：合成环 + 9 种畸形输入 + s905/s481 真实槽）、
+  `verify_load_restart.py` 新增 A/C 段（485 → count=1/pos=0；905 → count=11/pos=10）、
+  run_all 74→**75 步**、`make check` 32→**33 组**。
+- 顺带把 `save-snapshot.md` §4.6 那句已经过时的"外壳做不到从存档继续执行脚本"
+  改成当前真实边界（step-1/step-2 各做到什么、精确续玩还缺什么）。
+
 ### 结构分析/修正（台词历史：count 初值 = 1、begin 判据是 Variant type 0、槽尾第 20 段就是历史环）
 
 - `HistorySet(26)` 0x43A5E0 / `HistoryGet(25)` 0x43A490 的**每一条判据**（地址 +

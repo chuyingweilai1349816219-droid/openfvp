@@ -10,7 +10,9 @@ exe 的消费路径是 读槽文件 → 场景/图元树复位(0x438D20) → 脚
 1. 读槽文件并解析（章节名/对话行长度、缩略图尺寸、尾段长度）；
 2. 复位场景：prim/motion/文本窗口全清；
 3. 重建 VM 并从入口重启，保留 globals / globals_set / flags；
-4. 槽尾"引擎快照"里还没逆清的段**不应用**（文档写明）。
+4. 槽尾"引擎快照"里**台词历史环**（第 20 段）已经回灌（读档 step-2 第一段，
+   src/savehist.c；格式与读档路径 0x43F25A 已从静态分析冻结）；
+   其余段还没逆清，**不应用**（文档写明）。
 
 断言：
   A. `--load-restart --debug-load-request 485`：日志有槽文件解析
@@ -18,7 +20,10 @@ exe 的消费路径是 读槽文件 → 场景/图元树复位(0x438D20) → 脚
      重启后脚本继续跑（总步数 > 30000、至少 1 行文本）、退出码 0、
      结束帧非黑（mean > 5）；
   B. 不带 `--load-restart`：日志明确 `not implemented` 且提示
-     `pass --load-restart to restart`（行为未被悄悄改变）。
+     `pass --load-restart to restart`（行为未被悄悄改变）；
+  C. 历史环回灌：槽 485 → `history: restored count=1 pos=0`；
+     槽 905 → `count=11 pos=10 filled=11`，最新台词是"谁这样说道。"
+     （槽尾历史环在 6 份真实存档里的解析见 verify_exe_history.py）。
 
 缺 bin/fvp.exe 或游戏目录/槽文件时 SKIP。
 
@@ -100,6 +105,10 @@ def main():
     check('scene reset (prims/motion/text)' in text, '场景复位（prim/motion/text）')
     check(re.search(r'restarted at entry pc=0x[0-9a-f]+', text) is not None,
           '脚本引擎从入口重启（日志带 pc）')
+    check('history ring scan -> found' in text,
+          '槽尾台词历史环定位成功（读档 step-2 第一段）')
+    check(re.search(r'history: restored count=1 pos=0 filled=1', text) is not None,
+          '槽 485 的历史回灌 count=1 pos=0')
     ms = re.findall(r'vm\s+(\d+) steps total', text)
     total_steps = int(ms[-1]) if ms else 0
     check(total_steps > 30000, '重启后脚本继续执行（总步数 %d > 30000）'
@@ -119,6 +128,33 @@ def main():
         check(mean > 5.0, '结束帧非黑（mean %.2f > 5）' % mean)
     else:
         check(False, '截图读不出来')
+
+    print('== C. 历史环回灌（槽 905：11 条台词）==')
+    slot905 = os.path.join(GAME, 'save', 's905.bin')
+    if not os.path.isfile(slot905):
+        print('  SKIP: 缺少 s905.bin')
+    else:
+        shot_c = os.path.join(OUT, 'loadrestart-c.bmp')
+        log_c = os.path.join(OUT, 'loadrestart-c.log')
+        for p in (shot_c, log_c):
+            if os.path.isfile(p):
+                os.remove(p)
+        rc_c = run(['--load-restart', '--debug-load-request', '905'],
+                   log_c, shot_c, 4.0)
+        text_c = read_log(log_c)
+        check(rc_c == 0, '外壳退出码 0')
+        check('history ring scan -> found' in text_c,
+              '槽 905 的历史环定位成功')
+        m_c = re.search(r'history: restored count=(\d+) pos=(\d+) filled=(\d+)',
+                        text_c)
+        check(m_c is not None, '日志有 history: restored 行')
+        if m_c:
+            check((int(m_c.group(1)), int(m_c.group(2)), int(m_c.group(3))) ==
+                  (11, 10, 11),
+                  '历史回灌 count=11 pos=10 filled=11（实际 %s/%s/%s）'
+                  % (m_c.group(1), m_c.group(2), m_c.group(3)))
+        check('newest="　谁这样说道。"' in text_c,
+              '最新一条台词是存档里的中文台词（编码自动判定）')
 
     print('== B. 不带 --load-restart：旧行为（只记日志）==')
     shot_b = os.path.join(OUT, 'loadrestart-b.bmp')

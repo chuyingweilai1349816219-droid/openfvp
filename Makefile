@@ -26,11 +26,13 @@ TEXTATTR_OBJ = src/textattr.o
 THUMB_OBJ = src/thumb.o
 TIMER_OBJ = src/timer.o
 HISTORY_OBJ = src/history.o
+SAVEHIST_OBJ = src/savehist.o
 
 OBJ      = $(CORE_SRC:.c=.o) $(SAVE_OBJ) $(SAVEVM_OBJ) $(FLAGS_OBJ) \
-           $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ)
+           $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ) \
+           $(SAVEHIST_OBJ)
 LIB_OBJ  = $(SRC:.c=.o) $(SND_SRC:.c=.o) $(RES_SRC:.c=.o) $(SAVE_OBJ) \
-           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ)
+           $(SAVEVM_OBJ) $(FLAGS_OBJ) $(TEXTATTR_OBJ) $(THUMB_OBJ) $(TIMER_OBJ) $(HISTORY_OBJ) $(SAVEHIST_OBJ)
 
 # 无窗口（headless）外壳：核心 + 渲染层 + 便携 OS 缝，不依赖 Win32。
 HEADLESS_BIN = bin/fvp-headless$(EXE)
@@ -42,7 +44,7 @@ LIB = bin/libfvp.a
 HEADERS = src/fvp.h src/encoding.h src/hcb.h src/vm.h src/syscall.h \
           src/snd.h src/bin.h src/inflate.h src/hzc1.h \
           src/textattr.h src/timer.h src/history.h src/motion.h src/save.h \
-          src/save_vm.h \
+          src/save_vm.h src/savehist.h \
           src/flags.h src/thumb.h \
           src/gen_cp932.h src/gen_gbk.h src/gen_cmd_table.h
 
@@ -113,7 +115,7 @@ WIN32_SHELL = $(WIN32_DIR)/main_win32.c $(WIN32_DIR)/win32_window.c \
                $(WIN32_DIR)/win32_audio.c $(WIN32_DIR)/win32_log.c \
                $(WIN32_DIR)/win32_gdi_text.c
 WIN32_CORE  = src/fvp.c src/encoding.c src/hcb.c src/vm.c src/syscall.c src/snd.c \
-              src/titlemenu.c src/savelist.c src/savetail.c src/openseq.c \
+              src/titlemenu.c src/savelist.c src/savetail.c src/savehist.c src/openseq.c \
               src/titleenter.c src/titlebg.c \
               src/gamemenu.c \
                src/save.c src/save_vm.c src/flags.c src/textattr.c src/thumb.c \
@@ -432,6 +434,24 @@ clean-history:
 .PHONY: test_history clean-history
 
 # ---------------------------------------------------------------------------
+# 槽尾台词历史环（读档 step-2 第一段：src/savehist.c）
+#   make test_savehist
+# ---------------------------------------------------------------------------
+SAVEHIST_TEST = bin/test_savehist$(EXE)
+
+test_savehist: $(SAVEHIST_TEST)
+
+$(SAVEHIST_TEST): tests/test_savehist.c src/savehist.c src/savehist.h \
+                  src/history.h src/vm.h $(OBJ) | bin
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_savehist.c \
+		$(filter-out src/main.o,$(OBJ)) $(LDFLAGS) -lm
+
+clean-savehist:
+	-rm -f $(SAVEHIST_TEST)
+
+.PHONY: test_savehist clean-savehist
+
+# ---------------------------------------------------------------------------
 # 命中测试 PrimHit(76)（gfx 层的父链累加 + 矩形判定）
 #   make test_prim_hit
 # ---------------------------------------------------------------------------
@@ -672,6 +692,7 @@ clean-nullvalue:
 UNIT_TESTS = $(SAVE_TEST) $(SAVEVM_TEST) $(FLAGS_TEST) \
              $(TEXTATTR_TEST) $(THUMB_TEST) $(GFX_MOTION_TEST) \
              $(TIMER_TEST) $(TYPEWRITER_TEST) $(TEX_CACHE_TEST) $(HISTORY_TEST) \
+         $(SAVEHIST_TEST) \
              $(PRIM_HIT_TEST) $(GLYPH_FALLBACK_TEST) $(MOTION_TEST) \
              $(GFX_XFORM_TEST) \
              $(CONTROL_TEST) $(GRAPHCOLOR_TEST) $(TEXTBUFF_TEST) \

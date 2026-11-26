@@ -43,6 +43,7 @@
 #include "win32_gdi_text.h"
 #include "../../titlemenu.h"
 #include "../../openseq.h"
+#include "../../savehist.h"
 #include "../../savelist.h"
 #include "../../gamemenu.h"
 #include "../../titleanim.h"
@@ -1380,16 +1381,21 @@ static unsigned char *shell_read_file(const wchar_t *path, size_t *len_out)
 /* --load-restart：读槽文件 → 复位场景（prims/motion/text）→ 重建 VM 并从入口重启，
  * 保留调用前已灌入的全局变量与 flag。对应 exe 的读档复位序列：
  *   0x438D20（场景/图元树复位） + 0x441350（脚本引擎复位）+ 线程 +0xFD9 重启。
- * 槽文件里"引擎快照"各段的逐字段语义还没逆清，这一步不应用它们。 */
+ * 槽尾"引擎快照"目前只回灌**台词历史环**（第 20 段，格式与读档路径 0x43F25A
+ * 已从静态分析冻结，见 ref/exe-history.json / src/savehist.c）；其余段的字段
+ * 语义还没逆清，仍不应用。 */
 static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
-                              const Options *opts, int slot)
+                              const Options *opts, int slot,
+                              FvpEncoding save_enc)
 {
     wchar_t path[PATH_CAP];
     char u8[PATH_CAP * 3];
     unsigned char *buf;
     size_t len = 0;
     FvpSaveSlot sd;
+    FvpSaveHist hist;
     int slot_ok = 0;
+    int hist_ok = 0;
     FvpValue *gcopy = NULL;
     unsigned char *gcset = NULL;
     unsigned char *gflags = NULL;
@@ -1407,6 +1413,15 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
                  sd.len[0], sd.len[2], sd.thumb_w, sd.thumb_h,
                  (double)sd.tail_len / 1024.0);
         if (slot_ok) {
+            /* 槽尾第 20 段 = 台词历史环（u32 count/pos + 100 条记录）。
+             * 段偏移还没算出来，所以按结构判据定位（src/savehist.h 顶部）。 */
+            fvp_savehist_init(&hist);
+            hist_ok = fvp_savehist_locate(&hist, sd.tail, sd.tail_len,
+                                          sd.str[2], sd.len[2], save_enc);
+            fvp_logf("load: history ring scan -> %s%s (tail=%.1f KB)",
+                     hist_ok ? "found" : "not found",
+                     hist_ok ? "" : " (history snapshot skipped)",
+                     (double)sd.tail_len / 1024.0);
             fvp_save_slot_free(&sd);
         }
         free(buf);
@@ -1463,6 +1478,20 @@ static int shell_load_restart(FvpVM *vm, FvpHcb *hcb, Gfx *gfx, Snd *snd,
     if (snd != NULL) {
         fvp_vm_attach_snd(vm, snd);
     }
+    if (hist_ok && fvp_savehist_apply(&hist, &vm->history)) {
+        const FvpSaveHistRec *r = &hist.rec[hist.pos];
+        const char *newest = r->text1 != NULL ? r->text1
+                                              : (r->text0 != NULL ? r->text0
+                                                                  : "");
+
+        fvp_logf("history: restored count=%u pos=%u filled=%d "
+                 "scan=tail+%#x newest=\"%s\"",
+                 hist.count, hist.pos, fvp_history_filled(&vm->history),
+                 (unsigned)hist.offset, newest);
+    } else if (hist_ok) {
+        fvp_logf("history: parsed but apply failed (keeping the fresh container)");
+    }
+    fvp_savehist_free(&hist);
     fvp_vm_start(vm);
     fvp_logf("load: scene reset (prims/motion/text) + script engine restarted "
              "at entry pc=0x%x (globals/flags kept)",
@@ -4237,7 +4266,7 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                 if (lreq >= 0) {
                     if (opts.load_restart) {
                         (void)shell_load_restart(&vm, &hcb, gfx, snd, &opts,
-                                                 lreq);
+                                                 lreq, save_enc);
                     } else {
                         fvp_logf("load: slot %d requested; snapshot restore is "
                                  "not implemented yet (staying in the current "
