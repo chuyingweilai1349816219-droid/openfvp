@@ -1,0 +1,121 @@
+{
+ "body_window_defaults": [
+  {
+   "local": 250,
+   "pc": "0x039f33",
+   "value": 230
+  },
+  {
+   "local": 251,
+   "pc": "0x039f41",
+   "value": 522
+  }
+ ],
+ "helpers": [
+  {
+   "pc": "0x035c10",
+   "syscall": 86,
+   "what": "PrimSetText(prim, layer, x*1.875, y*1.6875)"
+  },
+  {
+   "pc": "0x035cf2",
+   "syscall": 89,
+   "what": "PrimSetWH(prim, w*1.875, h*1.6875)"
+  },
+  {
+   "pc": "0x035d14",
+   "syscall": 90,
+   "what": "PrimSetXY(prim, x*1.875, y*1.6875)（true 哨兵 = 不改）"
+  },
+  {
+   "pc": "0x035d56",
+   "syscall": 94,
+   "what": "syscall 94(a, w*1.875, h*1.6875)"
+  },
+  {
+   "pc": "0x035d76",
+   "syscall": 110,
+   "what": "TextBuff(layer, w*1.875, h*1.6875)，宽高钳到 1024"
+  }
+ ],
+ "note": "从 HCB 脚本静态分析抄出的文本窗口几何（A 类）：脚本坐标是设计空间，窗口 helper 先把 x 乘 1.875、y 乘 1.6875 再调引擎命令；由 scripts/extract-script-window-geometry.py 生成",
+ "script_coords": {
+  "canvas": [
+   1920,
+   1080
+  ],
+  "design": [
+   1024,
+   640
+  ],
+  "float_bits": {
+   "x": "0x3ff00000",
+   "y": "0x3fd80000"
+  },
+  "note": "换算发生在脚本里（helper），引擎收到的已经是画布坐标；引擎侧**不要**再缩一次",
+  "scale_x": 1.875,
+  "scale_x_from": "1920/1024",
+  "scale_y": 1.6875,
+  "scale_y_from": "1080/640"
+ },
+ "textbuff_clamp": {
+  "height": 1024,
+  "note": "TextBuff helper 把换算后的宽高各自钳到 1024 再调 TextBuff；所以全屏面板的实测值就是 1024×1024，而不是设计尺寸",
+  "pc": "0x035da0",
+  "width": 1024
+ },
+ "windows": [
+  {
+   "canvas": {
+    "x": 375,
+    "y": 852
+   },
+   "design": {
+    "x": "200",
+    "y": "505"
+   },
+   "layer": 8,
+   "pc": "0x0364f1",
+   "prim": 552,
+   "role": "name"
+  },
+  {
+   "design": {
+    "x": "stack250",
+    "y": "stack251"
+   },
+   "layer": 0,
+   "pc": "0x039f82",
+   "prim": 551,
+   "role": "body"
+  },
+  {
+   "canvas": {
+    "x": 0,
+    "y": 0
+   },
+   "design": {
+    "x": "0",
+    "y": "0"
+   },
+   "layer": 10,
+   "pc": "0x03a046",
+   "prim": 558,
+   "role": "overlay"
+  },
+  {
+   "canvas": {
+    "x": 165,
+    "y": 590
+   },
+   "design": {
+    "x": "88",
+    "y": "350"
+   },
+   "layer": 9,
+   "pc": "0x03aa7b",
+   "prim": 553,
+   "role": "chapter"
+  }
+ ]
+}

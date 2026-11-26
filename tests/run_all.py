@@ -662,6 +662,15 @@ def build_steps(args):
                            'contiguous), 7 container ctors cross-checked against the '
                            'registration list'))
 
+    # 6.49646 脚本侧窗口几何（设计 1024x640 → 画布 1920x1080；缺游戏数据时 SKIP）
+    vsw = os.path.join(HERE, 'verify_script_window_geometry.py')
+    steps.append(Step('verify_script_window_geometry.py', [PY, '-X', 'utf8', vsw], 600,
+                      skip_reason=None,
+                      note='text-window geometry read from the HCB: design space '
+                           '1024x640 scaled by 1.875 (1920/1024) and 1.6875 (1080/640) '
+                           'inside the script helpers, TextBuff clamped to 1024, and the '
+                           'four window bindings 552/8, 551/0, 558/10, 553/9'))
+
     # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
     vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
     steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,
