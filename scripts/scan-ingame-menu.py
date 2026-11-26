@@ -107,6 +107,67 @@ def scan(path):
 
     items.sort(key=lambda r: (r['index'] is None, r['index']))
 
+    # 谁写这 7 个开关：
+    #   a) 选项面板 switch（`pushstack 253 / pushint8 <选项号> / eq` + `pushstack 254 / popglobal G`）
+    #   b) 配置块拷贝（`pushglobal A / popglobal G`，A 是持久化默认值）
+    #   c) 重置（`pushfalse / popglobal G`，在 0x22F48 的初始化函数里）
+    by_global = {it['enable_global']: it for it in items if it.get('enable_global')}
+    allpcs = sorted(code.instr)
+    pos = {p: i for i, p in enumerate(allpcs)}
+    fn_starts = [p for p in allpcs if code.instr[p][1] == 'initstack']
+
+    def step(pc, n):
+        i = pos.get(pc)
+        if i is None or not (0 <= i + n < len(allpcs)):
+            return (None, None, None, [])
+        q = allpcs[i + n]
+        return (q,) + code.instr[q]
+
+    import bisect
+
+    def fn_of(pc):
+        k = bisect.bisect_right(fn_starts, pc) - 1
+        return fn_starts[k] if k >= 0 else None
+
+    writes, enable_map, opt = [], [], None
+    for pc in allpcs:
+        _op, name, args = code.instr[pc]
+        _p1, _o1, n1, a1 = step(pc, 1)
+        _p2, _o2, n2, a2 = step(pc, 2)
+        if name == 'pushstack' and args == [253] and n1 == 'pushint8' and n2 == 'eq':
+            opt = a1[0]
+        if name != 'popglobal' or not args or args[0] not in by_global:
+            continue
+        g = args[0]
+        _pm, _om, pn, pa = step(pc, -1)
+        if pn == 'pushfalse':
+            value = 'false'
+        elif pn == 'pushtrue':
+            value = 'true'
+        elif pn == 'pushglobal' and pa:
+            value = 'global:%d' % pa[0]
+        elif pn == 'pushstack':
+            value = 'arg'          # 值由调用方压栈（选项面板的 switch 走这条）
+        else:
+            value = pn or '?'
+        fnpc = fn_of(pc)
+        writes.append(dict(pc='0x%05x' % pc, global_=g,
+                           fn=('0x%05x' % fnpc) if fnpc is not None else '-',
+                           value=value))
+        if pn == 'pushstack' and opt is not None:
+            it = by_global[g]
+            enable_map.append(dict(option_id=opt, global_=g, item=it['index'],
+                                   image=it['image'], write_pc='0x%05x' % pc))
+    enable_map.sort(key=lambda r: (r['option_id'] is None, r['option_id']))
+
+    # 配置块拷贝：`pushglobal <持久化默认> / popglobal <运行时>`，按写入顺序给出
+    # option_id ↔ 默认 global 的对应（与选项面板的编号应完全一致，可互相印证）
+    copy_by_global = {w['global_']: w['value'] for w in writes
+                      if w['value'].startswith('global:')}
+    for m in enable_map:
+        src = copy_by_global.get(m['global_'])
+        m['config_global'] = int(src.split(':')[1]) if src else None
+
     strings = [a[0] for _, _, n, a in seq if n == 'pushstring' and a]
     loader_calls = sum(1 for _, _, n, a in seq if n == 'call' and a and a[0] == WRAP_LOAD)
     group_calls = sum(1 for _, _, n, a in seq if n == 'call' and a and a[0] == WRAP_GROUP)
@@ -132,6 +193,8 @@ def scan(path):
         strings=strings,
         items=items,
         loads=loads,
+        enable_map=enable_map,
+        writes=writes,
         entry=dict(fn='0x%05x' % ENTRY, xrefs=xrefs),
     )
 
@@ -158,6 +221,12 @@ def main(argv=None):
                  it['enable_global'], it['load_pc']))
     print('entry %s called from %d site(s)' % (facts['entry']['fn'],
                                                len(facts['entry']['xrefs'])))
+    for m in facts['enable_map']:
+        print('  option %s -> global[%d] = item %s (%s)  config global %s  @%s'
+              % (m['option_id'], m['global_'], m['item'], m['image'],
+                 m['config_global'], m['write_pc']))
+    print('flag writes: %d site(s) in %d function(s)'
+          % (len(facts['writes']), len({w['fn'] for w in facts['writes']})))
     if a.json:
         payload = dict(
             schema='fvp-ingame-menu/1', game=a.game,
@@ -182,11 +251,14 @@ def main(argv=None):
                       for r in facts['loads'] if r['prim'] in CONFIRM_PRIMS],
             background=dict(prim=BG_PRIM, image='menu_bg'),
             cursor=dict(prim=CURSOR_PRIM, image='menu_chk'),
+            enable_map=facts['enable_map'],
+            enable_writes=facts['writes'],
             strings=facts['strings'],
             entry=facts['entry'],
             unknowns=['菜单打开/关闭由哪条脚本路径触发（0x577C8 的 12 个调用点尚未逐个确认）',
                       '图元号 795/796 两个挂接父组的用途（推测为普通项/危险项两组）',
-                      '菜单项的屏幕坐标：本区间内没有显式 PrimSetXY，位置由上层 Motion/布局决定'],
+                      '菜单项的屏幕坐标：本区间内没有显式 PrimSetXY，位置由上层 Motion/布局决定',
+                      '0x577C8 里 14 个「取反写回」的确切语义（看着像按项切换可用性 + 同步光标，未证实）'],
         )
         with open(a.json, 'w', encoding='utf-8') as fp:
             json.dump(payload, fp, ensure_ascii=False, indent=1)

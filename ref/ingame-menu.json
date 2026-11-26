@@ -149,6 +149,276 @@
   "prim": 137,
   "image": "menu_chk"
  },
+ "enable_map": [
+  {
+   "option_id": 47,
+   "global_": 1596,
+   "item": 4,
+   "image": "menu_qload_mes",
+   "write_pc": "0x267f7",
+   "config_global": 976
+  },
+  {
+   "option_id": 48,
+   "global_": 1597,
+   "item": 5,
+   "image": "menu_ow_mes",
+   "write_pc": "0x2680b",
+   "config_global": 977
+  },
+  {
+   "option_id": 49,
+   "global_": 1598,
+   "item": 6,
+   "image": "menu_del_mes",
+   "write_pc": "0x2681f",
+   "config_global": 978
+  },
+  {
+   "option_id": 50,
+   "global_": 1593,
+   "item": 1,
+   "image": "menu_undo_mes",
+   "write_pc": "0x26833",
+   "config_global": 979
+  },
+  {
+   "option_id": 51,
+   "global_": 1599,
+   "item": 7,
+   "image": "menu_init_mes",
+   "write_pc": "0x26847",
+   "config_global": 980
+  },
+  {
+   "option_id": 52,
+   "global_": 1595,
+   "item": 3,
+   "image": "menu_exit_mes",
+   "write_pc": "0x2685b",
+   "config_global": 981
+  },
+  {
+   "option_id": 53,
+   "global_": 1594,
+   "item": 2,
+   "image": "menu_title_mes",
+   "write_pc": "0x2686f",
+   "config_global": 982
+  }
+ ],
+ "enable_writes": [
+  {
+   "pc": "0x231b3",
+   "global_": 1593,
+   "fn": "0x22f48",
+   "value": "false"
+  },
+  {
+   "pc": "0x231b7",
+   "global_": 1594,
+   "fn": "0x22f48",
+   "value": "false"
+  },
+  {
+   "pc": "0x231bb",
+   "global_": 1595,
+   "fn": "0x22f48",
+   "value": "false"
+  },
+  {
+   "pc": "0x231bf",
+   "global_": 1596,
+   "fn": "0x22f48",
+   "value": "false"
+  },
+  {
+   "pc": "0x231c3",
+   "global_": 1597,
+   "fn": "0x22f48",
+   "value": "false"
+  },
+  {
+   "pc": "0x231c7",
+   "global_": 1598,
+   "fn": "0x22f48",
+   "value": "false"
+  },
+  {
+   "pc": "0x231cb",
+   "global_": 1599,
+   "fn": "0x22f48",
+   "value": "false"
+  },
+  {
+   "pc": "0x267f7",
+   "global_": 1596,
+   "fn": "0x25e93",
+   "value": "arg"
+  },
+  {
+   "pc": "0x2680b",
+   "global_": 1597,
+   "fn": "0x25e93",
+   "value": "arg"
+  },
+  {
+   "pc": "0x2681f",
+   "global_": 1598,
+   "fn": "0x25e93",
+   "value": "arg"
+  },
+  {
+   "pc": "0x26833",
+   "global_": 1593,
+   "fn": "0x25e93",
+   "value": "arg"
+  },
+  {
+   "pc": "0x26847",
+   "global_": 1599,
+   "fn": "0x25e93",
+   "value": "arg"
+  },
+  {
+   "pc": "0x2685b",
+   "global_": 1595,
+   "fn": "0x25e93",
+   "value": "arg"
+  },
+  {
+   "pc": "0x2686f",
+   "global_": 1594,
+   "fn": "0x25e93",
+   "value": "arg"
+  },
+  {
+   "pc": "0x57ac0",
+   "global_": 1593,
+   "fn": "0x577c8",
+   "value": "true"
+  },
+  {
+   "pc": "0x57ad3",
+   "global_": 1593,
+   "fn": "0x577c8",
+   "value": "false"
+  },
+  {
+   "pc": "0x57afa",
+   "global_": 1594,
+   "fn": "0x577c8",
+   "value": "true"
+  },
+  {
+   "pc": "0x57b0d",
+   "global_": 1594,
+   "fn": "0x577c8",
+   "value": "false"
+  },
+  {
+   "pc": "0x57b34",
+   "global_": 1595,
+   "fn": "0x577c8",
+   "value": "true"
+  },
+  {
+   "pc": "0x57b47",
+   "global_": 1595,
+   "fn": "0x577c8",
+   "value": "false"
+  },
+  {
+   "pc": "0x57b6e",
+   "global_": 1596,
+   "fn": "0x577c8",
+   "value": "true"
+  },
+  {
+   "pc": "0x57b81",
+   "global_": 1596,
+   "fn": "0x577c8",
+   "value": "false"
+  },
+  {
+   "pc": "0x57ba8",
+   "global_": 1597,
+   "fn": "0x577c8",
+   "value": "true"
+  },
+  {
+   "pc": "0x57bbb",
+   "global_": 1597,
+   "fn": "0x577c8",
+   "value": "false"
+  },
+  {
+   "pc": "0x57be2",
+   "global_": 1598,
+   "fn": "0x577c8",
+   "value": "true"
+  },
+  {
+   "pc": "0x57bf5",
+   "global_": 1598,
+   "fn": "0x577c8",
+   "value": "false"
+  },
+  {
+   "pc": "0x57c1c",
+   "global_": 1599,
+   "fn": "0x577c8",
+   "value": "true"
+  },
+  {
+   "pc": "0x57c2f",
+   "global_": 1599,
+   "fn": "0x577c8",
+   "value": "false"
+  },
+  {
+   "pc": "0x6cef3",
+   "global_": 1596,
+   "fn": "0x6ce71",
+   "value": "global:976"
+  },
+  {
+   "pc": "0x6cef9",
+   "global_": 1597,
+   "fn": "0x6ce71",
+   "value": "global:977"
+  },
+  {
+   "pc": "0x6ceff",
+   "global_": 1598,
+   "fn": "0x6ce71",
+   "value": "global:978"
+  },
+  {
+   "pc": "0x6cf05",
+   "global_": 1593,
+   "fn": "0x6ce71",
+   "value": "global:979"
+  },
+  {
+   "pc": "0x6cf0b",
+   "global_": 1599,
+   "fn": "0x6ce71",
+   "value": "global:980"
+  },
+  {
+   "pc": "0x6cf11",
+   "global_": 1595,
+   "fn": "0x6ce71",
+   "value": "global:981"
+  },
+  {
+   "pc": "0x6cf17",
+   "global_": 1594,
+   "fn": "0x6ce71",
+   "value": "global:982"
+  }
+ ],
  "strings": [
   "menu_bg",
   "menu_chk",
@@ -184,6 +454,7 @@
  "unknowns": [
   "菜单打开/关闭由哪条脚本路径触发（0x577C8 的 12 个调用点尚未逐个确认）",
   "图元号 795/796 两个挂接父组的用途（推测为普通项/危险项两组）",
-  "菜单项的屏幕坐标：本区间内没有显式 PrimSetXY，位置由上层 Motion/布局决定"
+  "菜单项的屏幕坐标：本区间内没有显式 PrimSetXY，位置由上层 Motion/布局决定",
+  "0x577C8 里 14 个「取反写回」的确切语义（看着像按项切换可用性 + 同步光标，未证实）"
  ]
 }

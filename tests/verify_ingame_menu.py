@@ -122,6 +122,39 @@ def main():
           % len(strings))
     check(sorted(strings) == sorted(set(strings)), 'no duplicate strings')
 
+    # 7 个开关由谁写：选项面板（47..53）、配置块拷贝（976..982）、重置、菜单自身
+    em = ref.get('enable_map', [])
+    check(len(em) == 7, '7 enable-map entries (got %d)' % len(em))
+    check([m['option_id'] for m in em] == list(range(47, 54)),
+          'option ids 47..53')
+    check([m['item'] for m in em] == [4, 5, 6, 1, 7, 3, 2],
+          'option order is ring order 4,5,6,1,7,3,2 (not 1..7)')
+    check([m['config_global'] for m in em] == list(range(976, 983)),
+          'config defaults 976..982 in the same order')
+    check(sorted(m['global_'] for m in em) == list(range(1593, 1600)),
+          'the 7 mappings cover globals 1593..1599 exactly once')
+    by_item = {it['index']: it['enable_global'] for it in items}
+    check(all(m['global_'] == by_item[m['item']] for m in em),
+          'every mapping targets the item\'s own enable flag')
+    check(all(m['image'] == items[m['item'] - 1]['image'] for m in em),
+          'image names match the item table')
+
+    w = ref.get('enable_writes', [])
+    check(len(w) == 35, '35 flag write sites (got %d)' % len(w))
+    kinds = {}
+    for x in w:
+        kinds[(x['fn'], x['value'])] = kinds.get((x['fn'], x['value']), 0) + 1
+    check(kinds.get(('0x22f48', 'false')) == 7,
+          'init function 0x22F48 clears all 7 flags')
+    check(kinds.get(('0x25e93', 'arg')) == 7,
+          'option switch 0x25E93 sets all 7 from its argument')
+    check(kinds.get(('0x6ce71', 'global:976')) == 1 and
+          sum(v for (fn, _v), v in kinds.items() if fn == '0x6ce71') == 7,
+          'config copy 0x6CE71 fills all 7 from defaults 976..982')
+    check(kinds.get(('0x577c8', 'true')) == 7 and
+          kinds.get(('0x577c8', 'false')) == 7,
+          'menu 0x577C8 toggles each flag (7 true + 7 false)')
+
     print('== 命令表证据（菜单不可能是外壳画的）')
     with open(CMD_TABLE, encoding='utf-8') as f:
         table = json.load(f)
@@ -172,6 +205,8 @@ def main():
               '%d call sites to entry unchanged' % len(ref['entry']['xrefs']))
         check(facts['strings'] == strings, 'string list re-derived identically')
         check(facts['floats'] == cv['floats'], 'anchor float constants unchanged')
+        check(facts['enable_map'] == em, 'enable map re-derived identically')
+        check(facts['writes'] == w, 'flag write sites re-derived identically')
     else:
         print('  skip  hcb not present')
 
