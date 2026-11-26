@@ -1050,8 +1050,8 @@ def build_steps(args):
                       note='UI module addresses across both games: ring loader 0x54520 / 0x6B8E1 '
                            '(44/35 assets), dialog loader 0x57383 / 0x6E297 (13 each); '
                            'entries 0x54C68 / 0x6BEE4 and 0x577C8 / 0x6E6BA have '
-                           '5 and 12 call sites in both games (4 ring openers are '
-                           'InputGetDown bit1)'))
+                           '5 and 12 call sites in both games (4 ring openers test '
+                           'InputGetDown mask 1)'))
 
     # 6.51 输入掩码使用表（脚本只测 11 个掩码值；mask=1 是第 0 位）
     vib = os.path.join(HERE, 'verify_input_bits.py')

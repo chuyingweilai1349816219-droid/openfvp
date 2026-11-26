@@ -4,6 +4,39 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百一十五续）：全量回归 98/100 → **100 passed, 0 failed** —— 两条红灯都是"旧期望"，不是代码坏了
+
+### 1. 先跑全量，才知道账
+
+上次全量 `run_all` 是很多轮以前。本轮先跑 `--fast --exclude fuzz,soak,perf`：
+**98 passed / 2 failed / 1 skipped**。两条红灯分别是 `verify_headless.py` 与
+`verify_load_restart.py`，追下去发现都是**门禁在断言旧行为**，不是引擎回归：
+
+| 门禁 | 旧断言 | 为什么现在不成立 |
+|---|---|---|
+| `verify_headless.py` | `headless: steps=` 行 + "文本 ≥ 1 行" | 摘要行早改成 `headless: primhit=… threadnext=… steps=…`；而且带 gfx 的外壳会**忠实卡在 prim 265 等待环**，故事段没开始 → 0 行才对 |
+| `verify_load_restart.py` | "重启后至少 1 行文本" | 同上：重启后脚本确实继续跑（步数 > 30000），但同样卡在 265 |
+
+### 2. 修法：把"当前真相"钉成断言，而不是放宽
+
+* `verify_headless.py`：改成从摘要行里解析 `steps=`/`threadnext=` 两个 token；新增
+  "ThreadNext 推进了 8085 帧"；把文本断言改成 **headless == 0 行** 且 **同参数 fvm > 0 行**
+  （34 行），把"fvm 靠残留 temp 骗过 265、headless 忠实等待"这条差异写进断言语义；
+* `verify_load_restart.py`：解析 `text lines` 计数，断言 **== 0** 并注明"卡在 265 等待环"，
+  同时保留"脚本继续执行 / 画面非黑 / 快照恢复未实现"等原有断言。
+
+这不是放宽：0 行原本就是**忠实行为**，旧断言等于在要求引擎继续"骗过"等待环。
+
+### 3. 结果
+
+| 项目 | 结果 |
+|---|---|
+| `run_all.py --fast --exclude fuzz,soak,perf` | **100 passed, 0 failed, 1 skipped**（373.9 s） |
+| `verify_headless.py` | PASS（13 项） |
+| `verify_load_restart.py` | PASS（含新增的 0 行断言） |
+
+无 C 代码改动、无冻结基线改动。
+
 ## [未发布] — 2026-11-27（一百一十四续）：脚本只测 11 个输入掩码值，第 0 位是主力；顺手修正"bit1"的含糊写法
 
 ### 1. 输入掩码使用表

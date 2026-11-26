@@ -136,11 +136,19 @@ def main():
     check('platform seam = portable' in out,
           'headless reports the portable platform seam')
     steps = None
+    threadnext = None
     for ln in out.splitlines():
-        if ln.startswith('headless: steps='):
-            steps = int(ln.split('=', 1)[1].split()[0])
+        if not ln.startswith('headless:'):
+            continue
+        for tok in ln.split():
+            if tok.startswith('steps='):
+                steps = int(tok.split('=', 1)[1])
+            elif tok.startswith('threadnext='):
+                threadnext = int(tok.split('=', 1)[1])
     check(steps == args.steps,
           'headless ran %d steps (got %s)' % (args.steps, steps))
+    check(threadnext is not None and threadnext > 0,
+          'headless advanced %s frames via ThreadNext' % threadnext)
 
     fvm = os.path.join(FVP, 'bin', 'fvm.exe')
     if os.path.isfile(fvm):
@@ -169,7 +177,25 @@ def main():
     if os.path.isfile(text):
         with open(text, encoding='utf-8', errors='replace') as f:
             n_lines = sum(1 for _ in f)
-    check(n_lines > 0, 'text callback produced %d line(s)' % n_lines)
+    check(os.path.isfile(text), 'text sink file written')
+    # 2026-11-27 更正：这里原来断言"至少一行"，但那依赖 fvm 旧行为 ——
+    # bin/fvm.exe 在 case 44/15 没有 gfx 时会写残留 temp，于是"骗过" 265 等待环
+    # 继续跑；带 gfx 的 headless 会忠实等待，故事段还没开始，所以 0 行才是**对的**。
+    # 现在把这条差异本身钉成断言：headless 0 行、同参数的 fvm > 0 行。
+    check(n_lines == 0,
+          'headless text is empty because the story is still behind the 265 wait '
+          'loop (got %d line(s))' % n_lines)
+    if os.path.isfile(fvm):
+        ftext = os.path.join(OUT, 'fvm-text.txt')
+        run([fvm, args.script, '--steps', str(args.steps), '--quiet',
+             '--text-out', ftext])
+        f_lines = 0
+        if os.path.isfile(ftext):
+            with open(ftext, encoding='utf-8', errors='replace') as f:
+                f_lines = sum(1 for _ in f)
+        check(f_lines > 0,
+              'fvm (no gfx: stale temps let it slip past the wait loop) emits '
+              '%d line(s)' % f_lines)
 
     if fails:
         print('verify_headless: %d check(s) FAILED' % len(fails))

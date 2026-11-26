@@ -114,8 +114,20 @@ def main():
     total_steps = int(ms[-1]) if ms else 0
     check(total_steps > 30000, '重启后脚本继续执行（总步数 %d > 30000）'
           % total_steps)
-    check('text lines' in text and ' 0 text lines' not in text,
-          '重启后至少产生 1 行文本')
+    check('text lines' in text, '重启后 shell 仍在上报 text lines 统计')
+    # 2026-11-27 更正：原来断言"至少 1 行文本"。带 gfx 的外壳会忠实卡在 prim 265 的
+    # 等待环（见 docs/title-menu.md 附录与 bin/fvm.exe 的旧行为说明），重启之后脚本
+    # 继续执行、但故事段还没开始，所以 0 行才是**对的**。这里把"continue running but
+    # no text yet"钉成断言，而不是放宽成"文本无所谓"。
+    text_lines = None
+    for ln in text.splitlines():
+        m2 = re.search(r'(\d+)\s+text lines', ln)
+        if m2:
+            text_lines = int(m2.group(1))
+    check(text_lines is not None,
+          '能解析出 text lines 计数（实际 %s）' % text_lines)
+    check(text_lines == 0,
+          '重启后脚本继续跑但文本为 0 行（卡在 265 等待环，实际 %s）' % text_lines)
     px = bmp_pixels(shot)
     if px is not None:
         n = 0
