@@ -1,0 +1,151 @@
+{
+ "schema": "fvp-dissolve/1",
+ "source": "iroseka_HD.asm（objdump 反汇编）+ pctrace 实测",
+ "claim": "带 gfx 的外壳卡在 0x59264..0x5928C 的 DissolveWait 循环；exe 的 DissolveWait 对非空实参不写返回值（只置线程标志），所以循环出口取决于线程 temp 的残留值（变体比较语义），不是 MotionAlphaTest(265)",
+ "state": {
+  "addr": "engine+0x101010",
+  "idle": 0,
+  "phases": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6
+  ],
+  "duration": "engine+0x101018",
+  "elapsed": "engine+0x10101c",
+  "fade_prim": "engine+0x100fdc",
+  "fade_alpha_offset": 7
+ },
+ "loop": {
+  "region": [
+   "0x59264",
+   "0x5928c"
+  ],
+  "exit": "DissolveWait(15) == false",
+  "not_the_265_loop": "0x592DF 的 MotionAlphaTest(265) 在这段之后",
+  "script": [
+   {
+    "pc": "0x59264",
+    "instr": "pushtrue",
+    "role": "loop 入口：压 true 当实参"
+   },
+   {
+    "pc": "0x59265",
+    "instr": "syscall 15 (DissolveWait)",
+    "role": "唯一的出口判定"
+   },
+   {
+    "pc": "0x5926b",
+    "instr": "jmpcond 0x59291",
+    "role": "DissolveWait==false 才跳出循环"
+   },
+   {
+    "pc": "0x5928c",
+    "instr": "jmp 0x59264",
+    "role": "否则回到 loop 入口"
+   }
+  ]
+ },
+ "sites": [
+  {
+   "pc": "0x43752c",
+   "instr": "cmpl   $0x0,0x101010(%ecx)",
+   "expect": "cmpl   $0x0,0x101010(%ecx)",
+   "role": "DissolveWait：状态为 0 时什么都不做",
+   "ok": true
+  },
+  {
+   "pc": "0x437540",
+   "instr": "cmpb   $0x0,(%ecx)",
+   "expect": "cmpb   $0x0,(%ecx)",
+   "role": "DissolveWait：实参 type==0（null/false）时……",
+   "ok": true
+  },
+  {
+   "pc": "0x437545",
+   "instr": "movb   $0x1,0x814(%eax)",
+   "expect": "movb   $0x1,0x814(%eax)",
+   "role": "……只写返回类型 1，不写值",
+   "ok": true
+  },
+  {
+   "pc": "0x43754f",
+   "instr": "orl    $0x10,0x808(%eax)",
+   "expect": "orl    $0x10,0x808(%eax)",
+   "role": "非空实参：置线程标志 0x10",
+   "ok": true
+  },
+  {
+   "pc": "0x437556",
+   "instr": "movb   $0x1,0x810(%eax)",
+   "expect": "movb   $0x1,0x810(%eax)",
+   "role": "非空实参：线程 +0x810 = 1（等待）",
+   "ok": true
+  },
+  {
+   "pc": "0x436fc1",
+   "instr": "mov    0x101010(%ecx),%esi",
+   "expect": "mov    0x101010(%ecx),%esi",
+   "role": "tick：读状态",
+   "ok": true
+  },
+  {
+   "pc": "0x436fd0",
+   "instr": "add    %eax,0x10101c(%ecx)",
+   "expect": "add    %eax,0x10101c(%ecx)",
+   "role": "tick：已用时 += dt",
+   "ok": true
+  },
+  {
+   "pc": "0x436fe0",
+   "instr": "cmp    0x101018(%ecx),%edx",
+   "expect": "cmp    0x101018(%ecx),%edx",
+   "role": "tick：已用时 vs 总时长",
+   "ok": true
+  },
+  {
+   "pc": "0x436ff0",
+   "instr": "mov    %eax,0x101010(%ecx)",
+   "expect": "mov    %eax,0x101010(%ecx)",
+   "role": "tick：结束把状态归 0（state==3 归 1）",
+   "ok": true
+  },
+  {
+   "pc": "0x43704b",
+   "instr": "idivl  0x101018(%ecx)",
+   "expect": "idivl  0x101018(%ecx)",
+   "role": "渲染：按已用时/总时长算比例",
+   "ok": true
+  },
+  {
+   "pc": "0x437054",
+   "instr": "add    $0x100fdc,%ecx",
+   "expect": "add    $0x100fdc,%ecx",
+   "role": "渲染：屏幕淡出图元",
+   "ok": true
+  },
+  {
+   "pc": "0x43705f",
+   "instr": "mov    %dl,0x7(%ecx)",
+   "expect": "mov    %dl,0x7(%ecx)",
+   "role": "渲染：alpha 写图元 +0x7",
+   "ok": true
+  },
+  {
+   "pc": "0x43a06d",
+   "instr": "movl   $0x3,0x101010(%edi)",
+   "expect": "movl   $0x3,0x101010(%edi)",
+   "role": "Dissolve：状态置 3",
+   "ok": true
+  },
+  {
+   "pc": "0x43a18c",
+   "instr": "movl   $0x6,0x101010(%edi)",
+   "expect": "movl   $0x6,0x101010(%edi)",
+   "role": "Dissolve：状态置 6",
+   "ok": true
+  }
+ ]
+}

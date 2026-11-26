@@ -856,6 +856,15 @@ def build_steps(args):
                            'TextSkip +0x5D7, TextShadowDist clamped 0..12, '
                            'TextFont -5..font_count-1'))
 
+    # 6.4966b2 Dissolve/DissolveWait 状态机（脚本空转的第一个真实出口）
+    vds = os.path.join(HERE, 'verify_exe_dissolve.py')
+    steps.append(Step('verify_exe_dissolve.py', [PY, '-X', 'utf8', vds], 300,
+                      skip_reason=None,
+                      note='Dissolve(14)/DissolveWait(15): state at engine+0x101010 '
+                           '(0 idle, 3/6 phases), duration/elapsed, fade prim alpha; '
+                           'DissolveWait never writes a value -> the 0x59264 loop exit '
+                           'depends on inherited temp (not the 265 MotionAlphaTest loop)'))
+
     # 6.4966c 文本样式字段的访问地图（读/写/读改写点；缺 work/ 时 SKIP）
     vtf = os.path.join(HERE, 'verify_exe_text_fields.py')
     steps.append(Step('verify_exe_text_fields.py', [PY, '-X', 'utf8', vtf], 600,
