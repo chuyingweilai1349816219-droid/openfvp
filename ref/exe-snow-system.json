@@ -1,0 +1,236 @@
+{
+ "device_calls": [
+  {
+   "pc": "0x42ab07",
+   "vtable_offset": "0xe4"
+  },
+  {
+   "pc": "0x42ab14",
+   "vtable_offset": "0xe4"
+  },
+  {
+   "pc": "0x42ab26",
+   "vtable_offset": "0x10c"
+  },
+  {
+   "pc": "0x42ab3a",
+   "vtable_offset": "0x10c"
+  },
+  {
+   "pc": "0x42ab4e",
+   "vtable_offset": "0x10c"
+  },
+  {
+   "pc": "0x42ab62",
+   "vtable_offset": "0x10c"
+  },
+  {
+   "pc": "0x42ab76",
+   "vtable_offset": "0x10c"
+  },
+  {
+   "pc": "0x42ab8a",
+   "vtable_offset": "0x10c"
+  },
+  {
+   "pc": "0x42ab9e",
+   "vtable_offset": "0x164"
+  },
+  {
+   "pc": "0x42abc1",
+   "vtable_offset": "0x104"
+  }
+ ],
+ "draw_fn": "0x42aa10",
+ "field_accesses": [
+  {
+   "instr": "mov    0x500c(%edi),%edx",
+   "kind": "read",
+   "offset": "0x500c",
+   "pc": "0x42aa48",
+   "width": "u32"
+  },
+  {
+   "instr": "mov    0x5010(%edi),%eax",
+   "kind": "read",
+   "offset": "0x5010",
+   "pc": "0x42aa68",
+   "width": "u32"
+  },
+  {
+   "instr": "mov    0x5014(%edi),%eax",
+   "kind": "read",
+   "offset": "0x5014",
+   "pc": "0x42aa7d",
+   "width": "u32"
+  },
+  {
+   "instr": "mov    0x5028(%edi),%eax",
+   "kind": "read",
+   "offset": "0x5028",
+   "pc": "0x42aa88",
+   "width": "u32"
+  },
+  {
+   "instr": "fildl  0x501c(%edi)",
+   "kind": "read",
+   "offset": "0x501c",
+   "pc": "0x42abcd",
+   "width": "int32 -> float"
+  },
+  {
+   "instr": "mov    0x5044(%edi),%eax",
+   "kind": "read",
+   "offset": "0x5044",
+   "pc": "0x42abd3",
+   "width": "u32"
+  },
+  {
+   "instr": "mov    0x503c(%edi),%edx",
+   "kind": "read",
+   "offset": "0x503c",
+   "pc": "0x42abd9",
+   "width": "u32"
+  },
+  {
+   "instr": "mov    0x5040(%edi),%ecx",
+   "kind": "read",
+   "offset": "0x5040",
+   "pc": "0x42abe3",
+   "width": "u32"
+  },
+  {
+   "instr": "fildl  0x5020(%edi)",
+   "kind": "read",
+   "offset": "0x5020",
+   "pc": "0x42abe9",
+   "width": "int32 -> float"
+  },
+  {
+   "instr": "fildl  0x5024(%edi)",
+   "kind": "read",
+   "offset": "0x5024",
+   "pc": "0x42abff",
+   "width": "int32 -> float"
+  }
+ ],
+ "fields": [
+  {
+   "offset": "0x500c",
+   "reads": 1,
+   "widths": [
+    "u32"
+   ],
+   "writes": 0
+  },
+  {
+   "offset": "0x5010",
+   "reads": 1,
+   "widths": [
+    "u32"
+   ],
+   "writes": 0
+  },
+  {
+   "offset": "0x5014",
+   "reads": 1,
+   "widths": [
+    "u32"
+   ],
+   "writes": 0
+  },
+  {
+   "offset": "0x501c",
+   "reads": 1,
+   "widths": [
+    "int32 -> float"
+   ],
+   "writes": 0
+  },
+  {
+   "offset": "0x5020",
+   "reads": 1,
+   "widths": [
+    "int32 -> float"
+   ],
+   "writes": 0
+  },
+  {
+   "offset": "0x5024",
+   "reads": 1,
+   "widths": [
+    "int32 -> float"
+   ],
+   "writes": 0
+  },
+  {
+   "offset": "0x5028",
+   "reads": 1,
+   "widths": [
+    "u32"
+   ],
+   "writes": 0
+  },
+  {
+   "offset": "0x503c",
+   "reads": 1,
+   "widths": [
+    "u32"
+   ],
+   "writes": 0
+  },
+  {
+   "offset": "0x5040",
+   "reads": 1,
+   "widths": [
+    "u32"
+   ],
+   "writes": 0
+  },
+  {
+   "offset": "0x5044",
+   "reads": 1,
+   "widths": [
+    "u32"
+   ],
+   "writes": 0
+  }
+ ],
+ "hints": [
+  {
+   "hint": "精灵下标：`imul $0x51c` 后在 0x1014C0/0x1018C8 （sprite 表）里取条目",
+   "offset": "0x500c"
+  },
+  {
+   "hint": "粒子条数（`mov ...,%eax` 后 `dec %eax` 当上界）",
+   "offset": "0x5010"
+  },
+  {
+   "hint": "另一维计数（同样 dec 后当上界）",
+   "offset": "0x5014"
+  },
+  {
+   "hint": "三个 int→float 的参数（`fildl` 后参与浮点运算）",
+   "offset": "0x501c/0x5020/0x5024"
+  },
+  {
+   "hint": "整型参数（读入后进浮点栈）",
+   "offset": "0x5028"
+  },
+  {
+   "hint": "三个整型参数，两两做差（0x5044-0x503c、0x5040-0x5044）",
+   "offset": "0x503c/0x5040/0x5044"
+  }
+ ],
+ "note": "雪系统记录（engine+0x684378 + idx*0x5048）在绘制函数 0x42AA10 里的字段访问图（A 类）；由 scripts/extract-exe-snow-system.py 生成",
+ "record": {
+  "base": "engine+0x684378",
+  "enabled_flag": "engine+0x689378 + idx*0x5048",
+  "selector": "prim+0x2E（有符号）",
+  "stride": "0x5048"
+ },
+ "unknown": [
+  "字段之间的运算关系（粒子位置/速度/寿命的公式）",
+  "设备调用序列里各 render state 的常量含义"
+ ]
+}

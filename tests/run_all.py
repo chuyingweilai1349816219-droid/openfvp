@@ -714,6 +714,14 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.49654 雪系统记录的字段访问图（snow = prim type 7）
+    vss = os.path.join(HERE, 'verify_exe_snow_system.py')
+    steps.append(Step('verify_exe_snow_system.py', [PY, '-X', 'utf8', vss], 600,
+                      skip_reason=None,
+                      note='snow system record (engine+0x684378, stride 0x5048): every '
+                           'field access inside the draw fn 0x42AA10, plus the four '
+                           'device vtable methods it calls (0xE4/0x104/0x10C/0x164)'))
+
     # 6.49653 图元类型分派（type 1..7，含 snow 的雪系统结构）
     vptd = os.path.join(HERE, 'verify_exe_prim_type_dispatch.py')
     steps.append(Step('verify_exe_prim_type_dispatch.py', [PY, '-X', 'utf8', vptd], 600,
