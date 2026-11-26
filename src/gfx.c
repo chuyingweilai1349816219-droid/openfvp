@@ -5543,6 +5543,177 @@ void gfx_text_set_hidden(Gfx *g, int layer, int hidden)
     g->tw_hidden[layer] = hidden ? 1u : 0u;
 }
 
+/* ---- 场景状态导出（供 bin/fvp.exe --scene 回放）----------------------
+ *
+ * 把当前渲染状态写成 `FVPS` v2 二进制：
+ *   header: "FVPS" u32 version=2, i32 canvas_w, canvas_h, i32 bg r,g,b,a
+ *   graphs: u32 n;  每个 { i32 slot; u32 namelen + bytes; i32 w,h,x,y,frames,frame }
+ *   prims : u32 n;  每个 { i32 id,type,draw,alpha,blend,z,x,y,w,h,u,v,op1,op2,
+ *                           angle,sx,sy,graph,tw,parent }（20 个 i32）
+ *   texts : u32 n;  每个 { i32 idx,r,g,b,size0,size1,out0,out1,panel_w,panel_h,
+ *                           has_pos,pos0,pos1,nlines; 每行 u32 len + bytes }
+ *   layout: u32 n;  每个 { i32 idx,x,y,max_w,size,max_lines }
+ *
+ * 为什么要 C 侧导出：Python 参考模型不跑 motion，prim 的 alpha/位置停在脚本
+ * 初始化值，导出出来的图元驱动帧没有对话框；C 引擎有 motion 实现，导出的才是
+ * “引擎真跑到这一步”的状态。
+ */
+static void se_i32(FILE *f, int v)
+{
+    unsigned char b[4];
+
+    b[0] = (unsigned char)(v & 0xff);
+    b[1] = (unsigned char)((v >> 8) & 0xff);
+    b[2] = (unsigned char)((v >> 16) & 0xff);
+    b[3] = (unsigned char)((v >> 24) & 0xff);
+    (void)fwrite(b, 1, 4, f);
+}
+
+static void se_str(FILE *f, const char *s)
+{
+    unsigned n = (s != NULL) ? (unsigned)strlen(s) : 0u;
+
+    se_i32(f, (int)n);
+    if (n > 0) {
+        (void)fwrite(s, 1, n, f);
+    }
+}
+
+int gfx_scene_export(Gfx *g, const char *path)
+{
+    FILE *f;
+    int i;
+    int n;
+
+    if (g == NULL || path == NULL) {
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    (void)fwrite("FVPS", 1, 4, f);
+    se_i32(f, 2);
+    se_i32(f, g->w);
+    se_i32(f, g->h);
+    se_i32(f, (int)(g->bg & 0xff));
+    se_i32(f, (int)((g->bg >> 8) & 0xff));
+    se_i32(f, (int)((g->bg >> 16) & 0xff));
+    se_i32(f, (int)((g->bg >> 24) & 0xff));
+    /* graphs */
+    n = 0;
+    for (i = 0; i < GFX_GRAPH_MAX; ++i) {
+        if (g->slot != NULL && g->slot[i].name != NULL) {
+            n += 1;
+        }
+    }
+    se_i32(f, n);
+    for (i = 0; i < GFX_GRAPH_MAX; ++i) {
+        GfxSlot *sl = &g->slot[i];
+
+        if (sl->name == NULL) {
+            continue;
+        }
+        se_i32(f, i);
+        se_str(f, sl->name);
+        se_i32(f, sl->tex != NULL ? sl->tex->img.w : 0);
+        se_i32(f, sl->tex != NULL ? sl->tex->img.h : 0);
+        se_i32(f, 0);
+        se_i32(f, 0);
+        se_i32(f, 1);
+        se_i32(f, sl->frame);
+    }
+    /* prims */
+    n = 0;
+    for (i = 1; i < GFX_PRIM_MAX; ++i) {
+        if (g->prim[i].type != 0) {
+            n += 1;
+        }
+    }
+    se_i32(f, n);
+    for (i = 1; i < GFX_PRIM_MAX; ++i) {
+        const GfxPrim *p = &g->prim[i];
+
+        if (p->type == 0) {
+            continue;
+        }
+        se_i32(f, p->id);
+        se_i32(f, p->type);
+        se_i32(f, p->draw);
+        se_i32(f, p->alpha);
+        se_i32(f, p->blend);
+        se_i32(f, p->z);
+        se_i32(f, p->x);
+        se_i32(f, p->y);
+        se_i32(f, p->w);
+        se_i32(f, p->h);
+        se_i32(f, p->u);
+        se_i32(f, p->v);
+        se_i32(f, p->op1);
+        se_i32(f, p->op2);
+        se_i32(f, p->angle);
+        se_i32(f, p->scale_x);
+        se_i32(f, p->scale_y);
+        se_i32(f, p->graph);
+        se_i32(f, p->tw);
+        se_i32(f, p->parent);
+    }
+    /* texts */
+    n = 0;
+    for (i = 0; i < GFX_TEXT_MAX; ++i) {
+        if (g->tw[i].used || g->tw[i].nlines > 0) {
+            n += 1;
+        }
+    }
+    se_i32(f, n);
+    for (i = 0; i < GFX_TEXT_MAX; ++i) {
+        const GfxTextWin *tw = &g->tw[i];
+        int k;
+
+        if (!tw->used && tw->nlines <= 0) {
+            continue;
+        }
+        se_i32(f, i);
+        se_i32(f, tw->color[0]);
+        se_i32(f, tw->color[1]);
+        se_i32(f, tw->color[2]);
+        se_i32(f, tw->size[0]);
+        se_i32(f, tw->size[1]);
+        se_i32(f, tw->out_size[0]);
+        se_i32(f, tw->out_size[1]);
+        se_i32(f, tw->panel_w);
+        se_i32(f, tw->panel_h);
+        se_i32(f, tw->has_pos);
+        se_i32(f, tw->pos[0]);
+        se_i32(f, tw->pos[1]);
+        se_i32(f, tw->nlines);
+        for (k = 0; k < tw->nlines; ++k) {
+            se_str(f, tw->lines[k]);
+        }
+    }
+    /* text_layout */
+    n = 0;
+    for (i = 0; i < GFX_TEXT_MAX; ++i) {
+        if (g->tw[i].lay_custom) {
+            n += 1;
+        }
+    }
+    se_i32(f, n);
+    for (i = 0; i < GFX_TEXT_MAX; ++i) {
+        if (!g->tw[i].lay_custom) {
+            continue;
+        }
+        se_i32(f, i);
+        se_i32(f, g->tw[i].lay.x);
+        se_i32(f, g->tw[i].lay.y);
+        se_i32(f, g->tw[i].lay.max_w);
+        se_i32(f, g->tw[i].lay.size);
+        se_i32(f, g->tw[i].lay.max_lines);
+    }
+    (void)fclose(f);
+    return 1;
+}
+
 void gfx_set_text_fixed_layout(Gfx *g, int fixed)
 {
     if (g == NULL) {

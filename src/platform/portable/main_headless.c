@@ -33,6 +33,8 @@ static void usage(FILE *f, const char *argv0)
     fprintf(f, "  --text-out FILE   write the text lines as they appear\\n");
     fprintf(f, "  --pctrace FILE    write one executed pc per line (diagnostics)\\n");
     fprintf(f, "  --screenshot FILE write the canvas as a 32-bit BMP\n");
+    fprintf(f, "  --dump-scene FILE export the FVPS v2 scene "
+               "(input for bin/fvp.exe --scene)\n");
     fprintf(f, "  --quiet           do not echo text\n");
     fprintf(f, "  --click N         synthetic click every N steps\n");
     fprintf(f, "  --text-fixed-layout  legacy text layout (synthetic box;\n");
@@ -115,6 +117,8 @@ static int write_bmp(const char *path, const unsigned char *rgba, int w, int h)
 typedef struct {
     FILE *f;
     int lines;
+    FILE *steps;      /* --text-out-steps：每行带 VM 步数，便于定位某句台词出现在哪一步 */
+    FvpVM *vm;
 } TextSink;
 
 static void text_sink(void *ud, int layer, const char *text, int clear)
@@ -126,6 +130,10 @@ static void text_sink(void *ud, int layer, const char *text, int clear)
         return;
     }
     fprintf(sink->f, "[%d] %s\r\n", layer, text);
+    if (sink->steps != NULL) {
+        fprintf(sink->steps, "%llu\t[%d] %s\n",
+                (unsigned long long)sink->vm->steps, layer, text);
+    }
     sink->lines += 1;
 }
 
@@ -136,6 +144,8 @@ int main(int argc, char **argv)
     const char *text_out = NULL;
     const char *pctrace = NULL;
     const char *shot = NULL;
+    const char *text_steps = NULL;
+    const char *dump_scene = NULL; /* --dump-scene: 导出 FVPS v2 场景（--scene 的输入） */
     TextSink sink;
     unsigned long long steps = 200000ULL;
     unsigned long long click = 0;
@@ -165,6 +175,10 @@ int main(int argc, char **argv)
             text_out = argv[++i];
         } else if (strcmp(a, "--screenshot") == 0 && i + 1 < argc) {
             shot = argv[++i];
+        } else if (strcmp(a, "--text-out-steps") == 0 && i + 1 < argc) {
+            text_steps = argv[++i];
+        } else if (strcmp(a, "--dump-scene") == 0 && i + 1 < argc) {
+            dump_scene = argv[++i];
         } else if (strcmp(a, "--frame-ms") == 0 && i + 1 < argc) {
             frame_ms = (int)strtol(argv[++i], NULL, 0);
         } else if (strcmp(a, "--click-mask") == 0 && i + 1 < argc) {
@@ -203,6 +217,14 @@ int main(int argc, char **argv)
         return 3;
     }
     memset(&sink, 0, sizeof sink);
+    sink.vm = &vm;
+    if (text_steps != NULL) {
+        sink.steps = fopen(text_steps, "wb");
+        if (sink.steps == NULL) {
+            fprintf(stderr, "fvp-headless: cannot write %s\n",
+                    text_steps);
+        }
+    }
     memset(&vm, 0, sizeof vm);
     fvp_vm_init(&vm, &hcb, quiet);
     vm.click_period = (int)click;
@@ -311,10 +333,12 @@ int main(int argc, char **argv)
             fvp_hcb_free(&hcb);
             return 5;
         }
-        if (vm.gfx_bridge != NULL) {
-            vm.gfx_bridge->on_text = text_sink;
-            vm.gfx_bridge->text_ud = &sink;
-        }
+    }
+    /* 只要打开了任意一个文本输出（含 --text-out-steps），就挂上文本回调：
+     * 带步数的落盘依赖同一个回调。 */
+    if ((sink.f != NULL || sink.steps != NULL) && vm.gfx_bridge != NULL) {
+        vm.gfx_bridge->on_text = text_sink;
+        vm.gfx_bridge->text_ud = &sink;
     }
 
     t0 = fvp_plat_now_sec();
@@ -364,6 +388,14 @@ int main(int argc, char **argv)
         done = vm.steps;
     }
     gfx_render(gfx);
+    if (dump_scene != NULL) {
+        if (gfx_scene_export(gfx, dump_scene)) {
+            printf("headless: scene -> %s\n", dump_scene);
+        } else {
+            fprintf(stderr, "fvp-headless: cannot write %s\n",
+                    dump_scene);
+        }
+    }
     printf("headless: primhit=%llu/%llu threadnext=%llu motion_active=%d "
            "steps=%llu in %.1f ms\n",
            (unsigned long long)vm.prim_hit_calls,

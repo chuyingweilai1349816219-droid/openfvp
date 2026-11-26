@@ -82,7 +82,7 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
     }
     memset(magic, 0, sizeof magic);
     if (fread(magic, 1, 4, r.fp) != 4 || memcmp(magic, "FVPS", 4) != 0 ||
-        !rd_i32(&r, &version) || version != 1) {
+        !rd_i32(&r, &version) || (version != 1 && version != 2)) {
         fclose(r.fp);
         return 0;
     }
@@ -160,6 +160,7 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
     if (!r.bad && rd_i32(&r, &n)) {
         for (i = 0; i < n && !r.bad; ++i) {
             int idx = 0, col[3], size[2], out[2], has_pos = 0, pos[2] = {0, 0};
+            int panel[2] = {0, 0};
             int nlines = 0, k;
 
             if (!rd_i32(&r, &idx)) {
@@ -180,6 +181,11 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
                     break;
                 }
             }
+            if (version >= 2) {
+                if (!rd_i32(&r, &panel[0]) || !rd_i32(&r, &panel[1])) {
+                    break;
+                }
+            }
             if (r.bad || !rd_i32(&r, &has_pos) || !rd_i32(&r, &pos[0]) ||
                 !rd_i32(&r, &pos[1]) || !rd_i32(&r, &nlines)) {
                 break;
@@ -191,6 +197,9 @@ int fvp_scene_load(Gfx *gfx, const wchar_t *path)
                 gfx_text_set_out_size(gfx, idx, out[0], out[1]);
                 if (has_pos) {
                     gfx_text_set_pos(gfx, idx, pos[0], pos[1]);
+                }
+                if (panel[0] > 0 && panel[1] > 0) {
+                    (void)gfx_text_set_buff(gfx, idx, panel[0], panel[1]);
                 }
             }
             for (k = 0; k < nlines && !r.bad; ++k) {

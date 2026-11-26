@@ -4,6 +4,67 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（八十二续）：场景状态改由 C 引擎导出（FVPS v2）+ 步数不对齐的实证
+
+### 1. 做了什么
+
+上一轮发现 Python 参考模型不跑 motion，导出的图元驱动帧里文本图元 `draw=0/alpha=0`，
+画不出对话框。这一轮补上 **C 侧导出**：
+
+| 新增 | 位置 | 作用 |
+|---|---|---|
+| `gfx_scene_export()` | `src/gfx.c` / `src/gfx.h` | 把 prims / graphs / texts / text_layout 写成 FVPS **v2** 二进制 |
+| `--dump-scene FILE` | `bin/fvp-headless.exe` | C 引擎跑到指定步后导出场景 |
+| `--text-out-steps FILE` | `bin/fvp-headless.exe` | 每句台词带 VM 步数落盘（`<step>\t[layer] text`），用来定位台词出现在第几步 |
+| v2 读取 | `src/platform/win32/win32_scene.c` | 兼容 v1/v2；v2 的 `panel_w/panel_h` 走 `gfx_text_set_buff()`，图元驱动换行才和引擎一致 |
+| v2 写出 | `work/scene_to_bin.py` | 从 `gfx-scene.json` 转 FVPS v2（`panel` 字段） |
+| 诊断阅读器 | `work/peek_scene.py` | 打印 FVPS 的图元/文本状态，定位用 |
+
+实测链路（真跑）：
+
+```
+bin\fvp-headless.exe iroseka.hcb --steps 528000 --dump-scene out\c\scene-c.bin --screenshot out\c\scene-c.bmp
+  → headless: scene -> out\c\scene-c.bin
+  → headless: screenshot -> out\c\scene-c.bmp (1920x1080)
+bin\fvp.exe ... --scene out\c\scene-c.bin
+  → scene: scene.bin 已载入（窗口正常，ESC 退出）
+```
+
+### 2. 两个"坑"的实证（本轮负面结论）
+
+**① 两个引擎的步数不可比。** 同样是 step 528000：
+
+| 侧 | 图元数 | type-5 文本图元 | 文本窗口 |
+|---|---:|---:|---|
+| Python 参考模型 | 282 | 4（含 tw0/tw8/tw9） | 有台词「……おっと。人が来たみたいだな。私は消えてるよ」 |
+| C 引擎（headless） | 135 | **0** | 全空 |
+
+原因是两侧输入模型不同（点击周期、协程开关、`hold_text`），不是同一段剧情的同一时刻。
+拿参考模型的 step 号去 C 侧 `--steps` 取帧，取到的是别的剧情点。
+
+**② headless + gfx 到不了正文。** 带 gfx 时 `PrimHit` 走图元查询、永不命中，脚本卡在
+标题菜单：`primhit=0/0`，即使 `--click 600` 也 **0 行台词**；而不带 gfx 的 `bin/fvm.exe`
+同样参数能跑出 195 行（冻结基线 `ref/ref-900k.txt`）。所以"导出正文那一帧"还缺一步：
+把 headless 的 `PrimHit` 与 gfx 解耦（诊断模式），或用 `FVP_START_PC` 配上真实的栈/协程上下文。
+
+### 3. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS**（前缀 + 预算） |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971；24/24，0 px） |
+| `tests/gfx_dump.py` 自检 | **0 differing px**（参考帧未受影响） |
+| `scripts/check-docs.py` | **PASS** |
+
+### 4. 诚实说明
+
+- 本轮**没有**让"浮游旁白位置"变得可验证：导出链路通了，但导出的那一帧（C 的 528000 步）
+  本来就没有对话框，所以 `out/c/scene-c.png` 只有天空 CG。这是步数不对齐导致的，不是渲染 bug。
+- `--scene` 窗口需要手动关（`--run-seconds` 在回放模式下还不生效），本轮用 `Stop-Process` 收尾；
+  下一轮顺手把回放模式的超时退出加上。
+- 目标清单 ② 仍未完成，卡点明确写成"PrimHit 与 gfx 解耦"或"真实上下文重放"二选一。
+
 ## [未发布] — 2026-11-26（八十一续）：参考 VM 的 `pushtrue` 也是 bool —— 冻结参考帧重生成
 
 ### 1. 发现：参考 VM 与原版语义不一致

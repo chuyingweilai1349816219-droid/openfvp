@@ -97,7 +97,7 @@ fvp.exe --game <游戏目录> [选项]
 | `--title-bg-div N` | 背景动画合成的内部分辨率除数（1 = 全分辨率**默认**/ 2 / 4 / 8）。全分辨率实测 36-41 fps、清晰度是静态帧的 0.78；老机器可传 2 换帧率。门禁 `tests/verify_title_bg_anim.py` 会检查清晰度比 ≥ 45%，糊了会拦下 |
 | `--title-bg-anim` | （历史条目，已被上面那条取代）标题背景按脚本做缩放动画 |
 | `--title-bg-static` | 关掉 `--opening` 自动打开的背景动画（逐帧对比/诊断用）。开着它跑 `--opening`，开场结束帧与静态标题帧**逐字节相同** |
-| `--scene FILE` | **一帧回放**：读 `work/scene_to_bin.py` 从 `gfx-scene.json` 转出的二进制场景（prims / graphs / texts / text_layout），在真窗口里只画这一帧，不跑 VM。用于人眼验收某一帧的位置/层序（ESC 或关窗口退出）；配合 `--text-fixed-layout` 可看旧版式的合成框 |
+| `--scene FILE` | **一帧回放**：读 FVPS v2 场景二进制（`bin/fvp-headless.exe --dump-scene FILE` 由 C 引擎导出，或 `work/scene_to_bin.py` 从 `gfx-scene.json` 转出）场景（prims / graphs / texts / text_layout），在真窗口里只画这一帧，不跑 VM。用于人眼验收某一帧的位置/层序（ESC 或关窗口退出）；配合 `--text-fixed-layout` 可看旧版式的合成框 |
 | `--hide-text-layer N` | 与 `--scene` 一起用，不画第 N 层文本（可重复）。典型用法：`--hide-text-layer 9` 去掉旧版式里那个原版并不存在的「章节标题」 |
 | `--load-restart` | `Load(slot)` 时按 exe 的读档复位序列做 step-1：读槽文件（解析章节/对话行长度、缩略图、尾段长度）→ 场景复位（prim/motion/文本窗口）→ 重建 VM 并从入口重启，**保留 globals/flags**；槽尾快照里未逆清的段暂不应用。默认关（不开时行为与之前相同） |
 

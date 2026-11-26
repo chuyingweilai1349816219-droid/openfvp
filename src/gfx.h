@@ -163,6 +163,9 @@ void gfx_render(Gfx *g);
 /* The composed canvas, valid until the next gfx_render()/gfx_destroy().
  * Do not free.  Returns NULL for w == NULL misuse.  Either w/h may be NULL. */
 const uint32_t *gfx_canvas(Gfx *g, int *w, int *h);
+/* 把当前渲染状态导出成 FVPS v2 二进制（bin/fvp.exe --scene 的输入）。
+ * C 侧导出的意义：C 有 motion 实现，导出的是“引擎真跑到这一步”的状态；Python 参考模型不跑 motion。 */
+int gfx_scene_export(Gfx *g, const char *path);
 
 /* 诊断：文理缓存占用（字节）与引擎中的图像条数。 */
 size_t gfx_tex_bytes(const Gfx *g);

@@ -323,6 +323,47 @@ gfx_compare.py
 
 ---
 
+## 4.3 场景导出与回放（FVPS v2，2026-11-26）
+
+`--scene` 回放需要一份"某一帧的渲染状态"。两种来源：
+
+| 来源 | 导出方式 | 状态是否带 motion |
+|---|---|---|
+| Python 参考模型 | `tests/gfx_dump.py` → `work/scene_to_bin.py`（JSON → FVPS） | **否**：参考模型不跑 motion，prim 的 alpha/位置停在脚本初始化值 |
+| C 引擎 | `bin/fvp-headless.exe ... --dump-scene out/c/scene.bin`（`gfx_scene_export()`） | **是**：C 有 motion 实现，导出的是"引擎真跑到这一步"的状态 |
+
+FVPS v2 布局（小端，`src/gfx.c: gfx_scene_export()` 写、`src/platform/win32/win32_scene.c` 读）：
+
+```
+"FVPS" | u32 version=2 | i32 canvas_w, canvas_h | i32 bg r,g,b,a
+graphs : u32 n; { i32 slot; u32 namelen + bytes; i32 w,h,x,y,frames,frame }
+prims  : u32 n; { i32 id,type,draw,alpha,blend,z,x,y,w,h,u,v,op1,op2,
+                  angle,sx,sy,graph,tw,parent }   (20 × i32)
+texts  : u32 n; { i32 idx,r,g,b,size0,size1,out0,out1,panel_w,panel_h,
+                  has_pos,pos0,pos1,nlines; 每行 u32 len + bytes }
+layout : u32 n; { i32 idx,x,y,max_w,size,max_lines }
+```
+
+v2 比 v1 多的是 `panel_w/panel_h`（`TextBuff(110)` 的离屏面板尺寸）：
+图元驱动模式下它就是换行宽度与裁剪高度，没有它回放出来的正文会按版面表换行，
+和引擎不一致。
+
+**诊断开关**：`fvp-headless.exe --text-out-steps FILE` 把每句台词连同**VM 步数**
+写出来（`<step>\t[layer] text`），用来定位"某句台词出现在第几步"。
+`--text-out` 的格式不变。
+
+**已知限制（本轮实测）**：
+
+1. **两个引擎的步数不可比**：参考模型与 C 的输入模型不同（点击周期、协程开关、
+   `hold_text`），同样是 step 528000，C 侧导出的是 135 个图元、0 个 type-5 文本图元、
+   文本窗口全空；参考模型那一步却是"对话框 + 台词"。所以拿 Python 的 step 号
+   去 C 侧 `--steps` 取帧是错的。
+2. **headless + gfx 到不了正文**：带 gfx 时 `PrimHit` 走图元查询、永远不命中，
+   脚本卡在标题菜单（`primhit=0/0`、`--click 600` 也 0 行文本）；不带 gfx 的
+   `bin/fvm.exe` 同样参数能跑出 195 行（`ref/ref-900k.txt`）。因此"导出正文帧"
+   还缺一步：让 headless 的 `PrimHit` 与 gfx 解耦（诊断模式），或者用
+   `FVP_START_PC` 配上真实的栈/协程上下文。
+
 ## 5. 性能
 
 测量条件：Windows + w64devkit gcc 16.2 `-O2`，单线程，`clock()`（CPU 时间），
