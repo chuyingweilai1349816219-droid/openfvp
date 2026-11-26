@@ -970,6 +970,24 @@ MotionMove prim=552 x=1 y=852 z=1 ms=1 mode=3 (instant)
    `PrimSetText` 的初值；
 2. 抓窗口位置必须抓 MotionMove（本轮已给 48/51 加了 `FVP_DEBUG_TEXT` 日志）。
 
+### 文本类 handler 的实参规则（A 类：`ref/exe-text-handlers.json`）
+
+四个文本 handler 是同一族写法：**层号 `arg0` 必须是 int 且在 `0..0x1F`**（否则整条
+命令忽略），其余分量**逐分量**先判 `type==2`（int）再过范围检查，不满足就**跳过那一个
+分量、保持原值**——不是钳位、也不是取低位。
+
+| 命令 | handler | 分量规则 |
+|---|---|---|
+| `TextBuff(110)` | `0x43C830` | w/h 缺省 8，int 且 ≥0 才覆盖；越界交给 `0x430EA0` 抛异常 |
+| `TextColor(112)` | `0x43C8D0` | R/G/B 各自 int 且 **0..0xFF** |
+| `TextOutSize(120)` | `0x43C960` | arg2 **0..0xC**、arg3 **0..0x8** |
+| `TextSize(126)` | `0x43CD60` | w **0xC..0x40**、h **0x8..0x20** |
+
+我们这轮修掉的一处真实偏差：`TextColor` 原来无条件调 `gfx_text_set_color()`（内部
+`& 255`），于是 `TextColor(0, 300, 0, 0)` 会把 R 写成 44；原版是**保持原值**。现在改成
+逐分量入口 `gfx_text_set_color_ex()`（新增 `gfx_text_get_color()` 给单元测试），
+`tests/test_textprims.c` 从 37 条检查加到 **40 条**。
+
 ### TextBuff 的尺寸上限是"越界即抛异常"（A 类：`ref/exe-textbuff.json`）
 
 上一轮我怀疑"我们的引擎把 1380 宽的面板丢掉了、原版不会"。本轮把 `0x430EA0` 读透，

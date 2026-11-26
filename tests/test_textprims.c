@@ -270,6 +270,27 @@ int main(void)
         gfx_text_clear(g, 3);
     }
 
+    /* TextColor(112) 的原版逐分量语义（handler 0x43C8D0）：每个分量要求 int 且
+     * 0..0xFF，不满足的那一个保持原值（不是钳位、不是取低位）。 */
+    {
+        int r = -1;
+        int gr = -1;
+        int b = -1;
+
+        gfx_text_set_color(g, 4, 10, 20, 30);
+        gfx_text_set_color_ex(g, 4, 300, 40, -5, 1, 1, 1);
+        gfx_text_get_color(g, 4, &r, &gr, &b);
+        CHECK(r == 10 && gr == 40 && b == 30,
+              "TextColor: out-of-range components keep the old value (%d,%d,%d)",
+              r, gr, b);
+        gfx_text_set_color_ex(g, 4, 255, 0, 128, 0, 1, 1);
+        gfx_text_get_color(g, 4, &r, &gr, &b);
+        CHECK(r == 10 && gr == 0 && b == 128,
+              "TextColor: non-int component is skipped (%d,%d,%d)", r, gr, b);
+        gfx_text_set_color_ex(g, 99, 1, 2, 3, 1, 1, 1);
+        CHECK(1, "TextColor: bad layer ignored");
+    }
+
     gfx_destroy(g);
     printf("\ntest_textprims: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

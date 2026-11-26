@@ -434,6 +434,14 @@ int gfx_draw_text_line(Gfx *g, const char *utf8, int x, int y, int px, int r,
                        int gr, int b, int alpha);
 void gfx_text_clear(Gfx *g, int layer);
 void gfx_text_set_color(Gfx *g, int layer, int r, int gr, int b);
+
+/* TextColor(112) 的原版逐分量语义（handler 0x43C8D0）：每个分量要求 int 且
+ * 0..0xFF，否则那一个保持原值（不是钳位）。has_* = 0 表示该参数不是 int。 */
+void gfx_text_set_color_ex(Gfx *g, int layer, int r, int gr, int b,
+                           int has_r, int has_g, int has_b);
+
+/* 读回该层的文字颜色（给单元测试用）。返回 1 = 该层有窗口。 */
+int gfx_text_get_color(const Gfx *g, int layer, int *r, int *gr, int *b);
 void gfx_text_set_size(Gfx *g, int layer, int w, int h);
 /* TextSize(126) 的原版语义：两个分量各自独立判定（先要求 int，再各自过
  * 12..64 / 8..32 的范围检查），不满足的那一个保持原值。has_w/has_h = 0 表示

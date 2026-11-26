@@ -4952,6 +4952,54 @@ void gfx_text_set_color(Gfx *g, int layer, int r, int gr, int b)
     g->tw[layer].color[2] = b & 255;
 }
 
+int gfx_text_get_color(const Gfx *g, int layer, int *r, int *gr, int *b)
+{
+    if (r != NULL) {
+        *r = 0;
+    }
+    if (gr != NULL) {
+        *gr = 0;
+    }
+    if (b != NULL) {
+        *b = 0;
+    }
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return 0;
+    }
+    if (r != NULL) {
+        *r = g->tw[layer].color[0];
+    }
+    if (gr != NULL) {
+        *gr = g->tw[layer].color[1];
+    }
+    if (b != NULL) {
+        *b = g->tw[layer].color[2];
+    }
+    return 1;
+}
+
+/* TextColor(112) 的原版语义（handler 0x43C8D0）：三个分量**各自独立判定**——
+ * 每个参数先必须是 int（type==2），再各自过 0..0xFF 的范围检查；不满足的那一个
+ * **保持原值**（handler 直接跳过该分量），不是钳位、也不是取低 8 位。
+ * has_r/has_g/has_b = 0 表示该参数不是 int（原版跳过）。 */
+void gfx_text_set_color_ex(Gfx *g, int layer, int r, int gr, int b,
+                           int has_r, int has_g, int has_b)
+{
+    if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {
+        return;
+    }
+    g->tw[layer].used = 1;
+    if (has_r && r >= 0 && r <= 0xFF) {
+        g->tw[layer].color[0] = r;
+    }
+    if (has_g && gr >= 0 && gr <= 0xFF) {
+        g->tw[layer].color[1] = gr;
+    }
+    if (has_b && b >= 0 && b <= 0xFF) {
+        g->tw[layer].color[2] = b;
+    }
+}
+
 void gfx_text_set_size(Gfx *g, int layer, int w, int h)
 {
     if (g == NULL || layer < 0 || layer >= GFX_TEXT_MAX) {

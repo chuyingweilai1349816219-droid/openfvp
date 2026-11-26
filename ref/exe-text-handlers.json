@@ -1,0 +1,137 @@
+{
+ "common": "层号 arg0 一律要求\"是 int 且在 0..0x1F\"，否则整条命令忽略；其余分量逐分量 cmpb type==2 + 范围检查，不满足就跳过那一个分量（保持原值，不是钳位）",
+ "handlers": [
+  {
+   "handler": "0x43c830",
+   "id": 110,
+   "name": "TextBuff",
+   "rules": {
+    "h": "缺省 8；int 且 >=0 才覆盖",
+    "layer": "int 0..0x1F",
+    "out_of_range": "越界走 0x430EA0 抛异常",
+    "w": "缺省 8；int 且 >=0 才覆盖"
+   }
+  },
+  {
+   "handler": "0x43c8d0",
+   "id": 112,
+   "name": "TextColor",
+   "rules": {
+    "b": "int 0..0xFF，否则保持原值",
+    "g": "int 0..0xFF，否则保持原值",
+    "layer": "int 0..0x1F",
+    "out_of_range": "逐分量跳过，不钳位",
+    "r": "int 0..0xFF，否则保持原值"
+   }
+  },
+  {
+   "handler": "0x43c960",
+   "id": 120,
+   "name": "TextOutSize",
+   "rules": {
+    "a": "int 0..0xC，否则保持原值",
+    "b": "int 0..0x8，否则保持原值",
+    "layer": "int 0..0x1F",
+    "out_of_range": "逐分量跳过"
+   }
+  },
+  {
+   "handler": "0x43cd60",
+   "id": 126,
+   "name": "TextSize",
+   "rules": {
+    "h": "int 0x8..0x20，否则保持原值",
+    "layer": "int 0..0x1F",
+    "out_of_range": "逐分量跳过",
+    "w": "int 0xC..0x40，否则保持原值"
+   }
+  }
+ ],
+ "instructions": [
+  {
+   "instr": "cmpb   $0x2,(%eax)",
+   "pc": "0x43c834"
+  },
+  {
+   "instr": "cmp    $0x1f,%ecx",
+   "pc": "0x43c840"
+  },
+  {
+   "instr": "mov    $0x8,%edi",
+   "pc": "0x43c858"
+  },
+  {
+   "instr": "mov    0xc(%eax),%edx",
+   "pc": "0x43c861"
+  },
+  {
+   "instr": "call   0x430ea0",
+   "pc": "0x43c87b"
+  },
+  {
+   "instr": "cmpb   $0x2,(%esi)",
+   "pc": "0x43c8d5"
+  },
+  {
+   "instr": "cmp    $0x1f,%eax",
+   "pc": "0x43c8e1"
+  },
+  {
+   "instr": "mov    0xc(%esi),%eax",
+   "pc": "0x43c8fa"
+  },
+  {
+   "instr": "cmp    $0xff,%eax",
+   "pc": "0x43c901"
+  },
+  {
+   "instr": "mov    0x14(%esi),%eax",
+   "pc": "0x43c918"
+  },
+  {
+   "instr": "mov    0x1c(%esi),%eax",
+   "pc": "0x43c934"
+  },
+  {
+   "instr": "cmpb   $0x2,(%esi)",
+   "pc": "0x43c965"
+  },
+  {
+   "instr": "cmp    $0x1f,%eax",
+   "pc": "0x43c971"
+  },
+  {
+   "instr": "cmp    $0xc,%eax",
+   "pc": "0x43c991"
+  },
+  {
+   "instr": "cmp    $0x8,%eax",
+   "pc": "0x43c9ad"
+  },
+  {
+   "instr": "cmpb   $0x2,(%esi)",
+   "pc": "0x43cd65"
+  },
+  {
+   "instr": "cmp    $0x1f,%eax",
+   "pc": "0x43cd71"
+  },
+  {
+   "instr": "cmp    $0xc,%eax",
+   "pc": "0x43cd8d"
+  },
+  {
+   "instr": "cmp    $0x40,%eax",
+   "pc": "0x43cd92"
+  },
+  {
+   "instr": "cmp    $0x8,%eax",
+   "pc": "0x43cdaa"
+  },
+  {
+   "instr": "cmp    $0x20,%eax",
+   "pc": "0x43cdaf"
+  }
+ ],
+ "note": "从 exe 静态分析抄出的文本类 handler 实参规则（A 类）；由 scripts/extract-exe-text-handlers.py 生成"
+}

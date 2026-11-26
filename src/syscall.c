@@ -45,6 +45,7 @@
 #pragma weak gfx_text_set_out_size
 #pragma weak gfx_text_set_buff
 #pragma weak gfx_text_set_pos
+#pragma weak gfx_text_set_color_ex
 #pragma weak gfx_text_set_pos_ex
 #pragma weak gfx_text_set_size
 #pragma weak gfx_text_set_size_ex
@@ -606,10 +607,20 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             b->on_text(b->text_ud, id, NULL, 1);
         }
         break;
-    case 112: /* TextColor(layer, R, G, B) */
+    case 112: /* TextColor(layer, R, G, B)：原版 0x43C8D0 逐分量要求 int 且 0..0xFF，
+               * 不满足的那一个保持原值（不是钳位/取低位）。 */
+        if (getenv("FVP_DEBUG_TEXT") != NULL) {
+            fprintf(stderr, "TextColor layer=%d r=%d g=%d b=%d\n", id,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : -1,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : -1,
+                    argc > 3 ? fvp_gfx_int(&a[3]) : -1);
+        }
         if (argc > 3) {
-            gfx_text_set_color(g, id, fvp_gfx_int(&a[1]),
-                               fvp_gfx_int(&a[2]), fvp_gfx_int(&a[3]));
+            gfx_text_set_color_ex(g, id,
+                                  fvp_gfx_int(&a[1]), fvp_gfx_int(&a[2]),
+                                  fvp_gfx_int(&a[3]),
+                                  fvp_gfx_is_int(&a[1]), fvp_gfx_is_int(&a[2]),
+                                  fvp_gfx_is_int(&a[3]));
         }
         break;
     case 120: /* TextOutSize(layer, w, h)：两个分量各自要求 int 才写（原版 handler

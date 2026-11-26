@@ -705,6 +705,15 @@ def build_steps(args):
                       note='TextBuff limit: w/h each capped at 0x400 and the over-limit '
                            'branch THROWS (code 0x80 at 0x430FF8 -> 0x447C05 -> 0x4258F0 -> '
                            '0x44837C) instead of silently returning'))
+    # 6.496496 文本类 handler 实参规则（TextBuff/TextColor/TextOutSize/TextSize；缺 work/ 时 SKIP）
+    vth2 = os.path.join(HERE, 'verify_exe_text_handlers.py')
+    steps.append(Step('verify_exe_text_handlers.py', [PY, '-X', 'utf8', vth2], 600,
+                      skip_reason=None,
+                      note='text handler argument rules from the exe: layer must be an int in '
+                           '0..0x1F; every other component is written only when it is an int '
+                           'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
+                           'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
+
     # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
     vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
     steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,

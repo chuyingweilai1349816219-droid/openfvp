@@ -4,6 +4,19 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（十二续）：文本类 handler 实参规则成串冻结；修掉 TextColor 的钳位偏差
+
+四个文本 handler（`TextBuff 110` / `TextColor 112` / `TextOutSize 120` / `TextSize 126`）
+是同一族写法：层号 arg0 必须是 int 且在 0..0x1F，否则整条忽略；其余分量**逐分量**
+判 int + 范围，不满足**保持原值**（不是钳位）。冻结成 `ref/exe-text-handlers.json`
+（21 条指令、4 个 handler），新增 `scripts/extract-exe-text-handlers.py` +
+`tests/verify_exe_text_handlers.py`（`run_all` 6.496496）。
+
+**修掉一处真实偏差**：`TextColor` 原来无条件调 `gfx_text_set_color()`（内部 `& 255`），
+`TextColor(0,300,0,0)` 会把 R 写成 44；原版是保持原值。改为逐分量入口
+`gfx_text_set_color_ex()`（新增 `gfx_text_get_color()` 给测试用），
+`tests/test_textprims.c` 37 → **40** 条检查。
+
 ## [未发布] — 2026-11-26（十一续）：TextBuff(110) 的实参规则按 handler 对齐（w/h 缺省 8）
 
 读 handler `0x43C830` 并补进 `ref/exe-textbuff.json`（20 条指令逐条校验）：
