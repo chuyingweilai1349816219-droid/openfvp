@@ -4,6 +4,84 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（九十四续）：旁白绑定的那段代码（`0x36782`）在轨迹里执行 0 次
+
+上一轮把「默认路径不再用版面表兜底」落地后，浮游旁白变成"不画"。这一轮查它为什么
+没有图元绑定——结论是：**脚本里给旁白定位置的那整段代码从未执行**。
+
+### 1. 旁白的绑定/定位块（HCB 静态）
+
+```
+36782  pushint8 4 ; pushint8 0 ; call 0x23804     ; 把窗口 4 挂到图元组
+3678b  pushint8 3 ; pushint8 0 ; call 0x23804
+36794  pushint8 2 ; pushint8 0 ; call 0x23804
+3679d  pushint8 1 ; pushint8 1 ; call 0x23804
+367a6  pushint16 551 ; pushint8 1 ; call 0x23804  ; 把 551 挂进组
+367b0  pushint16 246 / 258 / 800 / 320 ; pushtrue
+367bd  call 0x39F27        ; ← 几何 helper（PrimSetText(551,0,x,y) + TextBuff(0,w,h) + TextFont）
+367c2  pushint16 244 ; syscall 50                 ; MotionMoveTest(244)
+367c8  … test/eq/jmpcond 0x367EC                 ; 等 244 的位移动画
+367d0  call 0x23827                               ; 让出/重画
+```
+
+### 2. 执行轨迹（`--steps 900000 --pctrace`，iroseka）
+
+| pc | 执行次数 |
+|---|---:|
+| `0x36782`（块入口） | **0** |
+| `0x367A0`（`pushint16 246` 前一条） | **0** |
+| `0x367BD`（`call 0x39F27`） | **0** |
+| `0x367C2`（等 244 的 MotionMoveTest） | **0** |
+| 0x36730 / 0x3668F / 0x365F2（上层跳转来源） | 0 |
+
+也就是说：**整段"给旁白建文本图元 + 定面板几何 + 等位移动画"的代码一次都没跑**。
+
+### 3. 旁白那一帧 `prim 551` 的实际状态
+
+用 Python 参考模型跑到含「……羽根だ。」的那一步（step≈47000，`work/why_nulled.py`）：
+
+```
+records touching prim 551: 3
+  step=12008  pc=3a866 PrimSetAlpha ['551', '255']
+  step=12073  pc=3a8ce PrimSetAlpha ['551', '0']
+  step=37466  pc=23822 PrimSetDraw  ['551', '1']
+final prim 551: type=0 tw=-1 draw=1 alpha=255 xy=(0,27) parent=767
+```
+
+- 只有两次 `PrimSetAlpha` 和一次 `PrimSetDraw` 碰过它；
+- **没有任何 `PrimSetText`**，所以 `type=0 / tw=-1` —— 旁白没有图元绑定是**必然**的；
+- `xy=(0,27)` 是更早的 MotionMove 留下的。
+
+对照组：全 46 个 `pushint16 551` 站点里，只有 3 个执行过
+（`0x23748` PrimGroupIn ×8、`0x3A860` PrimSetAlpha(551,255) ×1、`0x3A8C9` PrimSetAlpha(551,0) ×1），
+其余 43 个（含 `0x39F82` 的 PrimSetText、`0x37607` 的组装配）全部 0 次。
+
+### 4. 结论
+
+- 「浮游旁白没有绑定」不是渲染层丢的，而是**脚本里负责绑定的那段代码没执行**；
+  这和 `prim 265` 是同一类问题：我们走的脚本路径在某个更早的分支上就与原版分叉了。
+- 现在有两条互相印证的证据链：① 265 的 38 个引用点只有 4 个执行；② 551 的 46 个
+  引用点只有 3 个执行。两条都指向"上游分支没走到"。
+- 下一轮的方向应该是**找第一个分叉点**（不是继续在 265/551 的末端猜）。做法：把
+  C 侧与参考模型在**早期**（前 2 万步）的 pc 轨迹对齐，找第一处不同的跳转。
+
+### 5. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS** |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_opening_render.py` | **PASS**（两作） |
+| `verify_prim_refs` / `verify_thread_calls` / `verify_text_geometry` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 6. 诚实说明
+
+- 本轮没有代码改动（新增 `work/why_nulled.py` 这个诊断脚本，work/ 不入库），基线数字不变。
+- 连续两轮都在做"引用点 × 执行轨迹"的对照，结论一致：**问题在上游分支，不在末端的
+  渲染或命令语义**。下一轮必须换方法（对齐早期轨迹找第一处分叉），否则还会在末端打转。
+
 ## [未发布] — 2026-11-26（九十三续）：默认路径去掉"版面表兜底" —— 文本只按图元绝对坐标画
 
 ### 1. 用户要求 #3 落地
