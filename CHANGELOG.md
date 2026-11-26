@@ -4,6 +4,25 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（六十八续）：交互闭环盘点 —— 菜单动作可用，但"从标题进正文"两条外壳都没通
+
+优先级②（交互闭环）本轮做了一次度量：
+
+| 检查 | 结果 |
+|---|---|
+| `tests/verify_menu_actions.py`（SAVE 写模板 / LOAD 开列表 / OPTION 面板与音量） | **PASS**（OPTION 面板 17688 采样有墨迹，音量 100→90→70） |
+| 桌面外壳 `bin/fvp.exe --auto-click 800 --run-seconds 35`（iroseka） | **0 行文本**、`prim hit 0 call(s)`、`unimpl cmds none` |
+| `bin/fvp-headless.exe`（同作品，素材已接入） | **0 行文本**、`primhit=0/0` |
+| `bin/fvm.exe`（无 gfx） | **194 行**（同一段脚本） |
+
+⇒ **交互命令本身是通的**（菜单/存档/选项都能跑）；卡的是"标题画面 → 正文"这一段：
+脚本在标题等待循环里空转，`PrimHit`/`TitleMenu`/光标命令**从未被调用**，说明连菜单轮询都没走到。
+两个有 gfx 的外壳一致、无 gfx 的 fvm 反而能跑完 —— 差异只可能来自 gfx 路径上某条命令改变了
+脚本走向（候选：`*Test` 的真实返回值、`Wait`/`TimerGet` 的时间语义、或某个被 gfx 分支吞掉的返回值）。
+
+下一步（可验证）：桌面外壳开 `--dump-text-prims` + tick 日志，配合 `FVP_TRACE_CIDS` 找到标题段
+第一条"与 fvm 走向不同"的命令，再按 handler 反汇编定语义。
+
 ## [未发布] — 2026-11-26（六十七续）：多游戏矩阵**首次全绿**（`verify_multigame: PASS (3 game(s))`）
 
 优先级①（多游戏矩阵）在本轮收口。`tests/verify_multigame.py` 之前有 5 项失败，逐项处理：
