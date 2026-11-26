@@ -4,6 +4,23 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（二十四续）：`type 6` 语义查清（0x6A4DF0 表的索引）；Variant 类型表冻结成 A 类基线
+
+上一轮留下的两个"还没解"的类型，这一轮把 type 6 查清了：
+
+- handler **`0x445CB0`**：`cmpb $0x6,(%edx,%ecx,8)` 判全局单元是 type6，随后
+  `lea (%ecx,%ecx,4),%ecx` + `lea 0x6a4df0(%eax,%ecx,4),%ecx`（`ecx = payload*5`）
+  取 **`engine+0x6A4DF0` 表的第 payload 条**（256 项 × 0x14）；
+- 数据侧印证：5 份可解存档里 type6 的载荷全是 **0..n-1 的连续整数**
+  （s481: 0..36、s485/s800: 0..32、s901/s906: 0..31），全部 < 256。
+
+所以 **type 6 = 那张表的索引**；要回灌它，必须先恢复第 14 段（0x6A4DF0 表）——
+前置条件没到，本轮不硬做（日志照实写 "type 1/3/6 still unmapped"）。
+
+新增 A 类基线 `ref/exe-variant-types.json` + `scripts/extract-exe-variant-types.py` +
+`tests/verify_exe_variant_types.py`（`run_all` 6.496498）：7 个类型逐条带证据，
+并与 exe 指令、真实存档、写/读档基线三边交叉核对。
+
 ## [未发布] — 2026-11-26（二十三续）：type 0 = null/未设（已回灌）；1549 条里已恢复 1481~1485 条
 
 继续按"数据 + exe 消费点"的办法定类型语义：

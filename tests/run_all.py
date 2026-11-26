@@ -714,6 +714,15 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.496498 全局变量 Variant 的类型语义（exe handler + 存档数据双证据；缺 work/ 时 SKIP）
+    vvt = os.path.join(HERE, 'verify_exe_variant_types.py')
+    steps.append(Step('verify_exe_variant_types.py', [PY, '-X', 'utf8', vvt], 600,
+                      skip_reason=None,
+                      note='variant type codes: 0 = null/unset, 2 = int, '
+                           '4 = absolute HCB offset string, 5 = dynamic-string slot '
+                           'number, 6 = index into the 0x6A4DF0 table (handler '
+                           '0x445CB0); each with evidence'))
+
     # 6.496497 文本窗口的存档格式（从 exe 0x433850 抄出来；缺 work/ 时 SKIP）
     vws = os.path.join(HERE, 'verify_exe_text_window_save.py')
     steps.append(Step('verify_exe_text_window_save.py', [PY, '-X', 'utf8', vws], 600,

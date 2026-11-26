@@ -1,0 +1,146 @@
+{
+ "applied": {
+  "not_applied": [
+   1,
+   3,
+   6
+  ],
+  "note": "type6 需要先恢复第 14 段（0x6A4DF0 表）才能解析",
+  "read_restart": [
+   0,
+   2,
+   4,
+   5
+  ]
+ },
+ "cell": "8 字节：byte0 = type，i32 载荷在 +4",
+ "note": "全局变量 Variant 的类型语义（A 类，逐条带证据）；由 scripts/extract-exe-variant-types.py 生成；读档回灌见 src/platform/win32/main_win32.c 的 shell_load_restart",
+ "type4_strings": [
+  {
+   "offset": 143332,
+   "text": "voice/01001530"
+  },
+  {
+   "offset": 518150,
+   "text": "……。"
+  },
+  {
+   "offset": 481990,
+   "text": "None"
+  },
+  {
+   "offset": 4199307,
+   "text": "……。"
+  }
+ ],
+ "type6_evidence": {
+  "handler": "0x445cb0",
+  "instrs": [
+   {
+    "instr": "cmpb   $0x6,(%edx,%ecx,8)",
+    "pc": "0x445cdb"
+   },
+   {
+    "instr": "lea    (%ecx,%ecx,4),%ecx",
+    "pc": "0x445cef"
+   },
+   {
+    "instr": "lea    0x6a4df0(%eax,%ecx,4),%ecx",
+    "pc": "0x445cf3"
+   }
+  ],
+  "table": "engine+0x6A4DF0，256 项 × 0x14（读档第 14 段、写档第 14 段）",
+  "what": "cmpb $0x6,(%edx,%ecx,8) 判全局单元是 type6，lea 0x6a4df0(%eax,%ecx,4)（ecx = payload*5）取 0x14 字节记录"
+ },
+ "type6_saves": [
+  {
+   "count": 37,
+   "dense": true,
+   "distinct": 37,
+   "lt256": true,
+   "max": 36,
+   "min": 0,
+   "save": "s481.bin"
+  },
+  {
+   "count": 33,
+   "dense": true,
+   "distinct": 33,
+   "lt256": true,
+   "max": 32,
+   "min": 0,
+   "save": "s485.bin"
+  },
+  {
+   "count": 33,
+   "dense": true,
+   "distinct": 33,
+   "lt256": true,
+   "max": 32,
+   "min": 0,
+   "save": "s800.bin"
+  },
+  {
+   "count": 32,
+   "dense": true,
+   "distinct": 32,
+   "lt256": true,
+   "max": 31,
+   "min": 0,
+   "save": "s901.bin"
+  },
+  {
+   "count": 32,
+   "dense": true,
+   "distinct": 32,
+   "lt256": true,
+   "max": 31,
+   "min": 0,
+   "save": "s906.bin"
+  }
+ ],
+ "types": [
+  {
+   "applied": true,
+   "evidence": "载荷无意义（样本 118~345 条带随机载荷，最大 7500 万）；src/fvp.h 的原版 Variant 注释与 save.bin 加载器都把 type 0 当\"未设\"",
+   "name": "null / false / 未设",
+   "type": 0
+  },
+  {
+   "applied": false,
+   "evidence": "save.bin 加载器也标 unknown；暂无消费点",
+   "name": "？",
+   "type": 1
+  },
+  {
+   "applied": true,
+   "evidence": "handler 里满地的 cmpb $0x2（101 处）；载荷 = i32",
+   "name": "int",
+   "type": 2
+  },
+  {
+   "applied": false,
+   "evidence": "未解",
+   "name": "？",
+   "type": 3
+  },
+  {
+   "applied": true,
+   "evidence": "143332→\"voice/01001530\"、518150→\"……。\"、481990→\"None\"、4199307→\"……。\"（iroseka.hcb 里都是合法 CP932 NUL 结尾串）",
+   "name": "数据段字符串的绝对偏移",
+   "type": 4
+  },
+  {
+   "applied": true,
+   "evidence": "槽 905 的两个 type5 载荷是 0 与 2，而非空槽正是 #0/#2（#1 为空）",
+   "name": "动态字符串表的槽号",
+   "type": 5
+  },
+  {
+   "applied": false,
+   "evidence": "handler 0x445CB0：cmpb $0x6,(%edx,%ecx,8) + lea 0x6a4df0(%eax,%ecx,4)（ecx = payload*5）；真实存档 type6 载荷是 0..n-1 的连续整数；要回灌它必须先把第 14 段（0x6A4DF0 表）恢复出来",
+   "name": "0x6A4DF0 表的索引",
+   "type": 6
+  }
+ ]
+}
