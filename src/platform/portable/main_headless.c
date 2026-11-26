@@ -218,6 +218,19 @@ int main(int argc, char **argv)
      * 放在 (0,0) 时菜单项永远不命中，脚本停在标题（CHANGELOG 五十九续）。 */
     vm.cx = CANVAS_W / 2;
     vm.cy = CANVAS_H / 2;
+    /* FVP_CURSOR="x,y"：把光标放到指定画布坐标，用来试菜单命中
+     * （headless 没有鼠标；PrimHit 需要 vm.cx/cy）。 */
+    {
+        const char *cur = getenv("FVP_CURSOR");
+        int cx0 = 0;
+        int cy0 = 0;
+
+        if (cur != NULL && sscanf(cur, "%d,%d", &cx0, &cy0) == 2) {
+            vm.cx = cx0;
+            vm.cy = cy0;
+            fprintf(stderr, "fvp-headless: cursor=%d,%d\n", cx0, cy0);
+        }
+    }
 
     {
         /* 可选素材宿主：`FVP_GAME_DIR=<游戏目录>` 时用 src/gfx.c 里已有的
@@ -344,7 +357,10 @@ int main(int argc, char **argv)
         done = vm.steps;
     }
     gfx_render(gfx);
-    printf("headless: threadnext=%llu motion_active=%d steps=%llu in %.1f ms\n",
+    printf("headless: primhit=%llu/%llu threadnext=%llu motion_active=%d "
+           "steps=%llu in %.1f ms\n",
+           (unsigned long long)vm.prim_hit_calls,
+           (unsigned long long)vm.prim_hit_hits,
            (unsigned long long)vm.thread_next_calls, gfx_motion_active(gfx),
            (unsigned long long)done,
            (fvp_plat_now_sec() - t0) * 1000.0);
