@@ -535,6 +535,29 @@ tw 10: ... space=0,0   ... fmt=0,0,0,0,0,0      func=0,0,0
 **为什么只记录不实现**：这九个值（排版边距/间距/开关）在原版排版端怎么消费没有证据；
 `work/render.py` 里这些字段也只有声明、没有参与绘制。渲染层的排版仍是 §1.3 那套近似。
 
+> **2026-11-27 补**：上面这句对 `d`（`tw+0x5AC`）不成立 —— 它**有**消费点，已实现，
+> 见 §7.4.1。其余字段（`0x5A8/0x5AA/0x5AE/0x5B4/0x5B0`）至今没有读点或没有可靠语义。
+
+#### 7.4.1 `TextFormat` 的 `d` 就是行首缩进（0..64）
+
+| 事实 | 出处 |
+|---|---|
+| `d` 写 `tw+0x5AC`（0..64），并且把 `tw+0x5E8`（笔位）抬到 ≥d | `0x43CC9B..0x43CCAE` |
+| 排版起点就是 `pen_x := tw+0x5AC` | `0x4337A9` 读 `0x5AC` → `0x4337BE` 写 `0x5E8` |
+| 笔位逐字推进（` += 字宽`） | `0x4247C4`、`0x4247DA` |
+| 换行判据：`pen_x + 字宽 > tw+0x5DC - 字距` 就换行 | `0x433011` |
+| 换行后笔位恢复为行首保存值 —— 缩进对**每一行**都成立 | `0x4330A8` |
+| 排版器给的字符 x 也会写进笔位 | `0x432B02` |
+
+实现：`src/gfx.c` 在算出行的起点（版面 / `TextPos` / 图元原点）之后加
+`tw->fmt[3]`，即"从原点再往里推"。单测 `tests/test_textprims.c` 断言
+`arg4=40` 时首个墨迹列正好右移 40 px、清零后回到原位。
+冻结基线：`ref/exe-text-layout.json` + 门禁 `tests/verify_exe_text_layout.py`（8 个站点 +
+`0x5A8/0x5AA` 死存储 + `0x5AC` 两个读点）。
+
+**冻结的像素基线不受影响**（289 px / PSNR 49.95 / SSIM 0.99971 均未变）—— 那一帧上
+`fmt[3]` 是 0，缩进不参与。
+
 **改动**：`FvpTextAttr` 新增 `fmt_pad_a/fmt_pad_b/fmt_off_a/fmt_off_b` 与
 `func_a/func_b/func_c`（掩码 `FVP_TEXTATTR_FORMAT` / `FVP_TEXTATTR_FUNCTION`），
 `fvp_textattr_set_format()` 六字段逐字段判范围、`fvp_textattr_set_function()` 三开关；

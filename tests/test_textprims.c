@@ -74,6 +74,31 @@ static long region_light(Gfx *g, int x0, int y0, int x1, int y1)
     return sum;
 }
 
+/* 第一个有墨迹的列（没有墨迹返回 -1）。用来量"缩进"这类整体位移。 */
+static int first_ink_x(Gfx *g)
+{
+    const uint8_t *c;
+    int w = 0;
+    int h = 0;
+    int x;
+    int y;
+
+    c = gfx_canvas_rgba(g, &w, &h);
+    if (c == NULL) {
+        return -1;
+    }
+    for (x = 0; x < w; x++) {
+        for (y = 0; y < h; y++) {
+            const uint8_t *p = c + ((size_t)y * (size_t)w + (size_t)x) * 4u;
+
+            if ((int)p[0] + (int)p[1] + (int)p[2] > 0) {
+                return x;
+            }
+        }
+    }
+    return -1;
+}
+
 /* 做一个文本图元：type 5 + 文本窗口号 + 位置 + alpha。 */
 static void make_text_prim(Gfx *g, int id, int tw, int x, int y, int alpha)
 {
@@ -291,6 +316,35 @@ int main(void)
               "TextColor: non-int component is skipped (%d,%d,%d)", r, gr, b);
         gfx_text_set_color_ex(g, 99, 1, 2, 3, 1, 1, 1);
         CHECK(1, "TextColor: bad layer ignored");
+    }
+
+    /* --- TextFormat(118) arg4 是左缩进：tw+0x5AC 抄进笔位（0x430E72），
+     * 排版起点用 0x5AC（0x4337A9）；见 ref/exe-text-layout.json。 --- */
+    {
+        int x0;
+        int x1;
+
+        (void)gfx_set_prim(g, 7, GFX_F_PARENT, 0);
+        (void)gfx_set_prim(g, 7, GFX_F_X, 20);
+        (void)gfx_set_prim(g, 7, GFX_F_Y, 40);
+        (void)gfx_set_prim(g, 7, GFX_F_DRAW, 1);
+        (void)gfx_set_prim(g, 7, GFX_F_ALPHA, 255);
+        gfx_text_clear(g, 6);
+        gfx_text_append(g, 6, "ABC");
+        gfx_text_set_format(g, 6, 0, 0, 0, 0, 0, 0);
+        gfx_render(g);
+        x0 = first_ink_x(g);
+        CHECK(x0 >= 17 && x0 <= 23,
+              "no indent: first ink at %d (prim x=20 + 字形左bearing)", x0);
+        gfx_text_set_format(g, 6, 0, 0, 0, 40, 0, 0);
+        gfx_render(g);
+        x1 = first_ink_x(g);
+        CHECK(x1 == x0 + 40,
+              "TextFormat arg4=40 shifts the line start by 40 px (%d -> %d)",
+              x0, x1);
+        gfx_text_set_format(g, 6, 0, 0, 0, 0, 0, 0);
+        gfx_render(g);
+        CHECK(first_ink_x(g) == x0, "clearing arg4 restores the start");
     }
 
     gfx_destroy(g);

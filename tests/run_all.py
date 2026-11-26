@@ -865,6 +865,14 @@ def build_steps(args):
                            'TextShadowDist byte is written but never read, '
                            '+0x5E8 is an accumulated line width'))
 
+    # 6.4966c2 文本排版笔位链（TextFormat arg4 -> +0x5E8；0x5A8/0x5AA 死存储）
+    vtl = os.path.join(HERE, 'verify_exe_text_layout.py')
+    steps.append(Step('verify_exe_text_layout.py', [PY, '-X', 'utf8', vtl], 300,
+                      skip_reason=None,
+                      note='text pen-x chain: TextFormat arg4 -> tw+0x5E8 is pushed, '
+                           'wrapped on and restored; +0x5A8/+0x5AA (TextSpace) are '
+                           'written but never read'))
+
     # 6.4966d 文本窗口默认值（来自 exe 构造函数 0x430EA0；缺 work/ 时 SKIP）
     vtd = os.path.join(HERE, 'verify_exe_text_defaults.py')
     steps.append(Step('verify_exe_text_defaults.py', [PY, '-X', 'utf8', vtd], 600,

@@ -1,0 +1,83 @@
+{
+ "schema": "fvp-text-layout/1",
+ "source": "iroseka_HD.asm（objdump 反汇编）",
+ "claim": "TextFormat(118) 的 arg1/arg2（tw+0x5A8/+0x5AA，TextSpace(128) 也写这两个）在原版里没有读点，是死存储；arg4 经 tw+0x5AC 抄进 tw+0x5E8（笔位），参与换行判据并被逐字推进",
+ "sites": [
+  {
+   "pc": "0x430e67",
+   "instr": "mov    0x5ac(%esi),%ax",
+   "expect": "mov    0x5ac(%esi),%ax",
+   "role": "TextFormat arg4 (tw+0x5AC) 被读进 ax",
+   "ok": true
+  },
+  {
+   "pc": "0x430e72",
+   "instr": "mov    %ax,0x5e8(%esi)",
+   "expect": "mov    %ax,0x5e8(%esi)",
+   "role": "文本复位：笔位/累计行宽 tw+0x5E8 := arg4",
+   "ok": true
+  },
+  {
+   "pc": "0x4247c4",
+   "instr": "add    %ax,0x5e8(%ecx)",
+   "expect": "add    %ax,0x5e8(%ecx)",
+   "role": "逐字推进：tw+0x5E8 += 字宽",
+   "ok": true
+  },
+  {
+   "pc": "0x4247da",
+   "instr": "add    %ax,0x5e8(%ecx)",
+   "expect": "add    %ax,0x5e8(%ecx)",
+   "role": "逐字推进（第二处）：tw+0x5E8 += 字宽",
+   "ok": true
+  },
+  {
+   "pc": "0x432b02",
+   "instr": "mov    %cx,0x5e8(%esi)",
+   "expect": "mov    %cx,0x5e8(%esi)",
+   "role": "笔位 := 字符记录 +0x1C（排版器给的 x）",
+   "ok": true
+  },
+  {
+   "pc": "0x433006",
+   "instr": "movswl 0x5e8(%esi),%ecx",
+   "expect": "movswl 0x5e8(%esi),%ecx",
+   "role": "换行判据：读笔位",
+   "ok": true
+  },
+  {
+   "pc": "0x433011",
+   "instr": "cmp    %edx,%ecx",
+   "expect": "cmp    %edx,%ecx",
+   "role": "换行判据：笔位+字宽 与 (tw+0x5DC - 字距) 比较",
+   "ok": true
+  },
+  {
+   "pc": "0x4330a8",
+   "instr": "mov    %cx,0x5e8(%esi)",
+   "expect": "mov    %cx,0x5e8(%esi)",
+   "role": "换行后：笔位恢复为行首保存值",
+   "ok": true
+  }
+ ],
+ "fields": {
+  "0x5a8": {
+   "reads": [],
+   "covering": [],
+   "name": "TextSpace/TextFormat arg1（-32..32）"
+  },
+  "0x5aa": {
+   "reads": [],
+   "covering": [],
+   "name": "TextSpace/TextFormat arg2（-32..32）"
+  },
+  "0x5ac": {
+   "reads": [
+    "0x430e67",
+    "0x4337a9"
+   ],
+   "covering": [],
+   "name": "TextFormat arg4（0..64）"
+  }
+ }
+}

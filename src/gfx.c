@@ -2997,6 +2997,14 @@ static void draw_text_window(Gfx *g, int idx, const int *origin,
         x = origin[0];
         y = origin[1];
     }
+    /* TextFormat(118) 的 arg4（写 tw+0x5AC，范围 0..64）是**左缩进**：
+     * 原版排版起点 `pen_x = tw+0x5AC`（0x4337A9 读 0x5AC → 0x4337BE 写 0x5E8），
+     * 换行后恢复行首保存值（0x4330A8），所以每一行都从这条缩进起排。
+     * 放在原点判定之后：缩进是"从面板/图元原点再往里推"，两者叠加。
+     * 见 ref/exe-text-layout.json 与 tests/verify_exe_text_layout.py。 */
+    if (tw->fmt[3] > 0) {
+        x += tw->fmt[3];
+    }
     if (idx == 9 && origin == NULL) {
         /* 旧路径的“章节标题居中 + 白色描边”是版面表的一部分（合成版式）。
          * 图元驱动时位置由图元决定，不再套这层版式；标题样式待后续从 exe 逆。 */

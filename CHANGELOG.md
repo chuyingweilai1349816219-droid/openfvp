@@ -4,6 +4,50 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百零六续）：`TextFormat(118)` 的 arg4 是缩进（已实现）；`TextSpace(128)` 的两个字段在原版里没人读
+
+### 1. 先看证据，再动渲染
+
+`docs/render-model.md` §7.4 一直写"118/119 只记录、不画"。翻反汇编后发现这条说法对
+**arg4** 不成立：
+
+| 事实 | 出处 |
+|---|---|
+| `d` 写 `tw+0x5AC`（0..64），并把笔位 `tw+0x5E8` 抬到 ≥d | `0x43CC9B..0x43CCAE` |
+| 排版起点 `pen_x := tw+0x5AC` | `0x4337A9` → `0x4337BE` |
+| 笔位逐字推进 `+= 字宽` | `0x4247C4`、`0x4247DA` |
+| 换行判据 `pen + 字宽 > tw+0x5DC - 字距` | `0x433011` |
+| 换行后恢复行首值 → 缩进对每一行成立 | `0x4330A8` |
+
+同时确认：`TextSpace(128)` 写的 `tw+0x5A8/+0x5AA`（= `TextFormat` 前两个参数）
+**一个读点都没有**（连更宽读都没有）。所以"只记录"对这两个字段是忠实，对 arg4 是漏了。
+
+### 2. 实现
+
+`src/gfx.c` 在算出行的起点（版面 / `TextPos` / 图元原点）之后 `x += tw->fmt[3]` ——
+"从原点再往里推"。放在图元原点判定**之后**：第一次写在了前面，被原点覆盖，单测立刻抓到。
+
+### 3. 冻结 + 门禁
+
+* `scripts/extract-exe-text-layout.py` → `ref/exe-text-layout.json`：8 个指令站点
+  （pc + 指令文本 + 角色）与三个字段的读点；
+* `tests/verify_exe_text_layout.py`（15 项）：站点顺序、`0x5A8/0x5AA` 死存储、
+  `0x5AC` 两个读点、与 `ref/exe-text-fields.json` 独立对账、重抽取逐字段相等；
+* `tests/test_textprims.c` 新增 3 项：`arg4=40` 首个墨迹列右移正好 40 px、清零复原；
+* `run_all.py` 新增 `verify_exe_text_layout.py` 步。
+
+### 4. 结果
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | PASS（`test_textprims` 40 → **43**） |
+| `tests/compare.py --run` | PASS（6496 B / 195 行 / sha256 未变） |
+| `verify_gfx.ps1 -SkipDump` | PASS，**289 px / 0.0139%**、PSNR 49.95、SSIM 0.99971（与改前逐项相同） |
+| `verify_scene_replay.py` | PASS，0/2,073,600 px 变化 |
+| `verify_exe_text_layout.py` | PASS（15 项） |
+
+像素基线不变的原因说得清：那一帧上 `fmt[3] == 0`，缩进不参与。
+
 ## [未发布] — 2026-11-27（一百零五续）：把"头坐标是偏置"钉成单测 —— 图元 = 头 + prim，直接 blit 不叠加
 
 ### 1. 为什么加这一组
