@@ -476,9 +476,16 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
     /* 原版把这些字段按 u16 存、按 int16 读回（handler 0x43BF50/0x43BFA0 等），
      * 所以超出 int16 的值在原版会被截断；这里跟着截，保持"实际操作一致"。 */
 #define FVP_S16(v) ((int)(int16_t)((uint16_t)((unsigned)(v) & 0xFFFFu)))
-    case 78: /* PrimSetBlend(id, blend) */
+    case 78: /* PrimSetBlend(id, blend)
+              * 原版 handler 0x43BA20（ref/exe-prim-setters-args.json）：
+              *   id 允许 0..0xFFF（这一条允许 0）；blend 只接受 **0..1**，
+              *   越界就保持原值；不置任何 flags 位。 */
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_BLEND, fvp_gfx_int(&a[1]));
+            int blend = fvp_gfx_int(&a[1]);
+
+            if (blend >= 0 && blend <= 1) {
+                (void)gfx_set_prim(g, id, GFX_F_BLEND, blend);
+            }
         }
         break;
     case 79: /* PrimSetDraw(id, draw) */

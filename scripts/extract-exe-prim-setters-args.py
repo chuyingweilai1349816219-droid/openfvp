@@ -29,6 +29,12 @@ OUT_JSON = os.path.join(ROOT, 'ref', 'exe-prim-setters-args.json')
 LINE = re.compile(r'^\s+([0-9a-f]+):\t([0-9a-f ]+?)\s*\t(.*)$')
 
 EXPECT = [
+    # 0x43ba20：PrimSetBlend（cmd 78）：id 0..0xFFF，blend 0..1 -> prim+0x08
+    (0x43BA24, 'cmpb   $0x2,(%edx)'),
+    (0x43BA2E, 'jl     0x43ba58'),
+    (0x43BA45, 'cmp    $0x1,%esi'),
+    (0x43BA4D, 'imul   $0x34,%eax,%eax'),
+    (0x43BA50, 'mov    %dl,0x61dd6c(%eax,%ecx,1)'),
     (0x43BA97, 'cmp    %bl,(%edx)'),
     (0x43BAA3, 'cmp    $0xfff,%eax'),
     (0x43BAAD, 'cmpb   $0x4,0x61dd68(%eax,%ecx,1)'),
@@ -86,7 +92,12 @@ EXPECT = [
 ]
 
 HANDLERS = [
-    {'handler': '0x43ba90', 'writes': ['prim+0x20 = op1', 'prim+0x22 = op2'],
+    {'handler': '0x43ba20', 'writes': ['prim+0x08 = blend'],
+     'rules': ['arg0 = int 且 **0..0xFFF**（这一条允许 0）',
+               'arg1 int 且 **0..1** → prim+0x08 = (u8)值',
+               '越界保持原值；不置任何 flags 位'],
+     'guess': 'PrimSetBlend(78)', 'confirmed_id': 78},
+    {'handler': '0x43ba90', 'confirmed_id': 81, 'writes': ['prim+0x20 = op1', 'prim+0x22 = op2'],
      'rules': ['arg0 = int 且 1..0xFFF（图元 id）',
                '该图元 prim+0x04 必须是 4（类型检查）',
                'arg1/arg2 各自 int 才写，写 u16 并 flags |= 0x02',
@@ -126,12 +137,12 @@ HANDLERS = [
                'arg1/arg2 各自 int → u16，逐分量 flags |= 0x01',
                '末尾无条件 flags |= 0x40'],
      'guess': 'UV/裁剪对（+0x1C/+0x1E）'},
-    {'handler': '0x43bf50', 'writes': ['prim+0x18 = w', 'prim+0x1A = h'],
+    {'handler': '0x43bf50', 'confirmed_id': 89, 'writes': ['prim+0x18 = w', 'prim+0x1A = h'],
      'rules': ['arg0 = int 且 1..0xFFF（无类型检查）',
                'arg1/arg2 各自 int → u16，逐分量 flags |= 0x01',
                '末尾无条件 flags |= 0x40'],
      'guess': 'PrimSetWH(89)'},
-    {'handler': '0x43bfa0', 'writes': ['prim+0x14 = x', 'prim+0x16 = y'],
+    {'handler': '0x43bfa0', 'confirmed_id': 90, 'writes': ['prim+0x14 = x', 'prim+0x16 = y'],
      'rules': ['arg0 = int 且 1..0xFFF（无类型检查）',
                'arg1/arg2 各自 int → u16（**不置任何"已写"位**）',
                '末尾无条件 flags |= 0x40'],
@@ -176,7 +187,9 @@ def main(argv=None):
                    '0x40 位表示"这个图元被改过"'],
         'handlers': HANDLERS,
         'instructions': checked,
-        'unknown': ['handler 与命令 id 的对应已由 ref/exe-cmd-dispatch.json 证实'
+        'unknown': ['PrimSetBlend(78)/PrimSetOP(81)/PrimSetWH(89)/PrimSetXY(90) 的 id'
+                    '已由 ref/exe-cmd-dispatch.json 证实（见 confirmed_id）；'
+                    'handler 与命令 id 的对应已由 ref/exe-cmd-dispatch.json 证实'
                     '（81/89/90 = 0x43BA90/0x43BF50/0x43BFA0、78 = 0x43BA20）；'
                     '下面 guess 字段保留最初读代码时的猜测，供对照',
                     'prim+0x06 的 0x40 位在渲染端如何使用还没读',

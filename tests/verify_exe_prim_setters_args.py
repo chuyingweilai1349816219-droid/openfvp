@@ -45,10 +45,10 @@ def main():
     hs = ref.get('handlers') or []
 
     print('== 2. 四个 handler 的规则 ==')
-    check(len(hs) == 9, '九个 handler（实际 %d）' % len(hs))
+    check(len(hs) == 10, '十个 handler（实际 %d）' % len(hs))
     by = {h['handler']: h for h in hs}
-    for addr in ('0x43ba90', '0x43baf0', '0x43bc40', '0x43bd00', '0x43bdc0',
-                 '0x43be40', '0x43bef0', '0x43bf50', '0x43bfa0'):
+    for addr in ('0x43ba20', '0x43ba90', '0x43baf0', '0x43bc40', '0x43bd00',
+                 '0x43bdc0', '0x43be40', '0x43bef0', '0x43bf50', '0x43bfa0'):
         check(addr in by, '含 handler %s' % addr)
     op = by.get('0x43ba90') or {}
     check(any('0x20' in w for w in op.get('writes') or []), '0x43BA90 写 op1(+0x20)')
@@ -79,7 +79,15 @@ def main():
         r = ' '.join(h.get('rules') or [])
         check('0x439bf0' in r.lower() or '0x439BF0' in r, '%s 用 0x439BF0 造图元' % addr)
         check('type-%s' % ty in r or 'type %s' % ty in r, '%s 造 type-%s' % (addr, ty))
-    check(bool(ref.get('unknown')), 'unknown 里保留"命令 id ↔ handler 仍是推断"')
+    bl = by.get('0x43ba20') or {}
+    check(any('0x08' in w for w in bl.get('writes') or []),
+          '0x43BA20（PrimSetBlend）写 prim+0x08')
+    check('0..1' in ' '.join(bl.get('rules') or []), 'blend 范围 0..1')
+    check(bl.get('confirmed_id') == 78, 'PrimSetBlend 的 id = 78（已证实）')
+    for addr, cid in (('0x43ba90', 81), ('0x43bf50', 89), ('0x43bfa0', 90)):
+        check((by.get(addr) or {}).get('confirmed_id') == cid,
+              '%s 的 id = %d（已证实）' % (addr, cid))
+    check(bool(ref.get('unknown')), 'unknown 里保留未解项')
 
     print('== 3. 与上一轮的写入点扫描交叉核对 ==')
     if os.path.isfile(SETTERS):
@@ -97,6 +105,9 @@ def main():
         check('ang < 0' in seg and 'ang += 3600' in seg, 'case 82 负数归一化')
         check('sc < 100' in seg and 'sc > 10000' in seg, 'case 82 scale 钳位 100..10000')
         check('FVP_S16' in src, 'C 侧有 int16 截断宏')
+        k78 = src.index('case 78:')
+        seg78 = src[k78:k78 + 900]
+        check('blend >= 0 && blend <= 1' in seg78, 'case 78 只接受 blend 0..1')
         for case in ('case 81:', 'case 89:', 'case 90:'):
             k = src.index(case)
             seg2 = src[k:k + 900]
@@ -105,7 +116,7 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 九个图元 setter handler 的实参规则已冻结，case 82 已按原版语义'
+    print('\nOK: 十个图元 setter handler 的实参规则已冻结，case 82 已按原版语义'
           '（angle mod 3600 / scale 100..10000 / int16 存储）修正')
     return 0
 

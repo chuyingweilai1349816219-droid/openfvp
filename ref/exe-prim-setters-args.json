@@ -13,6 +13,20 @@
  ],
  "handlers": [
   {
+   "confirmed_id": 78,
+   "guess": "PrimSetBlend(78)",
+   "handler": "0x43ba20",
+   "rules": [
+    "arg0 = int 且 **0..0xFFF**（这一条允许 0）",
+    "arg1 int 且 **0..1** → prim+0x08 = (u8)值",
+    "越界保持原值；不置任何 flags 位"
+   ],
+   "writes": [
+    "prim+0x08 = blend"
+   ]
+  },
+  {
+   "confirmed_id": 81,
    "guess": "PrimSetOP(81)",
    "handler": "0x43ba90",
    "rules": [
@@ -100,6 +114,7 @@
    ]
   },
   {
+   "confirmed_id": 89,
    "guess": "PrimSetWH(89)",
    "handler": "0x43bf50",
    "rules": [
@@ -113,6 +128,7 @@
    ]
   },
   {
+   "confirmed_id": 90,
    "guess": "PrimSetXY(90)",
    "handler": "0x43bfa0",
    "rules": [
@@ -142,6 +158,26 @@
   }
  ],
  "instructions": [
+  {
+   "instr": "cmpb   $0x2,(%edx)",
+   "pc": "0x43ba24"
+  },
+  {
+   "instr": "jl     0x43ba58",
+   "pc": "0x43ba2e"
+  },
+  {
+   "instr": "cmp    $0x1,%esi",
+   "pc": "0x43ba45"
+  },
+  {
+   "instr": "imul   $0x34,%eax,%eax",
+   "pc": "0x43ba4d"
+  },
+  {
+   "instr": "mov    %dl,0x61dd6c(%eax,%ecx,1)",
+   "pc": "0x43ba50"
+  },
   {
    "instr": "cmp    %bl,(%edx)",
    "pc": "0x43ba97"
@@ -341,7 +377,7 @@
  ],
  "note": "图元 setter handler 的实参规则（A 类，逐条带指令）；由 scripts/extract-exe-prim-setters-args.py 生成",
  "unknown": [
-  "handler 与命令 id 的对应已由 ref/exe-cmd-dispatch.json 证实（81/89/90 = 0x43BA90/0x43BF50/0x43BFA0、78 = 0x43BA20）；下面 guess 字段保留最初读代码时的猜测，供对照",
+  "PrimSetBlend(78)/PrimSetOP(81)/PrimSetWH(89)/PrimSetXY(90) 的 id已由 ref/exe-cmd-dispatch.json 证实（见 confirmed_id）；handler 与命令 id 的对应已由 ref/exe-cmd-dispatch.json 证实（81/89/90 = 0x43BA90/0x43BF50/0x43BFA0、78 = 0x43BA20）；下面 guess 字段保留最初读代码时的猜测，供对照",
   "prim+0x06 的 0x40 位在渲染端如何使用还没读",
   "handler 0x43BE40 造 type-2 图元时 +0x30 的语义（1..0xFF 范围）"
  ]

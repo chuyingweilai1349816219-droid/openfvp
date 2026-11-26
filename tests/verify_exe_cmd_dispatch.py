@@ -88,8 +88,8 @@ def main():
                   % (cid, got))
         check((cmds.get(78) or {}).get('handler') == '0x43ba20',
               'cmd 78（PrimSetBlend）→ 0x43BA20（还没精读的 handler）')
-        check('0x43ba20' not in handlers,
-              '0x43BA20 尚未进 setter 基线（下一轮读它）')
+        check('0x43ba20' in handlers,
+              'cmd 78 的 0x43BA20 已进 setter 基线（本轮读完）')
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))

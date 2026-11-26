@@ -4,6 +4,25 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（三十续）：PrimSetBlend(78) 读完，用户第一优先待办 ① 的四个 setter 全齐
+
+命令 id→handler 表拿到手之后，最后一块 `PrimSetBlend(78)` 也能直接定位了：
+
+**`0x43BA20`（cmd 78，argc 2）**：
+- arg0 int 且 **0..0xFFF**——注意这一条**允许 0**（其它 prim setter 要求 ≥1）；
+- arg1 int 且 **0..1**（0 = over / 1 = additive）→ `prim+0x08`；
+- 越界**保持原值**；不置任何 flags 位。
+
+**修掉一处偏差**：我们的 `case 78` 只判了"是 int"，没判 0..1——脚本传 2 时我们会写
+`blend=2`，原版则保持旧值。现在对齐（只接受 0..1）。
+
+顺带确认：`PrimSetNull(80)` → `0x43BA60`（`0x439BF0(id, 0)` 把图元清成 type 0）；
+`TitleMenu(141)`、`MenuMessSkip(41)`、`SysAtSkipName(108)` **共用** `0x437950` 这个
+空操作 handler——与早先"TitleMenu 的 handler 是空操作"的结论一致。
+
+至此 **78 / 81 / 89 / 90** 四个 setter 的实参语义全部来自 exe（`ref/exe-prim-setters-args.json`
+扩到 **10 个 handler / 54 条指令**，其中 4 个带 `confirmed_id`）。
+
 ## [未发布] — 2026-11-26（二十九续）：命令 id → handler 表拿到手（133/148），"推断"变成"事实"
 
 前面几轮一直被"命令 id ↔ handler 对应"卡着（只能写 guess）。本轮找到了原版的
