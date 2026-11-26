@@ -5,7 +5,7 @@
 这里的文档是**结构分析与实现过程中的工作记录**：格式怎么来、结论怎么验证、哪里还没做对。
 写作原则是「只写验证过的，猜想单独标注」（各文档内部都会明确区分）。
 
-一共 20 份专题文档 + 本索引。建议阅读顺序：先 [00-engine.md](00-engine.md) 建立全局印象，
+一共 27 份专题文档 + 本索引。建议阅读顺序：先 [00-engine.md](00-engine.md) 建立全局印象，
 再按你关心的方向跳到对应分组。
 
 > 关于路径：文档里引用的 `work/`、`out/`、`extract/` 是**本地工作目录，不进仓库**
@@ -45,6 +45,14 @@
 | [render-model.md](render-model.md) | 渲染层模型（Python 原型）：图元 / 图层 / 文本排版 / 合成顺序，以及第 7 节的**已知偏差与未实现语义** |
 | [c-gfx.md](c-gfx.md) | C 渲染层：接口、与原型逐项对应、GFXF 场景格式、syscall 接线表、像素比对结果与性能 |
 | [opening.md](opening.md) | 开场 FAVORITE logo：脚本时间轴（3800 ms、六层、逐层 alpha/缩放/旋转/位移）、exe 侧 `PrimSetOP` 轴心语义、「标题场景先建、开场后跑」的顺序，以及两份作品的差异 |
+| [original-verification.md](original-verification.md) | 原版对照：抓帧语料怎么来、逐像素/墨迹怎么量、哪些结论是 A 类（协议常量）哪些只能算 B 类（最终像素），以及语料的公开边界 |
+
+## 界面（标题 / 游戏内菜单）
+
+| 文档 | 讲什么 |
+|---|---|
+| [title-menu.md](title-menu.md) | 标题菜单：引擎侧 5 项、右对齐几何、状态变体、动画，以及 `global[236]` 守卫让脚本开场只在菜单动作路径上跑 |
+| [ingame-menu.md](ingame-menu.md) | 游戏内菜单其实是**脚本侧**的：7 项 `menu_*_mes` → 图元 94、开关 `global[1593..1599]`、虚拟 1024×640 画布；外壳那 5 项文字菜单是占位 |
 
 ## 音频
 
@@ -65,6 +73,7 @@
 |---|---|
 | [win32-shell.md](win32-shell.md) | Win32 桌面运行器：用法、按键、帧循环与上屏路径、性能与已知限制 |
 | [android-shell.md](android-shell.md) | Android 外壳与构建流水线（能装能跑，渲染仍是占位，非当前主线） |
+| [cross-platform.md](cross-platform.md) | 跨平台策略：哪些层是纯 C、哪些必须由 OS 外壳提供，以及可移植性验收口径 |
 | [roadmap.md](roadmap.md) | 阶段划分、阶段 0 的结论、关键技术风险与版本目标 |
 | [status.md](status.md) | **收尾对账**：七项目标的完成度、六个缺口的现状、可复核的数字、下一步清单与已知限制 |
 | [animation-baseline.md](animation-baseline.md) | 动画/时间模型的验收基线设计：哪些旧数字会失效、改用哪三组自洽断言、为什么在拿到实机对照前不默认开时间模型 |

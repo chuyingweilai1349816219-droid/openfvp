@@ -1011,11 +1011,20 @@ def build_steps(args):
                       skip_reason=None,
                       note='menu SAVE writes a template slot, LOAD opens the list, OPTION panel renders'))
 
-    # 6.5 游戏内菜单（引擎侧 UI，--menu-at 打开）
+    # 6.47 游戏内菜单的静态结构（脚本侧：命令表里没有 Menu* 命令）
+    vim = os.path.join(HERE, 'verify_ingame_menu.py')
+    steps.append(Step('verify_ingame_menu.py', [PY, '-X', 'utf8', vim], 300,
+                      skip_reason=None,
+                      note='in-game menu is script-side: 7 items -> prim 94, '
+                           'enable globals 1593..1599, only MenuMessSkip/TitleMenu '
+                           'in the 148-command table'))
+
+    # 6.5 游戏内菜单（外壳侧占位实现，--menu-at 打开）
     vg = os.path.join(HERE, 'verify_gamemenu.py')
     steps.append(Step('verify_gamemenu.py', [PY, vg], 900,
                       skip_reason=None,
-                      note='in-game menu overlay: opens, 5 items, ink present'))
+                      note='placeholder shell overlay (5 text items); the original '
+                           'menu is drawn by script, see verify_ingame_menu.py'))
 
     # 6.6 headless 外壳（不依赖 Win32 窗口/D3D）
     vh = os.path.join(HERE, 'verify_headless.py')

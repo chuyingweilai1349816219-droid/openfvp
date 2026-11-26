@@ -1,0 +1,189 @@
+{
+ "schema": "fvp-ingame-menu/1",
+ "game": "iroseka",
+ "source": {
+  "file": "iroseka.hcb",
+  "size": 4275282,
+  "sha256": "8c362ff7178628bef90f0d7bf35a48be5ee22f9f762d4c76e86799f6f063c0ff",
+  "method": "HCB 静态解码（ref/fvm_ref.py），只读结构，不含图像"
+ },
+ "claim": "游戏内菜单由脚本绘制：命令表 148 条里没有 Menu*（只有 MenuMessSkip(41) 与 TitleMenu(141)），exe 也没有菜单文案字符串",
+ "region": [
+  "0x57300",
+  "0x57800"
+ ],
+ "module": {
+  "load": "0x2354b",
+  "group": "0x235e8",
+  "anchor": "0x35ab7",
+  "show": "0x23804",
+  "sprt": "0x35bcc",
+  "entry": "0x577c8"
+ },
+ "canvas": {
+  "virt": [
+   1024,
+   640
+  ],
+  "real": [
+   1920,
+   1080
+  ],
+  "scale": [
+   1.875,
+   1.6875
+  ],
+  "anchor": [
+   512,
+   320
+  ],
+  "anchor_px": [
+   960,
+   540
+  ],
+  "floats": [
+   "0x3fd80000",
+   "0x3ff00000"
+  ]
+ },
+ "prims": {
+  "background": 93,
+  "item": 94,
+  "cursor": 137,
+  "confirm": [
+   95,
+   96,
+   97,
+   98
+  ],
+  "parents": [
+   795,
+   796
+  ]
+ },
+ "items": [
+  {
+   "prim": 94,
+   "image": "menu_undo_mes",
+   "load_pc": "0x57463",
+   "parent": 795,
+   "enable_global": 1593,
+   "index": 1
+  },
+  {
+   "prim": 94,
+   "image": "menu_title_mes",
+   "load_pc": "0x574aa",
+   "parent": 795,
+   "enable_global": 1594,
+   "index": 2
+  },
+  {
+   "prim": 94,
+   "image": "menu_exit_mes",
+   "load_pc": "0x574f2",
+   "parent": 796,
+   "enable_global": 1595,
+   "index": 3
+  },
+  {
+   "prim": 94,
+   "image": "menu_qload_mes",
+   "load_pc": "0x57539",
+   "parent": 795,
+   "enable_global": 1596,
+   "index": 4
+  },
+  {
+   "prim": 94,
+   "image": "menu_ow_mes",
+   "load_pc": "0x57581",
+   "parent": 795,
+   "enable_global": 1597,
+   "index": 5
+  },
+  {
+   "prim": 94,
+   "image": "menu_del_mes",
+   "load_pc": "0x575c6",
+   "parent": 795,
+   "enable_global": 1598,
+   "index": 6
+  },
+  {
+   "prim": 94,
+   "image": "menu_init_mes",
+   "load_pc": "0x5760c",
+   "parent": 795,
+   "enable_global": 1599,
+   "index": 7
+  }
+ ],
+ "confirms": [
+  {
+   "prim": 95,
+   "image": "menu_yes_1",
+   "load_pc": "0x57655"
+  },
+  {
+   "prim": 96,
+   "image": "menu_yes_2",
+   "load_pc": "0x576aa"
+  },
+  {
+   "prim": 97,
+   "image": "menu_no_1",
+   "load_pc": "0x576ff"
+  },
+  {
+   "prim": 98,
+   "image": "menu_no_2",
+   "load_pc": "0x57753"
+  }
+ ],
+ "background": {
+  "prim": 93,
+  "image": "menu_bg"
+ },
+ "cursor": {
+  "prim": 137,
+  "image": "menu_chk"
+ },
+ "strings": [
+  "menu_bg",
+  "menu_chk",
+  "menu_undo_mes",
+  "menu_title_mes",
+  "menu_exit_mes",
+  "menu_qload_mes",
+  "menu_ow_mes",
+  "menu_del_mes",
+  "menu_init_mes",
+  "menu_yes_1",
+  "menu_yes_2",
+  "menu_no_1",
+  "menu_no_2"
+ ],
+ "entry": {
+  "fn": "0x577c8",
+  "xrefs": [
+   "0x26695",
+   "0x3d974",
+   "0x5615b",
+   "0x5630c",
+   "0x563f3",
+   "0x59ddd",
+   "0x5b85a",
+   "0x5c120",
+   "0x6f891",
+   "0x6f9be",
+   "0x6fa71",
+   "0x6fb2b"
+  ]
+ },
+ "unknowns": [
+  "菜单打开/关闭由哪条脚本路径触发（0x577C8 的 12 个调用点尚未逐个确认）",
+  "图元号 795/796 两个挂接父组的用途（推测为普通项/危险项两组）",
+  "菜单项的屏幕坐标：本区间内没有显式 PrimSetXY，位置由上层 Motion/布局决定"
+ ]
+}

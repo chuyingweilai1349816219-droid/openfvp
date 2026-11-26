@@ -1,0 +1,139 @@
+# 游戏内菜单（脚本侧）
+
+> 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
+
+一句话结论：**原版的游戏内菜单不是外壳画的，是脚本用一组 `menu_*` 图片自己画的。**
+我们外壳里那个 `--menu-at` 打开的 5 项文字菜单是**占位**，不是原版行为，不参与任何
+像素基线。本文记录的是脚本侧菜单的静态结构、证据链，以及为什么不能用固定版面表
+去"补齐"它。
+
+---
+
+## 1. 为什么可以断定它不在 exe 里
+
+三条互相独立的证据：
+
+| 证据 | 内容 | 复现 |
+|---|---|---|
+| 命令表 | 148 条命令里带 `Menu` 的只有 `MenuMessSkip(41)` 与 `TitleMenu(141)`，没有任何"打开菜单 / 菜单项 / 菜单绘制"命令 | `ref/cmd_table.json` + `tests/verify_ingame_menu.py` |
+| exe 文案 | 从 `iroseka_HD.exe` 抽出 1,506 条像样的 CP932 字符串，**没有一条**等于菜单项标签（`セーブ`/`ロード`/`設定`/`終了`/`戻す`/`上書き`/`初期化`/`削除`/`メニュー`） | 同上（`jp_strings()`） |
+| exe 里唯一的 `終了` | 出现在 `0x5cef8`，是「開くに失敗しました。終了してもよろしいですか？」这句话的一段，其后紧跟 `して`（CP932 `82 b5 82 c4`），不是独立标签 | 同上 |
+
+既然 exe 既没有菜单命令、也没有菜单文案，菜单文字就只能来自**图片**；而 HCB 脚本里
+正好有 13 个 `menu_*` 字符串作为 `pushstring` 立即数，全部落在同一段字节区间。
+
+## 2. 菜单模块（`0x57300..0x57800`）
+
+| 角色 | 图元号 | 图片 | 说明 |
+|---|---|---|---|
+| 背景 | 93 | `menu_bg` | `0x573c2` 载入 |
+| 当前项标签 | 94 | `menu_*_mes` | 7 项共用同一个图元，换项即换图 |
+| 光标 | 137 | `menu_chk` | 27×25 的小方块 |
+| 确认 yes | 95 / 96 | `menu_yes_1` / `menu_yes_2` | 两态（普通 / 高亮） |
+| 确认 no | 97 / 98 | `menu_no_1` / `menu_no_2` | 同上 |
+
+7 个菜单项（`0x57463` 起逐项一段）：
+
+| # | 图片 | 载入点 | 挂接父组 | 启用开关 |
+|---|---|---|---|---|
+| 1 | `menu_undo_mes` | `0x57463` | 795 | `global[1593]` |
+| 2 | `menu_title_mes` | `0x574aa` | 795 | `global[1594]` |
+| 3 | `menu_exit_mes` | `0x574f2` | **796** | `global[1595]` |
+| 4 | `menu_qload_mes` | `0x57539` | 795 | `global[1596]` |
+| 5 | `menu_ow_mes` | `0x57581` | 795 | `global[1597]` |
+| 6 | `menu_del_mes` | `0x575c6` | 795 | `global[1598]` |
+| 7 | `menu_init_mes` | `0x5760c` | 795 | `global[1599]` |
+
+第 3 项「終了」是唯一挂到 796 的项（其余 6 项挂 795）；`0x577b1` 还有一条
+`PrimExitGroup(796)`，所以 795/796 更像是"普通组 / 危险组"两个容器，而不是坐标。
+
+### 2.1 用到的包装函数
+
+| 地址 | 语义 | 依据 |
+|---|---|---|
+| `0x2354B` | `(prim, slot, name, ?)` → `GraphLoad("graph/"+name)` 后调 `0x35BCC` 用 `PrimSetSprt(85)` 把图绑到图元（x/y 传 `true` = 保持默认） | 函数体：`pushstring "graph/"` + `syscall 22`，随后 `call 0x35BCC` |
+| `0x235E8` | `(prim, parent, ?)` → `PrimGroupIn(73)` | 函数体 |
+| `0x23804` | `(prim, on)` → `PrimSetDraw(79)` | 函数体 |
+| `0x35AB7` | `(prim, x, y, on)` → `PrimSetOP(81)`，x 乘 **1.875**、y 乘 **1.6875** | 函数体里的 `pushfloat 0x3FF00000` / `0x3FD80000` + `FloatToInt(20)` |
+| `0x577C8` | 按"当前项下标"刷新（在栈 254）：选图、挂组、按 enable global 决定是否画光标 | 12 个调用点：`0x26695`、`0x3d974`、`0x5615b`、`0x5630c`、`0x563f3`、`0x59ddd`、`0x5b85a`、`0x5c120`、`0x6f891`、`0x6f9be`、`0x6fa71`、`0x6fb2b` |
+
+### 2.2 坐标与缩放
+
+每个菜单图元都调一次 `0x35AB7(prim, 512, 320, true)`：
+
+```
+虚拟坐标 1024×640  (512,320)  = 画面正中
+        ↓ ×1.875 / ×1.6875
+PrimSetOP = (960, 540)        = 1920×1080 的正中
+```
+
+这里的 1.875 = 1920/1024、1.6875 = 1080/640，与正文 `PrimSetText` 那条链用的是同一
+套浮点常量（`0x3FF00000` / `0x3FD80000`）。也就是说菜单和正文共享同一个"虚拟 1024×640
+→ 实机 1920×1080"的画布，而不是给菜单单独留一套版面表。
+
+## 3. 我们外壳里的现状（占位，不是原版）
+
+`bin/fvp.exe --menu-at N` 打开的是 `src/gamemenu.c` 里的 5 项文字菜单：
+
+| 项 | 行为 |
+|---|---|
+| SAVE / LOAD | 复用外壳的存档/读档列表 |
+| OPTION | 配置面板 |
+| TITLE | 回标题 |
+| QUIT | 退出 |
+
+排版是 `y=300`、行距 64、宽度 320、水平居中 —— 这几个数字**是我们自己定的**，原版
+没有对应常量。保留它的唯一理由是：在脚本菜单还进不去的时候，至少能验证输入通路
+（`tests/verify_gamemenu.py`、`tests/verify_menu_actions.py`）。
+
+为了不让人误以为它是原版，打开时会多打一行日志：
+
+```
+menu: NOTE placeholder overlay, original menu is script-side (see ref/ingame-menu.json)
+```
+
+`tests/verify_gamemenu.py` 仍然校验它"能打开、5 项、有墨迹"，但报告与文档里一律标
+**占位**，且不参与 `verify_gfx` 的像素基线。
+
+## 4. 门禁与工具
+
+```powershell
+# 静态扫描（只读 HCB，不需要跑游戏）
+python scripts/scan-ingame-menu.py --json out/ingame-menu.json
+
+# 门禁：JSON 自洽 + 命令表证据 + exe 文案证据 + 重扫 HCB 逐字段比对
+python tests/verify_ingame_menu.py
+```
+
+`tests/verify_ingame_menu.py` 共 36 项断言，分四组：
+
+1. **冻结 JSON 自洽**：7 项、下标 1..7、都进图元 94、开关 1593..1599 一一对应、
+   第 3 项挂 796、锚点算术 `512×1.875=960` / `320×1.6875=540`；
+2. **命令表证据**：148 条里带 `Menu` 的恰好是 `(41, MenuMessSkip)`、`(141, TitleMenu)`；
+3. **exe 文案证据**：没有独立的 CP932 菜单标签，`終了` 只以对话句出现；
+4. **重扫比对**：有游戏数据时重跑扫描，7 项 / 确认框 / 13 个字符串 / 12 个调用点
+   / 浮点常量逐字段相等；没有数据时这三组 SKIP（不谎报通过）。
+
+## 5. 还没确定的（照实写）
+
+| 未知 | 现状 |
+|---|---|
+| 菜单是怎么被打开的 | `0x577C8` 的 12 个调用点尚未逐个确认；其中 `0x59ddd` 落在标题区、`0x6f891..0x6fb2b` 四个在脚本尾部，说明这个刷新函数被多条 UI 路径复用 |
+| 795 / 796 两个父组的用途 | 推测为"普通项 / 危险项"，只有第 3 项（終了）挂 796；没有实机对照 |
+| 菜单项在屏幕上的坐标 | 本区间内**没有**显式 `PrimSetXY`；唯一相关的 `0x6fef5` 是存档列表的行号，不是菜单。位置由上层布局/Motion 决定，尚未定位 |
+| 确认框的触发条件 | 95..98 的 `PrimSetDraw` 在区间内各有一条，但"什么条件下弹确认"要等输入路径跑通 |
+
+在这些未知项上，宁可不画，也不要用固定版面表补一个"看起来一样"的菜单。
+
+## 6. 复现步骤
+
+```powershell
+$env:PATH = "C:\Users\Mechrevo\Documents\deepseek-harness\default-workspace\tools\w64devkit\w64devkit\bin;" + $env:PATH
+mingw32-make -f Makefile win32
+python scripts/scan-ingame-menu.py
+python tests/verify_ingame_menu.py
+```
+
+`ref/ingame-menu.json` 里只存"名字 / 图元号 / 偏移 / 全局变量号"这类结构事实，
+不含任何图像数据；图片本身按 [`work/export_menu_assets.py`](../work/export_menu_assets.py)
+从 `graph.bin` 现取（`work/`、`out/` 都不进仓库）。
