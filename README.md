@@ -8,6 +8,8 @@
 >
 > 以下内容由 DeepSeek 生成,不一定代表作者个人意愿
 
+> 文档只描述**文件格式与可观察行为**（不带任何原版游戏数据）；措辞规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
 **FVP（FAVORITE VIEW POINT SYSTEM）引擎的开源 C99 重实现。**
 
 目标：让 FAVORITE 社的 FVP 视觉小说（《いろとりどりのセカイ HD》系列、《星空のメモリア》、
