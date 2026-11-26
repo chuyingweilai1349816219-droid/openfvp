@@ -4,6 +4,34 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（三十四续）：图元类型分派表冻结；snow 的结构查清（0x2E 是雪系统下标）
+
+顺着 `0x438AB0` 往下读，把**图元类型分派**梳清了：
+
+```
+0x438AFA: movsbl 0x4(%esi),%eax     ; type = (int8)prim+0x04
+0x438AFE: dec    %eax               ; index = type - 1
+0x438AFF: cmp    $0x6,%eax
+0x438B02: ja     0x438C94           ; 越界直接返回
+0x438B08: jmp    *0x438c9c(,%eax,4) ; 7 项跳表，type 1..7
+```
+
+跳表：type 1 = group、2 = tile、3 = 空、4 = sprite、5 = **text（→ `0x42AE40`，
+与文字绘制基线一致）**、6 = 空、7 = **snow（→ `0x42AA10`）**。
+
+**snow 的关键修正**：`prim+0x2E` 不是布尔开关，而是**雪系统下标**——
+记录在 `engine+0x684378 + idx*0x5048`（每条 0x5048 字节），启用标志在
+`engine+0x689378 + idx*0x5048`，为 0 就完全不画。这个容器正是读档恢复顺序里
+`0x43F3D4` 恢复的 `0x431E70(engine+0x684378)`——两边对得上。
+
+所以上一轮 `PrimSetSnow` 的"开关 0..1"其实是在**选 0 号或 1 号雪系统**；我们把
+`prim_snow[id]` 当布尔只是数值上碰巧等价，语义要改成"系统下标"。真正画出雪还差
+`0x5048` 记录内部字段的解读（列在基线 `unknown` 里）。
+
+新增 `ref/exe-prim-type-dispatch.json` + `scripts/extract-exe-prim-type-dispatch.py` +
+`tests/verify_exe_prim_type_dispatch.py`（`run_all` 6.49653，与文字绘制/读档恢复/命令表
+三边互证）。
+
 ## [未发布] — 2026-11-26（三十三续）：PrimSetSnow(84) 按原版结构落地（造 type-7 图元 + 位置 + 开关）
 
 `PrimSetSnow(84)` 原来只记了一个 per-prim 布尔（`vm->prim_snow[id]`），既不造图元也不

@@ -714,6 +714,16 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.49653 图元类型分派（type 1..7，含 snow 的雪系统结构）
+    vptd = os.path.join(HERE, 'verify_exe_prim_type_dispatch.py')
+    steps.append(Step('verify_exe_prim_type_dispatch.py', [PY, '-X', 'utf8', vptd], 600,
+                      skip_reason=None,
+                      note='prim type dispatch: type = (int8)prim+4, index = type-1, '
+                           'jump table at 0x438C9C for types 1..7 (3 and 6 are empty); '
+                           'type 5 -> 0x42AE40 (text panel), type 7 -> 0x42AA10 (snow, '
+                           'selects a 0x5048-byte system record at engine+0x684378 by '
+                           'prim+0x2E)'))
+
     # 6.49652 命令 id → handler（原版注册构造函数 0x43E000..0x440E00；缺 exe 时 SKIP）
     vcd = os.path.join(HERE, 'verify_exe_cmd_dispatch.py')
     steps.append(Step('verify_exe_cmd_dispatch.py', [PY, '-X', 'utf8', vcd], 600,

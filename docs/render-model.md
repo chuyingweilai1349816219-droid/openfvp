@@ -1176,6 +1176,31 @@ call   0x4387d0            ; register(entry, name)
 仍未知（`unknown` 里写着）：这些 handler 与命令 id 78/81/89/90 的对应还是**推断**、
 `prim+0x06` 的 `0x40` 位在渲染端怎么用、`0x43BE40` 里 `+0x30`（-1..0xFF）的语义。
 
+### 图元类型分派与 snow（A 类：`ref/exe-prim-type-dispatch.json`）
+
+绘制前的类型分派在 `0x438AFA`：`type = (int8)prim+0x04`、`index = type-1`，
+越界（`>6`）直接返回，否则跳到 `0x438C9C` 的**7 项跳表**：
+
+| type | 名字 | 落点 | 说明 |
+|---|---|---|---|
+| 1 | group | `0x438B0F` | 递归子图元 |
+| 2 | tile | `0x438BE1` | |
+| 3 | （空） | `0x438C94` | 直接返回 |
+| 4 | sprite | `0x438B54` | |
+| 5 | text | `0x438C54` → `0x42AE40` | 文字面板绘制（与文字基线一致） |
+| 6 | （空） | `0x438C94` | 直接返回 |
+| 7 | **snow** | `0x438C83` → `0x42AA10` | 雪 |
+
+**snow 的结构**（`0x42AA10`）：
+- `prim+0x2E`（有符号 u16）= **雪系统下标**（不是布尔开关！）；
+- 记录在 `engine+0x684378 + idx*0x5048`（每条 `0x5048` 字节）；
+- 启用标志在 `engine+0x689378 + idx*0x5048`，为 0 就完全不画；
+- 这个容器正是读档恢复顺序里 `0x43F3D4` 恢复的 `0x431E70(engine+0x684378)`。
+
+也就是说：`PrimSetSnow(id, idx, x, y)` 里那个 0..1 的参数是**选 0 号或 1 号雪系统**。
+我们的引擎目前只记布尔、不画雪——`ref/exe-prim-type-dispatch.json` 的 `unknown` 里
+列出了实现它还需要读的字段（`0x5048` 记录内部的浮点参数/frame 等）。
+
 ### 图元字段的写入点全量扫描（A 类：`ref/exe-prim-setters.json`）
 
 为了把 `PrimSetXY(90)/PrimSetWH(89)/PrimSetOP(81)/PrimSetBlend(78)` 的实参语义从
