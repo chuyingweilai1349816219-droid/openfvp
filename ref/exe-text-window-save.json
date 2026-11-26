@@ -1,0 +1,247 @@
+{
+ "args": [
+  "win（窗口对象）",
+  "engine（流对象：base 在 +0，游标在 +8）"
+ ],
+ "entry": "0x433850",
+ "fields": [
+  {
+   "field": "present",
+   "order": 1,
+   "pc": "0x433860",
+   "size": "u8",
+   "what": "存在标志（0 = 该窗口为空，直接跳过）"
+  },
+  {
+   "field": "surface",
+   "order": 2,
+   "pc": "0x43387d",
+   "size": "record",
+   "what": "surface 记录，0x429190(win+4, engine)（与 sprite 同一套）"
+  },
+  {
+   "field": "text",
+   "order": 3,
+   "pc": "0x4338c9",
+   "size": "string",
+   "what": "窗口文本，0x4303A0(win+0x574, engine)"
+  },
+  {
+   "field": "cell_count",
+   "order": 4,
+   "pc": "0x4338d5",
+   "size": "u32",
+   "what": "随后字格的个数"
+  },
+  {
+   "field": "cells",
+   "order": 5,
+   "pc": "0x4338ea",
+   "size": "u16×count",
+   "what": "字格（u16 序列）"
+  },
+  {
+   "field": "win+0x58C",
+   "order": 6,
+   "pc": "0x43395c",
+   "size": "u32",
+   "what": "win+0x58C"
+  },
+  {
+   "field": "style_block",
+   "order": 7,
+   "pc": "0x433976",
+   "size": "0x28",
+   "what": "memcpy 0x28 字节 → win+0x590（文字样式块）"
+  },
+  {
+   "field": "win+0x5B8",
+   "order": 8,
+   "pc": "0x4339ce",
+   "size": "vector",
+   "what": "计数向量 → win+0x5B8（0x430430）"
+  },
+  {
+   "field": "win+0x5EC",
+   "order": 9,
+   "pc": "0x4339da",
+   "size": "vector",
+   "what": "计数向量 → win+0x5EC（0x42F620）"
+  },
+  {
+   "field": "win+0x5D0",
+   "order": 10,
+   "pc": "0x433a32",
+   "size": "u32",
+   "what": "win+0x5D0"
+  },
+  {
+   "field": "win+0x5D5",
+   "order": 11,
+   "pc": "0x433a43",
+   "size": "u8",
+   "what": "win+0x5D5"
+  },
+  {
+   "field": "win+0x5D6",
+   "order": 12,
+   "pc": "0x433a5d",
+   "size": "u8",
+   "what": "win+0x5D6"
+  },
+  {
+   "field": "win+0x5D7",
+   "order": 13,
+   "pc": "0x433a70",
+   "size": "u8",
+   "what": "win+0x5D7（TextSkip 的 mode 也写这里）"
+  },
+  {
+   "field": "win+0x5DA",
+   "order": 14,
+   "pc": "0x433a83",
+   "size": "u8",
+   "what": "win+0x5DA"
+  },
+  {
+   "field": "panel_w",
+   "order": 15,
+   "pc": "0x433a95",
+   "size": "u16",
+   "what": "面板宽 win+0x5DC"
+  },
+  {
+   "field": "panel_h",
+   "order": 16,
+   "pc": "0x433ab0",
+   "size": "u16",
+   "what": "面板高 win+0x5DE"
+  },
+  {
+   "field": "win+0x5E0",
+   "order": 17,
+   "pc": "0x433ac3",
+   "size": "u32",
+   "what": "win+0x5E0"
+  },
+  {
+   "field": "win+0x5E4",
+   "order": 18,
+   "pc": "0x433ad5",
+   "size": "u32",
+   "what": "win+0x5E4"
+  },
+  {
+   "field": "pen_x",
+   "order": 19,
+   "pc": "0x433ae8",
+   "size": "u16",
+   "what": "排版笔位 x（win+0x5E8）"
+  },
+  {
+   "field": "pen_y",
+   "order": 20,
+   "pc": "0x433afc",
+   "size": "u16",
+   "what": "排版笔位 y（win+0x5EA）"
+  }
+ ],
+ "instructions": [
+  {
+   "instr": "movsbl (%eax,%ecx,1),%ecx",
+   "pc": "0x433860"
+  },
+  {
+   "instr": "movb   $0x1,0x5d4(%edi)",
+   "pc": "0x433876"
+  },
+  {
+   "instr": "call   0x429190",
+   "pc": "0x43387d"
+  },
+  {
+   "instr": "call   0x4303a0",
+   "pc": "0x4338c9"
+  },
+  {
+   "instr": "mov    (%ecx),%ecx",
+   "pc": "0x4338d5"
+  },
+  {
+   "instr": "mov    (%edx,%eax,1),%cx",
+   "pc": "0x4338ea"
+  },
+  {
+   "instr": "mov    %ecx,0x58c(%edi)",
+   "pc": "0x43395c"
+  },
+  {
+   "instr": "push   $0x28",
+   "pc": "0x43396c"
+  },
+  {
+   "instr": "call   0x447800",
+   "pc": "0x433976"
+  },
+  {
+   "instr": "call   0x430430",
+   "pc": "0x4339ce"
+  },
+  {
+   "instr": "mov    (%ecx),%ecx",
+   "pc": "0x4339da"
+  },
+  {
+   "instr": "mov    %eax,0x5d0(%edi)",
+   "pc": "0x433a32"
+  },
+  {
+   "instr": "mov    %dl,0x5d5(%edi)",
+   "pc": "0x433a43"
+  },
+  {
+   "instr": "mov    %al,0x5d6(%edi)",
+   "pc": "0x433a5d"
+  },
+  {
+   "instr": "mov    %al,0x5d7(%edi)",
+   "pc": "0x433a70"
+  },
+  {
+   "instr": "mov    %al,0x5da(%edi)",
+   "pc": "0x433a83"
+  },
+  {
+   "instr": "mov    %dx,0x5dc(%edi)",
+   "pc": "0x433a95"
+  },
+  {
+   "instr": "mov    %ax,0x5de(%edi)",
+   "pc": "0x433ab0"
+  },
+  {
+   "instr": "mov    %eax,0x5e0(%edi)",
+   "pc": "0x433ac3"
+  },
+  {
+   "instr": "mov    %eax,0x5e4(%edi)",
+   "pc": "0x433ad5"
+  },
+  {
+   "instr": "mov    %ax,0x5e8(%edi)",
+   "pc": "0x433ae8"
+  },
+  {
+   "instr": "mov    %ax,0x5ea(%edi)",
+   "pc": "0x433afc"
+  }
+ ],
+ "note": "从 exe 静态分析抄出的文本窗口存档格式（A 类）；读档恢复顺序第 29 步用 0x433850 逐个恢复 32 个窗口；由 scripts/extract-exe-text-window-save.py 生成",
+ "restored_by_load": {
+  "count": 32,
+  "loop_pc": "0x0043f38f",
+  "what": "读档时 32 个窗口逐个调 0x433850 反序列化",
+  "window_table": "engine+0x98，步长 4，下标 0x98/4..0x118/4"
+ },
+ "stream": "base = *(engine+0x0)，cursor = engine+0x8；每次读都把 cursor 往前推"
+}

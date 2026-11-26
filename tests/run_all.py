@@ -714,6 +714,15 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.496497 文本窗口的存档格式（从 exe 0x433850 抄出来；缺 work/ 时 SKIP）
+    vws = os.path.join(HERE, 'verify_exe_text_window_save.py')
+    steps.append(Step('verify_exe_text_window_save.py', [PY, '-X', 'utf8', vws], 600,
+                      skip_reason=None,
+                      note='text window save format read out of 0x433850: presence byte -> '
+                           'surface record -> text string -> u32 count + u16 cells -> '
+                           '0x28-byte style block -> two vectors -> panel w/h (0x5DC/0x5DE) '
+                           '-> pen x/y (0x5E8/0x5EA)'))
+
     # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
     vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
     steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,
