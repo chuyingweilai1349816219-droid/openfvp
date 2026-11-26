@@ -489,9 +489,17 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
     case 72: /* PrimExitGroup: recorded by the engine, unused by the
               * reference compositor */
         break;
-    case 73: /* PrimGroupIn(child, parent) */
-        if (argc > 1) {
-            (void)gfx_prim_group_in(g, id, fvp_gfx_int(&a[1]));
+    case 73: /* PrimGroupIn(child, parent)
+              * 原版 0x43D6D0：child int **1..0xFFF**、parent int **0..0xFFF**
+              * （允许 0），两个都合法才挂接；否则整条忽略。 */
+        if (argc > 1 && fvp_gfx_is_int(&a[1])) {
+            int child = id;
+            int parent = fvp_gfx_int(&a[1]);
+
+            if (child >= 1 && child <= 0xFFF && parent >= 0 &&
+                parent <= 0xFFF) {
+                (void)gfx_prim_group_in(g, child, parent);
+            }
         }
         break;
     case 75: /* PrimGroupOut(id) */

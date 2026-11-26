@@ -14,6 +14,19 @@
  ],
  "handlers": [
   {
+   "confirmed_id": 73,
+   "guess": "PrimGroupIn(73)（两部作品合计 349 次）",
+   "handler": "0x43d6d0",
+   "rules": [
+    "arg0 child = int 且 **1..0xFFF**",
+    "arg1 parent = int 且 **0..0xFFF**（允许 0）",
+    "两个都合法才挂接，否则整条忽略；不置 flags"
+   ],
+   "writes": [
+    "prim 树父子关系（0x43D640(parent, child)）"
+   ]
+  },
+  {
    "confirmed_id": 50,
    "guess": "MotionMoveTest(50)（两部作品合计 447 次）",
    "handler": "0x43ace0",
@@ -234,6 +247,34 @@
   }
  ],
  "instructions": [
+  {
+   "instr": "cmpb   $0x2,(%eax)",
+   "pc": "0x43d6d4"
+  },
+  {
+   "instr": "cmp    $0x1,%edx",
+   "pc": "0x43d6dc"
+  },
+  {
+   "instr": "cmp    $0x1000,%edx",
+   "pc": "0x43d6e1"
+  },
+  {
+   "instr": "cmpb   $0x2,0x8(%eax)",
+   "pc": "0x43d6e9"
+  },
+  {
+   "instr": "test   %eax,%eax",
+   "pc": "0x43d6f2"
+  },
+  {
+   "instr": "cmp    $0x1000,%eax",
+   "pc": "0x43d6f6"
+  },
+  {
+   "instr": "call   0x43d640",
+   "pc": "0x43d6ff"
+  },
   {
    "instr": "cmpb   $0x2,(%eax)",
    "pc": "0x43ace4"

@@ -1157,6 +1157,7 @@ call   0x4387d0            ; register(entry, name)
 | `0x437990`（**cmd 77 `PrimSetAlpha`**） | `prim+0x07`（alpha） | id **1..0xFFF**；arg1 int 且 **0..0xFF**（`cmpl $0xff; ja` 无符号比较），越界保持原值；不置 flags。**全片最高频命令**（两部作品合计 1052 次） |
 | `0x43A9C0`（**cmd 44 `MotionAlphaTest`**） | 线程 `+0x814` | id 1..0xFFF；查 `engine+0x651E04`（与 `MotionAlpha(42)` 同一容器）。**已接到** `FVP_TWEEN_ALPHA` |
 | `0x43B0D0`（**cmd 56 `MotionMoveS2Test`**） | 线程 `+0x814` | id 1..0xFFF；查 `engine+0x67CE64`（与 `MotionMoveS2(54)` 同族）。**已接到** `FVP_TWEEN_SCALE` |
+| `0x43D6D0`（**cmd 73 `PrimGroupIn`**） | 图元树父子关系（`0x43D640(parent, child)`） | child int **1..0xFFF**、parent int **0..0xFFF**（**允许 0**），两个都合法才挂接；不置 flags。两部作品合计 349 次 |
 | `0x43ACE0`（**cmd 50 `MotionMoveTest`**） | 线程 `+0x814`（返回值） | id 1..0xFFF；`0x4231A0(engine+0x65BA54, id)` 查该图元动作是否还在跑，**无条件**写返回值：1 = 还在跑。两部作品合计 447 次 |
 | `0x43A8B0`（**cmd 42 `MotionAlpha`**） | 尾调 `0x42D460(engine+0x651E04, …)` | id 1..0xFFF；**from/to 各自 int 0..0xFF，缺/越界回退成当前 `prim+0x07`**；**ms 必须 int 1..300000，否则整条忽略**；mode 0..1（缺省 0）；flag = `type != 0`。两部作品合计 553 次 |
 | `0x43B9C0`（**cmd 76 `PrimHit`**） | 线程 `+0x814`（返回值） | id 1..0xFFF；arg1 用 `type != 0` 当布尔；`0x43B8D0(id, flag)` 命中才把返回值置 1（未命中不写）。389 次（标题菜单命中就靠它） |

@@ -4,6 +4,23 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（四十三续）：PrimGroupIn(73) 的实参校验（父子挂接）
+
+继续"高频且无基线"清单：**`PrimGroupIn(73)`，349 次**。
+
+handler `0x43D6D0`：
+- arg0 child：int **1..0xFFF**；
+- arg1 parent：int **0..0xFFF**（**允许 0**，表示挂到根）；
+- 两个都合法才 `0x43D640(parent, child)`，否则整条忽略。
+
+**我们原来的问题**：只判 `argc > 1` 就直接用 `fvp_gfx_int(&a[1])`——非 int 会退化成
+`0`，等于把"没给父节点"当成了"挂到 0 号"；id 与 parent 的 range 也都没查。
+
+已按 handler 补齐校验（child 1..0xFFF、parent 0..0xFFF、parent 必须是 int）。
+
+`ref/exe-prim-setters-args.json` 从 15 个 handler 扩到 **16 个**（新增 73，带
+`confirmed_id`），门禁的 C 侧断言也加了三条。
+
 ## [未发布] — 2026-11-26（四十二续）：GraphLoad(22) 的 type 0 = 释放槽（原来缺这条路径）
 
 接着"高频且无基线"的清单，这轮是 **`GraphLoad(22)`（454 次）**。

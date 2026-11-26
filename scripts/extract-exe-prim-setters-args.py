@@ -29,6 +29,14 @@ OUT_JSON = os.path.join(ROOT, 'ref', 'exe-prim-setters-args.json')
 LINE = re.compile(r'^\s+([0-9a-f]+):\t([0-9a-f ]+?)\s*\t(.*)$')
 
 EXPECT = [
+    # 0x43d6d0：PrimGroupIn（cmd 73）：child 1..0xFFF、parent 0..0xFFF
+    (0x43D6D4, 'cmpb   $0x2,(%eax)'),
+    (0x43D6DC, 'cmp    $0x1,%edx'),
+    (0x43D6E1, 'cmp    $0x1000,%edx'),
+    (0x43D6E9, 'cmpb   $0x2,0x8(%eax)'),
+    (0x43D6F2, 'test   %eax,%eax'),
+    (0x43D6F6, 'cmp    $0x1000,%eax'),
+    (0x43D6FF, 'call   0x43d640'),
     # 0x43ace0：MotionMoveTest（cmd 50）：id 1..0xFFF -> 线程 +0x814（1 = 还在跑）
     (0x43ACE4, 'cmpb   $0x2,(%eax)'),
     (0x43ACEC, 'cmp    $0x1,%eax'),
@@ -112,6 +120,12 @@ EXPECT = [
 ]
 
 HANDLERS = [
+    {'handler': '0x43d6d0', 'confirmed_id': 73,
+     'writes': ['prim 树父子关系（0x43D640(parent, child)）'],
+     'rules': ['arg0 child = int 且 **1..0xFFF**',
+               'arg1 parent = int 且 **0..0xFFF**（允许 0）',
+               '两个都合法才挂接，否则整条忽略；不置 flags'],
+     'guess': 'PrimGroupIn(73)（两部作品合计 349 次）'},
     {'handler': '0x43ace0', 'confirmed_id': 50,
      'writes': ['线程 +0x814（VM 返回值）'],
      'rules': ['arg0 = int 且 **1..0xFFF**',

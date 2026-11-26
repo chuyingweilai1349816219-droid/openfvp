@@ -45,9 +45,10 @@ def main():
     hs = ref.get('handlers') or []
 
     print('== 2. 四个 handler 的规则 ==')
-    check(len(hs) == 15, '十五个 handler（实际 %d）' % len(hs))
+    check(len(hs) == 16, '十六个 handler（实际 %d）' % len(hs))
     by = {h['handler']: h for h in hs}
-    for addr in ('0x43ace0', '0x43a8b0', '0x43b9c0', '0x437990', '0x4379d0',
+    for addr in ('0x43d6d0', '0x43ace0', '0x43a8b0', '0x43b9c0', '0x437990',
+                 '0x4379d0',
                  '0x43ba20',
                  '0x43ba90', '0x43baf0',
                  '0x43bc40', '0x43bd00', '0x43bdc0', '0x43be40', '0x43bef0',
@@ -104,11 +105,17 @@ def main():
     ph = by.get('0x43b9c0') or {}
     check(any('0x814' in w for w in ph.get('writes') or []),
           '0x43B9C0（PrimHit）写线程 +0x814')
+    gi = by.get('0x43d6d0') or {}
+    check(any('0x43D640' in w for w in gi.get('writes') or []),
+          '0x43D6D0（PrimGroupIn）调 0x43D640')
+    check('1..0xFFF' in ' '.join(gi.get('rules') or []), 'child 范围 1..0xFFF')
+    check('0..0xFFF' in ' '.join(gi.get('rules') or []), 'parent 范围 0..0xFFF')
     mm = by.get('0x43ace0') or {}
     check(any('0x814' in w for w in mm.get('writes') or []),
           '0x43ACE0（MotionMoveTest）写线程 +0x814')
     check('还在跑' in ' '.join(mm.get('rules') or []), '规则写明 1 = 还在跑')
-    for addr, cid in (('0x43ace0', 50), ('0x43a8b0', 42), ('0x43b9c0', 76),
+    for addr, cid in (('0x43d6d0', 73), ('0x43ace0', 50), ('0x43a8b0', 42),
+                      ('0x43b9c0', 76),
                       ('0x437990', 77), ('0x4379d0', 79),
                       ('0x43ba90', 81), ('0x43bf50', 89), ('0x43bfa0', 90),
                       ('0x43bc40', 84), ('0x43bd00', 85), ('0x43bdc0', 86),
@@ -133,6 +140,12 @@ def main():
         check('ang < 0' in seg and 'ang += 3600' in seg, 'case 82 负数归一化')
         check('sc < 100' in seg and 'sc > 10000' in seg, 'case 82 scale 钳位 100..10000')
         check('FVP_S16' in src, 'C 侧有 int16 截断宏')
+        k73 = src.index('case 73:')
+        seg73 = src[k73:k73 + 800]
+        check('fvp_gfx_is_int(&a[1])' in seg73, 'case 73 先判 parent 是 int')
+        check('parent >= 0' in seg73 and 'parent <= 0xFFF' in seg73,
+              'case 73 校验 parent 0..0xFFF')
+        check('child >= 1 && child <= 0xFFF' in seg73, 'case 73 校验 child 1..0xFFF')
         k50 = src.index('case 50:')
         seg50 = src[k50:k50 + 900]
         check('gfx_motion_test' in seg50, 'case 50 用 gfx_motion_test 查询')
@@ -179,7 +192,7 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 十五个图元 handler 的实参规则已冻结，case 82 已按原版语义'
+    print('\nOK: 十六个图元 handler 的实参规则已冻结，case 82 已按原版语义'
           '（angle mod 3600 / scale 100..10000 / int16 存储）修正')
     return 0
 
