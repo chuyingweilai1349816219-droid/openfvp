@@ -4,6 +4,30 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（再续）：引擎对象表基线；正文"居中"找到指令出处
+
+### A 类基线（新增）
+- `scripts/extract-exe-engine-objects.py` → `ref/exe-engine-objects.json`：
+  `0x448833` 是 `Construct(base, elemsize, count, ctor)`（`0x448843..0x448861`），
+  引擎初始化里 14 张对象表的**基址/元素大小/项数/构造函数**全部从调用点实参抄出。
+  最大一张是 sprite 表 `engine+0x101064`（`0x51C`×4096 = 5.11 MiB）。
+- `tests/verify_exe_engine_objects.py`（`run_all` 步骤 6.49645）：重新提取必须与
+  基线逐字节一致；三条互证——① `sprite`→`prim_alt`→`prim` 三表**首尾相接**
+  （排除把 elemsize/count 看反）② `prim` 的 (0x61DD64, 0x34, 4096) 与
+  `ref/exe-prim-hierarchy.json` 完全一致 ③ 7 个容器构造函数的
+  (size,count,元素构造函数) 与注册表 7/7 对上。
+
+### 正文"面板内居中"不再是假设
+在 `0x432B60` 里定位到居中的那条算术：`pen_x += (右边界 − 左边界)/2`
+（`0x433037..0x433048`，`cltd; sub; sar $1; add`）；笔位是 `tw+0x5E8/+0x5EA`，
+字形落位 `0x424550` 读笔位、按 `tw+0x5DC/0x5DE` 裁剪并维护包围盒
+`+0x630/+0x638/+0x634/+0x63C`；排版起点 `0x4337A9` 是 `pen_x = tw+0x5AC`、
+`pen_y = 0`。`TextFormat(118)` 只允许把 `0x5AC` 写进 **0..64** 且只升不降
+（`0x43CC9B..0x43CCAE`）。
+两条结论：**每行水平居中**、**垂直顶端对齐**（垂直没有对应居中指令）——旧文档里
+"面板内垂直居中"的假设据此**撤回**。差异不再靠截图推，实现前先去 `0x433A91`
+那个"窗口版式记录加载点"把数据格式查清（下一轮）。
+
 ## [未发布] — 2026-11-26（续）：外壳 `--auto-click`；正文图元 551 确实在 (1,1) 上屏
 
 ### 工具

@@ -1,0 +1,241 @@
+{
+ "construct": {
+  "args": [
+   "base",
+   "elemsize",
+   "count",
+   "ctor"
+  ],
+  "func": "0x448833",
+  "inline_arrays": "每个表都内联在容器对象里：容器构造函数先在 (%ecx) 写 vtable，再 add $0x4,%ecx，把 this+4 当元素数组首址",
+  "steps": [
+   {
+    "pc": "0x448843",
+    "what": "esi = elemsize（0xc(%ebp)）"
+   },
+   {
+    "pc": "0x448848",
+    "what": "base += elemsize*count，从表尾倒序构造"
+   },
+   {
+    "pc": "0x448858",
+    "what": "base -= elemsize；ecx = base"
+   },
+   {
+    "pc": "0x44885e",
+    "what": "call *0x14(%ebp)，即逐个元素调 ctor(this)"
+   }
+  ]
+ },
+ "container_ctor_matches": {
+  "matched": 7,
+  "what": "每个容器构造函数解出的 (elemsize, count, 元素构造函数) 必须能在引擎初始化注册的表里找到同一组三元组——两处独立抄写互相对上，才说明表和偏移配对了"
+ },
+ "container_ctors": [
+  {
+   "base_expression": "this+0x4",
+   "count": 256,
+   "ector": "0x434770",
+   "elemsize": 24,
+   "pc": "0x4347b6",
+   "vtable": "0x45d99c"
+  },
+  {
+   "base_expression": "this+0x4",
+   "count": 32,
+   "ector": "0x434800",
+   "elemsize": 1040,
+   "pc": "0x434846",
+   "vtable": "0x45d9ac"
+  },
+  {
+   "base_expression": "this+0x4",
+   "count": 4096,
+   "ector": "0x434890",
+   "elemsize": 28,
+   "pc": "0x4348d6",
+   "vtable": "0x45d9bc"
+  },
+  {
+   "base_expression": "this+0x4",
+   "count": 512,
+   "ector": "0x434920",
+   "elemsize": 24,
+   "pc": "0x434966",
+   "vtable": "0x45d9cc"
+  },
+  {
+   "base_expression": "this+0x4",
+   "count": 512,
+   "ector": "0x4349b0",
+   "elemsize": 28,
+   "pc": "0x4349f6",
+   "vtable": "0x45d9dc"
+  },
+  {
+   "base_expression": "this+0x4",
+   "count": 512,
+   "ector": "0x434a40",
+   "elemsize": 24,
+   "pc": "0x434a86",
+   "vtable": "0x45d9ec"
+  },
+  {
+   "base_expression": "this+0x4",
+   "count": 4,
+   "ector": "0x434ad0",
+   "elemsize": 32,
+   "pc": "0x434b13",
+   "vtable": "0x45d9fc"
+  }
+ ],
+ "engine_init_range": [
+  "0x434f00",
+  "0x435300"
+ ],
+ "note": "从 exe 静态分析抄出的引擎自建对象表（A 类）：基址/元素大小/项数/构造函数全部是 0x448833 调用点的实参，由 scripts/extract-exe-engine-objects.py 生成",
+ "table_count": 14,
+ "tables": [
+  {
+   "base": "engine+0x101064",
+   "bytes": 5357568,
+   "count": 4096,
+   "ctor": "0x425950",
+   "elemsize": 1308,
+   "init_step": 8,
+   "name": "sprite",
+   "register_pc": "0x43520b"
+  },
+  {
+   "base": "engine+0x61D064",
+   "bytes": 3328,
+   "count": 64,
+   "ctor": "0x434cb0",
+   "elemsize": 52,
+   "init_step": 9,
+   "name": "prim_alt",
+   "register_pc": "0x4351eb"
+  },
+  {
+   "base": "engine+0x61DD64",
+   "bytes": 212992,
+   "count": 4096,
+   "ctor": "0x434740",
+   "elemsize": 52,
+   "init_step": 10,
+   "name": "prim",
+   "register_pc": "0x4351d1"
+  },
+  {
+   "base": "engine+0x651E08",
+   "bytes": 6144,
+   "count": 256,
+   "ctor": "0x434770",
+   "elemsize": 24,
+   "init_step": 11,
+   "name": "",
+   "register_pc": "0x4351b4"
+  },
+  {
+   "base": "engine+0x653810",
+   "bytes": 33280,
+   "count": 32,
+   "ctor": "0x434800",
+   "elemsize": 1040,
+   "init_step": 12,
+   "name": "",
+   "register_pc": "0x43518d"
+  },
+  {
+   "base": "engine+0x65BA58",
+   "bytes": 114688,
+   "count": 4096,
+   "ctor": "0x434890",
+   "elemsize": 28,
+   "init_step": 13,
+   "name": "",
+   "register_pc": "0x435166"
+  },
+  {
+   "base": "engine+0x679A60",
+   "bytes": 12288,
+   "count": 512,
+   "ctor": "0x434920",
+   "elemsize": 24,
+   "init_step": 14,
+   "name": "",
+   "register_pc": "0x43513f"
+  },
+  {
+   "base": "engine+0x67CE68",
+   "bytes": 14336,
+   "count": 512,
+   "ctor": "0x4349b0",
+   "elemsize": 28,
+   "init_step": 15,
+   "name": "",
+   "register_pc": "0x435118"
+  },
+  {
+   "base": "engine+0x680A70",
+   "bytes": 12288,
+   "count": 512,
+   "ctor": "0x434a40",
+   "elemsize": 24,
+   "init_step": 16,
+   "name": "",
+   "register_pc": "0x4350f1"
+  },
+  {
+   "base": "engine+0x683E78",
+   "bytes": 128,
+   "count": 4,
+   "ctor": "0x434ad0",
+   "elemsize": 32,
+   "init_step": 17,
+   "name": "",
+   "register_pc": "0x4350ca"
+  },
+  {
+   "base": "engine+0x68DFC0",
+   "bytes": 91392,
+   "count": 32,
+   "ctor": "0x434bb0",
+   "elemsize": 2856,
+   "init_step": 19,
+   "name": "",
+   "register_pc": "0x435094"
+  },
+  {
+   "base": "engine+0x6A49EC",
+   "bytes": 512,
+   "count": 128,
+   "ctor": "0x433c40",
+   "elemsize": 4,
+   "init_step": 22,
+   "name": "",
+   "register_pc": "0x43503b"
+  },
+  {
+   "base": "engine+0x6A4DF0",
+   "bytes": 5120,
+   "count": 256,
+   "ctor": "0x434ba0",
+   "elemsize": 20,
+   "init_step": 23,
+   "name": "",
+   "register_pc": "0x43501e"
+  },
+  {
+   "base": "engine+0x6A7E7C",
+   "bytes": 8,
+   "count": 2,
+   "ctor": "0x433c40",
+   "elemsize": 4,
+   "init_step": 7,
+   "name": "",
+   "register_pc": "0x4352ea"
+  }
+ ],
+ "total_bytes": 5864072
+}

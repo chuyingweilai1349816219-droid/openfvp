@@ -653,6 +653,15 @@ def build_steps(args):
                            ' dispatch 0x438AB0 (7 types, parent chain sums x/y) and the'
                            ' type-5 text path (layer +0x32, window table +0x98, surface +4)'))
 
+    # 6.49645 引擎自建对象表（14 张表的 base/size/count/ctor；缺 work/ 时 SKIP）
+    veo = os.path.join(HERE, 'verify_exe_engine_objects.py')
+    steps.append(Step('verify_exe_engine_objects.py', [PY, '-X', 'utf8', veo], 600,
+                      skip_reason=None,
+                      note='engine object tables read from the exe Construct() sites: '
+                           '14 tables (sprite 4096x0x51C, prim_alt 64x0x34, prim 4096x0x34 '
+                           'contiguous), 7 container ctors cross-checked against the '
+                           'registration list'))
+
     # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
     vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
     steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,
