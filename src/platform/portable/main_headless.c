@@ -252,7 +252,18 @@ int main(int argc, char **argv)
     if (pctrace != NULL) {
         vm.pctrace = fopen(pctrace, "wb");
     }
-    fvp_vm_start(&vm);
+    /* 允许从指定脚本 pc 起步（环境变量 FVP_START_PC，十六进制/十进制均可）：
+     * 没有素材宿主时脚本会停在标题/菜单（PrimHit 永远不命中，见 CHANGELOG 五十六续），
+     * 想验证正文渲染就得绕过标题。仅诊断/验证用，默认仍从 main_start 起跑。 */
+    {
+        const char *sp = getenv("FVP_START_PC");
+
+        if (sp != NULL && sp[0] != '\0') {
+            fvp_vm_start_at(&vm, (unsigned)strtoul(sp, NULL, 0));
+        } else {
+            fvp_vm_start(&vm);
+        }
+    }
     /* 无逐帧循环外壳的动画时钟：原版主循环里所有线程都让出一次就是一帧，
      * 脚本用 ThreadNext(133) 让出。这里按分块跑，把每块新增的 ThreadNext 次数
      * 换算成帧并推进补间表（每帧 --frame-ms 毫秒，默认 16 = 60 fps 假设）。
