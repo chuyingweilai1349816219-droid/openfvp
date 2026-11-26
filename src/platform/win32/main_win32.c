@@ -2180,8 +2180,16 @@ static int title_draw_bg(Gfx *gfx, const FvpTitleProfile *prof)
                     L->anchor_x = prof->client_w / 2;
                     L->anchor_y = prof->client_h / 2;
                 } else {
-                    L->anchor_x = def->op_x;
-                    L->anchor_y = def->op_y;
+                    /* path B 的锚点 = OP，但 OP 是**设计画布**坐标（2400×1350），
+                     * 屏幕看到的是设计画布中心裁剪掉 (bg_src_x, bg_src_y) 之后
+                     * 的那一块，所以锚点要先换算到屏幕坐标：
+                     *     屏幕锚点 = OP − (bg_src_x, bg_src_y)
+                     * 否则整层会被恒定平移 (+240,+135) —— 2026-11-26 用户反馈
+                     * "风车剪影的入场位置太靠中" 就是它（风车整体右移 240 px）。
+                     * 一致性自检：缩放 1000‰、角度 0 时该公式必须退化成静态路径的
+                     * `img + src − 裁剪原点`；带裁剪偏移才能相等。 */
+                    L->anchor_x = def->op_x - prof->bg_src_x;
+                    L->anchor_y = def->op_y - prof->bg_src_y;
                 }
                 L->scale_x1000 = lst.scale_x1000;
                 L->scale_y1000 = lst.scale_y1000;

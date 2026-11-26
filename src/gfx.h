@@ -412,7 +412,11 @@ typedef struct GfxAffineLayer {
     int img_y;
     int op_x;
     int op_y;
-    int anchor_x;   /* 锚点（画面坐标）；anchor_center=1 时由调用方填画面中心 */
+    int anchor_x;   /* 锚点（**画面/输出缓冲坐标**，不是设计画布坐标）：
+                     * 缩放/旋转绕它进行，同时是"设计画布原点"在屏幕上的位置。
+                     * 公式：屏幕 = 锚点 + S·R·(图头 + 源像素 − OP)。
+                     * 设计坐标系的 OP 要先减去背景裁剪原点再填进来，否则整层
+                     * 会被恒定平移（v1 五彩标题风车右移 240 px 就是这个）。 */
     int anchor_y;
     int anchor_center;
     int scale_x1000;

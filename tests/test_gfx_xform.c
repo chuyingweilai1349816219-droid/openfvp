@@ -506,6 +506,127 @@ int main(void)
           "cropped_scaled 同样参数两次绘制逐字节相同");
     free(base);
 
+    /* ================= 5. gfx_draw_affine_layers()：锚点语义 =================
+     * 标题背景动画用逐层仿射合成。它必须满足两条不变式：
+     *   (a) 缩放 1000‰、角度 0 时，屏幕上等价于静态的 `img + src − 裁剪原点`；
+     *   (b) 锚点填的是**画面坐标**：设计画布坐标的 OP 要先减去裁剪原点，
+     *       否则整层被恒定平移 —— 2026-11-26 五彩标题的"风车入场太靠中"
+     *       就是锚点少减了裁剪原点（(240,135)）。 */
+    printf("== 5. gfx_draw_affine_layers 锚点/恒等语义 ==\n");
+    {
+        static const int crop_x = 5;
+        static const int crop_y = 3;
+        GfxAffineLayer L;
+        uint8_t *aff;
+        size_t alen = 0;
+
+        /* (a) 恒等：等于把图按 (img − 裁剪原点) 直贴 */
+        clear_canvas(g);
+        (void)gfx_draw_image_at(g, 1, 0 - crop_x, 0 - crop_y);
+        base = canvas_snapshot(g, &len);
+
+        memset(&L, 0, sizeof L);
+        L.slot = 1;
+        L.img_x = 0;
+        L.img_y = 0;
+        L.op_x = 20;
+        L.op_y = 15;
+        L.anchor_x = L.op_x - crop_x; /* 关键：OP 换算到画面坐标 */
+        L.anchor_y = L.op_y - crop_y;
+        L.scale_x1000 = 1000;
+        L.scale_y1000 = 1000;
+        L.angle_units = 0;
+        L.alpha = 255;
+        clear_canvas(g);
+        CHECK(gfx_draw_affine_layers(g, &L, 1, 1) == 1, "affine 恒等返回 1");
+        aff = canvas_snapshot(g, &alen);
+        CHECK(base != NULL && aff != NULL && len == alen &&
+                  memcmp(base, aff, len) == 0,
+              "恒等仿射 == 静态直贴（逐字节）");
+        free(aff);
+
+        /* (b) 锚点没减裁剪原点 → 整层正好平移 (crop_x, crop_y) */
+        L.anchor_x = L.op_x;
+        L.anchor_y = L.op_y;
+        clear_canvas(g);
+        CHECK(gfx_draw_affine_layers(g, &L, 1, 1) == 1, "affine 平移返回 1");
+        CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1,
+              "平移帧有内容");
+        CHECK(bx0 == 0 && by0 == 0 && bx1 == IMG_W - 1 && by1 == IMG_H - 1,
+              "锚点不减裁剪原点 → 画在 (0,0) 起（%d,%d..%d,%d）", bx0, by0,
+              bx1, by1);
+
+        /* (c) 500‰ 绕 OP 缩放：包围盒 20x15，中心不变 */
+        L.anchor_x = L.op_x - crop_x;
+        L.anchor_y = L.op_y - crop_y;
+        L.scale_x1000 = 500;
+        L.scale_y1000 = 500;
+        clear_canvas(g);
+        CHECK(gfx_draw_affine_layers(g, &L, 1, 1) == 1, "affine 500‰ 返回 1");
+        CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1, "500‰ 有内容");
+        CHECK(bx1 - bx0 + 1 == IMG_W / 2 && by1 - by0 + 1 == IMG_H / 2,
+              "500‰ 缩放后包围盒 %dx%d", bx1 - bx0 + 1, by1 - by0 + 1);
+        CHECK(bx0 == (0 - crop_x) + IMG_W / 4 &&
+                  (by0 == (0 - crop_y) + IMG_H / 4 ||
+                   by0 == (0 - crop_y) + IMG_H / 4 + 1),
+              "500‰ 绕 OP 缩放后左上 (%d,%d)", bx0, by0);
+
+        /* (d) 90° 旋转：宽高互换。图放在画布中心附近，避免被画布边缘裁掉
+         * （图头 (80,60)、OP (100,75)、裁剪 0 ⇒ 屏幕 = OP + R·S·(图头+源−OP)）。 */
+        L.img_x = 80;
+        L.img_y = 60;
+        L.op_x = 100;
+        L.op_y = 75;
+        L.anchor_x = L.op_x;
+        L.anchor_y = L.op_y;
+        L.scale_x1000 = 1000;
+        L.scale_y1000 = 1000;
+        L.angle_units = 1800; /* 1800 * 0.05° = 90° */
+        clear_canvas(g);
+        CHECK(gfx_draw_affine_layers(g, &L, 1, 1) == 1, "affine 90° 返回 1");
+        CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1, "90° 有内容");
+        CHECK(bx1 - bx0 + 1 == IMG_H && by1 - by0 + 1 == IMG_W,
+              "90° 后包围盒 %dx%d（应为 %dx%d）", bx1 - bx0 + 1,
+              by1 - by0 + 1, IMG_H, IMG_W);
+        /* 再转回 0°：位置回到 (80,60) */
+        L.angle_units = 0;
+        clear_canvas(g);
+        CHECK(gfx_draw_affine_layers(g, &L, 1, 1) == 1, "affine 0° 返回 1");
+        CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1, "0° 有内容");
+        CHECK(bx0 == 80 && by0 == 60, "0° 时回到图头位置 (%d,%d)", bx0,
+              by0);
+
+        /* (e) div=2 的放大路径：回到 crop 场景，墨迹仍从 (0,0) 开始 */
+        L.img_x = 0;
+        L.img_y = 0;
+        L.op_x = 20;
+        L.op_y = 15;
+        L.anchor_x = L.op_x - crop_x;
+        L.anchor_y = L.op_y - crop_y;
+        L.angle_units = 0;
+        clear_canvas(g);
+        CHECK(gfx_draw_affine_layers(g, &L, 1, 2) == 1, "affine div=2 返回 1");
+        CHECK(ink_box(g, &bx0, &by0, &bx1, &by1, &count) == 1,
+              "div=2 有内容");
+        /* 图在 (-5,-3)，左边/上边被画布裁掉 → 墨迹从 (0,0) 开始 */
+        CHECK(bx0 == 0 && by0 == 0,
+              "div=2 左上 (%d,%d) = (0,0)（被画布裁剪）", bx0, by0);
+
+        /* (f) NULL / n<=0 / 非法缩放不崩 */
+        CHECK(gfx_draw_affine_layers(NULL, &L, 1, 1) == 0, "NULL gfx → 0");
+        CHECK(gfx_draw_affine_layers(g, NULL, 1, 1) == 0, "NULL layers → 0");
+        CHECK(gfx_draw_affine_layers(g, &L, 0, 1) == 0, "n=0 → 0");
+        {
+            GfxAffineLayer bad = L;
+
+            bad.scale_x1000 = 0;
+            clear_canvas(g);
+            CHECK(gfx_draw_affine_layers(g, &bad, 1, 1) == 0,
+                  "scale=0 层被跳过 → 0");
+        }
+        free(base);
+    }
+
     gfx_destroy(g);
     printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

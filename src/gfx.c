@@ -4238,18 +4238,21 @@ int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
         bf = si / s;
         c0 = (double)L->op_x - (double)L->img_x;
         d0 = (double)L->op_y - (double)L->img_y;
-        du = (int64_t)(af * (double)div * 65536.0);
-        dv = (int64_t)(-bf * (double)div * 65536.0);
-        xhi = (cw - 1) << 16;
-        yhi = (ch - 1) << 16;
+        du = (int64_t)(af * (double)div * 65536.0 + 0.5);
+        dv = (int64_t)(-bf * (double)div * 65536.0 + 0.5);
+        xhi = cw << 16; /* 允许 u 落在最后一列（含小数），索引侧再钳 */
+        yhi = ch << 16;
         for (y = 0; y < h; ++y) {
             double dy = ((double)y + 0.5) * (double)div -
                         (double)L->anchor_y;
             double dx0 = 0.5 * (double)div - (double)L->anchor_x;
             double u0 = af * dx0 + bf * dy + c0;
             double v0 = -bf * dx0 + af * dy + d0;
-            int64_t u = (int64_t)(u0 * 65536.0);
-            int64_t v = (int64_t)(v0 * 65536.0);
+            /* 像素中心约定：屏幕像素中心映射到源坐标 p 后要减 0.5，才是"源像素序号 +
+             * 小数权重"（与 zoom_warp_rgba 的 fx 表达式一致）。少了这个 0.5，恒等映射
+             * 会落在半像素上：整幅图被双线性糊一层、包围盒少 1 px（单测抓到）。 */
+            int64_t u = (int64_t)((u0 - 0.5) * 65536.0 + 0.5);
+            int64_t v = (int64_t)((v0 - 0.5) * 65536.0 + 0.5);
             uint8_t *orow = comp + (size_t)y * (size_t)w * 4u;
 
             for (x = 0; x < w; ++x, u += du, v += dv) {
@@ -4275,12 +4278,23 @@ int gfx_draw_affine_layers(Gfx *g, const GfxAffineLayer *layers, int n,
                 }
                 ix = (int)(u >> 16);
                 iy = (int)(v >> 16);
+                wx = (int)((u >> 8) & 0xff);
+                wy = (int)((v >> 8) & 0xff);
+                /* 最后一行/列也要能采到：双线性需要 ix+1，越界时把
+                 * 基址退到 cw-2/ch-2 并给满权重（否则恒等映射会少
+                 * 最后一列像素，包围盒小 1 px）。 */
+                if (ix >= cw - 1) {
+                    ix = cw - 2;
+                    wx = 255;
+                }
+                if (iy >= ch - 1) {
+                    iy = ch - 2;
+                    wy = 255;
+                }
                 if (mask != NULL && mask[(size_t)(iy >> 3) * (size_t)mw +
                                         (size_t)(ix >> 3)] == 0u) {
                     continue;
                 }
-                wx = (int)((u >> 8) & 0xff);
-                wy = (int)((v >> 8) & 0xff);
                 iwx = 256 - wx;
                 iwy = 256 - wy;
                 p00 = compo + ((size_t)iy * (size_t)cw + (size_t)ix) * 4u;
