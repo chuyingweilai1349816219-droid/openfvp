@@ -4,6 +4,84 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（九十六续）：统一点击掩码后再对齐轨迹 —— 下一处分叉在 265 等待环，且查明记录只能由 Motion 创建
+
+### 1. 统一输入模型
+
+上一轮剩下的分叉是"输入模型差异"：`fvm` 与 `headless` 的合成点击掩码不同
+（`fvm` 用 VM 默认值，`headless` 用 `0x0B`）。本轮给 `bin/fvm.exe` 加了 `--click-mask N`，
+并把默认值对齐成 **0x0B**：
+
+| 外壳 | 选项 | 默认 |
+|---|---|---|
+| `bin/fvm.exe` | `--click-mask N`（新增） | 0x0B |
+| `bin/fvp-headless.exe` | `--click-mask N`（已有） | 0x0B |
+
+两边统一用 `--click 600 --click-mask 11 --cursor 960,540` 重跑 90 万步 pctrace。
+
+### 2. 结果：第一处分叉推后到 index 33,518，正好落在 265 等待环
+
+```
+fvm: … 592da 592df 592e2 592e5 592e6 592e7 592e8 5930e 59311 …   ← 跳出循环
+hl : … 592da 592df 592e2 592e5 592e6 592e7 592e8 592ed 592f0 …   ← 继续等
+```
+
+对应：
+
+```
+592df  pushint16 265 ; syscall 44      ; MotionAlphaTest(265)
+592e5  pushtemp ; pushfalse ; eq
+592e8  jmpcond  0x5930E                ; 记录存在 → 跳出
+```
+
+- `headless` 的 `MotionAlphaTest(265)` 按语义返回 0（容器里没有 265 的记录）→ 不跳；
+- `fvm` 没有 gfx，`case 44` 走不到返回值写入，`pushtemp` 读到**上一条命令的残留值** → 跳到 0x5930E。
+
+所以 **`fvm` 的"能跳过"是假象**（上一轮已记录它不能当流程基准）。真正的问题是：
+原版的 265 记录从哪来。
+
+### 3. 静态查明：动画记录只能由 `Motion*` handler 创建
+
+- 容器是 `engine+0x651E04`；
+- 全部 10 处引用里只有 `0x443E37`（构造 `call 0x4428B0`）、`0x43E4F5`/`0x43F312`/`0x43F70A`
+  （每帧更新/复位 `call 0x426830 / 0x4267d0 / 0x426780`）与 `*Test` 查询；
+- 记录添加函数 `0x42D460` 在整个 exe 里**只有一个调用者**：`0x43A980`，即
+  `MotionAlpha`(42) handler `0x43A8B0` 的尾段。其它 `Motion*` handler 走同一族的入口
+  （`0x43AA10/0x43ABD0/0x43AF70/0x43AD30`）。
+
+结论：**没有"引擎侧批量登记"这回事**；要让 `MotionAlphaTest(265)` 为真，原版脚本必然在
+循环之前执行过某条 `Motion*(265, …)`。而我们在 90 万步轨迹里对 265 只看到"装载 + 一次
+`PrimSetAlpha` + 无限次查询"（八十九续），262 个 265 相关 pc 里 `Motion*` 全是 0 次。
+
+### 4. 这意味着什么
+
+要么原版在**首次进入标题之前**走过一段我们没走的初始化（创建 265 等图元的动画记录），
+要么这个循环在原版首次开机时确实会等——等到一次"菜单交互"给它建记录。两种都需要
+**脚本之外的信息**才能判定，靠继续对齐 `fvm`（它本身就是假象）已经走不通了。
+
+下一轮换靶：把 `ref/` 里已有的存档全局变量（`save/save.bin` 的 145 个 int）灌进
+headless（`fvm` 有 `--savebin`，headless 没有），看**带存档**时是否走到不同的分支——
+原版首次启动也会读 `save.bin`，这是唯一还没试过的"环境差异"。
+
+### 5. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS**（改默认 click-mask 后前缀仍 6489 B，冻结文本基线不变） |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_opening_render.py` | **PASS**（两作） |
+| `verify_prim_refs` / `verify_thread_calls` / `verify_text_geometry` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 6. 诚实说明
+
+- 本轮代码改动只有 `fvm` 的 `--click-mask`（默认 0x0B 对齐 headless），不影响冻结基线。
+- **没有修好 265**：本轮把"最后一处分叉"精确定位到 265 等待环本身，并证明了
+  `fvm` 在此处的"通过"是残留值假象；同时用 exe 反汇编排除了"引擎批量登记"。
+- 下一轮的计划（带存档启动）是最后一个未试的环境差异；如果仍无进展，应该承认
+  "首次启动的 265 记录" 需要原版运行数据才能判定，并把 ① 标成需要新证据的开放问题。
+
 ## [未发布] — 2026-11-26（九十五续）：`DissolveWait` 按 exe 改正 —— 轨迹对齐找到并消掉第一个真实分叉
 
 上一轮说"换方法：对齐早期轨迹找第一处分叉"。这一轮做到了，而且**真找到并修掉了一个语义 bug**。

@@ -30,6 +30,7 @@ static void fvp_usage(FILE *f, const char *prog)
             "  --enc NAME       text encoding: cp932 (default) or gbk\n"
             "  --steps N        instruction budget (default 2000000)\n"
             "  --click N        synthetic click every N steps (default 0)\n"
+            "  --click-mask N    synthetic click bitmask (default 0x0B)\n"
             "  --cursor X,Y     synthetic cursor position (default 960,540)\n"
             "  --text-out FILE  write \"[layer] text\" lines (CRLF) to FILE\n"
             "  --quiet          do not echo text / debmess to stdout\n"
@@ -548,6 +549,7 @@ int main(int argc, char **argv)
     uint64_t stall_after = 2000000u;
     int stall_exit = 0;
     int64_t click = 0;
+    int64_t click_mask = 0x0B; /* 与 headless 默认一致；--click-mask 可改 */
     int64_t cx = 960;
     int64_t cy = 540;
     int quiet = 0;
@@ -607,6 +609,13 @@ int main(int argc, char **argv)
                 fprintf(stderr, "fvm: bad --cursor value\n");
                 return 2;
             }
+        } else if (strcmp(a, "--click-mask") == 0) {
+            if (i + 1 >= argc ||
+                !fvp_parse_i64(argv[i + 1], &click_mask)) {
+                fprintf(stderr, "fvm: bad --click-mask value\n");
+                return 2;
+            }
+            ++i;
         } else if (strcmp(a, "--text-out") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "fvm: missing --text-out value\n");
@@ -723,6 +732,7 @@ int main(int argc, char **argv)
         return 5;
     }
     vm.click_period = click;
+    vm.click_mask = (int)click_mask;
     vm.cx = cx;
     vm.cy = cy;
     if (start_pc >= 0) {
