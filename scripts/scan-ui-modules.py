@@ -35,6 +35,35 @@ GAMES = {
 OUT = os.path.join(ROOT, 'ref', 'ui-modules.json')
 
 
+def openers(code, pcs, target):
+    """找出调用 target 的站点，并判断它的触发是不是 InputGetDown/GetState 的某一位。"""
+    pos = {p: i for i, p in enumerate(pcs)}
+    out = []
+    for q in pcs:
+        op, name, args = code.instr[q]
+        if name != 'call' or not args or args[0] != target:
+            continue
+        i = pos[q]
+        back = pcs[max(0, i - 10):i]
+        inputs, masks = [], []
+        for k, p in enumerate(back):
+            bop, bname, bargs = code.instr[p]
+            if bname != 'syscall' or not bargs or bargs[0] not in (31, 34):
+                continue
+            inputs.append(bargs[0])
+            # 形态：syscall 31/34 -> pushtemp -> pushint8 N -> test
+            for d in range(1, 5):
+                if k + d >= len(back):
+                    break
+                nxt = code.instr[back[k + d]]
+                if nxt[1] == 'pushint8':
+                    masks.append(nxt[2][0])
+                    break
+        out.append(dict(pc='0x%05x' % q, input_syscalls=inputs, masks=masks,
+                        input_driven=bool(inputs)))
+    return out
+
+
 def scan(path):
     data = open(path, 'rb').read()
     code = fvm_ref.Code(data, 'cp932')
@@ -87,10 +116,14 @@ def scan(path):
         out['ring'] = describe(fn_of(ring_pc), 'sys_')
         out['ring']['first_asset'] = ring_asset
         out['ring']['first_pc'] = '0x%05x' % ring_pc
+        entry = out['ring'].get('entry')
+        out['ring']['openers'] = openers(code, pcs, int(entry, 16)) if entry else []
     if dlg_pc is not None:
         out['dialog'] = describe(fn_of(dlg_pc), 'menu_')
         out['dialog']['first_asset'] = dlg_asset
         out['dialog']['first_pc'] = '0x%05x' % dlg_pc
+        entry = out['dialog'].get('entry')
+        out['dialog']['openers'] = openers(code, pcs, int(entry, 16)) if entry else []
     return out
 
 

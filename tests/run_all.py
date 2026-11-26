@@ -1047,10 +1047,11 @@ def build_steps(args):
     vum = os.path.join(HERE, 'verify_ui_modules.py')
     steps.append(Step('verify_ui_modules.py', [PY, '-X', 'utf8', vum], 300,
                       skip_reason=None,
-                      note='UI module addresses across both games: ring loader '
-                           '0x54520 / 0x6B8E1 (44/35 assets), dialog loader '
-                           '0x57383 / 0x6E297 (13 each), one caller each -> entry '
-                           '0x54C68 / 0x6BEE4 and 0x577C8 / 0x6E6BA'))
+                      note='UI module addresses across both games: ring loader 0x54520 / 0x6B8E1 '
+                           '(44/35 assets), dialog loader 0x57383 / 0x6E297 (13 each); '
+                           'entries 0x54C68 / 0x6BEE4 and 0x577C8 / 0x6E6BA have '
+                           '5 and 12 call sites in both games (4 ring openers are '
+                           'InputGetDown bit1)'))
 
     # 6.5 游戏内菜单（外壳侧占位实现，--menu-at 打开）
     vg = os.path.join(HERE, 'verify_gamemenu.py')

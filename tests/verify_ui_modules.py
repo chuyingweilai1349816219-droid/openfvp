@@ -95,6 +95,28 @@ def main():
             check(m.get('entry') is not None,
                   '%s %s 能反推出入口函数 %s' % (game, key, m.get('entry')))
 
+    print('== 打开路径：环形菜单由输入触发，确认框由动作触发')
+    for game in ('iroseka', 'hoshimemo'):
+        ring = games[game]['ring'].get('openers', [])
+        dlg = games[game]['dialog'].get('openers', [])
+        driven = [o for o in ring if o.get('input_driven')]
+        check(len(ring) == 5, '%s: 环形入口 5 个调用点（实际 %d）' % (game, len(ring)))
+        check(len(driven) == 4, '%s: 其中 4 个由输入触发（实际 %d）' % (game, len(driven)))
+        check(all(o.get('masks') == [1] for o in driven),
+              '%s: 输入触发的掩码都是 bit1（实际 %s）'
+              % (game, [o.get('masks') for o in driven]))
+        check(any(not o.get('input_driven') for o in ring),
+              '%s: 还有 1 个非输入（ControlPulse 路径）调用点' % game)
+        check(len(dlg) == 12, '%s: 确认框入口 12 个调用点（实际 %d）'
+              % (game, len(dlg)))
+        check(all(not o.get('input_driven') for o in dlg),
+              '%s: 确认框没有输入触发点（都是动作触发）' % game)
+    check(len(games['iroseka']['ring']['openers']) ==
+          len(games['hoshimemo']['ring']['openers']) and
+          len(games['iroseka']['dialog']['openers']) ==
+          len(games['hoshimemo']['dialog']['openers']),
+          '两作的调用点数完全一致（5 / 12）')
+
     print('== 重新扫描对账')
     mod = load_scanner()
     got = mod.build()

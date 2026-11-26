@@ -16,7 +16,55 @@
     ],
     "entry": "0x54c68",
     "first_asset": "sys_save_1",
-    "first_pc": "0x54526"
+    "first_pc": "0x54526",
+    "openers": [
+     {
+      "pc": "0x3d21b",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x5b596",
+      "input_syscalls": [
+       31
+      ],
+      "masks": [
+       1
+      ],
+      "input_driven": true
+     },
+     {
+      "pc": "0x5b629",
+      "input_syscalls": [
+       31
+      ],
+      "masks": [
+       1
+      ],
+      "input_driven": true
+     },
+     {
+      "pc": "0x5b6c6",
+      "input_syscalls": [
+       31
+      ],
+      "masks": [
+       1
+      ],
+      "input_driven": true
+     },
+     {
+      "pc": "0x5b74c",
+      "input_syscalls": [
+       31
+      ],
+      "masks": [
+       1
+      ],
+      "input_driven": true
+     }
+    ]
    },
    "dialog": {
     "fn": "0x57383",
@@ -29,7 +77,81 @@
     ],
     "entry": "0x577c8",
     "first_asset": "menu_bg",
-    "first_pc": "0x573c2"
+    "first_pc": "0x573c2",
+    "openers": [
+     {
+      "pc": "0x26695",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x3d974",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x5615b",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x5630c",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x563f3",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x59ddd",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x5b85a",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x5c120",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x6f891",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x6f9be",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x6fa71",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x6fb2b",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     }
+    ]
    }
   },
   "hoshimemo": {
@@ -46,7 +168,55 @@
     ],
     "entry": "0x6bee4",
     "first_asset": "sys_save_1",
-    "first_pc": "0x6b8e7"
+    "first_pc": "0x6b8e7",
+    "openers": [
+     {
+      "pc": "0x522c6",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x71d0f",
+      "input_syscalls": [
+       31
+      ],
+      "masks": [
+       1
+      ],
+      "input_driven": true
+     },
+     {
+      "pc": "0x71da2",
+      "input_syscalls": [
+       31
+      ],
+      "masks": [
+       1
+      ],
+      "input_driven": true
+     },
+     {
+      "pc": "0x71e3f",
+      "input_syscalls": [
+       31
+      ],
+      "masks": [
+       1
+      ],
+      "input_driven": true
+     },
+     {
+      "pc": "0x71ec5",
+      "input_syscalls": [
+       31
+      ],
+      "masks": [
+       1
+      ],
+      "input_driven": true
+     }
+    ]
    },
    "dialog": {
     "fn": "0x6e297",
@@ -59,7 +229,81 @@
     ],
     "entry": "0x6e6ba",
     "first_asset": "menu_bg",
-    "first_pc": "0x6e2d6"
+    "first_pc": "0x6e2d6",
+    "openers": [
+     {
+      "pc": "0x3a51e",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x52a16",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x6d2b8",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x6d347",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x6d39d",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x7088f",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x71fd3",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x72896",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x86859",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x86986",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x86a39",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     },
+     {
+      "pc": "0x86af3",
+      "input_syscalls": [],
+      "masks": [],
+      "input_driven": false
+     }
+    ]
    }
   }
  }
