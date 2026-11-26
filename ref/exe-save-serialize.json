@@ -914,5 +914,174 @@
  "unknown": [
   "第 20 段之后各子序列化器（0x43DCE0 外字表 / 0x4292B0 4096 项 / 0x429570 64 项 / 0x42D880 32 槽 / 0x4221E0 窗口 / 0x441320 脚本对象）的字节数",
   "engine+0x6a49e8 / 0x6a4dec / 0x6a65fc+0xc0 / 0x651d64 / 0x458 / 0x85 的语义"
- ]
+ ],
+ "write_read_correspondence": {
+  "agreements": [
+   "两边的**顺序完全一致**（写段号 1..31 对应读取点从早到晚）",
+   "第 24 段（图元数组）在写侧与读侧都是\"整块 0x34000 字节\"",
+   "第 27 段（文本窗口）在写侧与读侧都是 32 个",
+   "第 1 段（时间戳）写 7 字节，读侧直接跳过 7 字节不解析"
+  ],
+  "note": "序列化器 0x43DE90 的 31 段与读档 0x43EE90 的读取点**一一对应**，顺序相同：写在前面的读时也在前面。两侧分别冻结在 ref/exe-save-serialize.json（segments/reader）与 ref/exe-load-flow.json（load_apply.restore_steps）。",
+  "pairs": [
+   {
+    "label": "timestamp 7B",
+    "read": "reader #1（游标=7，不解析）",
+    "segment": 1,
+    "size": 7
+   },
+   {
+    "label": "string[0]",
+    "read": "reader #2（u16 长度+字节）",
+    "segment": 2
+   },
+   {
+    "label": "string[1]",
+    "read": "reader #2",
+    "segment": 3
+   },
+   {
+    "label": "string[2]",
+    "read": "reader #2",
+    "segment": 4
+   },
+   {
+    "label": "thumbnail",
+    "read": "reader #3（游标 += w*h*4）",
+    "segment": 5
+   },
+   {
+    "label": "per-slot globals",
+    "read": "reader #4（G1 条 × 8B）",
+    "segment": 6
+   },
+   {
+    "label": "32 coroutine snapshots",
+    "read": "reader #5（跳 32×0xB1D）",
+    "segment": 7
+   },
+   {
+    "label": "current thread index",
+    "read": "loader step 1（engine+0x6A66D0）",
+    "segment": 8
+   },
+   {
+    "label": "u32 @0x6A49E8",
+    "read": "loader step 2",
+    "segment": 9
+   },
+   {
+    "label": "dynamic string table",
+    "read": "loader step 3（124 × 0x433F60）",
+    "segment": 10
+   },
+   {
+    "label": "block 0x6A4BEC 256B",
+    "read": "loader step 4",
+    "segment": 11
+   },
+   {
+    "label": "block 0x6A4CEC 256B",
+    "read": "loader step 5",
+    "segment": 12
+   },
+   {
+    "label": "u32 @0x6A4DEC",
+    "read": "loader step 6",
+    "segment": 13
+   },
+   {
+    "label": "table 0x6A4DF0 (256)",
+    "read": "loader step 7",
+    "segment": 14
+   },
+   {
+    "label": "block 0x6A61F0 512B",
+    "read": "loader step 8",
+    "segment": 15
+   },
+   {
+    "label": "block 0x6A63F0 512B",
+    "read": "loader step 9",
+    "segment": 16
+   },
+   {
+    "label": "byte 0x6A65FC+0xC0",
+    "read": "loader step 10",
+    "segment": 17
+   },
+   {
+    "label": "table 0x6A65FC (16x12B)",
+    "read": "loader step 10（同一调用）",
+    "segment": 18
+   },
+   {
+    "label": "palette 256xBGRA",
+    "read": "loader step 15（0x43ECB0 内）",
+    "segment": 19
+   },
+   {
+    "label": "history ring",
+    "read": "loader step 14（1200 × 0x437EE0）",
+    "segment": 20
+   },
+   {
+    "label": "gaiji table",
+    "read": "loader step 14（同族循环）",
+    "segment": 21
+   },
+   {
+    "label": "object array 0x101064",
+    "read": "loader step 16（4096 × 0x51C）",
+    "segment": 22
+   },
+   {
+    "label": "object array 0x61D064",
+    "read": "loader step 17（64 × 0x34）",
+    "segment": 23
+   },
+   {
+    "label": "prim array (0x34000)",
+    "read": "loader step 18（memcpy 0x34000）",
+    "segment": 24,
+    "size": 212992
+   },
+   {
+    "label": "tween managers (9)",
+    "read": "loader steps 19-22",
+    "segment": 25
+   },
+   {
+    "label": "u32 @0x651D64",
+    "read": "loader step 28",
+    "segment": 26
+   },
+   {
+    "count": 32,
+    "label": "32 text windows",
+    "read": "loader step 29（32 × 0x433850）",
+    "segment": 27
+   },
+   {
+    "label": "window +0x2D4",
+    "read": "loader step 30",
+    "segment": 28
+   },
+   {
+    "label": "script engine walk",
+    "read": "loader step 31",
+    "segment": 29
+   },
+   {
+    "label": "byte @0x458",
+    "read": "loader step 34",
+    "segment": 30
+   },
+   {
+    "label": "byte @0x85 != 0",
+    "read": "loader step 35",
+    "segment": 31
+   }
+  ]
+ }
 }

@@ -425,6 +425,35 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
+    print('== 写↔读 一一对应 ==')
+    wr = ref.get('write_read_correspondence') or {}
+    pairs = wr.get('pairs') or []
+    check(len(pairs) == 31, '31 段全部有对应的读取点（实际 %d）' % len(pairs))
+    seg_nums = [p.get('segment') for p in pairs]
+    check(seg_nums == list(range(1, 32)), '段号 1..31 连续且有序')
+    bad = [p for p in pairs
+           if not (('reader' in (p.get('read') or '')) or
+                   ('loader step' in (p.get('read') or '')))]
+    check(not bad, '每条都指向 reader 或 loader step（异常 %r）'
+          % [p.get('segment') for p in bad])
+    seg24 = [p for p in pairs if p.get('segment') == 24]
+    check(seg24 and seg24[0].get('size') == 0x34000,
+          '第 24 段（图元数组）标记 0x34000 字节')
+    seg27 = [p for p in pairs if p.get('segment') == 27]
+    check(seg27 and seg27[0].get('count') == 32, '第 27 段（文本窗口）标记 32 个')
+    # 与读侧基线交叉核对：图元数组 memcpy 0x34000 / 32 个窗口
+    lf = os.path.join(FVP, 'ref', 'exe-load-flow.json')
+    if os.path.isfile(lf):
+        ld = json.loads(io.open(lf, encoding='utf-8').read())
+        la = ld.get('frame_consumers', {}).get('load_apply', {})
+        steps = la.get('restore_steps') or []
+        check(any('0x34000' in (x.get('what') or '') for x in steps),
+              '读侧也有"整块 0x34000 字节"（步 18）')
+        check(any('32 个文本窗口' in (x.get('what') or '') for x in steps),
+              '读侧也有"32 个文本窗口"（步 29）')
+    check(any('顺序完全一致' in a for a in (wr.get('agreements') or [])),
+          'agreements 写明两边顺序完全一致')
+
     print('\nOK: 存档槽写/读顺序都已冻结（写 31 段；读 20 步，游标从 7 开始）；'
           '数据侧 6 份真实存档验证了"tail 开头 = 1549 条全局变量（0x3068）→ '
           '32 上下文（0x163A0）→ 线程下标 @0x19408 → 128 槽字符串表 @0x19410 '
