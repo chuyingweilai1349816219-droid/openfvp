@@ -4,6 +4,38 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（四十九续）：`InputGetDown` 返回的是**位掩码**，我们一直只返回 1（bit 0）
+
+四十八续停在"点击也解不开等待循环"。本轮把这条命令自己反汇编读完，原因清楚了。
+
+### 事实（A 类，全部来自 exe）
+
+| 事实 | 出处 |
+|---|---|
+| `InputGetDown(31)` 的 handler 是 `0x437750` | `ref/exe-cmd-dispatch.json`（id 31，argc 0） |
+| 它返回 `*(engine + 0x43C)`，标成 Variant type 2（int） | `0x437750..0x43777C`：`mov 0x43c(%ecx),%edx` → `mov %edx,0x818(%eax)`，`movb $0x2,0x814(%eax)` |
+| `engine+0x43C` 是**位掩码**：别处用 `test %edx,0x43c(%ecx)` 直接测位 | `0x4310A4` |
+| 脚本也是按"位"用的：`syscall 31; pushtemp; pushint8 N; test`，`test` 的原版语义是 `(a & (1<<b)) != 0`（`0x444E40`，我们的 `src/vm.c case 0x1f` 已按此实现） | `0x5835A..0x58369` 等处 |
+
+### 结论：等待循环永远不会退出
+
+```
+0x5835A syscall 31            → 我们返回 1（= bit 0）
+0x5835D pushtemp; push 3; test → (1 & (1<<3)) = 0   ← 假
+0x58361 syscall 31            → 1
+0x58364 pushtemp; push 1; test → (1 & (1<<1)) = 0   ← 假
+0x58368 logor                 → 假
+0x58369 jmpcond 0x58376       → 假则跳 → 跳回 0x58347 再查 Test → 死循环
+```
+
+脚本等的是 **bit 1 / bit 3**（两个鼠标键位），我们的合成点击只给了 **bit 0**，
+所以 `--click 2/100/600` 全都解不开（与四十八续的实验完全吻合）。
+
+修法（下一轮）：把 `src/syscall.c case 31` 的合成点击改成返回**位掩码**而不是 1，
+具体哪几位对应左/右键要按 exe 的输入打包继续读（`engine+0x120` 那张输入结构里
+`+0x31C` 正好等于 `0x120+0x31C = 0x43C`，是下一步的入口）。
+验收：`verify_headless.py` 转绿（有文本行、legacy 版面非全黑）。
+
 ## [未发布] — 2026-11-26（四十八续）：headless 卡住的下一层——查询的 prim 号与动画 prim 号不同，且点击也解不开
 
 在四十七续（第一个分叉点 `0x58350`）之后继续挖，得到两条**否定性但有价值**的结论：
