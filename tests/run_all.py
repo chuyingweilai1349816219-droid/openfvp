@@ -738,7 +738,9 @@ def build_steps(args):
                            'side validated on 6 real saves: tail[0:0x3068] = '
                            '1549 per-slot globals, 32 contexts x 0xB1D = 0x163A0, '
                            'thread index + 128-slot string table at 0x19408, '
-                           'walk lands exactly on the history ring (no gap; record offsets match an '
+                           'walk lands exactly on the history ring (no gap; the ring always writes 100 '
+                           'records, then the gaiji table = 4 groups/12 records/0x15a '
+                           'and the 4096-item table first item; record offsets match an '
                            'independent scan), last two bytes 01 01'))
 
     # 6.4968636 台词历史（HistorySet 26 / HistoryGet 25）的 handler + 槽尾历史环

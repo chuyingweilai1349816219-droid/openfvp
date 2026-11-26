@@ -48,12 +48,22 @@ THREAD_NONE = 0x20
 SLOT_COUNT = 0x80
 ITEM_COUNT = 0x100           # 0x6A4DF0 那张表是 256 项（不是 128）
 ITEM_STRIDE = 0x14           # 内存步长；256 × 0x14 = 0x1400 = 0x6A61F0-0x6A4DF0
+RING_RECORDS = 100           # 历史环固定写 100 条（0x438190 的 edi 到 0x4B0 步进 0xC）
+GAIJI_GROUPS = 4             # 6 份存档的外字表常量
+GAIJI_RECORDS = 12
+GAIJI_CHARS = 4
+GAIJI_LEN = 0x15A            # 6 份存档逐份相同
+# 外字表之后、4096 项表的第一个非空项（6 份存档一致）
+ARRAY_FIRST = b'\x01\x01\x17\x00graph/main_window_mask\x00'
 # 独立扫描出来的“历史环第一条记录”偏移（旧报告里的 ring 位置就是这么来的）
 RING_RECORD_OFF = {
     's481': 0x20622, 's485': 0x328ce, 's800': 0x328c5,
     's901': 0x1AEAD, 's905': 0x20633, 's906': 0x1AEAD,
 }
 RING_COUNT = {'s481': 1, 's485': 1, 's800': 1, 's901': 1, 's905': 11, 's906': 1}
+# 环段长度 = 8 + Σ(100 条记录)；空槽 12 字节，写入一条带文本的记录会变长
+RING_LEN = {'s481': 0x4C0, 's485': 0x4C0, 's800': 0x4B8, 's901': 0x4B8,
+            's905': 0x566, 's906': 0x4B8}
 STR_COUNT = {'s481': 1, 's485': 1, 's800': 0, 's901': 0, 's905': 2, 's906': 0}
 
 fails = []
@@ -95,6 +105,59 @@ def parse_string_table(blob, off, n):
         out.append(s)
         cur += ln
     return cur, out
+
+
+def ring_size(blob, ring):
+    """历史环固定 100 条记录 → 返回 (环长度, 写入条数)；解析失败返回 (None, 0)。"""
+    pos = ring + 8
+    written = 0
+    for _ in range(RING_RECORDS):
+        n0 = struct.unpack_from('<i', blob, pos)[0]
+        pos += 4
+        if n0 < 0 or pos + n0 > len(blob):
+            return None, 0
+        pos += n0
+        n1 = struct.unpack_from('<i', blob, pos)[0]
+        pos += 4
+        if n1 < 0 or pos + n1 > len(blob):
+            return None, 0
+        pos += n1
+        pos += 4                      # i32 value（空槽 = -1）
+        if n0 or n1:
+            written += 1
+    return pos - ring, written
+
+
+def parse_gaiji(blob, pos):
+    """外字表：u32 组数；每组 u32 字数 + 字数×u16，再 u32 记录数 + 记录数×(u32 码
+    + u16 长度含 NUL 字符串)。返回 (end, groups, chars, recs)。"""
+    groups = struct.unpack_from('<I', blob, pos)[0]
+    if groups > 0x1000:
+        return None, 0, 0, 0
+    cur = pos + 4
+    chars = recs = 0
+    for _ in range(groups):
+        nch = struct.unpack_from('<I', blob, cur)[0]
+        cur += 4
+        if nch > 0x1000:
+            return None, 0, 0, 0
+        cur += 2 * nch
+        nrec = struct.unpack_from('<I', blob, cur)[0]
+        cur += 4
+        if nrec > 0x1000:
+            return None, 0, 0, 0
+        for _r in range(nrec):
+            cur += 4
+            n = struct.unpack_from('<H', blob, cur)[0]
+            cur += 2
+            if n > 0x400 or cur + n > len(blob):
+                return None, 0, 0, 0
+            if n and blob[cur + n - 1] != 0:
+                return None, 0, 0, 0
+            cur += n
+        chars += nch
+        recs += nrec
+    return cur, groups, chars, recs
 
 
 def walk_to_ring(blob):
@@ -186,13 +249,14 @@ def main():
           '空串哨兵 0x481364（只写 u16 0）')
     check(len(ref['unknown']) >= 2, '基线保留未解条目 %d 条'
           % len(ref['unknown']))
-    check(len(ref['invariants']) == 6, '6 条数据侧推论写进基线（实际 %d）'
+    check(len(ref['invariants']) == 7, '7 条数据侧推论写进基线（实际 %d）'
           % len(ref['invariants']))
 
     print('== 2b. 子读/写器的长度规则 ==')
     subs = {s['id']: s for s in ref['sub_readers']}
-    check(set(subs) == {'context', 'item128', 'savebin_globals_split'},
-          '冻结 3 个子读/写器（实际 %s）' % sorted(subs))
+    check(set(subs) == {'context', 'item128', 'savebin_globals_split',
+                        'history_ring', 'gaiji_table', 'array4096'},
+          '冻结 6 个子读/写器（实际 %s）' % sorted(subs))
     check(subs['context']['bytes_fixed'] == CTX_ITEM,
           '协程上下文固定 %#x 字节（32 条 = %#x）'
           % (CTX_ITEM, CTX_BYTES))
@@ -242,8 +306,8 @@ def main():
     if not os.path.isdir(SAVE):
         print('  SKIP: 缺存档目录 %s' % SAVE)
     else:
-        counts = {'globals': 0, 'strings': 0, 'walk': 0, 'markers': 0,
-                  'len_ok': 0}
+        counts = {'globals': 0, 'strings': 0, 'walk': 0, 'post_ring': 0,
+                  'markers': 0, 'len_ok': 0}
         for slot in SLOTS:
             path = os.path.join(SAVE, slot + '.bin')
             if not os.path.isfile(path):
@@ -302,6 +366,27 @@ def main():
                   % (slot, diag.get('walk_end', 0), rc, rp,
                      (ring or 0) + 8, want_rec))
 
+            # 3d. 环写满 100 条 → 外字表 → 4096 项表首项（6 份存档常量）
+            rsz, written = ring_size(blob, ring) if ring is not None else (None, 0)
+            gend, ggroups, gchars, grecs = (
+                parse_gaiji(blob, ring + rsz)
+                if rsz is not None else (None, 0, 0, 0))
+            post_ok = (rsz is not None and rsz == RING_LEN[slot] and
+                       gend is not None and ggroups == GAIJI_GROUPS and
+                       gchars == GAIJI_CHARS and grecs == GAIJI_RECORDS and
+                       gend - (ring + rsz) == GAIJI_LEN and
+                       all(b == 0 for b in blob[gend:gend + 0x24]) and
+                       blob[gend + 0x24:gend + 0x24 + len(ARRAY_FIRST)] ==
+                       ARRAY_FIRST)
+            if post_ok:
+                counts['post_ring'] += 1
+            check(post_ok,
+                  '%s: 环长 %s（写入 %d 条）→ 外字表 groups=%d chars=%d recs=%d '
+                  '长 %#x → 4096 项表首项 %r'
+                  % (slot, ('%#x' % rsz) if rsz else 'None', written, ggroups,
+                     gchars, grecs, (gend - (ring + rsz)) if gend else 0,
+                     blob[gend + 0x24:gend + 0x24 + 8] if gend else b''))
+
             markers = blob[-2:] == b'\x01\x01'
             if markers:
                 counts['markers'] += 1
@@ -317,6 +402,9 @@ def main():
         check(counts['walk'] == n,
               '6 份都能从 tail 开头走到历史环（%d/%d）'
               % (counts['walk'], n))
+        check(counts['post_ring'] == n,
+              '6 份都在环之后解出外字表并命中 4096 项表首项（%d/%d）'
+              % (counts['post_ring'], n))
         check(counts['markers'] == n, '6 份都符合末两字节标记（%d/%d）'
               % (counts['markers'], n))
         check(counts['len_ok'] == n, '6 份都符合槽头字符串长度约定（%d/%d）'
@@ -341,7 +429,8 @@ def main():
           '数据侧 6 份真实存档验证了"tail 开头 = 1549 条全局变量（0x3068）→ '
           '32 上下文（0x163A0）→ 线程下标 @0x19408 → 128 槽字符串表 @0x19410 '
           '→ … → 256 项表 → … → 台词历史环（走查无缺口），'
-          '记录起点与独立扫描逐份一致"')
+          '记录起点与独立扫描逐份一致；环固定 100 条 → 外字表（4 组/12 条/'
+          '0x15a）→ 4096 项表首项 graph/main_window_mask"')
     return 0
 
 

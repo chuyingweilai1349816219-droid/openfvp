@@ -302,6 +302,32 @@ SUB_READERS = [
      'bytes_rule': '12 + 12×count',
      'layout': 'u32 count + u32 + u32 + count×12 原样搬运',
      'note': '内存步长 0x14，表共 256 项（256×0x14 = 0x1400 = 0x6A61F0-0x6A4DF0），写盘长度随 count 变'},
+    {'id': 'history_ring',
+     'label': '台词历史环的记录写手',
+     'fn': '0x00438120', 'span': 0x90,
+     'frags': ['bf04000000', '8b03', '01 7e 08'.replace(' ', ''),
+               '81ffb0040000', '03cf', 'e805feffff'],
+     'bytes_rule': '8 + Σ(100 条记录)',
+     'layout': 'u32 count + u32 pos + **固定 100 条** {u32 len0, text0, u32 len1,'
+               ' text1, i32 value}（长度为 0 不写字节；空槽 = {0,0,-1}，12 字节）',
+     'note': '0x438190 的循环 edi 从 0 到 0x4B0 步进 0xC（100 条），与 count 无关；'
+             '记录写手 0x437FA0'},
+    {'id': 'gaiji_table',
+     'label': '外字表写手',
+     'fn': '0x0043dce0', 'span': 0x60,
+     'frags': ['8b4e08', '8b4604', '83460804', '0f8eed000000'],
+     'layout': 'u32 组数；每组 = u32 字数 + 字数×u16，然后 u32 记录数 + '
+               '记录数×(u32 码 + u16 长度含 NUL + 字节)',
+     'note': '子写手 0x43DC30 写「u32 字数 + 字数×u16」；记录串走 0x434410'},
+    {'id': 'array4096',
+     'label': '4096 项表的单项写手（部分已解）',
+     'fn': '0x004292b0', 'span': 0x50,
+     'frags': ['bb01000000', '8a8708050000', '80bf08050000008b4e08',
+               '8b4604'],
+     'layout': 'u8 flag；flag != 0 → u8 flag2，随后还有字段（含 u16 长度前缀字符串；'
+               '后续字段规则尚未逆完）',
+     'note': '6 份存档在“外字表之后 0x24 字节零”处出现的首项是 '
+             '01 01 17 00 "graph/main_window_mask\\0"'},
     {'id': 'savebin_globals_split',
      'label': 'save.bin 写的全局变量区间',
      'fn': '0x00439743', 'span': 0x30,
@@ -364,6 +390,14 @@ INVARIANTS = [
      'verify': '6/6 走查终点 == 历史环起点，环 count/pos 合法（s905: 11/10），'
                '且记录区起点与独立扫描的 '
                '0x20622/0x328ce/0x328c5/0x1aead/0x20633/0x1aead 逐份一致'},
+    {'id': 'post_ring_gaiji',
+     'claim': '台词历史环写**固定 100 条**记录（空槽 {0,0,-1}），所以环段长度 = '
+              '8 + Σ(100)；环之后紧跟外字表（u32 组数 + 每组 [u32 字数 + '
+              '字数×u16] + [u32 记录数 + 记录数×(u32 码 + u16 长度串)]）',
+     'verify': '6/6：环长度 0x4b8（0 条写入）/0x4c0（1 条）/0x566（11 条）；'
+               '外字表都解析成功且常量一致（groups=4、chars=4、records=12、'
+               '长度 0x15a）；表后 0x24 字节为零，随后是 4096 项表的首项 '
+               '01 01 17 00 + "graph/main_window_mask"'},
     {'id': 'tail_end_marker',
      'claim': '文件最后两字节 = (engine+0x458, engine+0x85!=0)',
      'verify': '实测 6 份存档末两字节都是 01 01'},
