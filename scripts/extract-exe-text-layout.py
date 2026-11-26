@@ -59,6 +59,35 @@ def load_rows(path):
     return rows
 
 
+# 这些偏移在 TextFormat(118)/TextFunction(119)/TextSpace(128) 里被写，
+# 但全 exe 里没有任何**读**（源操作数）或读改写 —— 即"死存储"。
+# arg4（0x5AC）不在这个表里，它是唯一被消费的参数。
+DEAD_OFFSETS = [0x5A4, 0x5A5, 0x5A6, 0x5A8, 0x5AA, 0x5AE, 0x5B0, 0x5B4]
+
+READ_RE = re.compile(r'0x([0-9a-f]+)\(%e[a-z]{2}\),%[a-z0-9]+$')
+WRITE_RE = re.compile(r'%[a-z0-9]+,0x([0-9a-f]+)\(%e[a-z]{2}\)$')
+RMW_RE = re.compile(r'^(add|sub|and|or|xor|inc|dec)')
+MEM_RE = re.compile(r'0x([0-9a-f]+)\(%e[a-z]{2}\)')
+
+
+def scan_offset(rows, off):
+    """直接扫反汇编：返回 (reads, writes, rmw) 的 pc 列表。"""
+    reads, writes, rmw = [], [], []
+    for pc in sorted(rows):
+        instr = rows[pc]
+        m = MEM_RE.search(instr)
+        if not m or int(m.group(1), 16) != off:
+            continue
+        pc_s = '0x%x' % pc
+        if READ_RE.search(instr):
+            reads.append(pc_s)
+        elif WRITE_RE.search(instr):
+            writes.append(pc_s)
+        if RMW_RE.match(instr):
+            rmw.append(pc_s)
+    return reads, writes, rmw
+
+
 def build():
     """从 asm + 字段表算出基线；asm 不在时返回 None。"""
     if not os.path.isfile(ASM):
@@ -82,10 +111,13 @@ def build():
     return dict(
         schema='fvp-text-layout/1',
         source='iroseka_HD.asm（objdump 反汇编）',
-        claim=('TextFormat(118) 的 arg1/arg2（tw+0x5A8/+0x5AA，TextSpace(128) 也写这两个）'
-               '在原版里没有读点，是死存储；arg4 经 tw+0x5AC 抄进 tw+0x5E8（笔位），'
-               '参与换行判据并被逐字推进'),
-        sites=sites, fields=dead)
+        claim=('TextFormat(118) 的 arg4 是唯一被消费的参数（行首缩进）；'
+               '其余 5 个参数与 TextFunction(119) 的 3 个开关、TextSpace(128) 的 2 个分量'
+               '都是死存储：全 exe 没有读点也没有读改写'),
+        sites=sites, fields=dead,
+        dead_fields=[dict(offset='0x%x' % off, reads=r, writes=w, rmw=m)
+                     for off, (r, w, m) in
+                     ((off, scan_offset(rows, off)) for off in DEAD_OFFSETS)])
 
 
 def main(argv=None):
@@ -102,6 +134,9 @@ def main(argv=None):
         print('%s %-6s %-30s %s' % (s['pc'], 'ok' if s['ok'] else 'DIFF', s['instr'], s['role']))
     for off, e in payload['fields'].items():
         print('%s reads=%s covering=%s' % (off, e['reads'], e['covering']))
+    for d in payload.get('dead_fields', []):
+        print('%s reads=%d writes=%d rmw=%d'
+              % (d['offset'], len(d['reads']), len(d['writes']), len(d['rmw'])))
     if a.check:
         return 0 if not bad else 1
     with open(OUT, 'w', encoding='utf-8') as f:

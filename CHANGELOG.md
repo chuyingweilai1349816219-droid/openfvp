@@ -4,6 +4,37 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百零七续）：`TextFormat`/`TextFunction`/`TextSpace` 里只有 arg4 被消费 —— 其余 8 个字段是死存储
+
+### 1. 把"只记录"从感觉变成判据
+
+上一轮实现了 `TextFormat` 的 arg4（行首缩进）。这轮把其余字段扫干净，判据只看指令形状
+（源操作数的 `0xOFF(%e..)` = 读、`%reg,0xOFF(%e..)` = 写、`add/sub/and/or/xor/inc/dec`
+带内存目标 = 读改写），得到：
+
+| 字段 | 来源 | 写点 | 读点 | 读改写 |
+|---|---|---|---|---|
+| `tw+0x5A4/0x5A5/0x5A6` | `TextFunction(119)` 三开关 | 各 2 | **0** | 0 |
+| `tw+0x5A8/0x5AA` | `TextFormat` arg1/2（`TextSpace` 也写） | 各 3 | **0** | 0 |
+| `tw+0x5AE/0x5B0/0x5B4` | `TextFormat` arg3/6/5 | 各 2 | **0** | 0 |
+
+也就是说：这三条命令 12 个参数里，**只有 arg4 会被原版排版端消费**，其余全是死存储。
+我们"只记录不画"对它们是忠实行为。
+
+### 2. 顺手修正一个旧结论
+
+`ref/exe-text-fields.json` 里 `0x5AE` 的 `covering_reads` 列了 `0x430E67`/`0x4337A9`，
+看着像"有读点"。实际那两条是 `mov 0x5ac(%esi),%ax`（2 字节，只覆盖 `0x5AC..0x5AD`）——
+宽度推断的伪命中。新判据按指令形状判，`0x5AE` 记为 0 读点，并写进文档避免再被误读。
+
+### 3. 冻结与门禁
+
+* `scripts/extract-exe-text-layout.py` 增加 `dead_fields`（8 个偏移 × 读/写/读改写 PC 列表）；
+  `ref/exe-text-layout.json` 重新生成；
+* `tests/verify_exe_text_layout.py` 15 → **20 项**：8 个偏移顺序、读点与读改写全空、
+  写点数（`0x5A8/0x5AA` 3 个、其余 2 个）、重抽取逐字段相等；
+* 无 C 代码改动，冻结基线不动。
+
 ## [未发布] — 2026-11-27（一百零六续）：`TextFormat(118)` 的 arg4 是缩进（已实现）；`TextSpace(128)` 的两个字段在原版里没人读
 
 ### 1. 先看证据，再动渲染

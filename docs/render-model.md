@@ -558,6 +558,26 @@ tw 10: ... space=0,0   ... fmt=0,0,0,0,0,0      func=0,0,0
 **冻结的像素基线不受影响**（289 px / PSNR 49.95 / SSIM 0.99971 均未变）—— 那一帧上
 `fmt[3]` 是 0，缩进不参与。
 
+#### 7.4.2 剩下 8 个字段是死存储（写了没人读）
+
+同一轮把 `TextFormat`/`TextFunction` 其余字段在整个 exe 里扫了一遍（判据只看指令形状：
+源操作数里的 `0xOFF(%e..)` 算读，`%reg,0xOFF(%e..)` 算写，`add/sub/and/or/xor/inc/dec`
+带内存目标算读改写）：
+
+| 字段 | 来源 | 写点 | 读点 | 读改写 |
+|---|---|---|---|---|
+| `tw+0x5A4` / `+0x5A5` / `+0x5A6` | `TextFunction(119)` 三个开关 | 各 2 | **0** | 0 |
+| `tw+0x5A8` / `+0x5AA` | `TextFormat` arg1/arg2（`TextSpace(128)` 也写） | 各 3 | **0** | 0 |
+| `tw+0x5AE` / `+0x5B0` / `+0x5B4` | `TextFormat` arg3/arg6/arg5 | 各 2 | **0** | 0 |
+
+结论：`TextFormat`/`TextFunction`/`TextSpace` 里**只有 arg4（`0x5AC`）被消费**，
+其余全部是死存储 —— 我们"只记录"是忠实的，不是偷懒。
+
+> 注意 `ref/exe-text-fields.json` 里 `0x5AE` 的 `covering_reads` 曾列出
+> `0x430E67`/`0x4337A9`：那是**宽度推断的伪命中**（这两条是 `mov 0x5ac(%esi),%ax`，
+> 2 字节，只覆盖 `0x5AC..0x5AD`）。本节的判据不看宽度推断，只按指令形状，所以
+> `0x5AE` 记为 0 读点。冻结在 `ref/exe-text-layout.json` 的 `dead_fields`。
+
 **改动**：`FvpTextAttr` 新增 `fmt_pad_a/fmt_pad_b/fmt_off_a/fmt_off_b` 与
 `func_a/func_b/func_c`（掩码 `FVP_TEXTATTR_FORMAT` / `FVP_TEXTATTR_FUNCTION`），
 `fvp_textattr_set_format()` 六字段逐字段判范围、`fvp_textattr_set_function()` 三开关；

@@ -1,7 +1,7 @@
 {
  "schema": "fvp-text-layout/1",
  "source": "iroseka_HD.asm（objdump 反汇编）",
- "claim": "TextFormat(118) 的 arg1/arg2（tw+0x5A8/+0x5AA，TextSpace(128) 也写这两个）在原版里没有读点，是死存储；arg4 经 tw+0x5AC 抄进 tw+0x5E8（笔位），参与换行判据并被逐字推进",
+ "claim": "TextFormat(118) 的 arg4 是唯一被消费的参数（行首缩进）；其余 5 个参数与 TextFunction(119) 的 3 个开关、TextSpace(128) 的 2 个分量都是死存储：全 exe 没有读点也没有读改写",
  "sites": [
   {
    "pc": "0x430e67",
@@ -79,5 +79,81 @@
    "covering": [],
    "name": "TextFormat arg4（0..64）"
   }
- }
+ },
+ "dead_fields": [
+  {
+   "offset": "0x5a4",
+   "reads": [],
+   "writes": [
+    "0x430f5c",
+    "0x43cd3c"
+   ],
+   "rmw": []
+  },
+  {
+   "offset": "0x5a5",
+   "reads": [],
+   "writes": [
+    "0x430f62",
+    "0x43cd24"
+   ],
+   "rmw": []
+  },
+  {
+   "offset": "0x5a6",
+   "reads": [],
+   "writes": [
+    "0x430f68",
+    "0x43cd56"
+   ],
+   "rmw": []
+  },
+  {
+   "offset": "0x5a8",
+   "reads": [],
+   "writes": [
+    "0x430f4e",
+    "0x43cc52",
+    "0x43ce45"
+   ],
+   "rmw": []
+  },
+  {
+   "offset": "0x5aa",
+   "reads": [],
+   "writes": [
+    "0x430f84",
+    "0x43cc6b",
+    "0x43ce62"
+   ],
+   "rmw": []
+  },
+  {
+   "offset": "0x5ae",
+   "reads": [],
+   "writes": [
+    "0x430f55",
+    "0x43cc83"
+   ],
+   "rmw": []
+  },
+  {
+   "offset": "0x5b0",
+   "reads": [],
+   "writes": [
+    "0x430f94",
+    "0x43cce3"
+   ],
+   "rmw": []
+  },
+  {
+   "offset": "0x5b4",
+   "reads": [],
+   "writes": [
+    "0x430f9b",
+    "0x43ccc7"
+   ],
+   "rmw": []
+  }
+ ]
 }

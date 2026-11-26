@@ -80,6 +80,20 @@ def main():
     check(f.get('0x5ac', {}).get('reads') == ['0x430e67', '0x4337a9'],
           '+0x5AC 有 2 个读点（实际 %s）' % f.get('0x5ac', {}).get('reads'))
 
+    print('== 死存储清单（写了但全 exe 没人读）')
+    dead = ref.get('dead_fields', [])
+    check([d['offset'] for d in dead] ==
+          ['0x5a4', '0x5a5', '0x5a6', '0x5a8', '0x5aa', '0x5ae', '0x5b0', '0x5b4'],
+          '8 个死存储字段（TextFunction 3 + TextFormat 5）')
+    check(all(not d['reads'] for d in dead), '没有任何精确读点')
+    check(all(not d['rmw'] for d in dead), '也没有读改写（add/sub/inc…）')
+    counts = {d['offset']: len(d['writes']) for d in dead}
+    check(counts.get('0x5a8') == 3 and counts.get('0x5aa') == 3,
+          '0x5A8/0x5AA 各 3 个写点（handler + TextSpace + 结构拷贝）')
+    check(all(counts.get(o) == 2 for o in
+              ('0x5a4', '0x5a5', '0x5a6', '0x5ae', '0x5b0', '0x5b4')),
+          '其余 6 个各 2 个写点（handler + 结构拷贝）')
+
     print('== 独立来源对账（ref/exe-text-fields.json）')
     if os.path.isfile(FIELDS):
         with open(FIELDS, encoding='utf-8') as fp:
@@ -100,6 +114,7 @@ def main():
     else:
         check(got['sites'] == sites, '站点表逐字段相等')
         check(got['fields'] == f, '字段读点相等')
+        check(got.get('dead_fields') == dead, '死存储清单逐字段相等')
         check(got['claim'] == ref.get('claim'), '结论文字未变')
 
     if fails:
