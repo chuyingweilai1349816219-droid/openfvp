@@ -45,9 +45,10 @@ def main():
     hs = ref.get('handlers') or []
 
     print('== 2. 四个 handler 的规则 ==')
-    check(len(hs) == 4, '四个 handler（实际 %d）' % len(hs))
+    check(len(hs) == 9, '九个 handler（实际 %d）' % len(hs))
     by = {h['handler']: h for h in hs}
-    for addr in ('0x43ba90', '0x43baf0', '0x43bc40', '0x43bd00'):
+    for addr in ('0x43ba90', '0x43baf0', '0x43bc40', '0x43bd00', '0x43bdc0',
+                 '0x43be40', '0x43bef0', '0x43bf50', '0x43bfa0'):
         check(addr in by, '含 handler %s' % addr)
     op = by.get('0x43ba90') or {}
     check(any('0x20' in w for w in op.get('writes') or []), '0x43BA90 写 op1(+0x20)')
@@ -56,6 +57,23 @@ def main():
     check('3600' in rules, '0x43BAF0 angle 取模 3600')
     check('100..10000' in rules, '0x43BAF0 scale 钳位 100..10000')
     check('0x40' in rules, '0x43BAF0 写分量时 flags |= 0x40')
+    txt = by.get('0x43bdc0') or {}
+    check(any('0x32' in w for w in txt.get('writes') or []),
+          '0x43BDC0 写文本层 +0x32')
+    check('0..0x1F' in ' '.join(txt.get('rules') or []),
+          '0x43BDC0 层号范围 0..0x1F')
+    t2 = by.get('0x43be40') or {}
+    check(any('0x30' in w for w in t2.get('writes') or []),
+          '0x43BE40 写 +0x30')
+    wh = by.get('0x43bf50') or {}
+    check(any('0x18' in w for w in wh.get('writes') or []),
+          '0x43BF50 写 w(+0x18)')
+    xy = by.get('0x43bfa0') or {}
+    check(any('0x14' in w for w in xy.get('writes') or []),
+          '0x43BFA0 写 x(+0x14)')
+    uv = by.get('0x43bef0') or {}
+    check(any('0x1C' in w for w in uv.get('writes') or []),
+          '0x43BEF0 写 +0x1C')
     for addr, ty in (('0x43bc40', '7'), ('0x43bd00', '4')):
         h = by.get(addr) or {}
         r = ' '.join(h.get('rules') or [])
@@ -78,12 +96,17 @@ def main():
         check('% 3600' in seg, 'case 82 有 angle % 3600')
         check('ang < 0' in seg and 'ang += 3600' in seg, 'case 82 负数归一化')
         check('sc < 100' in seg and 'sc > 10000' in seg, 'case 82 scale 钳位 100..10000')
+        check('FVP_S16' in src, 'C 侧有 int16 截断宏')
+        for case in ('case 81:', 'case 89:', 'case 90:'):
+            k = src.index(case)
+            seg2 = src[k:k + 900]
+            check('FVP_S16' in seg2, '%s 用 int16 截断' % case)
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 四个图元 setter handler 的实参规则已冻结，case 82 已按原版语义'
-          '（angle mod 3600 / scale 100..10000）修正')
+    print('\nOK: 九个图元 setter handler 的实参规则已冻结，case 82 已按原版语义'
+          '（angle mod 3600 / scale 100..10000 / int16 存储）修正')
     return 0
 
 

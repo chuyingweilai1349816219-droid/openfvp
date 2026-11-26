@@ -1,8 +1,10 @@
 {
  "block": "0x43baca..0x43bfda（上一轮全量扫描锁定的区域）",
  "c_side": {
-  "already_ok": "case 81（PrimSetOP）：逐分量 int 检查 + u16 写入",
-  "fixed_this_round": "src/syscall.c case 82（PrimSetRS）：angle 取模 3600、scale 钳位 100..10000"
+  "already_ok": "case 81/89/90 的逐分量 int 检查（非 int = 保持原值）",
+  "fixed_198": "case 82（PrimSetRS）：angle 取模 3600、scale 钳位 100..10000",
+  "fixed_199": "src/syscall.c 的 case 81/89/90 现在按原版把值当 **int16** 存（FVP_S16：u16 截断），因为原版这些字段都是 u16 写、int16 读",
+  "note": "prim+0x06 的\"已写\"位（bit0/bit1）我们只在语义上跟随，渲染器不依赖它们"
  },
  "common": [
   "arg0 必须是 int 且 1..0xFFF（图元 id 范围）",
@@ -51,6 +53,76 @@
    "writes": [
     "prim+0x2E = arg1",
     "prim+0x14/0x16 = x/y"
+   ]
+  },
+  {
+   "guess": "造文本图元（type 5）",
+   "handler": "0x43bdc0",
+   "rules": [
+    "arg0 = int 且 1..0xFFF",
+    "0x439BF0(id, 5) 造 **type-5（文本）**图元",
+    "flags &= 0xFE（清\"尺寸已写\"位）",
+    "+0x32=0、x/y=0、alpha(0x07)=0xFF、+0x08=0",
+    "arg1 int 且 **0..0x1F** → +0x32（文本层号，与 TextBuff 的层号范围一致）",
+    "arg2/arg3 int → x/y（逐分量）"
+   ],
+   "writes": [
+    "prim+0x32 = text layer",
+    "prim+0x14/0x16 = x/y"
+   ]
+  },
+  {
+   "guess": "造 type-2 图元（带尺寸）",
+   "handler": "0x43be40",
+   "rules": [
+    "arg0 = int 且 1..0xFFF",
+    "0x439BF0(id, 2) 造 **type-2** 图元",
+    "+0x30=0xFF、x/y/w/h=0、alpha=0xFF、+0x08=0",
+    "arg1 int 且 **-1..0xFF** → +0x30",
+    "arg2/arg3/arg4/arg5 int → x/y/w/h（逐分量）"
+   ],
+   "writes": [
+    "prim+0x30 = arg1",
+    "x/y/w/h"
+   ]
+  },
+  {
+   "guess": "UV/裁剪对（+0x1C/+0x1E）",
+   "handler": "0x43bef0",
+   "rules": [
+    "arg0 = int 且 1..0xFFF，且该图元 prim+4 必须是 4（类型检查）",
+    "arg1/arg2 各自 int → u16，逐分量 flags |= 0x01",
+    "末尾无条件 flags |= 0x40"
+   ],
+   "writes": [
+    "prim+0x1C = u",
+    "prim+0x1E = v"
+   ]
+  },
+  {
+   "guess": "PrimSetWH(89)",
+   "handler": "0x43bf50",
+   "rules": [
+    "arg0 = int 且 1..0xFFF（无类型检查）",
+    "arg1/arg2 各自 int → u16，逐分量 flags |= 0x01",
+    "末尾无条件 flags |= 0x40"
+   ],
+   "writes": [
+    "prim+0x18 = w",
+    "prim+0x1A = h"
+   ]
+  },
+  {
+   "guess": "PrimSetXY(90)",
+   "handler": "0x43bfa0",
+   "rules": [
+    "arg0 = int 且 1..0xFFF（无类型检查）",
+    "arg1/arg2 各自 int → u16（**不置任何\"已写\"位**）",
+    "末尾无条件 flags |= 0x40"
+   ],
+   "writes": [
+    "prim+0x14 = x",
+    "prim+0x16 = y"
    ]
   },
   {
@@ -173,11 +245,104 @@
   {
    "instr": "xor    %edx,%edx",
    "pc": "0x43bd54"
+  },
+  {
+   "instr": "push   $0x5",
+   "pc": "0x43bdd9"
+  },
+  {
+   "instr": "call   0x439bf0",
+   "pc": "0x43bddc"
+  },
+  {
+   "instr": "andb   $0xfe,0x6(%eax)",
+   "pc": "0x43bde1"
+  },
+  {
+   "instr": "mov    %cx,0x16(%eax)",
+   "pc": "0x43bdf1"
+  },
+  {
+   "instr": "cmp    $0x1f,%ecx",
+   "pc": "0x43be09"
+  },
+  {
+   "instr": "mov    %cx,%dx",
+   "pc": "0x43be0e"
+  },
+  {
+   "instr": "mov    %dx,0x32(%eax)",
+   "pc": "0x43be11"
+  },
+  {
+   "instr": "push   %ebx",
+   "pc": "0x43be66"
+  },
+  {
+   "instr": "call   0x439bf0",
+   "pc": "0x43be68"
+  },
+  {
+   "instr": "mov    %cx,0x30(%eax)",
+   "pc": "0x43be72"
+  },
+  {
+   "instr": "cmp    $0xffffffff,%ecx",
+   "pc": "0x43be99"
+  },
+  {
+   "instr": "cmp    $0xff,%ecx",
+   "pc": "0x43be9e"
+  },
+  {
+   "instr": "mov    %cx,0x18(%eax)",
+   "pc": "0x43bed0"
+  },
+  {
+   "instr": "mov    %dx,0x1a(%eax)",
+   "pc": "0x43bedd"
+  },
+  {
+   "instr": "orb    $0x1,0x6(%eax)",
+   "pc": "0x43bf26"
+  },
+  {
+   "instr": "mov    %cx,0x1c(%eax)",
+   "pc": "0x43bf2a"
+  },
+  {
+   "instr": "mov    %dx,0x1e(%eax)",
+   "pc": "0x43bf3c"
+  },
+  {
+   "instr": "orb    $0x1,0x6(%eax)",
+   "pc": "0x43bf7c"
+  },
+  {
+   "instr": "mov    %cx,0x18(%eax)",
+   "pc": "0x43bf80"
+  },
+  {
+   "instr": "mov    %dx,0x1a(%eax)",
+   "pc": "0x43bf92"
+  },
+  {
+   "instr": "mov    %cx,0x14(%eax)",
+   "pc": "0x43bfcc"
+  },
+  {
+   "instr": "mov    %dx,0x16(%eax)",
+   "pc": "0x43bfda"
+  },
+  {
+   "instr": "orb    $0x40,0x6(%eax)",
+   "pc": "0x43bfde"
   }
  ],
  "note": "图元 setter handler 的实参规则（A 类，逐条带指令）；由 scripts/extract-exe-prim-setters-args.py 生成",
  "unknown": [
-  "这四个 handler 与命令 id 78/81/89/90 的对应仍是推断（guess 字段）",
-  "prim+0x06 的 0x40 位在渲染端如何使用还没读"
+  "handler 与命令 id 78/81/89/90 的对应仍是推断（guess 字段）",
+  "prim+0x06 的 0x40 位在渲染端如何使用还没读",
+  "handler 0x43BE40 造 type-2 图元时 +0x30 的语义（1..0xFF 范围）"
  ]
 }

@@ -18,6 +18,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "gfx.h"
@@ -472,6 +473,9 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             (void)gfx_set_prim(g, id, GFX_F_ALPHA, fvp_gfx_int(&a[1]));
         }
         break;
+    /* 原版把这些字段按 u16 存、按 int16 读回（handler 0x43BF50/0x43BFA0 等），
+     * 所以超出 int16 的值在原版会被截断；这里跟着截，保持"实际操作一致"。 */
+#define FVP_S16(v) ((int)(int16_t)((uint16_t)((unsigned)(v) & 0xFFFFu)))
     case 78: /* PrimSetBlend(id, blend) */
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
             (void)gfx_set_prim(g, id, GFX_F_BLEND, fvp_gfx_int(&a[1]));
@@ -486,12 +490,13 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         fvp_gfx_prim_reset(g, id);
         fvp_gfx_prim_reset_shadow(b, id);
         break;
-    case 81: /* PrimSetOP(id, op1, op2) */
+    case 81: /* PrimSetOP(id, op1, op2)
+              * 原版 0x43BA90：op1/op2 各写 u16 且 flags |= 0x02，末尾 flags |= 0x40。 */
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_OP1, fvp_gfx_int(&a[1]));
+            (void)gfx_set_prim(g, id, GFX_F_OP1, FVP_S16(fvp_gfx_int(&a[1])));
         }
         if (argc > 2 && fvp_gfx_is_int(&a[2])) {
-            (void)gfx_set_prim(g, id, GFX_F_OP2, fvp_gfx_int(&a[2]));
+            (void)gfx_set_prim(g, id, GFX_F_OP2, FVP_S16(fvp_gfx_int(&a[2])));
         }
         break;
     case 82: /* PrimSetRS(id, angle, scale)
@@ -585,30 +590,32 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
             (void)gfx_set_prim(g, id, GFX_F_V, fvp_gfx_int(&a[2]));
         }
         break;
-    case 89: /* PrimSetWH(id, w, h) */
+    case 89: /* PrimSetWH(id, w, h)
+              * 原版 0x43BF50：w/h 各写 u16 且 flags |= 0x01，末尾 flags |= 0x40。 */
         if (getenv("FVP_DEBUG_TEXT") != NULL) {
             fprintf(stderr, "PrimSetWH prim=%d w=%d h=%d\n", id,
                     argc > 1 ? fvp_gfx_int(&a[1]) : -1,
                     argc > 2 ? fvp_gfx_int(&a[2]) : -1);
         }
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_W, fvp_gfx_int(&a[1]));
+            (void)gfx_set_prim(g, id, GFX_F_W, FVP_S16(fvp_gfx_int(&a[1])));
         }
         if (argc > 2 && fvp_gfx_is_int(&a[2])) {
-            (void)gfx_set_prim(g, id, GFX_F_H, fvp_gfx_int(&a[2]));
+            (void)gfx_set_prim(g, id, GFX_F_H, FVP_S16(fvp_gfx_int(&a[2])));
         }
         break;
-    case 90: /* PrimSetXY(id, x, y) */
+    case 90: /* PrimSetXY(id, x, y)
+              * 原版 0x43BFA0：x/y 各写 u16（不置任何"已写"位），末尾 flags |= 0x40。 */
         if (getenv("FVP_DEBUG_TEXT") != NULL) {
             fprintf(stderr, "PrimSetXY prim=%d x=%d y=%d\n", id,
                     argc > 1 ? fvp_gfx_int(&a[1]) : -1,
                     argc > 2 ? fvp_gfx_int(&a[2]) : -1);
         }
         if (argc > 1 && fvp_gfx_is_int(&a[1])) {
-            (void)gfx_set_prim(g, id, GFX_F_X, fvp_gfx_int(&a[1]));
+            (void)gfx_set_prim(g, id, GFX_F_X, FVP_S16(fvp_gfx_int(&a[1])));
         }
         if (argc > 2 && fvp_gfx_is_int(&a[2])) {
-            (void)gfx_set_prim(g, id, GFX_F_Y, fvp_gfx_int(&a[2]));
+            (void)gfx_set_prim(g, id, GFX_F_Y, FVP_S16(fvp_gfx_int(&a[2])));
         }
         break;
     case 91: /* PrimSetZ(id, z) */
