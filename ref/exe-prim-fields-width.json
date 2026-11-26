@@ -1,0 +1,133 @@
+{
+ "fields": [
+  {
+   "field": "x",
+   "offset": "0x14",
+   "read_instr": "movswl 0x14(%esi),%eax",
+   "read_pc": "0x42450e",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43bfa0",
+    "0x43bdc0",
+    "0x43be40",
+    "0x43bc40",
+    "0x43bd00"
+   ]
+  },
+  {
+   "field": "y",
+   "offset": "0x16",
+   "read_instr": "movswl 0x16(%esi),%edi",
+   "read_pc": "0x424518",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43bfa0",
+    "0x43bdc0",
+    "0x43be40",
+    "0x43bc40",
+    "0x43bd00"
+   ]
+  },
+  {
+   "field": "w",
+   "offset": "0x18",
+   "read_instr": "movswl 0x18(%edi),%ecx",
+   "read_pc": "0x42541c",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43bf50",
+    "0x43be40"
+   ]
+  },
+  {
+   "field": "h",
+   "offset": "0x1a",
+   "read_instr": "movswl 0x1a(%edx),%edx",
+   "read_pc": "0x424665",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43bf50",
+    "0x43be40"
+   ]
+  },
+  {
+   "field": "u",
+   "offset": "0x1c",
+   "read_instr": "movswl 0x1c(%edi),%ecx",
+   "read_pc": "0x42aed5",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43bef0"
+   ]
+  },
+  {
+   "field": "v",
+   "offset": "0x1e",
+   "read_instr": "movswl 0x1e(%edi),%eax",
+   "read_pc": "0x42aee2",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43bef0"
+   ]
+  },
+  {
+   "field": "op1",
+   "offset": "0x20",
+   "read_instr": "movswl 0x20(%esi),%edx",
+   "read_pc": "0x42450a",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43ba90"
+   ]
+  },
+  {
+   "field": "op2",
+   "offset": "0x22",
+   "read_instr": "movswl 0x22(%edi),%ebx",
+   "read_pc": "0x42af2a",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43ba90"
+   ]
+  },
+  {
+   "field": "angle",
+   "offset": "0x24",
+   "read_instr": "movswl 0x24(%edx),%esi",
+   "read_pc": "0x424596",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43baf0"
+   ]
+  },
+  {
+   "field": "scale",
+   "offset": "0x26",
+   "read_instr": "movswl 0x26(%edi),%edx",
+   "read_pc": "0x42b25a",
+   "read_width": "movswl（有符号 16 位扩展）",
+   "write_width": "u16（写侧 handler 用 mov %xx,off）",
+   "written_by": [
+    "0x43baf0"
+   ]
+  }
+ ],
+ "note": "图元字段的位宽证据（A 类）：写侧 u16、读侧 movswl ⇒ 语义 int16（-32768..32767）；由 scripts/extract-exe-prim-fields-width.py 生成",
+ "range": [
+  -32768,
+  32767
+ ],
+ "unknown": [
+  "prim+0x06 的 0x40 位在渲染端如何使用"
+ ],
+ "why": "本轮 src/syscall.c 的 case 81/89/90 按 int16 截断（FVP_S16）的依据"
+}

@@ -4,6 +4,27 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（二十八续）：图元字段 int16 的**读侧**证据冻结成基线
+
+上一轮从写侧（handler 用 `mov %xx,off`）推断字段是 u16；本轮补上**读侧**证据：
+在绘制/分派区（`0x424xxx~0x42Bxxx`）里，十个字段各有一条 `movswl offset(%reg),%reg`
+（有符号 16 位扩展）的读取点：
+
+| 字段 | 偏移 | 读取点 |
+|---|---|---|
+| x / y | `0x14` / `0x16` | `0x42450E` / `0x424518` |
+| w / h | `0x18` / `0x1A` | `0x42541C` / `0x424665` |
+| u / v | `0x1C` / `0x1E` | `0x42AED5` / `0x42AEE2` |
+| op1 / op2 | `0x20` / `0x22` | `0x42450A` / `0x42AF2A` |
+| angle / scale | `0x24` / `0x26` | `0x424596` / `0x42B25A` |
+
+⇒ 写 u16 + 读 movswl = **int16（-32768..32767）**，双边证据齐全。
+新增 `ref/exe-prim-fields-width.json` + `scripts/extract-exe-prim-fields-width.py` +
+`tests/verify_exe_prim_fields_width.py`（`run_all` 6.49651），并与上一轮的 setter 基线
+交叉核对（每个字段的写侧 handler 都在）。
+
+另：本轮开头把上一轮欠的推送补上了（`3f2f04e..78faee9`，远端已核对）。
+
 ## [未发布] — 2026-11-26（二十七续）：prims setter 补到 9 个；发现字段其实是 int16 并跟着改
 
 把锁定区域里剩下的五个 handler 读完（累计 **9 个**）：

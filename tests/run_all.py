@@ -714,6 +714,14 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.49651 图元字段的位宽（写 u16 + 读 movswl => int16）
+    vpfw = os.path.join(HERE, 'verify_exe_prim_fields_width.py')
+    steps.append(Step('verify_exe_prim_fields_width.py', [PY, '-X', 'utf8', vpfw], 600,
+                      skip_reason=None,
+                      note='prim field width: every field is written as u16 by its '
+                           'setter handler and read back with movswl in the draw path '
+                           '=> int16 (-32768..32767); this is why syscall.c truncates'))
+
     # 6.49650 图元 setter handler 的实参规则（angle mod 3600 / scale 100..10000）
     vpsa = os.path.join(HERE, 'verify_exe_prim_setters_args.py')
     steps.append(Step('verify_exe_prim_setters_args.py', [PY, '-X', 'utf8', vpsa], 600,
