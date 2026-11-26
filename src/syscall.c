@@ -1900,6 +1900,12 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
                * （见 CHANGELOG 九十五续的轨迹对齐）。 */
         if (argc >= 1 && args[0].type == (uint8_t)FVP_NULL) {
             t->temp = fvp_make_int(1);
+        } else if (vm->gfx_bridge == NULL) {
+            /* 无 gfx 的基线 VM（bin/fvm.exe）保持历史行为：一律写 1。
+             * 冻结文本基线（ref/ref-900k.txt、ref-2m.txt）就是这条路径产出的，
+             * 改它会让 verify_threads / 部分 compare 基线变红；而带 gfx 的
+             * 外壳（fvp.exe / fvp-headless.exe）走上面那条忠实分支。 */
+            t->temp = fvp_make_int(1);
         }
         return;
     case 44:  /* MotionAlphaTest(id)：原版 0x43A9C0，容器 engine+0x651E04
