@@ -1035,6 +1035,14 @@ def build_steps(args):
                            'identical menu_/fc_, iroseka-only 8 sys_*_M + window_title, '
                            'hoshimemo-only slf_prt_mask'))
 
+    # 6.49 UI 素材几何（直接读 .bin 归档里的 HZC1 头；两作都做，五彩与解包路径互证）
+    vur = os.path.join(HERE, 'verify_ui_rects.py')
+    steps.append(Step('verify_ui_rects.py', [PY, '-X', 'utf8', vur], 600,
+                      skip_reason=None,
+                      note='UI geometry straight from the .bin archives (no unpack): '
+                           'iroseka 81 rects cross-checked against the extract path, '
+                           'hoshimemo 73 rects (8 ring items 125x125, full-height windows)'))
+
     # 6.5 游戏内菜单（外壳侧占位实现，--menu-at 打开）
     vg = os.path.join(HERE, 'verify_gamemenu.py')
     steps.append(Step('verify_gamemenu.py', [PY, vg], 900,
