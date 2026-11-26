@@ -1067,6 +1067,37 @@ handler `0x43C830` 的**实参规则**（同一份基线里，20 条指令逐条
 合计 5.59 MiB，和 `engine` 的 bss 规模对得上（最大一张 5.11 MiB 的 sprite 表，
 正好铺满 `0x101064..0x61D064`）。
 
+### 命令 id → handler（A 类：`ref/exe-cmd-dispatch.json`）
+
+原版在 `0x43E000..0x440E00` 的构造函数里**逐条注册命令**，每条长这样：
+
+```
+mov    $0x43XXXX,%ecx      ; handler 地址
+mov    %ecx,(%eax)         ; 填进注册记录
+push   $argc
+push   $0x45Exxx           ; 命令名（ASCII 串）
+call   0x4387d0            ; register(entry, name)
+```
+
+名字在注册顺序里是**字典序**，所以命令 id 要从 HCB 侧的 `ref/cmd_table.json`
+（id → name）反查——三方连起来就是 **id / 名字 / argc / handler**。
+
+结果：**133 / 148** 条命令连上了（缺的 15 条注册形态略有不同，仍列为未知）。
+关键条目：
+
+| id | 命令 | handler |
+|---|---|---|
+| 78 | `PrimSetBlend` | `0x43BA20` |
+| 81 | `PrimSetOP` | `0x43BA90` |
+| 89 | `PrimSetWH` | `0x43BF50` |
+| 90 | `PrimSetXY` | `0x43BFA0` |
+| 110 | `TextBuff` | `0x43C830` |
+| 141 | `TitleMenu` | `0x437950` |
+
+门禁 `tests/verify_exe_cmd_dispatch.py` 除了可复现性，还与**文本 handler 基线**
+（110/112/120/126）和**图元 setter 基线**（81/89/90）互证——两条独立线都对上，
+说明这张表没抄错。
+
 ### 图元 setter handler 的实参规则（A 类：`ref/exe-prim-setters-args.json`）
 
 上一轮锁定 `0x43BACA..0x43BFDA` 之后，本轮把里面的四个 handler 读完了：

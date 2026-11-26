@@ -4,6 +4,31 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（二十九续）：命令 id → handler 表拿到手（133/148），"推断"变成"事实"
+
+前面几轮一直被"命令 id ↔ handler 对应"卡着（只能写 guess）。本轮找到了原版的
+**命令注册构造函数** `0x43E000..0x440E00`：每条命令一段
+`mov $handler,%ecx` → `push $argc` → `push $命令名字符串` → `call 0x4387d0`。
+名字在注册顺序里是字典序，于是用 HCB 侧的 `ref/cmd_table.json`（id→名字）反查，
+就得到 **id / 名字 / argc / handler** 四元组。
+
+结果 **133 / 148** 条连上（缺 15 条，注册形态略有不同，仍列为未知）。关键条目：
+
+| id | 命令 | handler |
+|---|---|---|
+| 78 | `PrimSetBlend` | `0x43BA20` |
+| 81 | `PrimSetOP` | `0x43BA90` |
+| 89 | `PrimSetWH` | `0x43BF50` |
+| 90 | `PrimSetXY` | `0x43BFA0` |
+| 110 | `TextBuff` | `0x43C830` |
+| 141 | `TitleMenu` | `0x437950` |
+
+**互证**：110/112/120/126 与文本 handler 基线一致；81/89/90 与图元 setter 基线一致
+——两条独立抄出来的线都对上，说明这张表可信。若与截图观感冲突，以这张表为准。
+
+新增 `ref/exe-cmd-dispatch.json` + `scripts/extract-exe-cmd-dispatch.py` +
+`tests/verify_exe_cmd_dispatch.py`（`run_all` 6.49652）。
+
 ## [未发布] — 2026-11-26（二十八续）：图元字段 int16 的**读侧**证据冻结成基线
 
 上一轮从写侧（handler 用 `mov %xx,off`）推断字段是 u16；本轮补上**读侧**证据：

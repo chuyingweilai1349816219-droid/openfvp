@@ -341,7 +341,7 @@
  ],
  "note": "图元 setter handler 的实参规则（A 类，逐条带指令）；由 scripts/extract-exe-prim-setters-args.py 生成",
  "unknown": [
-  "handler 与命令 id 78/81/89/90 的对应仍是推断（guess 字段）",
+  "handler 与命令 id 的对应已由 ref/exe-cmd-dispatch.json 证实（81/89/90 = 0x43BA90/0x43BF50/0x43BFA0、78 = 0x43BA20）；下面 guess 字段保留最初读代码时的猜测，供对照",
   "prim+0x06 的 0x40 位在渲染端如何使用还没读",
   "handler 0x43BE40 造 type-2 图元时 +0x30 的语义（1..0xFF 范围）"
  ]

@@ -714,6 +714,16 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.49652 命令 id → handler（原版注册构造函数 0x43E000..0x440E00；缺 exe 时 SKIP）
+    vcd = os.path.join(HERE, 'verify_exe_cmd_dispatch.py')
+    steps.append(Step('verify_exe_cmd_dispatch.py', [PY, '-X', 'utf8', vcd], 600,
+                      skip_reason=None,
+                      note='command id -> handler: the registrar at 0x4387D0 is called once '
+                           'per command from 0x43E000..0x440E00 with (handler, argc, name); '
+                           'names are alphabetical, so the ids come from the HCB command '
+                           'table. 133/148 joined and cross-checked against the text and '
+                           'prim setter baselines'))
+
     # 6.49651 图元字段的位宽（写 u16 + 读 movswl => int16）
     vpfw = os.path.join(HERE, 'verify_exe_prim_fields_width.py')
     steps.append(Step('verify_exe_prim_fields_width.py', [PY, '-X', 'utf8', vpfw], 600,
