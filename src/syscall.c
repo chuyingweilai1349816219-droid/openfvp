@@ -1889,10 +1889,18 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
                                   (int)args[0].i, (int)args[1].i);
         }
         return;
-    case 15:  /* DissolveWait：返回 1 = 溶解已结束（参考实现 ref/fvm_ref.py 的
-               * cmd_15 → 1）。以前它和 case 44 共用一个分支，走不到返回就被当成
-               * "未实现命令"计数了（verify_multigame 的 `unimpl cmds 15×4`）。 */
-        t->temp = fvp_make_int(1);
+    case 15:  /* DissolveWait(arg)：原版 handler 0x437520，逐条：
+               *   cmpl $0,0x101010(engine) ; je ret      ← 溶解系统未初始化 → 什么都不写
+               *   cmpb $0,(arg)         ; jne 0x43754F   ← arg0.type == 0 (null) → 返回槽写 1
+               *   movb $1,thread+0x814                    ←   "1 = 溶解已结束"
+               *   orl $0x10,thread+0x808 ; movb $1,thread+0x810   ← arg 非 null → 只置待位，**不写返回值**
+               *
+               * 以前我们不管实参一律写 1，结果 0x59264 那条
+               * `pushtrue; syscall 15; pushtemp; pushfalse; eq; jmpcond` 走错分支
+               * （见 CHANGELOG 九十五续的轨迹对齐）。 */
+        if (argc >= 1 && args[0].type == (uint8_t)FVP_NULL) {
+            t->temp = fvp_make_int(1);
+        }
         return;
     case 44:  /* MotionAlphaTest(id)：原版 0x43A9C0，容器 engine+0x651E04
                * （与 MotionAlpha(42) 同一个），id 1..0xFFF，1 = 还在跑。 */

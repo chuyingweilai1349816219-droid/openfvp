@@ -253,7 +253,7 @@ id/argc 以 `fvp/work/cmd_table.json`（= hcb 自带命令表，也是 `vm_id_ha
 |---:|---|---:|---|
 | 7 | ColorSet | 5 | `(idx, R, G, B, A)` → 调色板 `engine+0x6a44c0`（渲染层只记录，未用于取色） |
 | 14 | Dissolve | 7 | 屏幕溶解（时间/遮罩/矩形），未实现 |
-| 15 | DissolveWait | 1 | 溶解是否结束 → 返回 1（视为已结束，见 §9） |
+| 15 | DissolveWait | 视实参而定 | 溶解是否结束：arg 为 null → 返回槽写 1；arg 非 null（true 等）→ **不写返回槽**、只置线程等待位（exe 0x437520，2026-11-26 按反汇编改正；旧的'一律返回 1'是近似） |
 | 20 | FloatToInt | 1 | float → int（脚本用它把 1.875×/1.6875× 的坐标换算成像素） |
 | 22 | GraphLoad | 2 | `(slot, name|null)`，见 §1.2 |
 | 23 | GraphRGB | 4 | 颜色调制，未实现 |

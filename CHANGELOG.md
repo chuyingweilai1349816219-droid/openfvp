@@ -4,6 +4,107 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（九十五续）：`DissolveWait` 按 exe 改正 —— 轨迹对齐找到并消掉第一个真实分叉
+
+上一轮说"换方法：对齐早期轨迹找第一处分叉"。这一轮做到了，而且**真找到并修掉了一个语义 bug**。
+
+### 1. 方法
+
+用同一份脚本、同一组输入（`--click 600`）分别跑：
+
+- `bin/fvm.exe --pctrace`（无 gfx）
+- `bin/fvp-headless.exe --pctrace`（挂 gfx）
+
+然后逐条比对 pc 序列，找第一处不同。
+
+### 2. 第一处分叉（修前）
+
+```
+index 30282
+  fvm: … 59269 5926a 5926b 59270 23827 2382a 2382d 59275 …
+  hl : … 59269 5926a 5926b 59291 59294 59296 59297 …
+```
+
+对应的字节码：
+
+```
+59264  pushtrue
+59265  syscall   15        ; DissolveWait(true)
+59268  pushtemp
+59269  pushfalse
+5926a  eq
+5926b  jmpcond  0x59291    ; (temp == false) ? 跳 0x59291 : 继续 0x59270
+```
+
+### 3. 根因：`DissolveWait` 的返回值写错了
+
+exe handler `0x437520` 逐条：
+
+```
+mov  0x6a66d0(%ecx),%eax ; imul $0xb28 …        ; 取当前线程上下文
+cmpl $0x0,0x101010(%ecx) ; je 0x43755D          ; 溶解系统未初始化 → 什么都不写
+mov  0x4(%esp),%ecx ; cmpb $0x0,(%ecx)          ; arg0.type == 0（null）？
+jne  0x43754F
+  movb $0x1,0x814(%eax) ; ret $0x4              ;   null → 返回槽写 1（"已结束"）
+0x43754F:
+  orl  $0x10,0x808(%eax)                        ;   非 null（true 等）→ 只置线程等待位
+  movb $0x1,0x810(%eax)                         ;   **不写返回槽**
+0x43755D:
+  ret $0x4
+```
+
+也就是说：**只有实参是 null 时才写返回值 1；实参是 true 时什么都不写**，脚本随后
+`pushtemp` 读到的是上一条命令留下的值。我们以前不管实参一律写 1，于是
+`temp == false` 恒为假 → `jmpcond` 跳去 `0x59291`，与原版/无 gfx 路径分叉。
+
+修法（`src/syscall.c` `case 15`）：只有 `args[0].type == FVP_NULL` 时写 1，
+其余情况直接 `return`（不碰返回值槽），并把 exe 的反汇编注释留在代码里。
+
+### 4. 效果
+
+| 指标 | 修前 | 修后 |
+|---|---|---|
+| fvm vs headless 第一处分叉 | index **30,282** | **31,000 步内完全一致**（对比窗口扩到 31k） |
+| 900k 步的第一处分叉 | 30,282 | **33,005**（且已变成输入模型差异：`InputGetDown` 的点击相位，见下） |
+| `tests/compare.py --run` | PASS | **PASS**（前缀 6489 B 不变，冻结文本基线未动） |
+
+900k 处剩下的分叉是：
+
+```
+59275 syscall 31 (InputGetDown) ; test 位3 ; syscall 31 ; test 位1 ; logor ; jmpcond
+  fvm → 5928C（认为没按）
+  hl  → 59289（认为按了）
+```
+
+这是**合成点击的相位差异**（两个外壳的 `--click` 注入时机不同），不是语义错误；
+要彻底对齐得统一两边的输入模型，属于后续工作。
+
+### 5. 文档同步
+
+- `docs/vm-commands.md` 的 `15 DissolveWait` 行本来就写着正确语义（"arg 为 null → 返回 false；
+  否则置线程 flags…"），代码这轮才真正对上；
+- `docs/render-model.md` 与 `docs/c-vm.md` 里"DissolveWait 返回 1"的说法标注为
+  **旧行为**（那是让脚本越过等待循环时的近似），并指向本轮的 exe 反汇编。
+
+### 6. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS**（前缀 + 预算；冻结基线 195 行 / 6496 B / sha `7f9837ff…` 不变） |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_opening_render.py` | **PASS**（两作） |
+| `verify_prim_refs` / `verify_thread_calls` / `verify_text_geometry` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 7. 诚实说明
+
+- 这是本轮唯一的代码改动（`case 15` 的三行逻辑），但它是**第一次用"轨迹对齐"方法
+  定位到的真实语义 bug**，比之前十轮在 265/551 末端打转有价值。
+- 它**没有**直接修好标题→正文：900k 步文本仍是 0 行。但它把"第一处分叉"从 30,282
+  推到了 33,005，并且新的分叉已经明确是输入模型差异——这就是可继续推进的路径：
+  下一轮统一 `fvm` 与 `headless` 的点击/光标注入，再继续对齐，直到两边一致或撞到下一个语义 bug。
+
 ## [未发布] — 2026-11-26（九十四续）：旁白绑定的那段代码（`0x36782`）在轨迹里执行 0 次
 
 上一轮把「默认路径不再用版面表兜底」落地后，浮游旁白变成"不画"。这一轮查它为什么

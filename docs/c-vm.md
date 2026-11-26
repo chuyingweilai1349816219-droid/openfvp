@@ -247,6 +247,7 @@ typedef struct FvpValue { uint8_t type; int64_t i; double f; FvpStr *str; } FvpV
 - 点击模型：`InputGetDown` 在 `steps % 600 < 2` 时返回 1（`steps` 是**当前 syscall 指令已计数**后的值），
   光标 960,540，`InputGetCursIn=1`，`InputGetUp/Event/State=0`。
 - `DissolveWait` 与 `Motion*Test`、`V3DMotionTest`、`MovieState` 返回 1，让脚本越过等待循环。
+  > 2026-11-26 更正：`DissolveWait` 的忠实语义是「arg 为 null → 写 1；arg 非 null → 不写返回槽」（exe `0x437520`），已按此实现；旧的一律返回 1 会让 `0x59264` 的 `jmpcond` 走错分支。
 
 ### 6.3 为什么可信
 
