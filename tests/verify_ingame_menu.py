@@ -217,6 +217,50 @@ def main():
               '%s prompt has at least one trigger site' % p['action'])
     check(len(dlg.get('strings', [])) == 13, '13 pushstring operands in the dialog')
 
+    print('== UI 素材清单（fc_ / slf_ / sys_ / menu_）')
+    inv = ref.get('inventory', [])
+    fam = {}
+    for r in inv:
+        fam.setdefault(r['family'], []).append(r)
+    check(len(inv) == 98, '98 UI asset load sites (got %d)' % len(inv))
+    check({k: len(v) for k, v in fam.items()} ==
+          {'sys': 44, 'fc': 37, 'menu': 14, 'slf': 3},
+          'family counts sys 44 / fc 37 / menu 14 / slf 3 (got %s)'
+          % {k: len(v) for k, v in fam.items()})
+    check(all(r['prim'] is not None for r in inv), 'every load site binds a prim')
+    no_rect = [r['asset'] for r in inv if not r.get('rect')]
+    check(len(no_rect) == 17 and all(a.startswith('sys_cap') for a in no_rect),
+          'the 17 sys_cap_* frames have no header rect (runtime-generated captures)')
+    rected = [r for r in inv if r.get('rect')]
+    check(len(rected) == len(inv) - 17, 'every other asset has a header rect')
+    if rected:
+        check(all(0 <= r['rect'][0] and r['rect'][0] + r['rect'][2] <= 1920 and
+                  0 <= r['rect'][1] and r['rect'][1] + r['rect'][3] <= 1080
+                  for r in rected), 'all UI rects fit inside 1920x1080')
+        btns = [r for r in fam.get('fc', []) if not r['asset'].endswith('help')]
+        helps = [r for r in fam.get('fc', []) if r['asset'].endswith('help')]
+        check(len(btns) == 26 and len(helps) == 11,
+              'command bar = 26 buttons + 11 help strips (got %d/%d)'
+              % (len(btns), len(helps)))
+        check({tuple(r['rect'][2:]) for r in btns} == {(40, 40)},
+              'every command button is 40x40')
+        check(sorted({r['rect'][1] for r in btns}) == [1010, 1035],
+              'buttons sit on two staggered rows (y 1010 / 1035)')
+        check(all(1560 <= r['rect'][0] <= 1810 for r in btns),
+              'bar occupies x 1560..1850 (bottom-right corner)')
+        check({tuple(r['rect']) for r in helps} == {(1600, 975, 210, 30)},
+              'all 11 help strips share (1600,975,210,30)')
+        lk = [r for r in fam.get('fc', []) if r['asset'].startswith('fc_lock')]
+        check(len(lk) == 5, 'lock button has 4 states + help (got %d)' % len(lk))
+        caps = [r for r in fam.get('sys', []) if r['asset'].startswith('sys_cap')]
+        check(len(caps) == 17, '17 sys_cap_* capture frames (got %d)' % len(caps))
+        slf = {r['asset']: r for r in fam.get('slf', [])}
+        check(slf['slf_load_bg']['rect'] == [0, 0, 1920, 1080] and
+              slf['slf_save_bg']['rect'] == [0, 0, 1920, 1080],
+              'save/load backgrounds are full-screen')
+        check(not any(r['via_wrapper'] for r in fam.get('slf', [])),
+              'slf_* are not loaded through the graph/ wrapper')
+
     print('== 命令表证据（菜单不可能是外壳画的）')
     with open(CMD_TABLE, encoding='utf-8') as f:
         table = json.load(f)
@@ -262,6 +306,8 @@ def main():
         check(got_dlg['enable_map'] == ref_dlg['enable_map'], 'enable map identical')
         check(got_dlg['writes'] == ref_dlg['writes'], 'flag writes identical')
         check(got_dlg['sites'] == ref_dlg['sites'], 'trigger sites identical')
+        inv_now = strip_rects(facts['inventory'])
+        check(inv_now == strip_rects(inv), 'UI asset inventory identical')
         if ext:
             rects_now = [it.get('rect') for it in facts['system']['items']]
             check(rects_now == rects, 'ring rects re-read from HZC1 headers')

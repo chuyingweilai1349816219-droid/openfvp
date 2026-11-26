@@ -276,14 +276,47 @@ def scan_dialog(code, extract):
                 sites=sites)
 
 
+def scan_inventory(code, extract):
+    """所有 UI 素材（fc_/slf_/sys_/menu_）的载入点：图元号 + 名字 + HZC1 头矩形。"""
+    allpcs = sorted(code.instr)
+    pos = {p: i for i, p in enumerate(allpcs)}
+    rows = []
+    for p in allpcs:
+        op, name, args = code.instr[p]
+        if name != 'pushstring' or not args:
+            continue
+        asset = args[0]
+        if not asset.startswith(('fc_', 'slf_', 'sys_', 'menu_')):
+            continue
+        wrapped = False
+        for d in range(1, 6):
+            if pos[p] + d >= len(allpcs):
+                break
+            q = code.instr[allpcs[pos[p] + d]]
+            if q[1] == 'call':
+                wrapped = bool(q[2] and q[2][0] == WRAP_LOAD)
+                break
+        prim = None
+        if pos[p] > 0:
+            prev = code.instr[allpcs[pos[p] - 1]]
+            if prev[1] in ('pushint8', 'pushint16'):
+                prim = prev[2][0]
+        rows.append(dict(asset=asset, family=asset.split('_')[0], prim=prim,
+                         load_pc='0x%05x' % p, via_wrapper=wrapped,
+                         rect=read_rect(extract, asset)))
+    return rows
+
+
 def scan(path, extract):
     data = open(path, 'rb').read()
     code = fvm_ref.Code(data, 'cp932')
     sys_items, sys_window, openers = scan_system_menu(code, extract)
     dlg = scan_dialog(code, extract)
     dlg_seq = _window(code, *DLG_REGION)
+    inventory = scan_inventory(code, extract)
     return dict(
         hcb_size=len(data), hcb_sha256=hashlib.sha256(data).hexdigest(),
+        inventory=inventory,
         system=dict(region=['0x%05x' % SYS_REGION[0], '0x%05x' % SYS_REGION[1]],
                     entry='0x%05x' % SYS_ENTRY, items=sys_items,
                     window=sys_window, openers=openers,
@@ -337,6 +370,17 @@ def main(argv=None):
     print('  yes/no: %s' % ', '.join('%s@%d' % (c['image'], c['prim'])
                                      for c in facts['dialog']['confirms']))
     print('  geometry: %s' % ('extract/graph 头' if ext else '未提供 --extract，省略'))
+    fams = {}
+    for r in facts['inventory']:
+        fams.setdefault(r['family'], []).append(r)
+    print('UI 素材清单: %s' % ', '.join('%s %d' % (k, len(v))
+                                       for k, v in sorted(fams.items())))
+    for fam in sorted(fams):
+        for r in fams[fam]:
+            if fam in ('fc', 'slf'):
+                print('  %-4s %-16s prim %-4s %s  rect %s'
+                      % (fam, r['asset'], r['prim'],
+                         'wrap' if r['via_wrapper'] else 'direct', r['rect']))
     if a.json:
         payload = dict(
             schema='fvp-ingame-menu/2', game=a.game,
@@ -353,6 +397,7 @@ def main(argv=None):
                         note='7 个确认提示（是图片，不是文字）+ yes/no 两态 + 光标；'
                              '每项由 enable global 决定是否可用'),
             canvas=dict(virt=[1024, 640], real=[1920, 1080], scale=[1.875, 1.6875]),
+            inventory=facts['inventory'],
             unknowns=['菜单项在屏幕上的最终位置由 HZC1 头给出，但 hover 时是否再用'
                       '脚本微调（PrimSetXY）尚未逐项确认',
                       '0x577C8 里 14 个「取反写回」的确切语义未证实',

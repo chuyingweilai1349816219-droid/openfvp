@@ -1015,9 +1015,9 @@ def build_steps(args):
     vim = os.path.join(HERE, 'verify_ingame_menu.py')
     steps.append(Step('verify_ingame_menu.py', [PY, '-X', 'utf8', vim], 300,
                       skip_reason=None,
-                      note='in-game menu is script-side: 8 ring items sys_* -> prims 141..164, '
-                           '7 confirm prompts menu_*_mes -> prim 94 (+ yes/no 95..98), '
-                           'geometry from HZC1 headers (screen x/y)'))
+                      note='in-game menu is script-side: 8 ring items sys_* (prims 141..164) + '
+                           '7 confirm prompts menu_*_mes (prim 94, yes/no 95..98); '
+                           '98 UI asset load sites, geometry from HZC1 headers'))
 
     # 6.5 游戏内菜单（外壳侧占位实现，--menu-at 打开）
     vg = os.path.join(HERE, 'verify_gamemenu.py')
