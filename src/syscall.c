@@ -1584,16 +1584,29 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         return;
     case 111: /* TextClear(layer) */
         return;
-    case 31: /* InputGetDown: synthetic click every click_period steps */
+    case 31: /* InputGetDown: 边沿触发的合成点击
+               *
+               * 原版每帧把输入子系统采到的**位掩码**（engine+0x43C）交给脚本，
+               * 按下与抬起是两种不同的边沿：脚本普遍是
+               *   syscall 31; test 位  /  syscall 35; ...  （等一次变化）
+               * 而不是只要按着就成立。我们以前让 600 步里有 2 步持续为按下，
+               * 没有边沿 → 那些等边沿的循环 4M 步也退不出来（CHANGELOG 五十二/五十三）。
+               * 现在：第 0 步 = 按下，第 1 步 = 抬起边沿（InputGetUp），其余为 0。 */
         if (vm->click_period > 0 &&
-            (vm->steps % (uint64_t)vm->click_period) < 2u) {
+            (vm->steps % (uint64_t)vm->click_period) == 0u) {
             t->temp = fvp_make_int(vm->click_mask > 0 ? vm->click_mask : 1);
         } else {
             t->temp = fvp_make_int(0);
         }
         return;
-    case 35: /* InputGetUp（cmd_table: 35 = InputGetUp, 36 = InputGetWheel） */
-        t->temp = fvp_make_int(0);
+    case 35: /* InputGetUp（cmd_table: 35 = InputGetUp, 36 = InputGetWheel）
+               * 抬起边沿：合成点击按下的**下一步**。 */
+        if (vm->click_period > 0 &&
+            (vm->steps % (uint64_t)vm->click_period) == 1u) {
+            t->temp = fvp_make_int(vm->click_mask > 0 ? vm->click_mask : 1);
+        } else {
+            t->temp = fvp_make_int(0);
+        }
         return;
     case 36: /* InputGetWheel: 取走外壳累计的滚轮增量（120 = 一格） */
         t->temp = fvp_make_int(fvp_vm_wheel_take(vm));
