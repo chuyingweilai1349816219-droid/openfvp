@@ -135,6 +135,9 @@ def main():
         'prim_set_xy': ([3, 2], 252, 254),
         'text_buff': ([3, 2], 252, 254),
         'window_setup': ([5, 0], 250, 253),
+        # 复核样本：initstack 2|0 的参数是槽 253/254；initstack 8|0 用到槽 251
+        'probe_2args': ([2, 0], 253, 254),
+        'probe_8args': ([8, 0], 250, 254),
     }
     check(set(funcs) == set(want_funcs),
           '帧模型样本 = %r（实际 %r）' % (sorted(want_funcs), sorted(funcs)))

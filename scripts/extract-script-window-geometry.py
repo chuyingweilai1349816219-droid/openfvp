@@ -58,6 +58,9 @@ FRAME_FUNCS = [
     (0x35D14, 'prim_set_xy', 'PrimSetXY wrapper'),
     (0x35D76, 'text_buff', 'TextBuff wrapper'),
     (0x39F27, 'window_setup', '窗口设置（正文窗口 551 的绑定在这里）'),
+    # 两个高频函数用来复核"参数槽 = 255-A..254"：都用同一个 `== true` 缺省惯用法
+    (0x23804, 'probe_2args', 'initstack 2|0：参数槽 253/254（写 254）'),
+    (0x3F389, 'probe_8args', 'initstack 8|0：参数 1 是槽 251（写 251）'),
 ]
 WINDOW_SETUP_CALL = 0x363C5   # 调用 0x39F27 之前连压 5 个 pushtrue 哨兵
 
@@ -201,9 +204,11 @@ def extract(code):
         slots = []
         p = next_pc(code, fpc)
         guard = 0
-        while guard < 400:
+        while guard < 600:
             j = code.instr.get(p)
-            if j is None or (j[1] == 'ret' and guard > 2):
+            if j is None:
+                break
+            if j[1] == 'initstack':   # 下一个函数开始
                 break
             if j[1] in ('pushstack', 'copystack') and j[2][0] >= 0xFA:
                 slots.append(j[2][0])

@@ -186,6 +186,64 @@ FvpValue fvp_thread_pop(FvpThread *t)
     return t->stack[t->sp];
 }
 
+/* 修正版帧槽模型（FVP_FRAME_SLOTS=1）：
+ *   参数槽 = 绝对槽 255-A..254（A = initstack 第一个字节）；
+ *   局部变量块 = 参数块下面紧挨的 B 个槽，同时允许 0..B-1 直接寻址。
+ * 默认（环境变量没设）走旧行为，保持冻结文本基线不变。 */
+static int fvp_frame_slots_mode(void)
+{
+    static int mode = -1;
+    if (mode < 0) {
+        const char *v = getenv("FVP_FRAME_SLOTS");
+        mode = (v != NULL && v[0] != '\0' && v[0] != '0') ? 1 : 0;
+    }
+    return mode;
+}
+
+static int fvp_frame_local_index(const FvpFrame *f, int32_t n)
+{
+    int32_t base;
+    if (f == NULL || f->nlocals <= 0) {
+        return -1;
+    }
+    if (n >= 0 && n < f->nlocals) {
+        return (int)n;
+    }
+    if (!fvp_frame_slots_mode()) {
+        return -1;
+    }
+    base = FVP_FRAME_ARG_END + 1 - f->ndecl - f->nlocals;
+    if (n >= base && n < base + f->nlocals) {
+        return (int)(n - base);
+    }
+    return -1;
+}
+
+static int fvp_frame_arg_index(const FvpFrame *f, int32_t n)
+{
+    int32_t start, idx;
+    if (f == NULL || f->nargs <= 0) {
+        return -1;
+    }
+    if (!fvp_frame_slots_mode()) {
+        /* 旧行为（冻结基线用）：槽号只按"离 255 多远"映射到实参数组。 */
+        idx = n - (255 - f->nargs);
+    } else {
+        if (f->ndecl <= 0) {
+            return -1;
+        }
+        start = FVP_FRAME_ARG_END + 1 - f->ndecl;
+        if (n < start || n > FVP_FRAME_ARG_END) {
+            return -1;
+        }
+        idx = f->nargs - f->ndecl + (n - start);
+    }
+    if (idx < 0 || idx >= f->nargs) {
+        return -1;
+    }
+    return (int)idx;
+}
+
 static FvpFrame *fvp_frame_top(FvpThread *t)
 {
     return t->nframes > 0 ? &t->frames[t->nframes - 1] : NULL;
@@ -576,9 +634,12 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         FvpFrame *top = fvp_frame_top(t);
         if (top != NULL && top->pending) {
             free(top->locals);
-            top->nlocals = (int32_t)ins->a;
-            top->locals = ins->a != 0
-                              ? (FvpValue *)fvp_xcalloc((size_t)ins->a, sizeof(FvpValue))
+            top->ndecl = (int32_t)ins->a;
+            top->nlocals = fvp_frame_slots_mode() ? (int32_t)ins->b
+                                                 : (int32_t)ins->a;
+            top->locals = top->nlocals != 0
+                              ? (FvpValue *)fvp_xcalloc((size_t)top->nlocals,
+                                                        sizeof(FvpValue))
                               : NULL;
             top->pending = 0;
         } else {
@@ -587,9 +648,12 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
              * 脚本末尾，这样末尾的 ret 会结束线程；早先写成 ins->pc（指向
              * initstack 自己），ret 就会跳回入口，协程无限自循环。 */
             f.ret = vm->hcb->script_len;
-            f.nlocals = (int32_t)ins->a;
-            f.locals = ins->a != 0
-                           ? (FvpValue *)fvp_xcalloc((size_t)ins->a, sizeof(FvpValue))
+            f.ndecl = (int32_t)ins->a;
+            f.nlocals = fvp_frame_slots_mode() ? (int32_t)ins->b
+                                               : (int32_t)ins->a;
+            f.locals = f.nlocals != 0
+                           ? (FvpValue *)fvp_xcalloc((size_t)f.nlocals,
+                                                     sizeof(FvpValue))
                            : NULL;
             f.nargs = 0;
             f.args = NULL;
@@ -605,6 +669,7 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         f.nlocals = 0;
         f.locals = NULL;
         f.nargs = t->sp;
+        f.ndecl = 0;
         if (t->sp > 0) {
             f.args = (FvpValue *)fvp_xmalloc((size_t)t->sp * sizeof(FvpValue));
             memcpy(f.args, t->stack, (size_t)t->sp * sizeof(FvpValue));
@@ -695,16 +760,15 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         }
         t->pc += 3u;
         break;
-    case 0x10: { /* pushstack */
+    case 0x10: { /* pushstack：局部变量（两种写法）或绝对槽位的参数 */
         FvpFrame *f = fvp_frame_top(t);
-        if (f == NULL) {
-            fvp_thread_push(t, fvp_make_int(0));
-        } else if ((int32_t)ins->a < f->nlocals) {
-            fvp_thread_push(t, f->locals[ins->a]);
+        int li = fvp_frame_local_index(f, (int32_t)ins->a);
+        if (li >= 0) {
+            fvp_thread_push(t, f->locals[li]);
         } else {
-            int32_t idx = (int32_t)ins->a - (255 - f->nargs);
-            if (idx >= 0 && idx < f->nargs) {
-                fvp_thread_push(t, f->args[idx]);
+            int ai = fvp_frame_arg_index(f, (int32_t)ins->a);
+            if (ai >= 0) {
+                fvp_thread_push(t, f->args[ai]);
             } else {
                 fvp_thread_push(t, fvp_make_int(0));
             }
@@ -763,11 +827,17 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         t->pc += 3u;
         break;
     }
-    case 0x16: { /* copystack */
+    case 0x16: { /* copystack：局部变量（两种写法）或绝对槽位的参数 */
         FvpValue v = fvp_thread_pop(t);
         FvpFrame *f = fvp_frame_top(t);
-        if (f != NULL && (int32_t)ins->a < f->nlocals) {
-            f->locals[ins->a] = v;
+        int li = fvp_frame_local_index(f, (int32_t)ins->a);
+        if (li >= 0) {
+            f->locals[li] = v;
+        } else if (fvp_frame_slots_mode()) {
+            int ai = fvp_frame_arg_index(f, (int32_t)ins->a);
+            if (ai >= 0) {
+                f->args[ai] = v;
+            }
         }
         t->pc += 2u;
         break;

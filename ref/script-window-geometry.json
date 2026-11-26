@@ -60,6 +60,30 @@
     "slot_min": 250,
     "slot_reads": 13,
     "what": "窗口设置（正文窗口 551 的绑定在这里）"
+   },
+   {
+    "initstack": [
+     2,
+     0
+    ],
+    "pc": "0x023804",
+    "role": "probe_2args",
+    "slot_max": 254,
+    "slot_min": 253,
+    "slot_reads": 5,
+    "what": "initstack 2|0：参数槽 253/254（写 254）"
+   },
+   {
+    "initstack": [
+     8,
+     0
+    ],
+    "pc": "0x03f389",
+    "role": "probe_8args",
+    "slot_max": 254,
+    "slot_min": 250,
+    "slot_reads": 14,
+    "what": "initstack 8|0：参数 1 是槽 251（写 251）"
    }
   ],
   "known_gap": {

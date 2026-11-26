@@ -671,6 +671,15 @@ def build_steps(args):
                            'inside the script helpers, TextBuff clamped to 1024, and the '
                            'four window bindings 552/8, 551/0, 558/10, 553/9'))
 
+    # 6.49647 帧槽模型（默认保持冻结文本基线；FVP_FRAME_SLOTS=1 走修正模型）
+    vfs = os.path.join(HERE, 'verify_frame_slots.py')
+    steps.append(Step('verify_frame_slots.py', [PY, '-X', 'utf8', vfs], 1800,
+                      skip_reason=None,
+                      note='frame slot model: default keeps ref/ref-900k.txt byte-identical '
+                           '(PrimSetText(551) = (1,1), known gap); FVP_FRAME_SLOTS=1 puts the '
+                           'body window at the script value (431,880) and changes the text '
+                           'output (6760 B) — re-freezing that baseline needs a decision'))
+
     # 6.4965 D3D9 渲染状态常量（从 exe 的 SetRenderState 调用点抄出来；缺 work/ 时 SKIP）
     vds = os.path.join(HERE, 'verify_exe_d3d_states.py')
     steps.append(Step('verify_exe_d3d_states.py', [PY, '-X', 'utf8', vds], 600,

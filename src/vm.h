@@ -20,8 +20,14 @@ typedef struct FvpFrame {
     FvpValue *locals;
     int32_t nargs;
     FvpValue *args;
+    int32_t ndecl;   /* `initstack A|B` 的 A（参数槽个数；FVP_FRAME_SLOTS=1 时用） */
     int pending;
 } FvpFrame;
+
+/* 帧槽模型开关：`FVP_FRAME_SLOTS=1` 打开修正版（参数槽 255-A..254、局部变量块在
+ * 参数块下面）。默认关闭，保证 ref/ref-900k.txt 这份冻结文本基线逐字节不变。
+ * 证据与遗留问题见 ref/script-window-geometry.json 的 frame_model 段。 */
+#define FVP_FRAME_ARG_END 254
 
 #define FVP_THREAD_SLOTS 32 /* ThreadStart/ThreadExit 的 threadNo 0..31 */
 #define FVP_TIMER_COUNT 16  /* TimerSet/TimerGet 的 timerId 0..15 */
