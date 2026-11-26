@@ -123,7 +123,7 @@
     {
      "instr": "call   0x447800",
      "pc": "0x0043f255",
-     "what": "memcpy 0x400 -> engine+0x6A44C0（图形槽 -> 图元 id 表）"
+     "what": "memcpy 0x400 -> engine+0x6A44C0（**调色板** 256 × BGRA；ColorSet(7)/tile 索引色查表都用它）"
     },
     {
      "instr": "mov    %eax,0x6a49c0(%esi)",

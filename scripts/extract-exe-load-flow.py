@@ -248,7 +248,7 @@ def extract(path):
                     {'pc': '0x0043f233', 'instr': 'call   0x438770',
                      'what': '0x438770(engine+0x6A65FC)'},
                     {'pc': '0x0043f255', 'instr': 'call   0x447800',
-                     'what': 'memcpy 0x400 -> engine+0x6A44C0（图形槽 -> 图元 id 表）'},
+                     'what': 'memcpy 0x400 -> engine+0x6A44C0（**调色板** 256 × BGRA；ColorSet(7)/tile 索引色查表都用它）'},
                     {'pc': '0x0043f264', 'instr': 'mov    %eax,0x6a49c0(%esi)',
                      'what': 'engine+0x6A49C0 <- u32'},
                     {'pc': '0x0043f277', 'instr': 'mov    %edx,0x6a49c4(%esi)',

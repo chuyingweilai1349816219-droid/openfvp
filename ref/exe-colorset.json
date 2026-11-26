@@ -1,0 +1,73 @@
+{
+ "argc": 5,
+ "dispatch": {
+  "A": "arg4 -> +3",
+  "B": "arg3 -> +0",
+  "G": "arg2 -> +1",
+  "R": "arg1 -> +2"
+ },
+ "handler": "0x004373e0",
+ "id": 7,
+ "index_range": [
+  0,
+  255
+ ],
+ "instructions": [
+  {
+   "instr": "cmp    %cl,(%eax)",
+   "pc": "0x4373e9"
+  },
+  {
+   "instr": "test   %edx,%edx",
+   "pc": "0x4373f0"
+  },
+  {
+   "instr": "cmp    $0x100,%edx",
+   "pc": "0x4373f4"
+  },
+  {
+   "instr": "jne    0x43740c",
+   "pc": "0x437400"
+  },
+  {
+   "instr": "mov    %bl,0x6a44c2(%esi,%edx,4)",
+   "pc": "0x437405"
+  },
+  {
+   "instr": "mov    %bl,0x6a44c1(%esi,%edx,4)",
+   "pc": "0x437414"
+  },
+  {
+   "instr": "mov    %bl,0x6a44c0(%esi,%edx,4)",
+   "pc": "0x437423"
+  },
+  {
+   "instr": "mov    %al,0x6a44c3(%esi,%edx,4)",
+   "pc": "0x437433"
+  }
+ ],
+ "name": "ColorSet",
+ "note": "ColorSet(7) 的实参规则（A 类）；由 scripts/extract-exe-colorset.py 生成",
+ "palette": {
+  "base": "engine+0x6A44C0",
+  "component_offsets": {
+   "A": 3,
+   "B": 0,
+   "G": 1,
+   "R": 2
+  },
+  "entries": 256,
+  "order": "BGRA"
+ },
+ "readers": [
+  "图元绘制 type-2（tile）路径：mov 0x6a44c0(%edi,%eax,4),%edi"
+ ],
+ "rules": [
+  "每个分量各自判 type==2，非 int 的分量保持原值",
+  "分量没有范围检查（截断成字节）",
+  "index 必须 int 且 0..0xFF，否则整条忽略"
+ ],
+ "unknown": [
+  "tile 绘制时索引色查表的完整算法"
+ ]
+}

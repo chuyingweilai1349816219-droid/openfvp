@@ -4,6 +4,27 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（四十四续）：ColorSet(7) 其实是"写调色板"（我们原来是空操作）
+
+继续"高频且无基线"清单：**`ColorSet(7)`，244 次**。我们原来把它当**空操作**
+（注释写着"渲染器从不采样调色板"），读 handler 后发现它是**真的写状态**：
+
+handler `0x4373E0`：
+- `index` int **0..0xFF**；
+- 四个分量各自判 `type==2`，非 int 的保持原值；没有范围检查（截断成字节）；
+- 落点：`engine+0x6A44C0 + idx*4`，**B 在 +0、G 在 +1、R 在 +2、A 在 +3（BGRA）**。
+
+也就是说 `engine+0x6A44C0` 是那张 **256 项 BGRA 调色板**，读点是图元绘制里
+type-2（tile）路径的 `mov 0x6a44c0(%edi,%eax,4),%edi`（索引色查表）——
+**顺带纠正**了 `ref/exe-load-flow.json` 里那条 `memcpy 0x400` 的旧标注
+（原来写"图形槽 → 图元 id 表"，实际是调色板）。
+
+已实现：`vm->palette[256][4]` + `fvp_vm_color_set()`（逐分量 has 标志），`case 7`
+按原版校验。**渲染端暂时还不采样**（tile 索引色是后续一轮），但状态已与原版一致。
+
+新增 `ref/exe-colorset.json` + `scripts/extract-exe-colorset.py` +
+`tests/verify_exe_colorset.py`（`run_all` 6.49658，8 条指令 + 与读档基线互证）。
+
 ## [未发布] — 2026-11-26（四十三续）：PrimGroupIn(73) 的实参校验（父子挂接）
 
 继续"高频且无基线"清单：**`PrimGroupIn(73)`，349 次**。

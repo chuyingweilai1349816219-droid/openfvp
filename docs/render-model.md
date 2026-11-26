@@ -1255,6 +1255,29 @@ call   0x4387d0            ; register(entry, name)
 id、`missing_in_engine` 为空、除 `AudioLoad(0)` 外每个 id 都能在分派表里找到 handler。
 
 
+### ColorSet(7) = 256 项 BGRA 调色板（A 类：`ref/exe-colorset.json`）
+
+handler `0x4373E0`（两部作品合计 244 次）：
+
+| arg | 角色 | 落点 |
+|---|---|---|
+| 0 | index int **0..0xFF** | 调色板项 |
+| 1 | R | `engine+0x6A44C0 + idx*4` 的 **+2** |
+| 2 | G | **+1** |
+| 3 | B | **+0** |
+| 4 | A | **+3** |
+
+每个分量各自判 `type==2`，非 int 的保持原值；分量没有范围检查（截断成字节）。
+
+所以 `engine+0x6A44C0` 就是 **256 项 BGRA 调色板**：
+- 写点 = `ColorSet`；读点 = 图元绘制里 type-2（tile）路径的
+  `mov 0x6a44c0(%edi,%eax,4),%edi`（索引色查表）；
+- 与读档恢复顺序里那条 `memcpy 0x400 → engine+0x6A44C0` 是同一块缓冲
+  （**本轮纠正**：它原来被标成"图形槽 → 图元 id 表"，实际是调色板）。
+
+我们原来 `case 7` 是**空操作**——本轮实现了 `fvp_vm_color_set()`（写 `vm->palette[256][4]`，
+BGRA，逐分量 has 标志）。渲染端暂时还不采样它（tile 索引色查表是后续一轮）。
+
 ### GraphLoad(22) 的实参规则（A 类：`ref/exe-graph-load.json`）
 
 handler `0x43A340`（两部作品合计 454 次）：

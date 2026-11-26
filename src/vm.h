@@ -310,7 +310,12 @@ typedef struct FvpVM {
      *      完全相同（int 且 0..200，否则默认 100）
      *   74 PrimGroupMove(id **1..0xFFF**, …)    handler 0x43B980：arg2 也是 int
      * 本站都没有"部件动画/组位移"的渲染语义，按记录处理（值 + 计数）。 */
-    unsigned char parts_rgb[64][3];
+    /* ColorSet(7) 写的调色板：256 项 BGRA（原版 engine+0x6A44C0）。
+ * 渲染端目前还不用它（tile 的索引色查表是后续一轮），但状态要与原版一致。 */
+unsigned char palette[256][4];
+unsigned char palette_set[256];
+uint64_t color_set_calls;
+unsigned char parts_rgb[64][3];
     unsigned char parts_rgb_set[64];
     unsigned char parts_motion[64]; /* 最近一次 PartsMotion 的 arg2（诊断） */
     unsigned int parts_motion_time[64]; /* 最近一次 PartsMotion 的 arg3（时长 ms） */
@@ -575,6 +580,10 @@ int fvp_vm_graph_rgb(FvpVM *vm, const FvpValue *slot, const FvpValue *r,
                      const FvpValue *g, const FvpValue *b);
 /* PartsMotion(66) / PartsMotionPause(67) / PartsMotionStop(68)：
  * partsId 0..0x3F（Stop 是 1..0x3F）；返回 1 = 生效。 */
+/* ColorSet(7)：index 0..0xFF，四个分量各自 int 才写（BGRA），否则保持原值。 */
+int fvp_vm_color_set(FvpVM *vm, int index, int r, int g, int b, int a,
+                     int has_r, int has_g, int has_b, int has_a);
+
 int fvp_vm_parts_motion(FvpVM *vm, const FvpValue *parts, const FvpValue *arg2,
                         const FvpValue *arg3);
 int fvp_vm_parts_motion_pause(FvpVM *vm, const FvpValue *parts,

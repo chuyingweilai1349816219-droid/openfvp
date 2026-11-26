@@ -294,8 +294,26 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
     id = (argc > 0) ? fvp_gfx_int(&a[0]) : 0;
 
     switch (cid) {
-    case 7: /* ColorSet(idx, R, G, B, A): the renderer never samples the
-             * palette, render.py only records it */
+    case 7: /* ColorSet(idx, R, G, B, A)
+             * 原版 handler 0x4373E0：index **0..0xFF**（< 0x100），四个分量各自
+             * 判 int 才写，落点是 **engine+0x6A44C0 + idx*4 的 BGRA 调色板**
+             * （B 在 +0、G 在 +1、R 在 +2、A 在 +3）。 */
+        if (argc >= 1 && a[0].type == (uint8_t)FVP_INT) {
+            int idx = (int)a[0].i;
+
+            if (idx >= 0 && idx <= 0xFF) {
+                (void)fvp_vm_color_set(
+                    vm, idx,
+                    argc > 1 ? fvp_gfx_int(&a[1]) : 0,
+                    argc > 2 ? fvp_gfx_int(&a[2]) : 0,
+                    argc > 3 ? fvp_gfx_int(&a[3]) : 0,
+                    argc > 4 ? fvp_gfx_int(&a[4]) : 0,
+                    argc > 1 && a[1].type == (uint8_t)FVP_INT,
+                    argc > 2 && a[2].type == (uint8_t)FVP_INT,
+                    argc > 3 && a[3].type == (uint8_t)FVP_INT,
+                    argc > 4 && a[4].type == (uint8_t)FVP_INT);
+            }
+        }
         break;
     case 20: /* FloatToInt(v): render.py returns int(v); the byte-exact VM
               * leaves this command unimplemented because no text transcript

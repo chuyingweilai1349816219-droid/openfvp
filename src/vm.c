@@ -1300,6 +1300,38 @@ static int parts_id_of(const FvpValue *v, int min, int *out)
     return 1;
 }
 
+int fvp_vm_color_set(FvpVM *vm, int index, int r, int g, int b, int a,
+                     int has_r, int has_g, int has_b, int has_a)
+{
+    int wrote = 0;
+
+    if (vm == NULL || index < 0 || index > 0xFF) {
+        return 0;
+    }
+    /* 原版是 engine+0x6A44C0 + idx*4 的 BGRA 四字节，逐分量判 type==2。 */
+    if (has_b) {
+        vm->palette[index][0] = (unsigned char)(b & 0xFF);
+        wrote = 1;
+    }
+    if (has_g) {
+        vm->palette[index][1] = (unsigned char)(g & 0xFF);
+        wrote = 1;
+    }
+    if (has_r) {
+        vm->palette[index][2] = (unsigned char)(r & 0xFF);
+        wrote = 1;
+    }
+    if (has_a) {
+        vm->palette[index][3] = (unsigned char)(a & 0xFF);
+        wrote = 1;
+    }
+    if (wrote) {
+        vm->palette_set[index] = 1;
+        vm->color_set_calls += 1u;
+    }
+    return wrote;
+}
+
 int fvp_vm_parts_motion(FvpVM *vm, const FvpValue *parts, const FvpValue *arg2,
                         const FvpValue *arg3)
 {

@@ -714,6 +714,14 @@ def build_steps(args):
                            'inside its range (TextColor 0..0xFF, TextOutSize 0..0xC/0..0x8, '
                            'TextSize 0xC..0x40/0x8..0x20), otherwise it keeps the old value'))
 
+    # 6.49658 ColorSet(7) = 256xBGRA 调色板（engine+0x6A44C0）
+    vcs = os.path.join(HERE, 'verify_exe_colorset.py')
+    steps.append(Step('verify_exe_colorset.py', [PY, '-X', 'utf8', vcs], 600,
+                      skip_reason=None,
+                      note='ColorSet(7) writes the 256xBGRA palette at engine+0x6A44C0 '
+                           '(index 0..0xFF, per-component int); the same buffer is the '
+                           '0x400-byte memcpy in the load restore order'))
+
     # 6.49657 GraphLoad(22)：type 0 = 释放槽（0x424150）
     vgl = os.path.join(HERE, 'verify_exe_graph_load.py')
     steps.append(Step('verify_exe_graph_load.py', [PY, '-X', 'utf8', vgl], 600,
