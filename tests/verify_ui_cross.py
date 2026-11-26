@@ -88,6 +88,26 @@ def main():
     check(not any(x.endswith('_M') and x.startswith('sys_') for x in hos['sys']),
           '星空：没有任何 sys_*_M')
 
+    print('== 图元号：两作完全相同（同一套约定）')
+    iro_prim = {r['asset']: r['prim'] for r in games['iroseka']['loads']}
+    hos_prim = {r['asset']: r['prim'] for r in games['hoshimemo']['loads']}
+    shared = [k for k in iro_prim if k in hos_prim]
+    check(len(shared) == 89, '两作共有 89 个 UI 素材（实际 %d）' % len(shared))
+    bad = [(k, iro_prim[k], hos_prim[k]) for k in shared if iro_prim[k] != hos_prim[k]]
+    check(not bad, '共有素材的图元号逐个相同（差异 %s）' % (bad[:3] or '无'))
+    check(all(p is not None for p in iro_prim.values()) and
+          all(p is not None for p in hos_prim.values()), '每个载入点都绑了图元')
+    want = {}
+    for k, act in enumerate(RING):
+        want['sys_%s_1' % act] = 141 + 3 * k
+        want['sys_%s_2' % act] = 142 + 3 * k
+    check(all(iro_prim[a] == p and hos_prim[a] == p for a, p in want.items()),
+          '环形项图元号 = 141+3k / 142+3k（两作相同）')
+    check(iro_prim['menu_undo_mes'] == hos_prim['menu_undo_mes'] == 94 and
+          iro_prim['menu_bg'] == hos_prim['menu_bg'] == 93 and
+          iro_prim['menu_chk'] == hos_prim['menu_chk'] == 137,
+          '确认框三件套图元号一致（93/94/137）')
+
     print('== 重新扫描对账')
     mod = load_scanner()
     got = mod.build()
