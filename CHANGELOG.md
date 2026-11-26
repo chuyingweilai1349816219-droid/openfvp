@@ -4,6 +4,58 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（八十七续）：三个"实参=0"的调用点是**菜单动作**不是初始化 —— 标题菜单在协程里
+
+### 1. 把三个从未执行的 `call 0x584D8` 调用点解出来
+
+| pc | 上下文（`0x584D8` 是建标题场景的函数） |
+|---|---|
+| `0x59E93` | `pushint8 0; call 0x584D8` → 之后 `pushint8 0; pushtrue; call 0x24072`（存盘/重开一类动作） |
+| `0x59EBB` | `pushint8 0; call 0x584D8` → `MotionAlphaStop(264)`、`ThreadExit(9)`、`global[236]=1`、`global[833]=1`、`call 0x66823`、`global[833]=0`、`jmp 0x590C5` |
+| `0x59EFC` | `pushint8 0; call 0x584D8` → 5000 ms 等待 + `call 0x42B98`，再 `MotionAlphaStop(264)`、`ThreadExit(9)` |
+
+`0x59E48` 那一块也一样：`MotionAlphaStop(264)`；`ThreadExit(9)`；按 `global[1667]`
+分 3000/4000 ms 两支等待；最后才 `call 0x584D8(0)`。
+
+**结论（更正上一轮的假设）**：`0x584D8` 的实参 = 0 表示"**离开标题**"（选完菜单项后
+清场），不是"初始化"。所以"另外三个调用点跑了就会初始化 265"这条推想**不成立**——
+它们是 New Game / 继续游戏 / 退出 之类的**菜单动作**，而且都要先经过菜单交互才能到达。
+
+### 2. 新事实：标题菜单跑在协程里
+
+`ThreadExit(9)` 出现在 `0x59E50 / 0x59EC8 / 0x59F09 / 0x5A518`，
+说明菜单逻辑是一个 **slot 9 的协程**；`ThreadStart(136)` 的站点里能看到
+`pushint8 4; pushint32 0x5C52C; syscall 136`（slot 4）等，`TitleMenu(141)` 出现在
+`0x5A794`、`0x5A858`。
+
+因此"265 的动作记录由谁创建"的候选变成：**slot 9 这条菜单协程**在启动/悬停时给它
+排动画。下一轮要查的是"slot 9 的 ThreadStart 在哪、我们有没有执行到"。
+
+### 3. 工具
+
+`work/refs_59e.py`（扫指向 0x59C00..0x59F40 的 call/jmp/jmpcond）、
+`work/scan_threads.py`（扫 ThreadStart/ThreadExit/ThreadNext/TitleMenu 站点）、
+`work/scan_slot9.py`（找 slot 9 的 ThreadStart 模式）——都是 work/ 下的临时分析脚本，
+不入库；结论写进本文件与 docs。
+
+### 4. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS** |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_prim_refs.py` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 5. 诚实说明
+
+- 本轮没有代码改动；价值是**纠正了一个错误假设**（"实参=0 的调用点会初始化 265"），
+  并把方向收敛到"菜单协程 slot 9"。
+- `scan_slot9.py` 用 `pushint8 9; pushint32` 的字节模式**没找到** slot 9 的 ThreadStart，
+  说明槽号不是这样传的（可能来自局部变量/`copystack`），下一轮要按 `syscall 136` 全表
+  反查实参来源，而不是猜字节模式。
+
 ## [未发布] — 2026-11-26（八十六续）：`*Test` 语义按 exe 逐条确认（极性没问题）+ 光标命中实验的负面结果
 
 ### 1. 用 exe 反汇编把 `MotionAlphaTest` 的语义钉死
