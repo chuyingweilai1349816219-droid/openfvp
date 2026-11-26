@@ -156,6 +156,9 @@ typedef struct Options {
     /* --dump-text-prims：每 500 ms 把每个文本图元的 id/层号/位置/父链绝对位置
      * 写进日志（诊断正文位置用，不影响渲染）。 */
     int dump_text_prims;
+    /* --auto-click MS：每 MS 毫秒注入一次合成点击（与 --no-input 一起用，
+     * 让"推进对话"这件事可确定性复现）。 */
+    int auto_click_ms;
     int load_restart; /* --load-restart：Load(slot) 时读槽文件 + 复位场景 + 重启脚本
                        * （保留 globals/flags；槽尾快照段还没逆清，暂不应用） */
     int debug_save_request;
@@ -478,7 +481,8 @@ static const wchar_t *usage_text(void)
            L"                      选 New Game 才开始跑脚本（默认关；几何按原版实测）\n"
             L"  --tex-cache-mb N    texture cache cap in MiB（默认 256；0 = 不限制，按 LRU 淘汰未被引用的图）\n"
            L"  --title-bg-anim     标题背景按脚本做缩放+旋转动画（五彩四层 25 s；星空 2000->1000 40 s；默认关）\n"
-           L"  --title-bg-div N    背景动画的内部分辨率除数（1 = 全分辨率最清晰，2 默认，4/8 更快）\n"
+           L"  --title-bg-div N    背景动画的内部分辨率除数（1 默认 = 全分辨率最清晰，2/4/8 更快）\n"
+           L"  --auto-click MS     每 MS 毫秒注入一次合成点击（配 --no-input 可确定性推进对话）\n"
            L"  --dump-text-prims   每 500 ms 把文本图元 id/层号/位置/父链绝对位置写进日志\n"
            L"  --load-restart      Load(slot) 时读槽文件 + 复位场景 + 重启脚本（保留 globals/flags）\n"
            L"  --shot-every MS     运行中每 MS 毫秒抓一张（配 --shot-prefix；做动画 demo）\n"
@@ -560,6 +564,7 @@ static void defaults(Options *o)
     o->title_anim = -1; /* -1 = 未指定，见 main 里的 --opening 联动 */
     o->title_bg_anim = 0;
     o->title_bg_div = 1;
+    o->auto_click_ms = 0;
     o->preview_slot = -1;
     o->load_slot = -1;
     o->menu_at = -1;
@@ -787,6 +792,10 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             wcsncpy(o->shot_prefix, argv[++i], PATH_CAP - 1);
         } else if (wcscmp(a, L"--title-no-bg") == 0) {
             o->title_no_bg = 1;
+        } else if (wcscmp(a, L"--auto-click") == 0 && i + 1 < argc) {
+            int ms = _wtoi(argv[++i]);
+
+            o->auto_click_ms = ms < 50 ? 50 : (ms > 60000 ? 60000 : ms);
         } else if (wcscmp(a, L"--dump-text-prims") == 0) {
             o->dump_text_prims = 1;
         } else if (wcscmp(a, L"--title-no-hover") == 0) {
@@ -1956,6 +1965,7 @@ static double title_bg_now;
 static int title_bg_div = 1;
 /* --dump-text-prims 的节流计时（秒） */
 static double text_prim_dump_t0;
+static double auto_click_next;
 static int text_prim_dump_on;
 
 static FvpTitleEnter title_enter;
@@ -3611,6 +3621,13 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
             in->key_down = 0;
             in->key_pressed = 0;
             in->nav = 0;
+        }
+        /* --auto-click：合成点击边沿（放在 --no-input 抹除之后，所以两者可同用）。
+         * 走的是和真实点击同一条路径（click_edges → click_armed → InputGetDown），
+         * 不额外改 VM。 */
+        if (opts.auto_click_ms > 0 && now >= auto_click_next) {
+            auto_click_next = now + (double)opts.auto_click_ms / 1000.0;
+            in->mouse_pressed = 1;
         }
         vm.cx = in->canvas_x;
         vm.cy = in->canvas_y;

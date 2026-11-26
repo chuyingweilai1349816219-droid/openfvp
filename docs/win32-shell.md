@@ -352,3 +352,22 @@ textprim id=553 tw=9 xy=165,590 abs=165,590 parent=-1 alpha=0
 整个 22 s 内只有这两个文本图元（都 alpha=0），**没有绑定 tw=0 的图元**。也就是说序章
 画面上看到的叙述文字，在当前实现里是"未绑定窗口的版面表兜底"画出来的，不是任何图元
 给的——这正好是下一步要查清的点（见 `docs/render-model.md` 的未定论一节）。
+
+### `--auto-click MS`（2026-11-26，确定性推进对话）
+
+每 MS 毫秒注入一次**合成点击边沿**，走的是和真实鼠标同一条路径
+（`click_edges → click_armed → InputGetDown(31)` 轮询），因此和 `--no-input`
+可以同时使用：画面只由程序状态决定，同时脚本能继续往下推进。
+
+配合 `--dump-text-prims` 实测（`iroseka.hcb`，40 s，900 ms 一次点击）：
+
+```
+textprim id=551 tw=0  xy=1,1   alpha=255   ← 序章正文（可见）
+textprim id=558 tw=10 xy=0,0   alpha=255   ← 第 10 层文本（可见）
+textprim id=552 tw=8  xy=375,852 / 1,852   alpha=0
+textprim id=553 tw=9  xy=165,590           alpha=0
+```
+
+也就是说：**点击推进后正文图元 551 真的被建出来了，但位置是 (1,1)**（不是版面表的
+150,905）。这与"文本只经 type-5 图元上屏 + 图元坐标 = 父链和"的模型一致；剩下的
+问题是**面板内部文字为什么居中**（见 `docs/render-model.md` 的新假设）。
