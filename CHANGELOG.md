@@ -4,6 +4,66 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（九十二续）：faithful `bool_type` 模式的自旋点定位到 `0x23681` 一带
+
+上一轮只测到「faithful 模式 `threadnext = 0`」。这一轮用 `fvm.exe --bool-type --pctrace`
+把自旋点定位出来。
+
+### 1. 实测
+
+```
+fvm iroseka.hcb --steps 200000 --click 600 --quiet --bool-type --pctrace out/c/pc-bool.txt
+  → 200000 步里只走了 2,979 个不同 pc
+  → unknown cmds: 73×29897(PrimGroupIn), 80×6863, 75×6820, 20×107, …
+  → 最后 2 万步的热点：0x235C9/0x235CC/0x235CE/0x235CF/0x235D2/0x235D4/0x235D7/0x235D9（各 700 次）
+```
+
+`0x235C9` 是那个 reset helper（`GraphLoad(prim,true)` + `PrimGroupOut` + `PrimSetNull`，
+见八十七续）。它的调用者在这一带：
+
+```
+23681  pushint16 767 ; call 0x235C9      ; reset 767
+23689  pushint8 0   ; call 0x235C9      ; reset 0
+23690  pushint8 13  ; pushint16 774 ; syscall 73   ; PrimGroupIn(13, 774)
+23698  pushint8 12  ; pushint16 768 ; syscall 73
+236A0  pushint8 22  ; pushint16 768 ; syscall 73
+236A8  pushint8 11  ; pushint16 773 ; syscall 73
+236B0  pushint8 32  ; pushint16 772 ; syscall 73
+…
+```
+
+也就是说 faithful 模式下脚本在**反复执行"重置图元 + 把图元加回组"这一大段**（一次 pass
+里 `PrimGroupIn` 被调约 4 次、helper 约 2 次），永远走不到下一段逻辑。
+
+### 2. 含义
+
+- 这一段本身不是"动画/等待"，而是**菜单图元分组的装配代码**；只有它外面的循环条件
+  判错，才会反复重装。
+- 结合 roadmap 的旧记录（faithful 模式下 900k 步文本 195 → 0 行、首个分歧点 `0x05aaf5`），
+  可以确认：**faithful 模式不是"打开就更好"，而是会走进另一条早就存在的死路**
+  （先自旋在这段装配代码上）。
+- 结论与上轮一致：`bool_type` 要先补完"7×7 类型比较 + 未赋值 global → null"，
+  并且在**默认路径不受影响**的前提下，用可量化指标（`fvm --bool-type` 的文本行数、
+  headless 的 threadnext）逐步逼近原版行为；本轮把自旋点钉到 `0x23681`，
+  下一轮从这段的循环条件开始查。
+
+### 3. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS** |
+| `tests/compare.py --run` | **PASS**（默认路径未动） |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971） |
+| `tests/verify_prim_refs.py` / `verify_thread_calls.py` / `verify_text_geometry.py` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 4. 诚实说明
+
+- 本轮**没有代码改动**（只有一次 `fvm --bool-type --pctrace` 诊断与文档），
+  因此所有基线数字不变。
+- faithful 模式仍然是"实验开关、默认关"；在没有把它推进到能恢复 195 行之前，
+  它不会进入默认路径。
+
 ## [未发布] — 2026-11-26（九十一续）：`0x5AAEC` 那条线索 = 已知的 `bool_type` 分歧（faithful 模式在 gfx 路径上直接停摆）
 
 上一轮把"槽 1 线程入口 `0x5AAEC` 一进去就 `jmpcond` 到 `ret`"当作新线索。这一轮查证：
