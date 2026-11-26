@@ -4,6 +4,38 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（六十续）：Motion* 的实参抓到了 —— 脚本多数调用把 ms 传成 `true`（原版同样整条拒掉）
+
+加了两处诊断（都是 env-gated）：
+
+- `FVP_TRACE_CIDS=1`：打印每条命令首次出现的步数；
+- `FVP_DEBUG_MOTION=1`：打印 `Motion(42/48/54)` 的 argc 与每个实参的 Variant 类型/值。
+
+实测（headless，40k 步）：Motion 命令**确实被调用**（42 在步 12048、54 在 22948、48 在 29635），
+但实参长这样：
+
+```
+motion cmd=42 argc=6 args: [0 t=0 v=210] [1 t=4 v=1] [2 t=0 v=0] [3 t=0 v=0] [4 t=4 v=1] [5 t=4 v=1]
+motion cmd=42 argc=6 args: [0 t=0 v=514] [1 t=0 v=255] [2 t=0 v=0] [3 t=0 v=1] [4 t=4 v=1] [5 t=4 v=1]
+motion cmd=42 argc=6 args: [0 t=0 v=37]  [1 t=0 v=255] [2 t=0 v=0] [3 t=4 v=1] [4 t=4 v=1] [5 t=4 v=1]
+```
+
+（`t=0` 是 int，`t=4` 是我们上一轮新加的 `FVP_BOOL` = 原版 Variant type 1。）
+
+即脚本对 **ms(arg3)** 大量传 `true` 哨兵；而原版 handler `0x43A8B0` 的第一条硬校验就是：
+
+```
+43a8d6  cmpb $0x2,0x18(%eax)   ; arg3(ms) 必须是 Variant type 2(int)
+43a8da  jne  0x43a988          ; 否则整条命令丢弃
+43a8e3  cmp  $0x1,%edx / jl    ; ms 1..300000
+43a8ec  cmp  $0x493e0,%edx / jg
+```
+
+⇒ 这些调用在**原版里也是空操作**，我们的处理与 exe 一致（不是 bug）。所以
+`MotionAlphaTest(265)` 等查询对应的动画来自别的调用点。下一步扫全量（3M 步）的 Motion 实参，
+找出**带 int ms** 的那些（它们才该真建补间），并核对为什么 `motion_add` 仍为 0 次
+（候选：这些调用落在 argc 与 `fvp_gfx_argc()` 不一致的 49/51/52/54/94/95 上）。
+
 ## [未发布] — 2026-11-26（五十九续）：素材不是卡点 —— `Motion*` 在 headless 里从未真正生效
 
 载入 2653 张素材后再做 pc 直方图（400k 步）：
