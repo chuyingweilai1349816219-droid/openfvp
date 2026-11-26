@@ -3473,8 +3473,9 @@ int gfx_motion_add(Gfx *g, int prim_id, int kind, int from_x, int from_y,
         if (getenv("FVP_DEBUG_MOTION") != NULL) {
             fprintf(stderr,
                     "motion_add prim=%d kind=%d from=%d,%d to=%d,%d "
-                    "dur=%d mode=%d -> %d\n",
-                    prim_id, kind, from_x, from_y, to_x, to_y, dur_ms, mode, r);
+                    "dur=%d mode=%d -> %d (now_ms=%.0f)\n",
+                    prim_id, kind, from_x, from_y, to_x, to_y, dur_ms, mode, r,
+                    g->motion.now_ms);
         }
         return r;
     }

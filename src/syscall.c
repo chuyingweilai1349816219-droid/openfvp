@@ -296,8 +296,8 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
         (cid == 42u || cid == 48u || cid == 54u)) {
         uint32_t q;
 
-        fprintf(stderr, "motion cmd=%u argc=%u args:", (unsigned)cid,
-                (unsigned)argc);
+        fprintf(stderr, "motion cmd=%u argc=%u step=%llu args:", (unsigned)cid,
+                (unsigned)argc, (unsigned long long)vm->steps);
         for (q = 0; q < argc && q < 8u; ++q) {
             fprintf(stderr, " [%u t=%u v=%lld]", (unsigned)q,
                     (unsigned)a[q].type, (long long)a[q].i);
