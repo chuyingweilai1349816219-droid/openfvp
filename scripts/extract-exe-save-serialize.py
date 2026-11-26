@@ -224,21 +224,73 @@ SEGMENTS = [
      'note': '末尾两个字节之二：写成 (engine+0x85 != 0) 的 0/1（实测 01）'},
 ]
 
+# 读档侧（反序列化）的游标顺序：地址 + 判据字节 + 语义
+# 实现在 0x43EE90 里内联：0x43EFCC 起把游标置 7（跳过 7 字节时间戳），然后按
+# 与写档完全相同的顺序读回，每段尺寸取自同一个引擎字段。
+READER = [
+    {'order': 1, 'va': '0x0043efcc', 'frags': ['8b06', 'c7460807000000'],
+     'fact': '游标 = 7（跳过 7 字节时间戳，不解析）'},
+    {'order': 2, 'va': '0x0043efd5', 'frags': ['0fbf4007'],
+     'fact': '头 3 条字符串：u16 长度（不含 NUL）+ 字节'},
+    {'order': 3, 'va': '0x0043f0c7',
+     'frags': ['8b8ed40f0000', '0faf8ed00f0000'],
+     'fact': '缩略图：游标 += w*h*4（engine+0xFD0/0xFD4）'},
+    {'order': 4, 'va': '0x0043f0d4', 'frags': ['8b86c8666a00', '03c0', '03c0'],
+     'fact': '每槽全局变量：条数 = engine+0x6A66C8，字节数 = 条数×8'},
+    {'order': 5, 'va': '0x0043f100', 'frags': ['8dbed4e76800', 'bd20000000'],
+     'fact': '32 个协程快照：步长 0xB28，逐条调 0x445540（变长，不是整块 memcpy）'},
+    {'order': 6, 'va': '0x0043f12a', 'frags': ['8b0e', '034e08', '8b11'],
+     'fact': 'u32 → engine+0x6A66D0（线程下标）'},
+    {'order': 7, 'va': '0x0043f13f', 'frags': ['8b4608', '8b0e', '8b0c08'],
+     'fact': 'u32 → engine+0x6A49E8'},
+    {'order': 8, 'va': '0x0043f152', 'frags': ['8dbee c496a00'.replace(' ', ''),
+                                              '8d6b7c'],
+     'fact': '128 槽字符串表：逐条调 0x433F60（u16 长度含 NUL）'},
+    {'order': 9, 'va': '0x0043f176', 'frags': ['6800010000', '8d96ec4b6a00'],
+     'fact': '0x100 块 → engine+0x6A4BEC'},
+    {'order': 10, 'va': '0x0043f182', 'frags': ['81c100010000'],
+     'fact': '游标 += 0x100（第二块 → engine+0x6A4CEC）'},
+    {'order': 11, 'va': '0x0043f1b3', 'frags': ['8b0c08', '898eec4d6a00'],
+     'fact': 'u32 → engine+0x6A4DEC'},
+    {'order': 12, 'va': '0x0043f1ca', 'frags': ['8dbef04d6a00', 'bd00010000'],
+     'fact': '128 项表：逐项调 0x446210（变长：3×u32 + count×12）'},
+    {'order': 13, 'va': '0x0043f1e5', 'frags': ['6800020000', '8d96f0616a00'],
+     'fact': '0x200 块 → engine+0x6A61F0'},
+    {'order': 14, 'va': '0x0043f207', 'frags': ['6800020000', '8d86f0636a00'],
+     'fact': '0x200 块 → engine+0x6A63F0'},
+    {'order': 15, 'va': '0x0043f22c', 'frags': ['8d8efc656a00', 'e83895ffff'],
+     'fact': '1 字节 + 16 项（0x438770）→ engine+0x6A65FC'},
+    {'order': 16, 'va': '0x0043f238', 'frags': ['81c100040000'],
+     'fact': '游标 += 0x400（调色板）'},
+    {'order': 17, 'va': '0x0043f24e', 'frags': ['8d8ec0446a00'],
+     'fact': '调色板 → engine+0x6A44C0'},
+    {'order': 18, 'va': '0x0043f262', 'frags': ['8b02', '8986c0496a00'],
+     'fact': '读档回填历史环：u32 count → engine+0x6A49C0'},
+    {'order': 19, 'va': '0x0043f272', 'frags': ['8b1401', '8996c4496a00'],
+     'fact': 'u32 pos → engine+0x6A49C4'},
+    {'order': 20, 'va': '0x0043f282', 'frags': ['8b8ec8496a00', '81ffb0040000'],
+     'fact': '100 条历史记录：逐条调 0x437EE0'},
+]
+
 # 静态分析阶段读到的、数据侧可以验证的推论（门禁会用真实存档核对）
 INVARIANTS = [
-    {'id': 'ctx_block_at_zero',
-     'claim': 'tail 从 +0 起就是 32 个协程快照（每槽全局变量 count=0，故它们'
-              '紧贴 tail 起点）',
-     'verify': '32*0xB28 = 0x16500；实测 6 份存档里 0..7 号上下文都有数据、'
-               '8 号之后基本为零，且没有一段 0x16500 之外的零区符合'},
-    {'id': 'string_table_128',
-     'claim': 'tail+0x16508 起是 128 槽 u16 长度字符串表，空槽 2 字节',
-     'verify': '实测 6 份存档全部 128 槽解析成功、全空、正好在 +0x16608 结束'},
+    {'id': 'globals_first',
+     'claim': 'tail 从 +0 起就是"每槽全局变量"表：条数 = engine+0x6A66C8，'
+              '每条 8 字节 {u8 type, 3B pad, u32 value}；6 份样本条数都是 1471，'
+              '共 0x2DF8 字节，type 只出现 0/1/2/4/5/6',
+     'verify': '6/6 份存档 tail[0:0x2DF8] 按 8 字节切分后 type ∈ {0,1,2,4,5,6}，'
+               '且 tail[0x18]（第 4 条记录的 type）恒为 2'},
+    {'id': 'string_pool_after_globals',
+     'claim': '字符串池标签 = 0x16610 + 全局变量字节数；样本里 = 0x16610 + 1471×8 '
+              '= 0x19408 —— **不是固定偏移**',
+     'verify': '6/6 份存档在 0x19408 找到 u32 标签 0x20 且条数 ≤ 8；'
+               'src/savetail.c 已改成扫描定位'},
     {'id': 'tail_end_marker',
      'claim': '文件最后两字节 = (engine+0x458, engine+0x85!=0)',
      'verify': '实测 6 份存档末两字节都是 01 01'},
     {'id': 'head_marker',
-     'claim': 'tail+0x18 固定为 02（协程快照 0 的一个字段）',
+     'claim': 'tail+0x18 固定为 02 —— 那是第 4 条全局变量记录的 type（int），'
+              '不是旧文档以为的"协程快照 0 的字段"',
      'verify': '实测 6 份存档都是 02'},
 ]
 
@@ -291,6 +343,21 @@ def check_frags(blob, frags):
     return True, None
 
 
+def reader_checks(data, secs):
+    """逐条校验读档侧判据字节，返回冻结清单。"""
+    out = []
+    for item in READER:
+        blob = u8(data, secs, int(item['va'], 16), 0x40)
+        ok, bad = check_frags(blob, item['frags'])
+        if not ok:
+            raise SystemExit('FAIL: reader #%d @%s 判据字节 %s 不符（实际 %s）'
+                             % (item['order'], item['va'], bad, blob.hex()))
+        rec = dict(item)
+        rec['bytes'] = blob.hex()
+        out.append(rec)
+    return out
+
+
 def extract(path):
     data, secs = load_exe(path)
     out_segments = []
@@ -335,6 +402,7 @@ def extract(path):
         'segments': out_segments,
         'tail_starts_after': 'thumbnail（第 5 段）之后',
         'invariants': INVARIANTS,
+        'reader': reader_checks(data, secs),
         'unknown': UNKNOWN,
     }
 

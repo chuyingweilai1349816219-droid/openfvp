@@ -10,8 +10,9 @@
 1. 重新提取 → 与基线逐字节一致（exe 里那段指令流变了就报错）；
 2. 基线的结构自检（31 段、5 段文件头、26 段槽尾、末两字节写出规则）；
 3. **数据侧**：拿 6 份真实存档按这个模型走一遍，验证可证伪的推论
-   （协程快照紧贴 tail 起点、128 槽字符串表正好在 +0x16608 结束、
-   tail+0x18 = 02、文件末两字节 01 01）。缺存档/缺 exe 时 SKIP。
+   （`tail[0:0x2DF8]` = 1471 条每槽全局变量、128 槽字符串表在 0x19300、
+   字符串池标签 = 0x16610 + 全局变量字节数 = 0x19408、末两字节 01 01），
+   并校验读档侧 20 步游标顺序。缺存档/缺 exe 时 SKIP。
 
 用法：python tests/verify_exe_save_serialize.py
 """
@@ -136,11 +137,31 @@ def main():
           % len(ref['unknown']))
     check(len(ref['invariants']) == 4, '4 条数据侧推论写进基线')
 
+    print('== 2b. 读档侧（反序列化）顺序 ==')
+    rd = ref['reader']
+    check(len(rd) == 20, '读档侧 %d 步（期望 20）' % len(rd))
+    va = [r['va'] for r in rd]
+    check(va[0] == '0x0043efcc' and rd[0]['frags'][0] == '8b06',
+          '读档从偏移 7 开始（0x43EFCC：mov (%esi),%eax; movl $7,0x8(%esi)）')
+    check(any('c8666a00' in r['bytes'] for r in rd),
+          '每槽全局变量的条数来自 engine+0x6A66C8（0x43F0D4）')
+    check(any('d00f0000' in r['bytes'] for r in rd),
+          '缩略图按 w*h*4 推进游标（0x43F0C7）')
+    check(any('8dbeec496a00' in r['bytes'] for r in rd),
+          '128 槽字符串表逐条读（0x43F152 调 0x433F60）')
+    check(any('8dbef04d6a00' in r['bytes'] for r in rd),
+          '128 项表在 0x43F1CA（逐项读，不是整块 memcpy）')
+    check(any('c0446a00' in r['bytes'] for r in rd),
+          '调色板 → engine+0x6A44C0（0x43F24E）')
+    check(rd[-1]['va'] == '0x0043f282' and
+          rd[-1]['frags'] == ['8b8ec8496a00', '81ffb0040000'],
+          '读档最后回填历史环（count/pos + 100 条，0x43F262/0x43F282）')
+
     print('== 3. 数据侧：6 份真实存档按模型走一遍 ==')
     if not os.path.isdir(SAVE):
         print('  SKIP: 缺存档目录 %s' % SAVE)
     else:
-        counts = {'ctx_data': 0, 'table_ok': 0, 'markers': 0, 'len_ok': 0,
+        counts = {'globals': 0, 'e_empty': 0, 'markers': 0, 'len_ok': 0,
                   'pool': 0}
         for slot in SLOTS:
             path = os.path.join(SAVE, slot + '.bin')
@@ -157,45 +178,46 @@ def main():
                 check(False, '%s: 缩略图越界' % slot)
                 continue
             blob = data[thumb_off + thumb:]
-            # 32 个协程快照：0..7 号都应有数据（实测现象，8 号之后基本为零）
-            live = [i for i in range(CTX_COUNT)
-                    if any(blob[i * CTX_STRIDE:(i + 1) * CTX_STRIDE])]
-            ctx_ok = len(live) >= 8 and live[:8] == list(range(8))
-            if ctx_ok:
-                counts['ctx_data'] += 1
-            # 128 槽字符串表正好在 +0x16608 结束
-            end, slots = parse_string_table(blob, CTX_BYTES + 8)
-            table_ok = (end == CTX_BYTES + 8 + 0x80 * 2 and
-                        sum(1 for s in slots if s) == 0)
-            if table_ok:
-                counts['table_ok'] += 1
-            # 字符串池标签：0x16610 + globals_bytes（6 份样本 = 1471×8 → 0x19408）
-            pool_off = POOL_BASE + GLOBALS_PER_SLOT * 8
+            # 每槽全局变量：1471 条 × 8 字节，type 只出现 0/1/2/4/5/6
+            gbytes = GLOBALS_PER_SLOT * 8
+            types = [blob[i * 8] for i in range(GLOBALS_PER_SLOT)]
+            globals_ok = (all(t <= 6 for t in types) and
+                          types.count(2) > 0 and blob[0x18] == 2)
+            if globals_ok:
+                counts['globals'] += 1
+            check(globals_ok, '%s: tail[0:%#x] = %d 条全局变量（type=2 的 %d 条，'
+                  '第 4 条 type=%d）'
+                  % (slot, gbytes, GLOBALS_PER_SLOT, types.count(2),
+                     blob[0x18]))
+            # 128 槽字符串表：0x2DF8 + 0x16500 + 8 + 0x100（样本全空）
+            e_start = gbytes + CTX_BYTES + 8
+            e_end, e_slots = parse_string_table(blob, e_start)
+            e_ok = (e_end == e_start + 0x100 and
+                    sum(1 for t in e_slots if t) == 0)
+            if e_ok:
+                counts['e_empty'] += 1
+            check(e_ok, '%s: 128 槽字符串表 @%#x..%#x 全空'
+                  % (slot, e_start, e_end if e_end else 0))
+            # 字符串池标签：0x16610 + 1471×8 = 0x19408
+            pool_off = POOL_BASE + gbytes
             tag = struct.unpack_from('<I', blob, pool_off)[0]
             cnt = struct.unpack_from('<I', blob, pool_off + 4)[0]
             pool_ok = tag == 0x20 and cnt <= 8
             if pool_ok:
                 counts['pool'] += 1
-            check(pool_ok, '%s: 字符串池标签 @%#x（0x16610 + %d×8）= %#x，条数 %d'
-                  % (slot, pool_off, GLOBALS_PER_SLOT, tag, cnt))
-            # 全局变量表长度必须正好把标签推到 0x19408：模 8 对齐且落在扫描窗口内
-            check(pool_off == 0x19408, '%s: 标签偏移 = 0x19408（全局变量 %d 条）'
-                  % (slot, GLOBALS_PER_SLOT))
-            markers = blob[0x18] == 2 and blob[-2:] == b'\x01\x01'
+            check(pool_ok, '%s: 字符串池标签 @%#x（0x16610 + %d）=%#x，条数 %d'
+                  % (slot, pool_off, gbytes, tag, cnt))
+            markers = blob[-2:] == b'\x01\x01'
             if markers:
                 counts['markers'] += 1
-            check(ctx_ok, '%s: 协程快照 0..7 有数据（活跃 %d 个）' % (slot, len(live)))
-            check(table_ok, '%s: 128 槽字符串表全空且止于 +0x16608（实际 %#x）'
-                  % (slot, end if end else 0))
-            check(markers, '%s: tail+0x18 = %#04x，末两字节 %s'
-                  % (slot, blob[0x18], blob[-2:].hex()))
+            check(markers, '%s: 末两字节 %s' % (slot, blob[-2:].hex()))
             check(len_ok, '%s: 槽头字符串长度不含 NUL（0x43DFCD 的写法）' % slot)
         n = len(SLOTS)
-        check(counts['ctx_data'] == n, '6 份都符合协程快照分布（%d/%d）'
-              % (counts['ctx_data'], n))
-        check(counts['table_ok'] == n, '6 份都符合 128 槽表结构（%d/%d）'
-              % (counts['table_ok'], n))
-        check(counts['markers'] == n, '6 份都符合首尾标记（%d/%d）'
+        check(counts['globals'] == n, '6 份都符合"1471 条全局变量"模型（%d/%d）'
+              % (counts['globals'], n))
+        check(counts['e_empty'] == n, '6 份的 128 槽字符串表都在 globals 之后'
+              '（%d/%d）' % (counts['e_empty'], n))
+        check(counts['markers'] == n, '6 份都符合末两字节标记（%d/%d）'
               % (counts['markers'], n))
         check(counts['len_ok'] == n, '6 份都符合槽头字符串长度约定（%d/%d）'
               % (counts['len_ok'], n))
@@ -207,14 +229,17 @@ def main():
     check('0x43DE90' in doc, 'save-format 写了序列化器入口 0x43DE90')
     check('128 槽' in doc or '128槽' in doc, '文档写了 128 槽字符串表')
     check('协程快照' in doc, '文档写了协程快照')
-    check('0x16608' in doc, '文档写了槽尾可前向走到的 0x16608 锚点')
+    check('0x16610' in doc, '文档写了字符串池基址 0x16610')
+    check('1471' in doc, '文档写了每槽全局变量 1471 条')
+    check('savetail' in doc or '扫描定位' in doc, '文档写了池位置靠扫描定位')
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 存档槽序列化顺序已从 exe 冻结（31 段：5 文件头 + 26 槽尾），'
-          '并用 6 份真实存档验证了可证伪的推论（协程快照紧贴 tail 起点、'
-          '128 槽字符串表止于 0x16608、首尾标记）；各子序列化器长度仍列为未解')
+    print('\nOK: 存档槽写/读顺序都已冻结（写 31 段；读 20 步，游标从 7 开始）；'
+          '数据侧 6 份真实存档验证了"tail 开头 = 1471 条全局变量（0x2DF8）→ '
+          '128 槽字符串表（0x19300）→ 字符串池标签（0x19408 = 0x16610 + 1471×8）"；'
+          '各子序列化器的绝对偏移仍列为未解')
     return 0
 
 

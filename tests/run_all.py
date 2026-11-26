@@ -732,12 +732,12 @@ def build_steps(args):
     vss = os.path.join(HERE, 'verify_exe_save_serialize.py')
     steps.append(Step('verify_exe_save_serialize.py', [PY, '-X', 'utf8', vss],
                       300, skip_reason=None,
-                      note='slot serializer frozen: 31 segments (5 header + 26 '
-                           'tail) of 0x43DE90, sources/sizes/asm evidence in '
-                           'ref/exe-save-serialize.json; data side validated on '
-                           '6 real saves (32 coroutine snapshots at tail+0, '
-                           '128-slot string table ends at tail+0x16608, '
-                           'tail+0x18 = 02, last two bytes 01 01)'))
+                      note='slot write order 31 segments + read order 20 '
+                           'steps frozen in ref/exe-save-serialize.json; data '
+                           'side validated on 6 real saves: tail[0:0x2DF8] = '
+                           '1471 per-slot globals, 128-slot string table at '
+                           '0x19300, string pool tag = 0x16610 + 1471*8 = '
+                           '0x19408, last two bytes 01 01'))
 
     # 6.4968636 台词历史（HistorySet 26 / HistoryGet 25）的 handler + 槽尾历史环
     vhi = os.path.join(HERE, 'verify_exe_history.py')
