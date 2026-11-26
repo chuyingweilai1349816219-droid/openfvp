@@ -228,6 +228,10 @@ int main(int argc, char **argv)
     if (text_fixed) {
         gfx_set_text_fixed_layout(gfx, 1);
     }
+    /* 打开补间表：关着时 Motion* 只沿时间轴走、不登记到可查询状态，连
+     * MotionXxxTest 也永远答"没有在跑的动作"，与脚本期待相反。headless 用
+     * ThreadNext 计数当帧时钟（见下），所以这里必须真记录。 */
+    gfx_motion_set_enabled(gfx, 1);
     fvp_vm_attach_gfx(&vm, gfx);
     if (text_out != NULL) {
         sink.f = fopen(text_out, "wb");

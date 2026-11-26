@@ -3523,10 +3523,17 @@ void gfx_motion_advance(Gfx *g, int dt_ms)
 
 int gfx_motion_test(Gfx *g, int prim_id, int kind)
 {
+    int r;
+
     if (g == NULL) {
         return 0;
     }
-    return fvp_motion_test(&g->motion, prim_id, kind);
+    r = fvp_motion_test(&g->motion, prim_id, kind);
+    if (getenv("FVP_DEBUG_MOTION") != NULL) {
+        fprintf(stderr, "motion_test prim=%d kind=%d -> %d (table=%u now_ms=%.0f)\n",
+                prim_id, kind, r, (unsigned)g->motion.n, g->motion.now_ms);
+    }
+    return r;
 }
 
 int gfx_motion_active(const Gfx *g)
