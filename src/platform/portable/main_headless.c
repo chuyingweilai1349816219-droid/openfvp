@@ -214,6 +214,13 @@ int main(int argc, char **argv)
      * 键位与按钮的完整对应还没逆完，这里只保证"点击能满足脚本轮询的位"，
      * 属于合成输入模型的一部分；--click-mask 可改。 */
     vm.click_mask = click_mask;
+    /* 打开 VM 的虚拟时钟（--timeline 等价）：`fvp_vm_run` 只在 timeline_on 时
+     * 把所有线程都阻塞的等待推进到下一个唤醒点（timeline_advance）。headless 没有
+     * 真实帧循环，关着时钟时 `ThreadRaise(ms)`/定时器语义只能"醒来即继续"，
+     * 脚本里等时间的循环就永远等不到（CHANGELOG 六十二续的候选 3）。 */
+    if (getenv("FVP_NO_TIMELINE") == NULL) {
+        vm.timeline_on = 1;
+    }
     /* 光标默认放画面中央（原版靠鼠标，headless 没有鼠标）：PrimHit 需要坐标，
      * 放在 (0,0) 时菜单项永远不命中，脚本停在标题（CHANGELOG 五十九续）。 */
     vm.cx = CANVAS_W / 2;
