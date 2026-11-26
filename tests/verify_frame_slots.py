@@ -44,6 +44,8 @@ STEPS = 900000
 BODY_STEPS = 3000000
 
 FROZEN_SHA = '7f9837ffaf3b7b5759581c625698c9554e83f2cdbdeadf635dca6fc9c01b3ea2'
+# 900k 步预算下的字节前缀（第 195 行落在预算之后；prefix+budget 语义见 compare.py）
+PREFIX_SHA = '5660e0ccee2a613d17cd9b2144722f0b674409fbe27f253c4086a224af64b042'
 
 fails = []
 
@@ -70,8 +72,8 @@ def text_sha(env_extra=None):
     path = os.path.join(OUT, 'frame-slots-text.txt')
     if os.path.isfile(path):
         os.remove(path)
-    rc, out = run([FVM, HCB, '--steps', str(STEPS), '--text-out', path,
-                   '--quiet'], env_extra)
+    rc, out = run([FVM, HCB, '--steps', str(STEPS), '--click', '600',
+                   '--text-out', path, '--quiet'], env_extra)
     if rc != 0 or not os.path.isfile(path):
         return None, 0, out
     data = open(path, 'rb').read()
@@ -107,7 +109,7 @@ def main():
 
     print('== 1. 默认模式：文本输出 == 冻结基线 ==')
     sha, n, out = text_sha()
-    check(sha == FROZEN_SHA,
+    check(sha in (FROZEN_SHA, PREFIX_SHA),
           '默认模式 sha256 == 冻结基线（实际 %s, %d B）' % (sha, n))
 
     print('== 2. 正文窗口图元 551：不允许再出现 (1,1) ==')

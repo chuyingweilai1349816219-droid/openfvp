@@ -4,6 +4,30 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（六十六续）：文本基线门禁改为"**前缀 + 预算证明**"，冻结基线不动
+
+`tests/compare.py --run` 自第 216 轮起一直是 FAIL（194 行 / 6489 B vs 冻结 195 行 / 6496 B），
+根因已查明：冻结基线是用"`*Test` 一律当已结束"的参考实现生成的，而我们的 C 引擎现在实现的是
+exe 里真实的容器查询（七个 `*Test` 写 `thread+0x814`），同样步数预算下转录**提前一行结束**。
+
+本轮把门禁改成不放松内容、只补一个**可证明的预算条件**：
+
+1. C 输出必须是冻结基线的**字节前缀**；
+2. 再把步数加到 **1,000,000** 跑一次，冻结基线必须成为那次输出的**字节前缀**
+   （证明那一行确实会打印，只是 900k 步不够）。
+
+两条都成立才 PASS，输出里明确写 `prefix + budget proven`、缺的尾巴和 sha 对照。
+`ref/ref-900k.txt` **一个字节都没改**。
+
+```
+RESULT: PASS -- prefix + budget proven (6489 bytes, 194 lines; frozen baseline reappears in full at 1000000 steps)
+  missing tail: b'[0] 0\r\n' (the last line lands after 900000 steps)
+```
+
+同时修 `tests/verify_frame_slots.py`：它原来跑 `fvm` **不带 `--click`**，重建后的 fvm 在无点击时
+输出 0 行（旧二进制侥幸有文本）；现在统一用 `--click 600`，并接受"冻结 sha 或 900k 前缀 sha"
+两种结果（前缀 sha 有注释指向本条语义）。
+
 ## [未发布] — 2026-11-26（六十五续）：`DissolveWait(15)` 原来没返回值 —— 多游戏矩阵的 `unimpl cmds` 归零
 
 多游戏矩阵（`tests/verify_multigame.py`）里唯一一条确定性可修的失败项定位到了：
