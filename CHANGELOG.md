@@ -4,6 +4,25 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（五十九续）：素材不是卡点 —— `Motion*` 在 headless 里从未真正生效
+
+载入 2653 张素材后再做 pc 直方图（400k 步）：
+
+| pc | 次数 | 指令 |
+|---|---|---|
+| `0x23827/0x2382A/0x2382D` | 17584 | ThreadNext（让出 = 一帧） |
+| `0x592DF..0x592E7` | 17452 | `MotionAlphaTest(265); eq(temp,false)` |
+
+与没有素材时**完全一样** ⇒ 素材不是这条链上的卡点。结合上一轮 `motion_add` 计数为 **0**：
+
+> headless 里**一条 Motion\* 都没有真正生效**（fvm 里 42/48/54 等被计入 unknown，也从未生效）。
+
+所以 `MotionAlphaTest(265)` 永远 0，脚本认为"没有动画在跑"，走 idle 轮询分支，一直等点击；
+我们点得再多也只是 ControlPulse + ThreadNext，不会推进剧情。
+
+下一轮定位（不用抓帧）：给 `src/syscall.c` 的 `case 42/48/54` 加"被拒日志"（env-gated），
+看是 **argc 不符**（`fvp_gfx_argc()` 与 VM 的 argc 表不一致）还是 **实参类型/范围** 被拒。
+
 ## [未发布] — 2026-11-26（五十八续）：headless 接上了素材宿主接口，卡在**非 ASCII 路径**
 
 发现 `src/gfx.c` 里**已经有完整的素材宿主**：`gfx_archive_host_create(game_dir)` +
