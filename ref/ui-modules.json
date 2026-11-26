@@ -1,0 +1,66 @@
+{
+ "schema": "fvp-ui-modules/1",
+ "note": "两作 UI 模块的脚本侧地址对账（环形菜单装载器 / 确认框装载器）",
+ "games": {
+  "iroseka": {
+   "size": 4275282,
+   "hcb_sha256": "8c362ff7178628bef90f0d7bf35a48be5ee22f9f762d4c76e86799f6f063c0ff",
+   "ring": {
+    "fn": "0x54520",
+    "instructions": 481,
+    "assets": 44,
+    "prim_min": 141,
+    "prim_max": 421,
+    "callers": [
+     "0x54cf4"
+    ],
+    "entry": "0x54c68",
+    "first_asset": "sys_save_1",
+    "first_pc": "0x54526"
+   },
+   "dialog": {
+    "fn": "0x57383",
+    "instructions": 345,
+    "assets": 13,
+    "prim_min": 93,
+    "prim_max": 137,
+    "callers": [
+     "0x578e9"
+    ],
+    "entry": "0x577c8",
+    "first_asset": "menu_bg",
+    "first_pc": "0x573c2"
+   }
+  },
+  "hoshimemo": {
+   "size": 4618610,
+   "hcb_sha256": "e23b7958f897392e3535370956b7c9a722c562f0a6d65e91d589cfdd2b741802",
+   "ring": {
+    "fn": "0x6b8e1",
+    "instructions": 401,
+    "assets": 35,
+    "prim_min": 141,
+    "prim_max": 421,
+    "callers": [
+     "0x6bf6c"
+    ],
+    "entry": "0x6bee4",
+    "first_asset": "sys_save_1",
+    "first_pc": "0x6b8e7"
+   },
+   "dialog": {
+    "fn": "0x6e297",
+    "instructions": 324,
+    "assets": 13,
+    "prim_min": 93,
+    "prim_max": 137,
+    "callers": [
+     "0x6e7da"
+    ],
+    "entry": "0x6e6ba",
+    "first_asset": "menu_bg",
+    "first_pc": "0x6e2d6"
+   }
+  }
+ }
+}

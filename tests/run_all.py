@@ -1043,6 +1043,15 @@ def build_steps(args):
                            'iroseka 81 rects cross-checked against the extract path, '
                            'hoshimemo 73 rects (8 ring items 125x125, full-height windows)'))
 
+    # 6.50 UI 模块地址（两作同构：环形装载器 / 确认框装载器，各只有 1 个调用点）
+    vum = os.path.join(HERE, 'verify_ui_modules.py')
+    steps.append(Step('verify_ui_modules.py', [PY, '-X', 'utf8', vum], 300,
+                      skip_reason=None,
+                      note='UI module addresses across both games: ring loader '
+                           '0x54520 / 0x6B8E1 (44/35 assets), dialog loader '
+                           '0x57383 / 0x6E297 (13 each), one caller each -> entry '
+                           '0x54C68 / 0x6BEE4 and 0x577C8 / 0x6E6BA'))
+
     # 6.5 游戏内菜单（外壳侧占位实现，--menu-at 打开）
     vg = os.path.join(HERE, 'verify_gamemenu.py')
     steps.append(Step('verify_gamemenu.py', [PY, vg], 900,
