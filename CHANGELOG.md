@@ -4,6 +4,48 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（七十九续）：修外壳装配 —— `--opening` 单独运行也能看到 FAVORITE logo
+
+**用户现场反馈**：跑起来只看到天空 CG，`--opening` 抓的 39 帧里**一个 logo 都没有**，而且开场「立刻结束」。本轮定位到的是外壳装配缺陷，不是新的逆向结论；openseq 时间轴数学与 `ref/opening-scene.json`
+里的素材矩形都没问题。
+
+### 根因（两处，互为因果）
+
+| 现象 | 根因 | 证据 |
+|---|---|---|
+| 开场 39 帧全是天空 CG，无 logo | 六层素材的 `gfx_graph_load` 调用原本嵌在 `if (title_active)` 里；`--opening` 不配 `--title-menu` 时 `title_active == 0`，六层**从未载入**，帧循环里 `st.alpha` 走空 | 日志只有 `opening: finished in 39007308 ms (0 layers)`，既无 `6/6 layers loaded`，也无任何 `title:` 行 |
+| 开场"第一帧就结束"、耗时 39007308 ms | 同上：`opening_started_at` 只在实际载入成功时才赋值；未载入时它保持 0，`opening_ms = now_sec()*1000` 变成 3.9e7 ms，第一帧就 `fvp_openseq_done()` | 3.9e7 ms ≈ `now_sec()` 的毫秒值，正好是第一帧的墙钟 |
+
+### 修复
+
+- `src/platform/win32/main_win32.c`：六层载入从 `if (title_active)` 里搬出来，改成
+  `if (opening_active)` 独立一段（位置在标题素材之后、字体/桥接之前）。载入层数不等于 6 时
+  照旧整段跳过并回落到静态标题，避免半套画面。开场游戏名也改到 `--game` 目录转 UTF-8
+  之后再定（`title_profile` 优先，没有 profile 时用目录名），`--opening` 单跑不会错认作品。
+- `src/openseq.c`：`fvp_openseq_game_from_name()` 由 `strcmp` 全等改成**不区分大小写的子串**
+  匹配，于是 `"hoshimemo"` 短名和 `"...\Hoshimemo_HD"` 目录路径都能识别。
+
+### 验证（都是真启动、真抓帧）
+
+| 门禁 | 结果 |
+|---|---|
+| `mingw32-make -f Makefile win32` | 成功（`bin/fvp.exe` 21:39 重建） |
+| `make check` | **PASS**（含 `test_openseq: 2620 passed, 0 failed`） |
+| `tests/verify_opening_render.py` | **PASS**（两作：白场→淡出露标题背景→结束帧与静态标题帧逐字节相同） |
+| `--opening`（不带 `--title-menu`） | 日志 `opening: 6/6 layers loaded` → `finished in 3816 ms (6 layers)` |
+| `--opening --title-menu` | 日志 `6/6 layers loaded` → `finished in 3808 ms` → `title: script entrance started`（logo 2000 ms、5 项菜单错 40 ms、共 4000 ms） |
+
+抓帧序列（`out/seq/s-0000..0028.bmp`，300 ms 一帧，960×540）拼图 `out/c/seq_strip.png`：
+白底＋FAVORITE/FVP logo 淡入放大 → logo 淡出露出天空 CG（羽毛）→ 标题 logo
+「いろとりどりのセカイ HD Re:GENERATION」淡入 → New Game/Continue/Album/Option/Exit
+逐项错峰进场 → 版权行，正是"从 logo 一直到所有动画结束"的一条连续链。
+
+### 诚实说明
+
+- 这是**外壳装配**缺陷（素材载入没接上时间轴），不是引擎语义问题；既有门禁只覆盖
+  "`--opening` 搭配 `--title-menu`"这一条路径，所以漏检。已把单跑路径纳入本轮实测。
+- 标题→正文仍未打通（prim 265 的动作记录缺席，见"七十八续"），本轮不涉及。
+
 ## [未发布] — 2026-11-26（七十八续）：阶段交付小结（第 260 轮，移交清单）
 
 **已冻结并有门禁守护的事实层**（全部来自原版文件：exe / HCB / 存档 / 素材包）：

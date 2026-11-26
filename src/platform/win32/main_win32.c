@@ -3196,13 +3196,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     }
     /* 开场序列（--opening）：白底 + FAVORITE logo 六层，时间轴来自脚本
      * （见 src/openseq.h / openinganim.h，hcb 0x58096..0x584CB）。
-     * 这里只置标志，标题资源的加载仍在上面按 title_active 做；
+     * 这里只置标志；游戏名字和素材载入要等 --game 目录转成 UTF-8 之后
+     * （见下方 game_u8 就绪处），这样 --opening 单独跑也能认对标题。
      * 开场期间不画标题菜单（见帧循环里的 opening_active 判断）。 */
     if (opts.opening) {
-        FvpOpenGame open_game = fvp_openseq_game_from_name(
-            title_profile != NULL ? title_profile->game : NULL);
-
-        fvp_openseq_init(&opening, open_game);
         opening_active = 1;
         /* 真正的日志在素材载入之后打（这里 log 文件还没打开）。 */
     }
@@ -3276,6 +3273,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
         timeEndPeriod(1);
         LocalFree(argv);
         return 2;
+    }
+    /* 开场序列的游戏识别：per-title profile 的短名优先，没有 profile 时退回
+     * --game 目录名（"Hoshimemo_HD" 之类）。 */
+    if (opening_active) {
+        const char *open_name = (title_profile != NULL) ? title_profile->game
+                                                        : game_u8;
+
+        fvp_openseq_init(&opening, fvp_openseq_game_from_name(open_name));
     }
 
     /* Continue 的存档列表：等 game_u8 就绪后再扫描（只读） */
@@ -3496,33 +3501,6 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                              ? "+MotionMoveR, path A/B"
                              : "");
             }
-            if (opts.opening) {
-                int i;
-                int loaded = 0;
-
-                for (i = 0; i < fvp_openseq_layer_count(); ++i) {
-                    if (gfx_graph_load(gfx, fvp_openseq_layer_slot(i),
-                                       fvp_openseq_layer_name(i)) == 0) {
-                        loaded += 1;
-                    }
-                }
-                opening_layers_loaded = loaded;
-                if (loaded == fvp_openseq_layer_count()) {
-                    fvp_logf("opening: %d/%d layers loaded (script slots "
-                             "250/252/254/255/256/257)", loaded,
-                             fvp_openseq_layer_count());
-                    fvp_logf("opening: script timeline (%s, %d ms): alpha in "
-                             "1200/1400, logo out 2500, bg out 3500, cut 100",
-                             fvp_openseq_game_name(opening.game),
-                             FVP_OPEN_TOTAL_MS);
-                    opening_started_at = now_sec();
-                } else {
-                    fvp_logf("opening: only %d/%d layers loaded, skipping",
-                             loaded, fvp_openseq_layer_count());
-                    opening_active = 0;
-                    title_active = opts.title_menu ? 1 : 0;
-                }
-            }
             title_textures_on = title_textures > 0;
             if (title_textures > 0) {
                 fvp_logf("title: %d/%d menu textures loaded (slots 0x%X..0x%X)",
@@ -3530,6 +3508,38 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
                          TITLE_SLOT_BASE + FVP_TITLE_ITEMS - 1);
             } else if (title_profile != NULL) {
                 fvp_logf("title: no usable texture, falling back to text");
+            }
+        }
+        /* ---- 开场六层素材（--opening）----
+         * 和标题素材分开载入：脚本里标题场景先建好、开场后跑，但 --opening
+         * 单独跑（不开 --title-menu）也必须能看到 logo 动画。载入失败的层
+         * 用 gfx_graph_load 的返回值统计；缺任何一层就整段跳过，避免画出
+         * 半套画面。 */
+        if (opening_active) {
+            int i;
+            int loaded = 0;
+
+            for (i = 0; i < fvp_openseq_layer_count(); ++i) {
+                if (gfx_graph_load(gfx, fvp_openseq_layer_slot(i),
+                                   fvp_openseq_layer_name(i)) == 0) {
+                    loaded += 1;
+                }
+            }
+            if (loaded == fvp_openseq_layer_count()) {
+                fvp_logf("opening: %d/%d layers loaded (script slots "
+                         "250/252/254/255/256/257)", loaded,
+                         fvp_openseq_layer_count());
+                fvp_logf("opening: script timeline (%s, %d ms): alpha in "
+                         "1200/1400, logo out 2500, bg out 3500, cut 100",
+                         fvp_openseq_game_name(opening.game),
+                         FVP_OPEN_TOTAL_MS);
+                opening_layers_loaded = loaded;
+                opening_started_at = now_sec();
+            } else {
+                fvp_logf("opening: only %d/%d layers loaded, skipping",
+                         loaded, fvp_openseq_layer_count());
+                opening_active = 0;
+                title_active = opts.title_menu ? 1 : 0;
             }
         }
         {

@@ -1,4 +1,5 @@
 /* FVP engine -- 开场 FAVORITE logo 序列的时间轴（见 openseq.h / openinganim.h）。 */
+#include <ctype.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -169,9 +170,34 @@ static int open_alpha(int t, const FvpOpenLayerDef *L)
     return 0;
 }
 
+/* 名字既可能是 per-title profile 的短名（"hoshimemo"），也可能是 --game 给的
+ * 目录路径（"C:\\...\\Hoshimemo_HD"）：按不区分大小写的子串匹配，两种都能认。 */
+static int name_has_token(const char *name, const char *token)
+{
+    size_t n = strlen(token);
+    size_t i;
+
+    if (name == NULL || n == 0) {
+        return 0;
+    }
+    for (i = 0; name[i] != '\0'; ++i) {
+        size_t k = 0;
+
+        while (k < n && name[i + k] != '\0' &&
+               tolower((unsigned char)name[i + k]) ==
+                   tolower((unsigned char)token[k])) {
+            ++k;
+        }
+        if (k == n) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 FvpOpenGame fvp_openseq_game_from_name(const char *name)
 {
-    if (name != NULL && strcmp(name, GAMES[1].name) == 0) {
+    if (name_has_token(name, GAMES[1].name)) {
         return FVP_OPEN_GAME_HOSHIMEMO;
     }
     return FVP_OPEN_GAME_IROSEKA;
