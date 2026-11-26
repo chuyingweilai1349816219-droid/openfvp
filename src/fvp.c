@@ -132,6 +132,8 @@ int fvp_value_truth(const FvpValue *v)
         return v->str != NULL && v->str->len != 0;
     case FVP_NULL:
         return 0; /* 原版 type 0：false / null */
+    case FVP_BOOL:
+        return 1; /* 原版 type 1：true */
     default:
         return 0;
     }
@@ -140,6 +142,11 @@ int fvp_value_truth(const FvpValue *v)
 int fvp_value_is_null(const FvpValue *v)
 {
     return v != NULL && v->type == (uint8_t)FVP_NULL;
+}
+
+int fvp_value_is_bool(const FvpValue *v)
+{
+    return v != NULL && v->type == (uint8_t)FVP_BOOL;
 }
 
 /* 原版 Variant 的 type 0（null/false）在数值运算里按 int 0 处理。
@@ -156,6 +163,13 @@ static void fvp_as_number(const FvpValue *v, FvpValue *out)
         out->type = (uint8_t)FVP_INT;
         out->i = 0;
         out->f = 0.0;
+        out->str = NULL;
+    } else if (out->type == (uint8_t)FVP_BOOL) {
+        /* 原版 type 1（true）在数值/比较上下文里就是 1；只有 handler 的
+         * `cmpb $0x2` 类型检查能看出它"不是 int"（见 fvp.h 的说明）。 */
+        out->type = (uint8_t)FVP_INT;
+        out->i = 1;
+        out->f = 1.0;
         out->str = NULL;
     }
 }
@@ -394,6 +408,9 @@ FvpStr *fvp_value_to_str(FvpArena *a, const FvpValue *v)
     case FVP_NULL:
         /* 与 int 0 的字符串形式保持一致（见 fvp_as_number 的说明）。 */
         return fvp_arena_str(a, "0", 1);
+    case FVP_BOOL:
+        /* 与 int 1 的字符串形式保持一致（同上）。 */
+        return fvp_arena_str(a, "1", 1);
     default:
         return fvp_arena_str(a, "", 0);
     }

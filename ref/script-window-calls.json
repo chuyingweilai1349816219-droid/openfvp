@@ -1,0 +1,326 @@
+{
+ "call_sites": [
+  {
+   "args": [
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    }
+   ],
+   "call_pc": "0x0363ca",
+   "canvas": {
+    "h": 202.5,
+    "w": 1380.0,
+    "x": 431.25,
+    "y": 880.875
+   },
+   "design": [
+    230,
+    522,
+    736,
+    120,
+    null
+   ],
+   "explicit": false,
+   "panel": {
+    "h": 1024,
+    "w": 1380
+   }
+  },
+  {
+   "args": [
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "int",
+     "value": 1
+    }
+   ],
+   "call_pc": "0x0365e7",
+   "canvas": {
+    "h": 202.5,
+    "w": 1380.0,
+    "x": 431.25,
+    "y": 880.875
+   },
+   "design": [
+    230,
+    522,
+    736,
+    120,
+    1
+   ],
+   "explicit": false,
+   "panel": {
+    "h": 1024,
+    "w": 1380
+   }
+  },
+  {
+   "args": [
+    {
+     "kind": "int",
+     "value": 246
+    },
+    {
+     "kind": "int",
+     "value": 258
+    },
+    {
+     "kind": "int",
+     "value": 800
+    },
+    {
+     "kind": "int",
+     "value": 320
+    },
+    {
+     "kind": "true",
+     "value": null
+    }
+   ],
+   "call_pc": "0x0367bd",
+   "canvas": {
+    "h": 540.0,
+    "w": 1500.0,
+    "x": 461.25,
+    "y": 435.375
+   },
+   "design": [
+    246,
+    258,
+    800,
+    320,
+    null
+   ],
+   "explicit": true,
+   "panel": {
+    "h": 1024,
+    "w": 1500
+   }
+  },
+  {
+   "args": [
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    }
+   ],
+   "call_pc": "0x036933",
+   "canvas": {
+    "h": 202.5,
+    "w": 1380.0,
+    "x": 431.25,
+    "y": 880.875
+   },
+   "design": [
+    230,
+    522,
+    736,
+    120,
+    null
+   ],
+   "explicit": false,
+   "panel": {
+    "h": 1024,
+    "w": 1380
+   }
+  },
+  {
+   "args": [
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    }
+   ],
+   "call_pc": "0x03b1a0",
+   "canvas": {
+    "h": 202.5,
+    "w": 1380.0,
+    "x": 431.25,
+    "y": 880.875
+   },
+   "design": [
+    230,
+    522,
+    736,
+    120,
+    null
+   ],
+   "explicit": false,
+   "panel": {
+    "h": 1024,
+    "w": 1380
+   }
+  },
+  {
+   "args": [
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    },
+    {
+     "kind": "true",
+     "value": null
+    }
+   ],
+   "call_pc": "0x052f06",
+   "canvas": {
+    "h": 202.5,
+    "w": 1380.0,
+    "x": 431.25,
+    "y": 880.875
+   },
+   "design": [
+    230,
+    522,
+    736,
+    120,
+    null
+   ],
+   "explicit": false,
+   "panel": {
+    "h": 1024,
+    "w": 1380
+   }
+  }
+ ],
+ "function": {
+  "defaults": [
+   {
+    "note": "x 缺省",
+    "pc": "0x039f33",
+    "slot": 250,
+    "value": 230
+   },
+   {
+    "note": "y 缺省",
+    "pc": "0x039f41",
+    "slot": 251,
+    "value": 522
+   },
+   {
+    "expr": "800-(26+2+30)*2+26*2",
+    "expr_pc": [
+     "0x039f4f",
+     "0x039f63"
+    ],
+    "expr_value": 736,
+    "note": "w 缺省（脚本里的算式，见 w_expr）",
+    "pc": "0x039f4f",
+    "slot": 252,
+    "value": 736
+   },
+   {
+    "note": "h 缺省",
+    "pc": "0x039f6f",
+    "slot": 253,
+    "value": 120
+   }
+  ],
+  "initstack": [
+   5,
+   0
+  ],
+  "layer": 0,
+  "pc": "0x039f27",
+  "prim": 551,
+  "sentinel": "pushtrue = 「用缺省值」",
+  "slots": [
+   250,
+   254
+  ]
+ },
+ "note": "HCB 脚本里文本窗口设置函数（0x39F27）的全部调用点与实参（A 类事实）；由 scripts/extract-script-window-calls.py 生成",
+ "scale": {
+  "canvas": [
+   1920,
+   1080
+  ],
+  "design": [
+   1024,
+   640
+  ],
+  "x": 1.875,
+  "y": 1.6875
+ },
+ "textbuff_min": 1024,
+ "unknown": [
+  "5 个缺省调用点分别在什么场景触发（要运行期才能确定执行顺序）",
+  "参数 5（槽 254）的用途：0x39F73 之后与 pushglobal 51/249 组合使用"
+ ]
+}

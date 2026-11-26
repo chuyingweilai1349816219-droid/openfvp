@@ -714,8 +714,10 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         }
         break;
     }
-    case 0x08:
-        fvp_thread_push(t, fvp_make_int(1));
+    case 0x08: /* pushtrue：原版 0x444960 写的是 Variant type **1**，不是 int 1。
+                * 这个区别是"true 哨兵 = 这一维不改"的全部依据：各 PrimSet* /
+                * Motion* handler 只对 Variant type 2（int）写字段。 */
+        fvp_thread_push(t, fvp_value_bool());
         t->pc += 1u;
         break;
     case 0x09: /* pushfalse：原版 0x444940 写的是 Variant type 0，不是 int 0 */

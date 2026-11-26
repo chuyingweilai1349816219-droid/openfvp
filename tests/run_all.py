@@ -698,6 +698,16 @@ def build_steps(args):
                            'character per line (70 lines not in the HCB), so that baseline '
                            'must not be re-frozen as-is'))
 
+    # 6.49650 脚本侧文本窗口几何 + pushtrue 的 Variant type 1 语义
+    vwc = os.path.join(HERE, 'verify_script_window_calls.py')
+    steps.append(Step('verify_script_window_calls.py', [PY, '-X', 'utf8', vwc], 600,
+                      skip_reason=None,
+                      note='script-side window geometry: 6 call sites of the window-setup '
+                           'function, only 0x0367BD passes explicit (246,258,800,320) -> canvas '
+                           '(461.25,435.375); the other 5 use defaults (230,522,736,120) -> '
+                           '(431.25,880.875) panel 1380x1024; plus pushtrue = Variant type 1 '
+                           '(so `PrimSetXY(prim,true,y)` really keeps x)'))
+
     # 6.496495 TextBuff 尺寸上限/越界行为（从 exe 0x430EA0 抄出来；缺 work/ 时 SKIP）
     vtb = os.path.join(HERE, 'verify_exe_textbuff.py')
     steps.append(Step('verify_exe_textbuff.py', [PY, '-X', 'utf8', vtb], 600,

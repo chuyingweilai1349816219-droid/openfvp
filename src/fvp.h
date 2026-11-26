@@ -33,7 +33,17 @@ typedef enum FvpType {
      * 在数值/字符串上下文里与 int 0 等价（见 fvp.c 的说明），
      * 但 handler 可以用 fvp_value_is_null() 区分"省略"与"显式 0"——
      * LipAnim(38)/LipSync(39)/ControlMask(8)/CursorShow 都靠这个区别。 */
-    FVP_NULL = 3
+    FVP_NULL = 3,
+    /* 原版 Variant 的 **type 1**：`true`。pushtrue(0x08) 压出来的是它
+     * （原版 0x444960：`c6 44 c1 08 01` = 只写类型字节 0x1，载荷不动）。
+     *
+     * 为什么必须与 int 1 区分：原版每个 PrimSet / Motion 类 handler 都做
+     * `cmpb $0x2,(%edx)` / `cmpb $0x2,0x8(%edx)` 之类的**逐实参类型检查**，
+     * 只有 Variant type 2（int）才写字段；脚本用 `true` 当哨兵表示"这一维不改"。
+     * 我们以前把 pushtrue 压成 int 1，于是 `PrimSetXY(551, true, true)` 把
+     * x/y 写成 1 —— 正文窗口因此落在 (1,1)（用户报的"正文位置不对"根因）。
+     * 数值上下文里它仍等于 1（fvp_as_number），所以比较/算术行为不变。 */
+    FVP_BOOL = 4
 } FvpType;
 
 typedef struct FvpValue {
@@ -83,6 +93,19 @@ static inline FvpValue fvp_make_str(FvpStr *s)
     return v;
 }
 
+/* 原版 Variant type 1 = true（pushtrue 压的值）。
+ * 数值上下文里等于 1，但类型不是 int —— 这正是各 handler 的
+ * `cmpb $0x2` 类型检查要区分的东西。 */
+static inline FvpValue fvp_value_bool(void)
+{
+    FvpValue v;
+    v.type = (uint8_t)FVP_BOOL;
+    v.i = 1;
+    v.f = 1.0;
+    v.str = NULL;
+    return v;
+}
+
 /* Python truthiness: 0 / 0.0 / "" are false, everything else true.
  * FVP_NULL (原版 type 0) is false. */
 int fvp_value_truth(const FvpValue *v);
@@ -90,6 +113,9 @@ int fvp_value_truth(const FvpValue *v);
 /* 1 = 原版 Variant 的 type 0（false / null / 省略），即 pushfalse 压出来的值。
  * 参数指针本身为 NULL 时返回 0（"没有这个参数" 由各 handler 自己判 argc）。 */
 int fvp_value_is_null(const FvpValue *v);
+
+/* 1 = 原版 Variant 的 type 1（true），即 pushtrue 压出来的值。 */
+int fvp_value_is_bool(const FvpValue *v);
 
 /* Python `a == b` (never raises; cross-type number comparison). */
 int fvp_value_eq(const FvpValue *a, const FvpValue *b);

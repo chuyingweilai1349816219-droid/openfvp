@@ -471,11 +471,75 @@ static void test_bool_type_jmpcond(void)
     }
 }
 
+/* 最小 .hcb #0b：pushint8 0 ; jmpcond 13 ; pushint8 1 ; ret（同上注释） */
+
+/* 11. pushtrue（opcode 0x08）压的是**原版 Variant type 1**，不是 int 1。
+ *
+ * 为什么必须区分：原版 0x444960 只写类型字节 0x1；各 PrimSet* / Motion* handler
+ * 只对 Variant type 2（int）写字段，所以脚本里的 `true` 是"这一维不改"的哨兵。
+ * 我们以前压 int 1 → `PrimSetXY(551, true, y)` 把 x 写成 1，正文窗口跑到 (1,1)
+ * （用户报的"正文位置不对"根因）。数值语义必须与 int 1 等价，否则比较/算术全变。 */
+static const unsigned char kPushTrueHcb[9] = {
+    0x05, 0x00, 0x00, 0x00, /* script_len = 5 */
+    0x08,                   /* pushtrue */
+    0x04, 0x00, 0x00, 0x00  /* main_start = 4 */
+};
+
+static void test_pushtrue_opcode(void)
+{
+    const char *path = "bin/_nullvalue_pushtrue.hcb";
+    FvpHcb hcb;
+    FvpVM vm;
+    char err[256];
+
+    CHECK(write_file(path, kPushTrueHcb, sizeof(kPushTrueHcb)) == 1,
+          "write pushtrue hcb");
+    if (!fvp_hcb_load(&hcb, path, FVP_ENC_CP932, err, sizeof(err))) {
+        CHECK(0, "load pushtrue hcb: %s", err);
+        remove(path);
+        return;
+    }
+
+    fvp_vm_init(&vm, &hcb, 1);
+    fvp_vm_start(&vm);
+    (void)fvp_vm_run(&vm, 1);
+
+    CHECK(vm.cur != NULL, "thread exists after pushtrue");
+    if (vm.cur != NULL && vm.cur->sp == 1) {
+        FvpValue top = vm.cur->stack[0];
+        FvpValue one = fvp_make_int(1);
+        FvpValue onef = fvp_make_float(1.0);
+        FvpValue two = fvp_make_int(2);
+
+        CHECK(top.type == (uint8_t)FVP_BOOL,
+              "pushtrue pushes FVP_BOOL (type=%u)", (unsigned)top.type);
+        CHECK(top.type != (uint8_t)FVP_INT,
+              "pushtrue does NOT push an int (type=%u)", (unsigned)top.type);
+        CHECK(fvp_value_is_bool(&top) == 1, "pushed value is bool");
+        CHECK(fvp_value_is_null(&top) == 0, "pushed value is not null");
+        CHECK(fvp_value_truth(&top) == 1, "bool is truthy");
+        /* 数值语义与 int 1 完全等价（这是冻结基线不动的根据） */
+        CHECK(fvp_value_eq(&top, &one) == 1, "bool == int 1");
+        CHECK(fvp_value_eq(&one, &top) == 1, "int 1 == bool");
+        CHECK(fvp_value_eq(&top, &onef) == 1, "bool == float 1.0");
+        CHECK(fvp_value_eq(&top, &two) == 0, "bool != int 2");
+        CHECK(fvp_value_truth(&top) == fvp_value_truth(&one),
+              "same truthiness as int 1");
+    } else {
+        CHECK(0, "sp=%d after pushtrue", vm.cur ? (int)vm.cur->sp : -1);
+    }
+
+    fvp_vm_free(&vm);
+    fvp_hcb_free(&hcb);
+    remove(path);
+}
+
 int main(void)
 {
     test_null_value();
     test_lip_and_control();
     test_pushfalse_opcode();
+    test_pushtrue_opcode();
     test_bool_type_jmpcond();
 
     printf("test_nullvalue: %d passed, %d failed\n", g_pass, g_fail);

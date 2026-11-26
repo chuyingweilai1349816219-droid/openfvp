@@ -4,6 +4,48 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（四十五续）：`pushtrue` 是 Variant type 1，不是 int 1 —— 正文位置跑到 (1,1) 的真正原因
+
+用户两次问"正文位置不对解决了吗"。这一轮把**根因**钉住并修掉了，它不是渲染问题：
+
+原版 `pushtrue`（`0x444960`）只写 Variant 的**类型字节 `0x1`**（`c6 44 c1 08 01`），
+`true` 是**独立类型**；而每个 `PrimSet*` / `Motion*` handler 都做**逐实参类型检查**
+（`cmpb $0x2,(%edx)` / `cmpb $0x2,0x8(%edx)` …），只有 Variant **type 2（int）** 才写字段。
+所以脚本里的 `PrimSetText(551, 0, true, true)`、`PrimSetXY(551, true, y)` 里的 `true`
+是**"这一维不改"的哨兵**。我们以前把 `pushtrue` 压成 int 1，哨兵就真把 x/y 写成 **1** ——
+正文窗口因此落在 (1,1)。
+
+修法：
+- `src/fvp.h` 新增 `FVP_BOOL`（= 原版 Variant type 1）+ `fvp_value_bool()`；
+- `src/fvp.c` 的 `fvp_as_number()` 把 BOOL 当 **1**、`fvp_value_truth()` 把 BOOL 当真
+  （所以**比较/算术/字符串化一字不变**，`eq(true,true)` 仍为真）；
+- `src/vm.c` 的 `pushtrue`（opcode `0x08`）改压 BOOL。
+
+实测（`bin\fvp.exe --dump-text-prims`）：
+
+```
+修复前： textprim id=552 tw=8 xy=1,852
+修复后： textprim id=552 tw=8 xy=375,852   ← 与脚本 (200,505)×(1.875,1.6875) 完全一致
+```
+
+同时把**脚本侧文本窗口几何**全部抄出来（A 类）：`ref/script-window-calls.json` +
+`scripts/extract-script-window-calls.py` + `tests/verify_script_window_calls.py`
+（`run_all` 6.49650）。窗口设置函数 `0x39F27`（`initstack 5|0`，槽 250..254）全脚本只有
+**6 个调用点**，缺省几何 `(230,522,736,120)` → 画布 **(431.25, 880.875)**、面板 **1380×1024**；
+其中**只有 `0x0367BD` 传显式几何 (246,258,800,320)** → 画布 **(461.25, 435.375)**、面板
+1500×1024 —— 这正是用户截图里"正文浮在 CG 上"的那一段（用户补充的"只持续一小段就回归
+正常格式"与"6 个调用点里有 5 个吃缺省"完全对应）。
+
+另外**撤回**上一轮一条过度解读：`0x433037` 那条算术不是"每行水平居中"，
+它的两个操作数都是**字形步进之和**，而且只出现在控制码（`0x5B`/`0x5D`/`0x7C`）分支里；
+渲染器保持"从 `0x5AC` 缩进左对齐"。
+
+门禁全绿：冻结文本基线逐字节不变（6496 B / 195 行 / sha256 `7f9837ff…`）、
+像素基线不变（293 px / 0.0141% / PSNR 49.94 / SSIM 0.99971）、`make check` PASS。
+**未完成**：30 s 采样窗口里 `PrimSetText(551, …)` 一次都没被调用（只有 552/553），
+所以"这一段剧情为什么在我们 VM 里没跑到"仍待查（脚本里 551 的绑定被
+`pushglobal 249 == true` 保护，见 `0x39F78..0x39F7D`）。
+
 ## [未发布] — 2026-11-26（四十四续）：ColorSet(7) 其实是"写调色板"（我们原来是空操作）
 
 继续"高频且无基线"清单：**`ColorSet(7)`，244 次**。我们原来把它当**空操作**
