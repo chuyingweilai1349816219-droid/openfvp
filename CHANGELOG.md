@@ -4,6 +4,59 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（九十三续）：默认路径去掉"版面表兜底" —— 文本只按图元绝对坐标画
+
+### 1. 用户要求 #3 落地
+
+> 文本按图元绝对坐标绘制；固定版面表只保留给冻结像素基线的旧路径，默认路径不得使用。
+
+以前 `src/gfx.c` 的图元驱动路径对**未绑定**窗口（正文 0 等）还会"按窗口自己的版面"
+兜底画一遍（版式是 `work/render.py` 的近似表，不是原版数据）。这一轮去掉：
+
+```c
+/* 默认路径：不再补画未绑定窗口 —— 没有 PrimSetText(86) 图元的窗口不上屏。
+ * 版面表只在 --text-fixed-layout（冻结像素基线的旧路径）里用。 */
+```
+
+后果（如实记录）：
+
+| 场景 | 改动前 | 改动后 |
+|---|---|---|
+| 图元驱动 + 有绑定 | 按图元绝对坐标画 | 不变 |
+| 图元驱动 + **未绑定** | 按版面表在 (150,905) 等处画（近似版式） | **不画** |
+| 旧路径 `--text-fixed-layout` | 按版面表画 | 不变（冻结基线不受影响） |
+
+这也解释了之前"浮游旁白画在版面位置"的现象：那一帧 `tw0` 没有 type-5 图元绑定，
+所以走的是兜底；现在它**不上屏**，而不是画到错误位置——语义上更接近"文本必须由图元承载"。
+
+### 2. 单测更新
+
+- `tests/test_textprims.c`：断言 1 从"正文按版面画"改为"**未绑定窗口不画**（无兜底）"；
+  项数 29 → **40**，全部通过。
+- `tests/test_gaiji_render.c`：原来依赖"未绑定 0 号窗口按版面画"，现在先给 0 号窗口建一个
+  文本图元（固定在 (150,905)）再断言外字渲染；项数不变。
+
+### 3. 门禁
+
+| 门禁 | 结果 |
+|---|---|
+| `make check` | **PASS**（含 `test_textprims` 40、`test_gaiji_render` 17） |
+| `tests/compare.py --run` | **PASS**（fvm 不受影响） |
+| `tests/verify_gfx.ps1 -SkipDump` | **PASS**（289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971；旧路径未动） |
+| `tests/verify_opening_render.py` | **PASS**（两作） |
+| `verify_prim_refs` / `verify_thread_calls` / `verify_text_geometry` | **PASS** |
+| `scripts/check-docs.py` | **PASS** |
+
+### 4. 诚实说明
+
+- `tests/verify_headless.py` 仍然失败（3 项）：它按旧格式找 `headless: steps=` 行，而当前
+  `fvp-headless` 的汇总行是 `headless: primhit=… threadnext=… steps=…`；另外它期望
+  "文本回调有行数"，但带 gfx 的 headless 在现有语义下到不了 `TextPrint`。这两条都是
+  **先于本轮就存在的过期断言**（该脚本不在五门禁里），本轮没有修它，避免顺手改门禁语义。
+- 本轮没有改变任何冻结基线：像素 289 px、文本 195 行 / 6496 B 全部不变。
+- "浮游旁白位置"仍然画不出来，但性质变了：以前是画在**错误位置**（版面兜底），
+  现在是**不画**（缺图元绑定）。下一步该查的是"脚本为什么让这句旁白没有图元绑定"。
+
 ## [未发布] — 2026-11-26（九十二续）：faithful `bool_type` 模式的自旋点定位到 `0x23681` 一带
 
 上一轮只测到「faithful 模式 `threadnext = 0`」。这一轮用 `fvm.exe --bool-type --pctrace`

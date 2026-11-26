@@ -3083,17 +3083,13 @@ static void draw_text_all(Gfx *g)
          *   - 8（人名）/9（章节标题）是覆盖层窗口：原版只在脚本给它们建了
          *     PrimSetText(86) 文本图元时才上屏。未绑定就不画 —— 否则就会凭空
          *     出现一个实机看不到的「标题」/名牌（2026-11-26 用户实机反馈）。
-         *   - 其余窗口（正文 0 等）有窗口自己的版面，未绑定时按版面画。
+         *   - **所有**未绑定窗口都不补画：2026-11-26 用户要求（正文渲染要求 #3）
+         *     "文本按图元绝对坐标绘制；固定版面表只保留给冻结像素基线的旧路径，
+         *     默认路径不得使用"。所以默认路径下没有 PrimSetText(86) 图元的窗口
+         *     不上屏，版面表只在 --text-fixed-layout 里用。
          * 合成对话框/名牌不画：框与名牌是脚本自己的图元。
          */
-        for (i = 0; i < GFX_TEXT_MAX; i++) {
-            if (i == 8 || i == 9 || g->text_bound[i]) {
-                continue;
-            }
-            if (text_visible(&g->tw[i])) {
-                draw_text_window(g, i, NULL, 255);
-            }
-        }
+        (void)i;
         if (getenv("FVP_DEBUG_TEXT") != NULL) {
             for (i = 1; i < GFX_PRIM_MAX; i++) {
                 const GfxPrim *p = &g->prim[i];

@@ -112,6 +112,16 @@ int main(void)
         return 1;
     }
 
+    /* 2026-11-26 起默认路径不再用版面表兜底（用户要求 #3），
+     * 所以先给 0 号窗口建一个文本图元，把文字固定在版面位置 (150,905)。 */
+    (void)gfx_set_prim(g, 201, GFX_F_TYPE, 5);
+    (void)gfx_set_prim(g, 201, GFX_F_TW, 0);
+    (void)gfx_set_prim(g, 201, GFX_F_X, 150);
+    (void)gfx_set_prim(g, 201, GFX_F_Y, 905);
+    (void)gfx_set_prim(g, 201, GFX_F_ALPHA, 255);
+    (void)gfx_set_prim(g, 201, GFX_F_DRAW, 1);
+    (void)gfx_set_prim(g, 201, GFX_F_PARENT, 0);
+
     /* --- 1. 没登记外字时，字符 'X' 走内建字形，不是纯红 --- */
     CHECK(gfx_gaiji_count(g) == 0, "fresh gaiji table");
     gfx_text_append(g, 0, "X");

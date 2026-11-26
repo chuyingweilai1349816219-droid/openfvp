@@ -11,7 +11,7 @@
  *   看不到的「标题」）。合成对话框/名牌只属于旧路径 --text-fixed-layout。
  *
  * 本测试用内建 8x16 ASCII 字体做像素级断言：
- *   1. 默认：正文窗口按版面画、**没有合成框**；未绑定的 9 号窗口不画
+ *   1. 默认：**未绑定窗口一律不画**（不再用版面表兜底）；没有合成框
  *   2. 建 type 5 文本图元 → 文本改画在图元绝对位置（含父链累加）
  *   3. 图元 alpha 乘进文字颜色（128 比 255 暗）；draw=0 不画
  *   4. 渲染确定；旧路径（fixed）有合成框 + 按版面画，可随时切回
@@ -113,8 +113,10 @@ int main(void)
     CHECK(gfx_text_prim_bindings(g) == 0, "no bindings yet (got %d)",
           gfx_text_prim_bindings(g));
     gfx_render(g);
-    CHECK(region_light(g, 110, 870, 220, 930) > 0,
-          "body text at its own layout (got %ld)",
+    /* 2026-11-26 起默认路径**不再用版面表兜底**：未绑定的正文窗口也不画
+     * （用户要求 #3：文本一律按图元绝对坐标画）。 */
+    CHECK(region_light(g, 110, 870, 220, 930) == 0,
+          "unbound body window is NOT drawn (no layout fallback, got %ld)",
           region_light(g, 110, 870, 220, 930));
     CHECK(region_light(g, 60, 860, 105, 1000) == 0,
           "no synthetic dialogue box (got %ld)",
