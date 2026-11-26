@@ -213,6 +213,15 @@ int fvp_motion_test(const FvpMotion *m, int prim_id, int kind)
     if (m == NULL) {
         return 0;
     }
+    /* 语义来自 exe：`*Test` handler（如 MotionAlphaTest `0x43A9C0`）先
+     * `call 0x422990(容器, id)`，再 `test %eax,%eax; setne` 写进 thread+0x814；
+     * 而 `0x422990` 只是在容器的 256 个 0x18 步长槽里找"**存在**且 id 匹配"的记录
+     * （`cmpb $0x0,0x4(slot)` 活跃标志 + `movswl 0xC(slot)` 与 id 比较），
+     * **完全不看进度/时间**。
+     *
+     * 所以正确语义是"该 prim 有没有动作记录"，不是"还在跑"——以前按进度过滤，
+     * 让已跑完（但记录还在）的补间答 0，脚本的等待循环就永远退不出来
+     * （CHANGELOG 七十~七十五续的 headless 卡标题根因）。 */
     for (i = 0; i < m->n; ++i) {
         const FvpTween *t = &m->e[i];
 
@@ -222,9 +231,7 @@ int fvp_motion_test(const FvpMotion *m, int prim_id, int kind)
         if (kind >= 0 && t->kind != kind) {
             continue;
         }
-        if (tween_progress(m, t) < 1.0) {
-            return 1; /* 还在跑 */
-        }
+        return 1;
     }
     return 0;
 }
