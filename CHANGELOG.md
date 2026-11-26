@@ -4,6 +4,40 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-26（五十六续）：headless 里的等待循环其实在**等菜单命中**，不是等动画
+
+把 `FVP_DEBUG_MOTION` 同时加到 `gfx_motion_add` 之后，400k 步的运行给出关键数字：
+
+```
+motion_add 行数                = 0        ← Motion* 命令一次都没落到补间表
+motion_test prim=265 ... -> 0  (table=0)  ← 反复查询 17455 次，表始终是空的
+```
+
+也就是说：**脚本等的那条动画从来没被创建**，而 `MotionAlphaTest(265)` 答 0（"没有在跑"）
+是正确的。回到脚本结构：
+
+```
+0x592D4 pushglobal 236; pushint8 1; neq; jmpcond 0x5930E
+0x592DF pushint16 265; syscall 44; eq(temp,false); jmpcond 0x5930E
+0x592ED syscall 31(test 3) / syscall 31(test 1) / logor / jmpcond
+0x59301 syscall 9 (ControlPulse)
+0x59304 call 0x23827 (=ThreadNext 小函数)
+0x59309 jmp 0x592DF                      ← 回到开头
+```
+
+这是一段**"等点击、每帧让出"的空转循环**：`temp == false` 时它落进输入轮询，点击命中就
+`ControlPulse(9)` 一次再回到开头 —— 说明当前位置是**标题/菜单画面**，点击要"选中菜单项"
+才能进正文，而 headless **没有素材宿主**（不加载贴图/字体），菜单图元没有尺寸，
+`PrimHit(76)`（iroseka 里用了 211 次）永远不命中 → 永远进不了正文、也永远不会
+`TextPrint(123)`。
+
+结论：headless 的 0 行文本**不是 VM bug**，而是"没有素材宿主"的必然结果；`verify_headless.py`
+里"必须有文本行 / legacy 版面不能全黑"这两条要在 headless 能加载素材（或给它一个
+最小素材宿主）之后才有意义。下一步二选一：
+① 给 headless 加最小素材宿主（读 `.bin`/HZC1，注册字库），让菜单命中成立；
+② 让 headless 支持"从指定脚本 pc/场景起步"，绕过标题直接验证正文渲染。
+两者都不改冻结基线。
+
 ## [未发布] — 2026-11-26（五十五续）：headless 的补间表一直是**空的**（motion 从未启用）
 
 给 `gfx_motion_test` 加了 `FVP_DEBUG_MOTION` 打印后，一条关键事实露出来：

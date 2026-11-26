@@ -3465,9 +3465,19 @@ int gfx_motion_add(Gfx *g, int prim_id, int kind, int from_x, int from_y,
     if (dur_ms < 0) {
         dur_ms = 0;
     }
-    return fvp_motion_add(&g->motion, prim_id, kind, (double)from_x,
-                          (double)from_y, (double)to_x, (double)to_y,
-                          (double)dur_ms, mode, 1);
+    {
+        int r = fvp_motion_add(&g->motion, prim_id, kind, (double)from_x,
+                               (double)from_y, (double)to_x, (double)to_y,
+                               (double)dur_ms, mode, 1);
+
+        if (getenv("FVP_DEBUG_MOTION") != NULL) {
+            fprintf(stderr,
+                    "motion_add prim=%d kind=%d from=%d,%d to=%d,%d "
+                    "dur=%d mode=%d -> %d\n",
+                    prim_id, kind, from_x, from_y, to_x, to_y, dur_ms, mode, r);
+        }
+        return r;
+    }
 }
 
 void gfx_motion_set_enabled(Gfx *g, int on)
