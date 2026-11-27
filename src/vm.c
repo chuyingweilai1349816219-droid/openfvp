@@ -546,7 +546,7 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
         r = fvp_make_bool(vm, fvp_value_truth(&a) || fvp_value_truth(&b));
         break;
     case 0x22:
-        if (vm->bool_type) {
+        if (vm->bool_type || vm->cmp_matrix) {
             int ok = 0;
             int c = fvp_pair_cmp_faithful(&a, &b, &ok);
 
@@ -556,7 +556,7 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
         }
         break;
     case 0x23:
-        if (vm->bool_type) {
+        if (vm->bool_type || vm->cmp_matrix) {
             int ok = 0;
             int c = fvp_pair_cmp_faithful(&a, &b, &ok);
 

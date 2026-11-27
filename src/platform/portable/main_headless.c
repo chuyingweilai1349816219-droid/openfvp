@@ -191,6 +191,7 @@ int main(int argc, char **argv)
     int text_fixed = 0;
     int primhit_all = 0;
     int bool_type = 0; /* --bool-type：原版的“类型即真假”语义（默认关，影响冻结基线） */ /* --primhit-all：诊断用，PrimHit 一律命中 */
+    int cmp_matrix = 0; /* --cmp-matrix：只换 0x22..0x27 的类型对矩阵 */
     int faithful_ops = 0; /* --faithful-ops：按 exe 字节执行 0x08/0x09 等（见 ref/exe-vm-ops.json） */
     int click_mask = 0x0B;
     int frame_ms = 16;
@@ -234,6 +235,8 @@ int main(int argc, char **argv)
             primhit_all = 1;
         } else if (strcmp(a, "--bool-type") == 0) {
             bool_type = 1;
+        } else if (strcmp(a, "--cmp-matrix") == 0) {
+            cmp_matrix = 1;
         } else if (strcmp(a, "--faithful-ops") == 0) {
             faithful_ops = 1;
         } else if (strcmp(a, "--quiet") == 0) {
@@ -377,6 +380,7 @@ int main(int argc, char **argv)
     }
     vm.bool_type = bool_type;
     vm.faithful_ops = faithful_ops;
+    vm.cmp_matrix = cmp_matrix;
     fvp_vm_attach_gfx(&vm, gfx);
     if (text_out != NULL) {
         sink.f = fopen(text_out, "wb");

@@ -693,6 +693,53 @@
    "override_count": 17
   }
  ],
+ "text_template": {
+  "script": "iroseka.hcb",
+  "region": [
+   "0x3a1f3",
+   "0x3a2b0"
+  ],
+  "mode_flag_op": 8,
+  "mode_flag_type": 0,
+  "cmp_right_type": 2,
+  "eq_index": 2,
+  "eq_matrix_covered": false,
+  "eq_matrix_result": false,
+  "appended_when": "模板在 `模式位 == int 0` 成立时才把 `」` 追加到行尾；exe 矩阵里 (type 0, type 2) 未覆盖 → 恒假 → 原版**不追加**。",
+  "anchors": [
+   {
+    "offset": "0x03a22b",
+    "bytes": "10fe0c0022",
+    "what": "pushstack 254; pushint8 0; eq （模式位 == int 0）"
+   },
+   {
+    "offset": "0x03a235",
+    "bytes": "0e03817500",
+    "what": "pushstring \"「\""
+   },
+   {
+    "offset": "0x03a24c",
+    "bytes": "0e0100",
+    "what": "pushstring \"\"（续行模式：先清空 g226）"
+   },
+   {
+    "offset": "0x03a2a5",
+    "bytes": "0e03817600",
+    "what": "pushstring \"」\""
+   },
+   {
+    "offset": "0x03a2a2",
+    "bytes": "0fe2000e038176001a15e200",
+    "what": "pushglobal 226; pushstring \"」\"; add; popglobal 226（追加）"
+   },
+   {
+    "offset": "0x03a6c6",
+    "bytes": "08080808",
+    "what": "调用方连压 4 个 op 0x08 当模式位/哨兵"
+   }
+  ],
+  "note": "脚本用 `pushfalse`（类型 0）当\"行首/续行/引号\"模式位，再与 int 0/1 比较。这正是\"类型 0 与 int 0 不相等\"唯一能被观测到的地方：真实存档 s905 的台词历史环里 11 条记录都不带「」」。"
+ },
  "helpers": [
   {
    "va": "0x444f50",

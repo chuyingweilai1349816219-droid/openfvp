@@ -155,6 +155,20 @@ def main():
         check(t.count('faithful_ops') >= 4,
               'syscall.c 至少 4 处分支（DissolveWait / *Test / 59 / 62）')
 
+    print('== 文本模板的引号装饰（HCB 0x3A21D）')
+    tpl = ref.get('text_template', {})
+    if tpl:
+        check(tpl.get('mode_flag_op') == 0x08,
+              '模板的模式位来自 op 0x08（pushfalse）')
+        check(tpl.get('mode_flag_type') == 0,
+              '模式位的类型是 0（null/false）')
+        check(tpl.get('cmp_right_type') == 2,
+              '模板拿它和 int 0/1 比（右侧 type 2）')
+        check(tpl.get('eq_matrix_result') is False,
+              'exe 矩阵里 (type 0, type 2) 没被覆盖 → 比较恒假')
+        check('」' in tpl.get('appended_when', ''),
+              '记录"不相等时才不追加 \\u300d"的因果')
+
     print('== 两种语义的实测差异（bin/fvm.exe）')
     fvm = os.path.join(FVP, 'bin', 'fvm.exe')
     hcb = (r'C:\Users\Mechrevo\Downloads\五彩斑斓的世界HD\iroseka.hcb')
@@ -164,7 +178,9 @@ def main():
         import subprocess
         import tempfile
         outs = {}
-        for tag, extra in (('legacy', []), ('faithful', ['--faithful-ops'])):
+        for tag, extra in (('legacy', []),
+                           ('faithful', ['--faithful-ops']),
+                           ('matrix', ['--faithful-ops', '--cmp-matrix'])):
             fd, path = tempfile.mkstemp(suffix='.txt')
             os.close(fd)
             cmd = [fvm, hcb, '--steps', '900000', '--click', '600',
@@ -182,6 +198,14 @@ def main():
         check(n_faithful >= 100,
               '--faithful-ops 走过等待环（%d 行文本，默认 %d 行）'
               % (n_faithful, n_legacy))
+        # 因果验证：把 eq/neq 换成 exe 的类型对矩阵后，行尾那个多出来的「」」消失
+        check('」' in outs['faithful'],
+              '--faithful-ops 的每行结尾多一个「」」（宽松 eq 造成的装饰）')
+        check('」' not in outs['matrix'],
+              '--cmp-matrix 之后「」」消失（eq 走类型对矩阵：(type0,type2) 恒假）')
+        check(len(outs['matrix'].splitlines()) >= 100,
+              '--cmp-matrix 下流程仍往前走（%d 行）'
+              % len(outs['matrix'].splitlines()))
 
     print('== 重新抽取 exe 对账')
     mod = load_module('extract_exe_vm_ops', EXTRACTOR)

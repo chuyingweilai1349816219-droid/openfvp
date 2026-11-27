@@ -91,6 +91,24 @@ TYPE_NAMES = {
     6: '0x6A4DF0 表的索引',
 }
 
+# --- 脚本侧（HCB 字节）----------------------------------------------------
+# 正文模板 0x3A1F3..0x3A2B0：用 `pushfalse`（类型 0）当模式位，再和 **int 0/1**
+# 比（0x3A22B `10 fe 0c 00 22` = pushstack 254; pushint8 0; eq）。exe 的 eq 矩阵
+# 里 (type 0, type 2) 这一格**没被覆盖**，落到默认 helper（恒返回 0）→ 不相等，
+# 所以原版不会给正文追加「」」。我们自己的宽松 eq 把 null 当数值 0 → 相等 →
+# 多拼一个「」」——这就是 --faithful-ops 下每行结尾多一个「」」的原因。
+HCB = os.path.join(r'C:\Users\Mechrevo\Downloads', '五彩斑斓的世界HD',
+                   'iroseka.hcb')
+TEMPLATE_ANCHORS = [
+    (0x3A22B, '10fe0c0022', 'pushstack 254; pushint8 0; eq （模式位 == int 0）'),
+    (0x3A235, '0e03817500', 'pushstring "「"'),
+    (0x3A24C, '0e0100', 'pushstring ""（续行模式：先清空 g226）'),
+    (0x3A2A5, '0e03817600', 'pushstring "」"'),
+    (0x3A2A2, '0fe200' '0e03817600' '1a' '15e200',
+     'pushglobal 226; pushstring "」"; add; popglobal 226（追加）'),
+    (0x3A6C6, '08080808', '调用方连压 4 个 op 0x08 当模式位/哨兵'),
+]
+
 
 def sections(buf):
     """PE 段表：[(va, vsize, raw_off, raw_size, name)]"""
@@ -198,6 +216,39 @@ def skip_insn(pe, va):
     raise ValueError('0x%X: 未处理的指令头 %s' % (va, head))
 
 
+def text_template(eq_matrix):
+    """正文模板为什么会在原版里**不**追加「」」——纯字节 + 矩阵推理。"""
+    if not os.path.isfile(HCB):
+        return None
+    buf = io.open(HCB, 'rb').read()
+    anchors = []
+    for off, sig, what in TEMPLATE_ANCHORS:
+        got = buf[off:off + len(sig) // 2].hex()
+        if got != sig:
+            raise ValueError('模板锚点 0x%X 字节不符: %s != %s' % (off, got, sig))
+        anchors.append({'offset': '0x%06x' % off, 'bytes': got, 'what': what})
+    # 模式位 = 类型 0，右侧 = int（类型 2）→ idx = 7*0 + 2
+    idx = 7 * 0 + 2
+    covered = eq_matrix['entries'][idx] != eq_matrix['default']
+    return {
+        'script': 'iroseka.hcb',
+        'region': ['0x3a1f3', '0x3a2b0'],
+        'mode_flag_op': 0x08,
+        'mode_flag_type': 0,
+        'cmp_right_type': 2,
+        'eq_index': idx,
+        'eq_matrix_covered': covered,
+        'eq_matrix_result': False if not covered else None,
+        'appended_when': ('模板在 `模式位 == int 0` 成立时才把 `」` 追加到行尾；'
+                          'exe 矩阵里 (type 0, type 2) 未覆盖 → 恒假 → 原版'
+                          '**不追加**。'),
+        'anchors': anchors,
+        'note': ('脚本用 `pushfalse`（类型 0）当"行首/续行/引号"模式位，再与 int '
+                 '0/1 比较。这正是"类型 0 与 int 0 不相等"唯一能被观测到的地方：'
+                 '真实存档 s905 的台词历史环里 11 条记录都不带「」」。'),
+    }
+
+
 def build():
     pe = PE(EXE)
     disp = pe.hexs(DISPATCH_VA, 7)
@@ -276,6 +327,7 @@ def build():
         },
         'handler_heads': heads,
         'matrices': mats,
+        'text_template': text_template([m for m in mats if m['name'] == 'eq/neq'][0]),
         'helpers': helpers,
         'semantics': {
             'variant_slot': '线程栈槽 8 字节：+0 = 类型字节，+4 = 载荷（int/float/偏移）',

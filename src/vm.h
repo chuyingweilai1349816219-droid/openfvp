@@ -302,6 +302,16 @@ typedef struct FvpVM {
      * 导致 `DissolveWait` 的查询式轮询与 `MotionAlphaTest/ZTest` 的等待环永远
      * 出不来（① 的卡点）。asm 1 = 按上面的字节语义执行。 */
     int faithful_ops;
+    /* 只把比较类 opcode（0x22..0x27）换成 exe 的 7×7 类型对矩阵
+     * （`fvp_pair_cmp_faithful`），**不动** jmpcond 的真假判据与结果的表示。
+     *
+     * 为什么单独一个开关：`0x3A21D` 那段文本模板用 `pushfalse`（类型 0）当
+     * 模式位，再做 `模式 == 0`（int）。exe 的矩阵里 (type 0, type 2) 没被覆盖
+     * → 恒返回 0 → **不相等**；而我们的宽松 eq 把 null 当数值 0 → 相等，
+     * 于是模板多拼了一个「」」（见 CHANGELOG 一百二十续）。`--bool-type` 虽然
+     * 也走矩阵，但它同时改 jmpcond 与结果表示，会把别的循环卡住；
+     * `--cmp-matrix` 只换比较，用来单独验证这一条。 */
+    int cmp_matrix;
     FvpArena arena;         /* runtime strings (concat, int -> str) */
     FvpTextLine *text;
     size_t ntext;

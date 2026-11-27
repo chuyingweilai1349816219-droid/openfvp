@@ -556,6 +556,7 @@ int main(int argc, char **argv)
     int timeline = 0;
     int bool_type = 0;
     int faithful_ops = 0;
+    int cmp_matrix = 0;
     int threads = 1; /* 1/0 = 开/关协程槽；-1 表示命令行显式 --no-threads */
     int crlf = 1;
     int i;
@@ -633,6 +634,9 @@ int main(int argc, char **argv)
             timeline = 1;
         } else if (strcmp(a, "--bool-type") == 0) {
             bool_type = 1;
+        } else if (strcmp(a, "--cmp-matrix") == 0) {
+            /* 只把 0x22..0x27 换成 exe 的 7x7 类型对矩阵（不动 jmpcond） */
+            cmp_matrix = 1;
         } else if (strcmp(a, "--faithful-ops") == 0) {
             /* 按 exe 字节执行 0x08/0x09、pushtemp 清槽、DissolveWait 查询、
              * Motion*Test 的 0/1（见 ref/exe-vm-ops.json）。默认关：冻结文本
@@ -724,6 +728,7 @@ int main(int argc, char **argv)
     vm.timeline_on = timeline;
     vm.bool_type = bool_type;
     vm.faithful_ops = faithful_ops;
+    vm.cmp_matrix = cmp_matrix;
     vm.threads_on = (threads < 0) ? 0 : threads;
     if (save_history_path != NULL &&
         !fvp_seed_history(save_history_path, &vm, enc)) {
