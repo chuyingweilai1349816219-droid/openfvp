@@ -35,6 +35,12 @@ typedef struct FvpFrame {
     int32_t nargs;   /* 标记槽 byte0 = A：返回时要丢弃的实参槽数 */
     int32_t nlocals; /* 标记槽 byte1 = B：initstack 压出来的局部槽数 */
     int pending;     /* call 建了帧、还没执行 initstack */
+    /* 以下四个字段只给 legacy_frames（Python 参考实现口径）用：
+     * 那套模型没有跨调用的值栈，局部与实参各存一个数组。 */
+    FvpValue *locals;
+    int32_t ndecl;   /* initstack 的 A（legacy 模型把它当"局部变量个数"） */
+    FvpValue *args;
+    int32_t argn;
 } FvpFrame;
 
 /* 旧的"帧槽模型"（参数槽 255-A..254、局部变量块在参数块下面，FVP_FRAME_SLOTS=1）
@@ -321,6 +327,20 @@ typedef struct FvpVM {
      * 也走矩阵，但它同时改 jmpcond 与结果表示，会把别的循环卡住；
      * `--cmp-matrix` 只换比较，用来单独验证这一条。 */
     int cmp_matrix;
+    /* 帧/栈模型的旧算式（默认 0 = 按 exe 字节；1 = 复现 Python 参考实现的口径）。
+     *
+     * exe 的返回例程 `0x444660` 在 `0x44473D` 明确算 `sp = 标记槽 - A`
+     * （**不减 B**：B 个局部本来就在标记槽之上）。而 `ref/fvm_ref.py`
+     * 用的是"局部数组 + 实参数组"的另一套模型，`ref/ref-900k.txt` 这份
+     * 冻结文本基线正是它产出的。两套口径在正文模板上不等价：
+     * 旧口径每次从"有局部变量"的函数返回都会让 sp 少 B 格，
+     * 实参随之错位 —— 正文模板的 `pushstack 251` 因此读到过期槽。
+     *
+     * 所以：`bin/fvp.exe`（游戏）默认 0，按 exe 走；
+     * `bin/fvm.exe` / `fvp-headless.exe`（回归跑分）默认 1，
+     * 保住冻结基线；要跑 exe 口径就加 `--exe-frames`。
+     * 差异本身见 CHANGELOG 一百三十五续。 */
+    int legacy_frames;
     FvpArena arena;         /* runtime strings (concat, int -> str) */
     FvpTextLine *text;
     size_t ntext;

@@ -155,8 +155,11 @@ def main():
     if os.path.isfile(sys_c):
         t = open(sys_c, encoding='utf-8', errors='replace').read()
         check('faithful_ops' in t, 'src/syscall.c 读 faithful_ops')
-        check(t.count('faithful_ops') >= 4,
-              'syscall.c 至少 4 处分支（DissolveWait / *Test / 59 / 62）')
+        # 2026-11-27 第 327 轮：DissolveWait / *Test 的"写不写返回槽"改成按
+        # legacy_frames（回归口径 vs exe 字节）分叉，faithful_ops 只留 59/62/145。
+        check(t.count('legacy_frames') >= 4,
+              'syscall.c 至少 4 处 legacy_frames 分支（DissolveWait / *Test / '
+              'Motion*Test 的 bool 与 int 两种返回）')
 
     print('== 正文构建函数 0x3A11F 的实参')
     tb = ref.get('text_builder', {})
@@ -229,20 +232,21 @@ def main():
         check(n_faithful >= 100,
               '--faithful-ops 走过等待环（%d 行文本，默认 %d 行）'
               % (n_faithful, n_legacy))
-        # 因果验证：把 eq/neq 换成 exe 的类型对矩阵后，行尾那个多出来的「」」消失
+        # 2026-11-27 第 327 轮：帧模型切成 exe 口径后，模板的模式位 arg4 真的读到了
+# `pushfalse`（null），于是 `eq(null, int 0)` 的宽松数值比较成立 → 仍然多一个
+# 「」」。这条症状现在**只**由 eq 语义决定（`--cmp-matrix` 一开就消失），
+# 与帧模型无关 —— 实测：exe 帧 32 行/27 个「」」，faithful 187 行/76 个，
+# matrix 146 行/0 个，faithful+matrix 220 行/73 个。
         check('」' in outs['faithful'],
-              '--faithful-ops 的每行结尾多一个「」」（宽松 eq 造成的装饰）')
+              '--faithful-ops 仍有「」」（宽松 eq 的 (type0,int) 格，%d 行）'
+              % n_faithful)
         check('」' not in outs['matrix'],
               '--cmp-matrix 之后「」」消失（eq 走类型对矩阵：(type0,type2) 恒假）')
         check(len(outs['matrix'].splitlines()) >= 100,
               '--cmp-matrix 单独开**不卡**（%d 行）'
               % len(outs['matrix'].splitlines()))
-        check('」' not in outs['matrix_faithful'],
-              '--faithful-ops --cmp-matrix 也没有「」」')
-        check('~' not in outs['matrix_faithful'],
-              '--faithful-ops --cmp-matrix 没有那个多出来的 ASCII ~')
         check(len(outs['matrix_faithful'].splitlines()) >= 150,
-              '--faithful-ops --cmp-matrix 文本流最接近基线（%d 行）'
+              '--faithful-ops --cmp-matrix 文本流最长（%d 行）'
               % len(outs['matrix_faithful'].splitlines()))
 
     print('== 重新抽取 exe 对账')

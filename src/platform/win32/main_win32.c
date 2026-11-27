@@ -167,6 +167,10 @@ typedef struct Options {
      * 与 headless 的 --pctrace 同一个开关，用来比对两次运行在哪里分叉）。 */
     wchar_t pctrace_path[PATH_CAP];
     int faithful_ops; /* --faithful-ops：0x08/0x09/pushtemp/*Test 按 exe 字节执行 */
+    /* --legacy-frames：把帧/栈模型切回 Python 参考实现的口径
+     * （`ref/fvm_ref.py`：局部数组 + 实参数组 + call 清栈），用来和
+     * `bin/fvm.exe` 的冻结口径对齐、做 A/B。默认 0 = 按 exe 字节。 */
+    int legacy_frames;
     int cmp_matrix;   /* --cmp-matrix：eq/neq 走 exe 的 7x7 类型对矩阵 */
     int bool_type;    /* --bool-type：jmpcond 只认 type0 为假（原版语义） */
     /* --auto-click MS：每 MS 毫秒注入一次合成点击（与 --no-input 一起用，
@@ -829,6 +833,8 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
         o->pctrace_path[PATH_CAP - 1] = 0;
     } else if (wcscmp(a, L"--faithful-ops") == 0) {
         o->faithful_ops = 1;
+    } else if (wcscmp(a, L"--legacy-frames") == 0) {
+        o->legacy_frames = 1;
     } else if (wcscmp(a, L"--cmp-matrix") == 0) {
         o->cmp_matrix = 1;
     } else if (wcscmp(a, L"--bool-type") == 0) {
@@ -3443,6 +3449,9 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     vm.faithful_ops = opts.faithful_ops;
     vm.cmp_matrix = opts.cmp_matrix;
     vm.bool_type = opts.bool_type;
+    /* 窗口默认按 exe 字节的帧/栈模型（0x44473D：sp = 标记槽 - A）。
+     * --legacy-frames 切回 Python 参考实现口径，用来和 fvm 的冻结基线对齐。 */
+    vm.legacy_frames = opts.legacy_frames;
     if (opts.pctrace_path[0] != 0) {
         char pc_u8[PATH_CAP];
 

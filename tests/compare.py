@@ -31,6 +31,48 @@ REFS = {
 }
 
 
+def newest_source_mtime():
+    """最新一个"bin/fvm.exe 真正会编译"的源文件 mtime。
+
+    `src/platform/win32/**` 只喂 bin/fvp.exe，不参与 fvm 的构建，
+    所以不算进来（否则改窗口代码会误报"二进制过期"）。
+    """
+    newest = 0.0
+    skip = os.path.join(FVP, 'src', 'platform', 'win32')
+    for root, _dirs, files in os.walk(os.path.join(FVP, 'src')):
+        if os.path.abspath(root).startswith(skip):
+            continue
+        for name in files:
+            if name.endswith(('.c', '.h')):
+                p = os.path.join(root, name)
+                try:
+                    newest = max(newest, os.path.getmtime(p))
+                except OSError:
+                    pass
+    for extra in ('Makefile',):
+        p = os.path.join(FVP, extra)
+        if os.path.isfile(p):
+            newest = max(newest, os.path.getmtime(p))
+    return newest
+
+
+def stale_binary_reason(exe):
+    """0 = 新鲜；否则返回一句人话。
+
+    为什么需要这道检查：`make headless` 只构建 bin/fvp-headless.exe，
+    **不重建 bin/fvm.exe**。第 134 轮曾经先用 `make headless` 再跑本脚本，
+    结果比的是上一轮遗留的旧 fvm，把"已经改坏的基线"误判成 PASS
+    （见 CHANGELOG 一百三十五续的更正）。这里把"二进制比源码旧"变成硬失败。
+    """
+    if not os.path.isfile(exe):
+        return 'missing %s' % exe
+    src = newest_source_mtime()
+    if src and os.path.getmtime(exe) + 1.0 < src:
+        return ('%s is older than the newest source file '
+                '(run: mingw32-make -f Makefile all)' % exe)
+    return ''
+
+
 def sha256(path):
     h = hashlib.sha256()
     with open(path, 'rb') as f:
@@ -86,7 +128,16 @@ def main():
                     help='run fvm.exe before comparing (default)')
     ap.add_argument('--no-run', dest='run', action='store_false')
     ap.add_argument('--quiet', action='store_true', help='only print the verdict')
+    ap.add_argument('--allow-stale', action='store_true',
+                    help='skip the "bin/fvm.exe newer than sources" check')
     args = ap.parse_args()
+
+    if args.run and not args.allow_stale:
+        why = stale_binary_reason(args.exe)
+        if why:
+            print('compare: refusing to compare a stale binary: %s' % why,
+                  file=sys.stderr)
+            return 2
 
     ref = args.ref or REFS.get(args.steps)
     if ref is None:

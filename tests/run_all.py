@@ -1132,6 +1132,14 @@ def build_steps(args):
                       skip_reason=None,
                       note='portable platform seam + offscreen render, steps match fvm'))
 
+    # 6.61 帧/栈模型 A/B（fvm 默认 = 冻结基线口径；--exe-frames = exe 字节口径）
+    vef = os.path.join(HERE, 'verify_exe_frames.py')
+    steps.append(Step('verify_exe_frames.py', [PY, '-X', 'utf8', vef], 600,
+                      skip_reason=None,
+                      note='both frame models alive: fvm default reproduces '
+                           'ref-900k.txt byte for byte, --exe-frames follows '
+                           '0x44473D (sp = marker - A)'))
+
     # 7. asset fuzz
     fuzz_assets = os.path.join(HERE, 'fuzz_assets.py')
     fa_argv = [PY, fuzz_assets]

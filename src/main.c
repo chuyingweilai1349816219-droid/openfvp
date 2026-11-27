@@ -557,6 +557,7 @@ int main(int argc, char **argv)
     int bool_type = 0;
     int faithful_ops = 0;
     int cmp_matrix = 0;
+    int legacy_frames = 1; /* 回归跑分口径：复现 ref/fvm_ref.py（见 --exe-frames） */
     int threads = 1; /* 1/0 = 开/关协程槽；-1 表示命令行显式 --no-threads */
     int crlf = 1;
     int i;
@@ -630,6 +631,11 @@ int main(int argc, char **argv)
                 return 2;
             }
             pctrace_path = argv[++i];
+        } else if (strcmp(a, "--exe-frames") == 0) {
+            /* 帧/栈模型按 exe 字节（`0x44473D`：sp = 标记槽 - A，不减 B）。
+             * fvm 默认走 Python 参考实现的口径（legacy_frames=1）以保住
+             * 冻结文本基线；加这个开关才按 exe 算。 */
+            legacy_frames = 0;
         } else if (strcmp(a, "--timeline") == 0) {
             timeline = 1;
         } else if (strcmp(a, "--bool-type") == 0) {
@@ -642,6 +648,10 @@ int main(int argc, char **argv)
              * Motion*Test 的 0/1（见 ref/exe-vm-ops.json）。默认关：冻结文本
              * 基线是在历史语义下生成的。 */
             faithful_ops = 1;
+            /* "忠实"= 全按 exe 字节：帧/栈模型也切到 exe 口径，
+             * 否则会出现"0x08/0x09 忠实、帧还旧"的半残组合
+             * （实测 900k 行数会掉到 130/5 行，见 CHANGELOG 一百三十五续）。 */
+            legacy_frames = 0;
         } else if (strcmp(a, "--threads") == 0) {
             threads = 1;
         } else if (strcmp(a, "--no-threads") == 0) {
@@ -729,6 +739,7 @@ int main(int argc, char **argv)
     vm.bool_type = bool_type;
     vm.faithful_ops = faithful_ops;
     vm.cmp_matrix = cmp_matrix;
+    vm.legacy_frames = legacy_frames;
     vm.threads_on = (threads < 0) ? 0 : threads;
     if (save_history_path != NULL &&
         !fvp_seed_history(save_history_path, &vm, enc)) {

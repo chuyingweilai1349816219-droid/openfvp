@@ -4,6 +4,68 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百三十五续）：更正 134 续的"基线不变" —— 那是比了旧二进制；帧/栈模型改成双口径
+
+### 1. 先更正一条错的结论
+
+134 续写了"冻结文本基线 `ref/ref-900k.txt` 逐字节不变"。**这条是错的**：
+那一轮的 `compare.py` 比的是 `bin/fvm.exe`，而 `make headless` 只构建
+`bin/fvp-headless.exe`，**不重建 `bin/fvm.exe`** —— 所以比的是上一轮遗留的旧二进制。
+今天用 `mingw32-make -f Makefile all` 重建后再跑，`5c9ceb9` 的真实结果是
+**0 行文本**（卡在 `MotionAlphaTest(35)` 环，`44` 被调用 79,374 次）。
+
+| 构建方式 | 默认 900k 输出 |
+| --- | --- |
+| `make headless` 后跑 compare（134 续的做法） | 假 PASS（旧二进制） |
+| `make all` 后跑 compare（现在） | `5c9ceb9` = 0 行；`5c9ceb9^` = 195 行逐字节 PASS |
+
+修法：`tests/compare.py` 现在**拒绝比较过期二进制**（`bin/fvm.exe` 的 mtime
+必须不旧于任何 `src/**/*.c|h` 与 `Makefile`，否则直接退出码 2 并提示先 `make all`）；
+真要跳过加 `--allow-stale`。
+
+### 2. 为什么不能"直接把基线换成 exe 口径"
+
+`ref/ref-900k.txt` 是 **Python 参考实现**（`ref/fvm_ref.py`）产出的，而那套实现是
+"局部数组 + 实参数组 + `call` 时清栈"的模型；exe 是单一栈 + `base + (int8)偏移`。
+两者在正文模板 `0x3A11F` 上不等价（`pushstack 251` 在旧模型里读到过期槽）。
+所以这一轮改成**双口径并存**：
+
+| 口径 | 谁用 | 依据 | 900k 行数 |
+| --- | --- | --- | --- |
+| `legacy_frames`（默认） | `bin/fvm.exe` / `bin/fvp-headless.exe`（回归跑分） | `ref/fvm_ref.py`，冻结基线 | **195**（逐字节 PASS） |
+| exe 口径（`--exe-frames` / 窗口默认） | `bin/fvp.exe`（游戏）、`fvm --exe-frames` | `0x44473D`：`sp = 标记槽 - A` | 32（headless，无动作时钟）/ 窗口 9–13 |
+
+实现：`src/vm.h` 的 `FvpVM.legacy_frames`；`initstack` / `call` / `ret` /
+`pushstack` / `copystack` / `pushtop` 六个点分叉；`0x08`/`0x09`、`DissolveWait`、
+`*Test` 的返回也按同一开关分叉。窗口新增 `--legacy-frames` 供 A/B。
+`--faithful-ops` 现在隐含 exe 口径（否则会出"0x08/0x09 忠实、帧还旧"的半残组合）。
+
+### 3. 新门禁
+
+`tests/verify_exe_frames.py`（run_all 第 6.61 步）：默认口径必须逐字节命中
+`ref-900k.txt`；`--exe-frames` 必须走出正文且与基线不同；第一处差异必须落在文本行上。
+`tests/verify_vm_ops.py` 的 A/B 断言同步改成实测值（195 / 32 / 187 / 146 / 220 行，
+`」` 只在 exe 口径且不开 `--cmp-matrix` 时出现）。
+
+### 4. 顺带查清的两件事（用户现场提问）
+
+- **右下角那几块"水滴/汗/怒"图形是外字图元**：`--dump-prims` 里是
+  `prim 1..5`，素材 `graph/gaiji_ikari`(1445,495) / `gaiji_ase`(1495,595) /
+  `gaiji_shiru`(1560,695) / `gaiji_heart`(1560,795) / `gaiji_ikari156`(1645,895)，
+  全部 156×156、`alpha=255`、`parent=767`（随 CG 一起画）。
+- **为什么是黑底方块**：原版有 3 种混合配置（`ref/exe-d3d-states.json`：
+  straight-alpha over / **additive (alpha-add)** / overwrite），这类"白字形 + 黑底"
+  的符号在原版走加算时黑色自然不可见；我们现在一律 straight-alpha over，
+  于是黑底盖住 CG。属于"外字合成模式"缺口，不是素材错。
+
+### 5. 已知负面
+
+- 窗口切到 exe 口径后，**标题页/游戏内 UI 的形态和之前不一样了**（脚本走的分支变了），
+  而原版该长什么样还没定论；`--legacy-frames` 可以切回去对比。
+- `--exe-frames --cmp-matrix` 会卡（0 行），所以"没有 `」` 的正确文本"这条路还没通。
+- 读档重启路径在 exe 口径下 `text lines = 0`（脚本仍在跑），`verify_load_restart`
+  已按实测真值钉住并注明"修好会变红"。
+
 ## [未发布] — 2026-11-27（一百三十四续）：窗口第一次真的画出正文图元 —— 帧/栈模型按 exe 字节重写
 
 ### 1. 这一轮的净结果

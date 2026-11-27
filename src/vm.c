@@ -196,6 +196,27 @@ static int32_t fvp_frameslot(const FvpFrame *f, uint8_t oper)
     return f->sbase + (int32_t)(int8_t)oper;
 }
 
+/* legacy_frames（Python 参考实现口径）：局部数组 + 实参数组 +
+ * 操作数按"离 255 多远"映射。只用于回归跑分，见 vm.h 的 legacy_frames。 */
+static int fvp_legacy_local_index(const FvpFrame *f, int32_t n)
+{
+    if (f == NULL || f->nlocals <= 0) {
+        return -1;
+    }
+    return (n >= 0 && n < f->nlocals) ? (int)n : -1;
+}
+
+static int fvp_legacy_arg_index(const FvpFrame *f, int32_t n)
+{
+    int32_t idx;
+
+    if (f == NULL || f->argn <= 0) {
+        return -1;
+    }
+    idx = n - (255 - f->argn);
+    return (idx >= 0 && idx < f->argn) ? (int)idx : -1;
+}
+
 static FvpFrame *fvp_frame_top(FvpThread *t)
 {
     return t->nframes > 0 ? &t->frames[t->nframes - 1] : NULL;
@@ -215,10 +236,15 @@ static void fvp_frame_push(FvpThread *t, const FvpFrame *f)
 
 static void fvp_frame_release(FvpFrame *f)
 {
-    /* 单一栈模型：帧不持有数组，槽都在 t->stack 里由 sp 回收。 */
+    /* 单一栈模型：帧不持有数组（legacy 模型的两个数组在下面释放）。 */
+    free(f->locals);
+    free(f->args);
+    f->locals = NULL;
+    f->args = NULL;
     f->nlocals = 0;
     f->nargs = 0;
     f->sbase = 0;
+    f->argn = 0;
 }
 
 static FvpFrame fvp_frame_pop(FvpThread *t)
@@ -638,6 +664,14 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
     default:
         break;
     }
+    if (getenv("FVP_DBG_EQALL") != NULL &&
+        (t->pc == 0x37C60u || t->pc == 0x592E7u)) {
+        fprintf(stderr,
+                "eq@0x%x a.type=%u a.i=%lld b.type=%u b.i=%lld r.type=%u r.i=%lld\n",
+                (unsigned)t->pc, (unsigned)a.type, (long long)a.i,
+                (unsigned)b.type, (long long)b.i, (unsigned)r.type,
+                (long long)r.i);
+    }
     fvp_thread_push(t, r);
 }
 
@@ -668,6 +702,34 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         FvpFrame *top = fvp_frame_top(t);
         int32_t k;
 
+        if (vm->legacy_frames) {
+            /* Python 参考实现口径：局部变量个数取 A，另有独立数组。 */
+            if (top != NULL && top->pending) {
+                free(top->locals);
+                top->ndecl = (int32_t)ins->a;
+                top->nlocals = (int32_t)ins->a;
+                top->locals = top->nlocals != 0
+                                  ? (FvpValue *)fvp_xcalloc(
+                                        (size_t)top->nlocals, sizeof(FvpValue))
+                                  : NULL;
+                top->pending = 0;
+            } else {
+                FvpFrame f;
+
+                memset(&f, 0, sizeof(f));
+                f.ret = vm->hcb->script_len;
+                f.ndecl = (int32_t)ins->a;
+                f.nlocals = (int32_t)ins->a;
+                f.locals = f.nlocals != 0
+                               ? (FvpValue *)fvp_xcalloc((size_t)f.nlocals,
+                                                         sizeof(FvpValue))
+                               : NULL;
+                f.pending = 0;
+                fvp_frame_push(t, &f);
+            }
+            t->pc += 3u;
+            break;
+        }
         if (top == NULL || !top->pending) {
             FvpFrame f;
 
@@ -688,6 +750,13 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         top->pending = 0;
         for (k = 0; k < top->nlocals; ++k) {
             fvp_thread_push(t, fvp_make_null());   /* 局部槽：type0 = null */
+        }
+        /* 诊断（FVP_DBG_FRAME=1）：帧建立时的 sp/base 与 A/B，用来找"实参错位"。 */
+        if (getenv("FVP_DBG_FRAME") != NULL) {
+            fprintf(stderr,
+                    "initstack pc=0x%x A=%d B=%d base=%d sp=%d frames=%d\n",
+                    (unsigned)ins->pc, (int)top->nargs, (int)top->nlocals,
+                    (int)top->sbase, (int)t->sp, (int)t->nframes);
         }
         t->pc += 3u;
         break;
@@ -716,6 +785,24 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         f.sbase = 0;
         f.nargs = 0;
         f.nlocals = 0;
+        if (vm->legacy_frames) {
+            /* Python 参考实现口径：把当前栈上的实参拷进数组，再把 sp 清零
+             * （那套模型没有跨调用的值栈）。 */
+            f.ndecl = 0;
+            f.argn = t->sp;
+            f.args = NULL;
+            if (t->sp > 0) {
+                f.args = (FvpValue *)fvp_xmalloc((size_t)t->sp *
+                                                 sizeof(FvpValue));
+                memcpy(f.args, t->stack, (size_t)t->sp * sizeof(FvpValue));
+            }
+            f.locals = NULL;
+            f.pending = 1;
+            fvp_frame_push(t, &f);
+            t->sp = 0;
+            t->pc = ins->u;
+            break;
+        }
         f.pending = 1;
         fvp_frame_push(t, &f);
         t->pc = ins->u;
@@ -736,13 +823,31 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
             } else {
                 t->temp = fvp_make_null();
             }
-            /* 0x444660：base-- 得标记槽，弹出 B 个局部、再弹出 A 个实参。
-             * 于是 sp = 标记槽 - B - A。 */
-            t->sp = f.sbase - 1 - f.nlocals - f.nargs;
-            if (t->sp < 0) {
-                t->sp = 0;
+            /* 0x444660：base-- 得标记槽，先弹 B 个局部、再弹 A 个实参。
+             * 返回时 sp = base + B（局部还在栈上），弹完 B 个局部就落到 base，
+             * 再弹标记槽与 A 个实参 → sp = base - 1 - A。
+             * **不能再减一次 B**：base 本来就在局部下面。早先写成
+             * `sbase - 1 - nlocals - nargs` 会让每个"有局部变量"的函数
+             * 每次返回都少 B 格，sp 一路下沉，实参随之错位
+             * （正文模板 pushstack 251 因此读到过期槽，见 CHANGELOG 一百三十五续）。 */
+            if (vm->legacy_frames) {
+                /* Python 参考实现口径：call 时已把栈清空、实参拷到数组，
+                 * 返回时**完全不动 sp**（调用者再看到的是被调函数留下的栈）——
+                 * 冻结文本基线依赖这条怪癖，见 vm.h 的 legacy_frames 说明。 */
+            } else {
+                t->sp = f.sbase - 1 - f.nargs;
+                if (t->sp < 0) {
+                    t->sp = 0;
+                }
             }
             t->pc = f.ret;
+            if (getenv("FVP_DBG_FRAME") != NULL) {
+                fprintf(stderr,
+                        "ret pc=0x%x op=%u base=%d A=%d B=%d sp=%d frames=%d\n",
+                        (unsigned)ins->pc, (unsigned)ins->op, (int)f.sbase,
+                        (int)f.nargs, (int)f.nlocals, (int)t->sp,
+                        (int)t->nframes);
+            }
             fvp_frame_release(&f);
         } else {
             t->alive = 0;
@@ -758,6 +863,11 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
          * bool_type == 1：照原版 handler 0x445a30 的 `cmpb $0x0,(%edx)`，
          * 只认"类型字节 == 0"（也就是 FVP_NULL）为假；int 0 是 type 2 → 不算假。 */
         int cond = vm->bool_type ? (c.type == (uint8_t)FVP_NULL) : !fvp_value_truth(&c);
+        if (getenv("FVP_DBG_EQALL") != NULL &&
+            (t->pc == 0x37C61u || t->pc == 0x592E8u)) {
+            fprintf(stderr, "jmpcond@0x%x c.type=%u c.i=%lld cond=%d\n",
+                    (unsigned)t->pc, (unsigned)c.type, (long long)c.i, cond);
+        }
         if (cond) {
             t->pc = ins->u;
         } else {
@@ -766,14 +876,20 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         break;
     }
     case 0x08: /* 原版 0x444940：整段只写 Variant type **0**（= false / null）。
-                * 历史行为曾经把它当成 pushtrue 压 bool（为了迁就旧的文本基线），
-                * 实测基线并不依赖这个互换 —— 按字节改回之后
-                * ref/ref-900k.txt 仍逐字节相同（CHANGELOG 一百三十四续）。 */
-        fvp_thread_push(t, fvp_make_null());
+                *
+                * legacy_frames（`bin/fvm.exe` 的回归口径，复现 ref/fvm_ref.py 与
+                * 冻结文本基线）必须保持**旧的反向映射**：0x08 压 bool(true)、
+                * 0x09 压 null。那不是"对的"，但基线就是它产出的 —— 换成字节真值
+                * 之后 fvm 会卡在 `MotionAlphaTest(35)` 环上、195 行掉成 0 行
+                * （实测，见 CHANGELOG 一百三十五续的更正）。
+                * 游戏路径（`bin/fvp.exe`，legacy_frames = 0）按字节：null。 */
+        fvp_thread_push(t, vm->legacy_frames ? fvp_value_bool()
+                                             : fvp_make_null());
         t->pc += 1u;
         break;
     case 0x09: /* 原版 0x444960：整段只写 Variant type **1**（= true） */
-        fvp_thread_push(t, fvp_value_bool());
+        fvp_thread_push(t, vm->legacy_frames ? fvp_make_null()
+                                             : fvp_value_bool());
         t->pc += 1u;
         break;
     case 0x0a:
@@ -819,11 +935,44 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
                  * 栈外内容；这里给 null 并计数，便于诊断。 */
         FvpFrame *f = fvp_frame_top(t);
         int32_t abs = fvp_frameslot(f, ins->a);
+        const char *slot_dbg = getenv("FVP_DBG_SLOT");
 
+        if (vm->legacy_frames) {
+            int li = fvp_legacy_local_index(f, (int32_t)ins->a);
+
+            if (li >= 0) {
+                fvp_thread_push(t, f->locals[li]);
+            } else {
+                int ai = fvp_legacy_arg_index(f, (int32_t)ins->a);
+
+                fvp_thread_push(t, ai >= 0 ? f->args[ai] : fvp_make_int(0));
+            }
+            t->pc += 2u;
+            break;
+        }
         if (abs >= 0 && abs < t->sp) {
             fvp_thread_push(t, t->stack[abs]);
         } else {
             fvp_thread_push(t, fvp_make_null());
+        }
+        /* 诊断（FVP_DBG_SLOT=251）：把这次读的槽位、base、sp 和内容打出来。
+         * 用来回答"正文模板的 pushstack 251 到底读到了哪一格"。 */
+        if (slot_dbg != NULL &&
+            (atoi(slot_dbg) == (int)ins->a ||
+             atoi(slot_dbg) == (int)(int8_t)ins->a)) {
+            const FvpValue *v = &t->stack[t->sp - 1];
+
+            fprintf(stderr,
+                    "pushstack[%d] pc=0x%x base=%d abs=%d sp=%d type=%u",
+                    (int)(int8_t)ins->a, (unsigned)ins->pc,
+                    f != NULL ? (int)f->sbase : -1, (int)abs, (int)t->sp,
+                    (unsigned)v->type);
+            if (v->type == (uint8_t)FVP_STR && v->str != NULL) {
+                fprintf(stderr, " str=\"%.40s\"", v->str->data);
+            } else {
+                fprintf(stderr, " i=%lld", (long long)v->i);
+            }
+            fputc('\n', stderr);
         }
         t->pc += 2u;
         break;
@@ -858,9 +1007,17 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
     }
     case 0x13: { /* pushtop：原版 0x444980 是把**栈顶再压一份**（dup），不是"取 0 号局部"。
                  * 早先按 locals[0] 实现，因为局部数组模型里两者在单局部函数中
-                 * 恰好等价；单栈模型下必须按字节改成 dup。 */
-        FvpValue v = t->sp > 0 ? t->stack[t->sp - 1] : fvp_make_null();
+                 * 恰好等价；单栈模型下必须按字节改成 dup。Python 参考实现
+                 * （冻结基线的产出方）用的是 locals[0]，所以 legacy 分支保留它。 */
+        FvpValue v;
 
+        if (vm->legacy_frames) {
+            FvpFrame *f = fvp_frame_top(t);
+
+            v = (f != NULL && f->nlocals > 0) ? f->locals[0] : fvp_make_int(0);
+        } else {
+            v = t->sp > 0 ? t->stack[t->sp - 1] : fvp_make_null();
+        }
         fvp_thread_push(t, v);
         t->pc += 1u;
         break;
@@ -900,6 +1057,15 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         FvpFrame *f = fvp_frame_top(t);
         int32_t abs = fvp_frameslot(f, ins->a);
 
+        if (vm->legacy_frames) {
+            int li = fvp_legacy_local_index(f, (int32_t)ins->a);
+
+            if (li >= 0) {
+                f->locals[li] = v;
+            }
+            t->pc += 2u;
+            break;
+        }
         if (abs >= 0 && abs < t->sp) {
             t->stack[abs] = v;
         } else if (abs >= 0 && abs < t->scap) {

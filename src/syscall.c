@@ -1962,12 +1962,14 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             }
             return;
         }
-        /* 状态 0：原版 handler 第一条指令就 `je ret` —— **什么都不写**，
-         * 也就是返回槽保持"假"。历史行为（faithful_ops == 0）在这里写
-         * int 1（"还在溶解"），于是 `while (DissolveWait(pushfalse) ==
-         * pushtrue)`（prologue 0x59264..0x5928C）永远出不来。冻结文本
-         * 基线并不依赖这个 1（见 CHANGELOG 一百三十四续的实测），所以
-         * 默认路径按 exe 字节走：状态 0 → 不写 = 假。 */
+        /* 状态 0：原版 handler 第一条指令就 `je ret` —— **什么都不写**，也就
+         * 是返回槽保持"假"。游戏路径（legacy_frames = 0）按字节走这条。
+         * 回归口径（`bin/fvm.exe`，复现 ref/fvm_ref.py）必须写 int 1，否则
+         * prologue `0x59264..0x5928C` 的查询式轮询与冻结基线的走向都会变
+         * （实测 195 行掉成 0 行，见 CHANGELOG 一百三十五续的更正）。 */
+        if (vm->legacy_frames) {
+            t->temp = fvp_make_int(1);
+        }
         return;
     case 44:  /* MotionAlphaTest(id)：原版 0x43A9C0，容器 engine+0x651E04
                * （与 MotionAlpha(42) 同一个），id 1..0xFFF，1 = 还在跑。 */
@@ -1981,10 +1983,12 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
                  * 也就是 bool 变体（type 1 = 还在跑 / type 0 = 没在跑），
                  * 不是 int。写成 int 会让 `eq(测试结果, pushtrue)` 落到
                  * 7×7 表的 (2,1) 格 = 恒真，等待环永远出不来（① 的卡点）。 */
-                t->temp = gfx_motion_test(vm->gfx_bridge->gfx, aid,
-                                          (int)FVP_TWEEN_ALPHA)
-                              ? fvp_value_bool()
-                              : fvp_make_null();
+                int run = gfx_motion_test(vm->gfx_bridge->gfx, aid,
+                                          (int)FVP_TWEEN_ALPHA);
+
+                t->temp = vm->legacy_frames
+                              ? fvp_make_int(run ? 1 : 0)
+                              : (run ? fvp_value_bool() : fvp_make_null());
                 return;
             }
         }
@@ -1997,10 +2001,12 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             int tid = (int)args[0].i;
 
             if (tid >= 1 && tid <= 0xFFF) {
-                t->temp = gfx_motion_test(vm->gfx_bridge->gfx, tid,
-                                          (int)FVP_TWEEN_MOVE_XY)
-                              ? fvp_value_bool()
-                              : fvp_make_null();
+                int run = gfx_motion_test(vm->gfx_bridge->gfx, tid,
+                                          (int)FVP_TWEEN_MOVE_XY);
+
+                t->temp = vm->legacy_frames
+                              ? fvp_make_int(run ? 1 : 0)
+                              : (run ? fvp_value_bool() : fvp_make_null());
                 return;
             }
         }
@@ -2013,10 +2019,12 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             int sid = (int)args[0].i;
 
             if (sid >= 1 && sid <= 0xFFF) {
-                t->temp = gfx_motion_test(vm->gfx_bridge->gfx, sid,
-                                          (int)FVP_TWEEN_SCALE)
-                              ? fvp_value_bool()
-                              : fvp_make_null();
+                int run = gfx_motion_test(vm->gfx_bridge->gfx, sid,
+                                          (int)FVP_TWEEN_SCALE);
+
+                t->temp = vm->legacy_frames
+                              ? fvp_make_int(run ? 1 : 0)
+                              : (run ? fvp_value_bool() : fvp_make_null());
                 return;
             }
         }
@@ -2554,9 +2562,16 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
      * 忠实答案必须是 **0（没在跑）** —— 原版 handler 查一张动作表，表里没有
      * 这一项时写的就是类型 0。历史行为写 1（"当作还在跑"），于是
      * `while (MotionAlphaTest(35) == true) yield;`（0x37C5A）永远出不来 ——
-     * ① 的卡点之一。 */
+     * ① 的卡点之一。
+     *
+     * 2026-11-27（第 327 轮）：改成**无条件**答"没在跑"。以前默认路径写 1，
+     * 只因为 `ret` 把 sp 多减了 B 格、实参读到过期槽，等待环才"碰巧"出来 ——
+     * 那条路已被 0x44474A（`sp = 标记槽 - A`，不减 B）证伪，所以这里
+     * 必须一起给字节真值。 */
     if (fvp_sys_is_test(cid)) {
-        t->temp = (vm->faithful_ops) ? fvp_make_null() : fvp_make_int(1);
+        /* legacy_frames（回归跑分口径）仍然答 1，因为 Python 参考实现就是这么写的，
+         * 冻结基线依赖它；游戏路径（默认）按 exe 字节答"没在跑"。 */
+        t->temp = vm->legacy_frames ? fvp_make_int(1) : fvp_make_null();
     } else if (cid < FVP_CMD_COUNT && fvp_cmd_returns[cid]) {
         t->temp = fvp_make_int(0);
     }
