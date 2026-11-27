@@ -708,6 +708,11 @@
   "appended_when": "模板在 `模式位 == int 0` 成立时才把 `」` 追加到行尾；exe 矩阵里 (type 0, type 2) 未覆盖 → 恒假 → 原版**不追加**。",
   "anchors": [
    {
+    "offset": "0x03a11f",
+    "bytes": "010400",
+    "what": "正文构建函数 0x3A11F：initstack 4|0（4 个实参）"
+   },
+   {
     "offset": "0x03a22b",
     "bytes": "10fe0c0022",
     "what": "pushstack 254; pushint8 0; eq （模式位 == int 0）"
@@ -723,6 +728,11 @@
     "what": "pushstring \"\"（续行模式：先清空 g226）"
    },
    {
+    "offset": "0x03a27f",
+    "bytes": "0fe20010fb1a15e200",
+    "what": "g226 += arg1（正文就是 arg1，slot 251）"
+   },
+   {
     "offset": "0x03a2a5",
     "bytes": "0e03817600",
     "what": "pushstring \"」\""
@@ -733,12 +743,39 @@
     "what": "pushglobal 226; pushstring \"」\"; add; popglobal 226（追加）"
    },
    {
+    "offset": "0x03a2f1",
+    "bytes": "10fb10fc10fd10fe",
+    "what": "转发器 0x3A2EE：4 个实参原样转交 0x3A11F"
+   },
+   {
     "offset": "0x03a6c6",
     "bytes": "08080808",
     "what": "调用方连压 4 个 op 0x08 当模式位/哨兵"
    }
   ],
   "note": "脚本用 `pushfalse`（类型 0）当\"行首/续行/引号\"模式位，再与 int 0/1 比较。这正是\"类型 0 与 int 0 不相等\"唯一能被观测到的地方：真实存档 s905 的台词历史环里 11 条记录都不带「」」。"
+ },
+ "text_builder": {
+  "fn": "0x3a11f",
+  "initstack": [
+   4,
+   0
+  ],
+  "forwarder": "0x3a2ee",
+  "chain": "脚本 0x7e07b 起的一批调用点 → 0x3A2EE（4 实参转发）→ 0x3A11F",
+  "args": {
+   "arg1": "正文（slot 251）：0x3A27F `pushglobal 226; pushstack 251; add; popglobal 226`",
+   "arg2": "名字（slot 252）：0x3A2BD 写入 g231",
+   "arg3": "slot 253：0x3A2DC 交给 0x43A2",
+   "arg4": "模式位（slot 254）：调用方压的是 op 0x08（类型 0）"
+  },
+  "observed_args": "FVP_DBG_CALL=1 实测：两种语义下 arg1 都是正文串；arg2/arg3/arg4 在默认语义下是 bool（op 0x08 那时压 type 1），在 --faithful-ops 下是 null（type 0）",
+  "add_fallback": {
+   "va": "0x444c36",
+   "bytes": "53 e8 c4 f9 ff ff 57 8b ce e8 bc f9 ff ff c6 07 00",
+   "what": "其余类型对（含 null + 字符串）释放两个操作数后写类型字节 0 → 结果是 null，不是 int 0",
+   "site_status": "本站仍返回 int 0：改成 null 会让忠实语义的文本从 193 行掉到 128 行（null 顺着 add 链传播），所以先记下来、等上游 g226 修好再一起改"
+  }
  },
  "helpers": [
   {

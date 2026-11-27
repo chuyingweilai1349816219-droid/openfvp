@@ -383,7 +383,14 @@ static FvpValue fvp_op_add(FvpVM *vm, const FvpValue *a, const FvpValue *b)
     if (a->type == (uint8_t)FVP_STR && b->type == (uint8_t)FVP_STR) {
         return fvp_make_str(fvp_str_concat(vm, a->str, b->str));
     }
-    return fvp_make_int(0); /* Python TypeError -> 0 */
+    /* 其余类型对（含 `null + 字符串`）在原版走兜底分支 0x444C36：释放两个操作数后
+     * `movb $0x0,(%edi)`，结果写的是**类型字节 0**（null），不是 int 0。
+     * 这一条**暂时不改**：改成 null 之后 `--faithful-ops --cmp-matrix` 的文本从
+     * 193 行掉到 128 行（null 会顺着 add 链继续传播）。说明真正的病根在更上游
+     * ——正文模板 0x3A11F 里 g226 在某些分支上是空的（见
+     * ref/exe-vm-ops.json 的 text_template 与 docs/vm-commands.md §0.5）。
+     * 等上游修好再一起改，否则就是用"更忠实的一步"换来"更不忠实的结果"。 */
+    return fvp_make_int(0); /* TODO(add 兜底): exe 写 null，见上面的说明 */
 }
 
 static FvpValue fvp_op_sub(FvpVM *vm, const FvpValue *a, const FvpValue *b)
@@ -736,6 +743,22 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
     }
     case 0x02: { /* call */
         FvpFrame f;
+        if (getenv("FVP_DBG_CALL") != NULL && ins->u == 0x3A11Fu) {
+            uint32_t k = t->sp;
+            uint32_t want = k > 4u ? 4u : k;
+            fprintf(stderr, "call 0x3A11F nargs=%u\n", (unsigned)k);
+            for (uint32_t i = 0; i < want; ++i) {
+                const FvpValue *v = &t->stack[k - want + i];
+                fprintf(stderr, "   arg%u type=%u", (unsigned)(i + 1),
+                        (unsigned)v->type);
+                if (v->type == (uint8_t)FVP_STR && v->str != NULL) {
+                    fprintf(stderr, " str=\"%.40s\"", v->str->data);
+                } else {
+                    fprintf(stderr, " i=%lld", (long long)v->i);
+                }
+                fputc('\n', stderr);
+            }
+        }
         f.ret = ins->pc + 5u;
         f.nlocals = 0;
         f.locals = NULL;

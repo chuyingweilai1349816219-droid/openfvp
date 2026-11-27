@@ -100,12 +100,15 @@ TYPE_NAMES = {
 HCB = os.path.join(r'C:\Users\Mechrevo\Downloads', '五彩斑斓的世界HD',
                    'iroseka.hcb')
 TEMPLATE_ANCHORS = [
+    (0x3A11F, '010400', '正文构建函数 0x3A11F：initstack 4|0（4 个实参）'),
     (0x3A22B, '10fe0c0022', 'pushstack 254; pushint8 0; eq （模式位 == int 0）'),
     (0x3A235, '0e03817500', 'pushstring "「"'),
     (0x3A24C, '0e0100', 'pushstring ""（续行模式：先清空 g226）'),
+    (0x3A27F, '0fe20010fb1a15e200', 'g226 += arg1（正文就是 arg1，slot 251）'),
     (0x3A2A5, '0e03817600', 'pushstring "」"'),
     (0x3A2A2, '0fe200' '0e03817600' '1a' '15e200',
      'pushglobal 226; pushstring "」"; add; popglobal 226（追加）'),
+    (0x3A2F1, '10fb10fc10fd10fe', '转发器 0x3A2EE：4 个实参原样转交 0x3A11F'),
     (0x3A6C6, '08080808', '调用方连压 4 个 op 0x08 当模式位/哨兵'),
 ]
 
@@ -332,6 +335,31 @@ def build():
         'handler_heads': heads,
         'matrices': mats,
         'text_template': text_template([m for m in mats if m['name'] == 'eq/neq'][0]),
+        'text_builder': {
+            'fn': '0x3a11f',
+            'initstack': [4, 0],
+            'forwarder': '0x3a2ee',
+            'chain': '脚本 0x7e07b 起的一批调用点 → 0x3A2EE（4 实参转发）→ 0x3A11F',
+            'args': {
+                'arg1': '正文（slot 251）：0x3A27F `pushglobal 226; pushstack 251; '
+                        'add; popglobal 226`',
+                'arg2': '名字（slot 252）：0x3A2BD 写入 g231',
+                'arg3': 'slot 253：0x3A2DC 交给 0x43A2',
+                'arg4': '模式位（slot 254）：调用方压的是 op 0x08（类型 0）',
+            },
+            'observed_args': 'FVP_DBG_CALL=1 实测：两种语义下 arg1 都是正文串；'
+                             'arg2/arg3/arg4 在默认语义下是 bool（op 0x08 那时压 '
+                             'type 1），在 --faithful-ops 下是 null（type 0）',
+            'add_fallback': {
+                'va': '0x444c36',
+                'bytes': '53 e8 c4 f9 ff ff 57 8b ce e8 bc f9 ff ff c6 07 00',
+                'what': '其余类型对（含 null + 字符串）释放两个操作数后写类型字节 0 '
+                        '→ 结果是 null，不是 int 0',
+                'site_status': '本站仍返回 int 0：改成 null 会让忠实语义的文本从 '
+                               '193 行掉到 128 行（null 顺着 add 链传播），所以先'
+                               '记下来、等上游 g226 修好再一起改',
+            },
+        },
         'helpers': helpers,
         'eq_table_c': {
             'note': ('eq 表 C 的 17 项覆盖里，11 项是"恒返回 1"的谓词（不是三态'

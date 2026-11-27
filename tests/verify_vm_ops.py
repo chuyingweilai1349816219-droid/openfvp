@@ -155,6 +155,21 @@ def main():
         check(t.count('faithful_ops') >= 4,
               'syscall.c 至少 4 处分支（DissolveWait / *Test / 59 / 62）')
 
+    print('== 正文构建函数 0x3A11F 的实参')
+    tb = ref.get('text_builder', {})
+    if tb:
+        check(tb.get('fn') == '0x3a11f', '构建函数 0x3A11F')
+        check(tb.get('initstack') == [4, 0], 'initstack 4|0（4 个实参）')
+        check(tb.get('forwarder') == '0x3a2ee', '转发器 0x3A2EE')
+        args = tb.get('args') or {}
+        check('正文' in args.get('arg1', ''), 'arg1 = 正文（0x3A27F 的 add）')
+        check('模式位' in args.get('arg4', ''), 'arg4 = 模式位')
+        check('bool' in tb.get('observed_args', ''), '记下两种语义下实参类型的差异')
+        af = tb.get('add_fallback') or {}
+        check(af.get('va') == '0x444c36', 'add 兜底 0x444C36')
+        check('null' in af.get('what', ''), '兜底写的是 null（不是 int 0）')
+        check('193' in af.get('site_status', ''), '记下"暂不改"的实测理由')
+
     print('== 文本模板的引号装饰（HCB 0x3A21D）')
     tc = ref.get('eq_table_c', {})
     if tc:

@@ -4,6 +4,43 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百二十五续）：正文构建函数只有 4 个实参，arg1 就是正文
+
+### 1. 给 `call` 加钩子，直接看实参
+
+上一轮把分歧定位到 `pc=0x3A547`（layer 0、`g226` 变成 int 0）。这一轮给 `call`
+加了个诊断钩子（`FVP_DBG_CALL=1`，只在目标为 `0x3A11F` 时打印栈顶 4 个实参），
+两种语义下的差别一眼看清：
+
+| 实参 | 默认语义 | `--faithful-ops` | 去向 |
+| --- | --- | --- | --- |
+| arg1 | 字符串（正文） | 字符串（正文） | `0x3A27F g226 += arg1` |
+| arg2 | bool（type 4） | null（type 3） | `0x3A2BD` → g231（名字） |
+| arg3 | bool | null | `0x3A2DC` → `call 0x43A2` |
+| arg4 | bool | null | 模式位（与 int 0/1 比较） |
+
+**正文（arg1）在两种语义下都是好的** —— 所以丢正文的不是实参，而是 g226 的初值。
+调用链也定了：脚本 `0x7E07B` 起的一批调用点 → `0x3A2EE`（4 实参转发）→ `0x3A11F`
+（`initstack 4|0`）。
+
+### 2. 顺带钉住 `add` 的兜底（但**不改**）
+
+`0x444C36` 对"其余类型对"（含 **null + 字符串**）是先释放两个操作数，再
+`movb $0x0,(%edi)` —— 结果是 **null**，不是 int 0。我们一直返回 int 0。
+
+试过了：改成 null 之后 `--faithful-ops --cmp-matrix` 的文本从 **193 行掉到 128 行**
+（null 顺着 add 链继续传播）。所以撤回了这一改，把事实写进基线
+（`ref/exe-vm-ops.json` 的 `text_builder.add_fallback`，带 `site_status` 说明为什么
+暂不改）。**病根在上游**：g226 在某些分支上是空的。
+
+### 3. 基线
+
+`ref/exe-vm-ops.json` 新增 `text_builder` 块（函数地址、`initstack`、转发器、
+4 个实参的去向、`add` 兜底的字节与"暂不改"的理由），模板锚点从 6 个加到 9 个。
+门禁 `tests/verify_vm_ops.py` 74 → **83 项**。
+
+回归：默认路径 `compare.py` 仍逐字节一致；`--faithful-ops --cmp-matrix` 仍是 193 行。
+
 ## [未发布] — 2026-11-27（一百二十四续）：第一处分歧定位到 `pc=0x3A547`，正文根本没被组装
 
 ### 1. "差 18 块"还不够具体
