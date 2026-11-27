@@ -172,16 +172,19 @@ static void convert_frame(const Hzc1Info *info, const uint8_t *raw,
             out += 4;
         }
         break;
-    case 4: /* 1-bit mask stored as one byte per pixel */
+    case 4: /* 1-bit mask stored as one byte per pixel（0 = 无、1 = 字形） */
         for (i = 0; i < pixels; i++) {
-            /* Matches the Python reference ((m * 255).astype(uint8)):
-             * numpy uint8 multiplication wraps modulo 256.  For the 0/1
-             * values that actually occur this is a plain 0/255 scaling. */
-            uint8_t v = (uint8_t)((unsigned)(*src++) * 255u);
-            out[0] = v;
-            out[1] = v;
-            out[2] = v;
-            out[3] = 255;
+            /* 掩码不是"灰阶图"：值 0 是**没有 ink**，值 1 是字形。
+             * 早先按 (m*255) 压成灰阶并写 alpha=255，于是整块 156×156 的
+             * 黑底被当成不透明贴到画面上（用户报的"正文出现黑底水滴/汗/怒"）。
+             * 现在 0 → alpha 0（透），1 → 不透明白（字形）。12 个 fmt-4 素材
+             * 全是 gaiji（`extract/graph/0705..0716_gaiji_*`），没有别的用途。 */
+            uint8_t ink = *src++;
+
+            out[0] = ink ? 255 : 0;
+            out[1] = ink ? 255 : 0;
+            out[2] = ink ? 255 : 0;
+            out[3] = ink ? 255 : 0;
             out += 4;
         }
         break;

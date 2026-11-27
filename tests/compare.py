@@ -14,6 +14,7 @@ Exit code 0 iff both files are byte-identical.
 import argparse
 import hashlib
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -31,12 +32,16 @@ REFS = {
 }
 
 
-def newest_source_mtime():
-    """最新一个"bin/fvm.exe 真正会编译"的源文件 mtime。
+def _make_tool():
+    for name in ('mingw32-make', 'make'):
+        p = shutil.which(name)
+        if p:
+            return p
+    return None
 
-    `src/platform/win32/**` 只喂 bin/fvp.exe，不参与 fvm 的构建，
-    所以不算进来（否则改窗口代码会误报"二进制过期"）。
-    """
+
+def newest_source_mtime():
+    """（回退用）最新源文件 mtime；只有在找不到 make 时才用。"""
     newest = 0.0
     skip = os.path.join(FVP, 'src', 'platform', 'win32')
     for root, _dirs, files in os.walk(os.path.join(FVP, 'src')):
@@ -49,23 +54,39 @@ def newest_source_mtime():
                     newest = max(newest, os.path.getmtime(p))
                 except OSError:
                     pass
-    for extra in ('Makefile',):
-        p = os.path.join(FVP, extra)
-        if os.path.isfile(p):
-            newest = max(newest, os.path.getmtime(p))
+    p = os.path.join(FVP, 'Makefile')
+    if os.path.isfile(p):
+        newest = max(newest, os.path.getmtime(p))
     return newest
 
 
 def stale_binary_reason(exe):
-    """0 = 新鲜；否则返回一句人话。
+    """0 / '' = 新鲜；否则返回一句人话。
 
     为什么需要这道检查：`make headless` 只构建 bin/fvp-headless.exe，
     **不重建 bin/fvm.exe**。第 134 轮曾经先用 `make headless` 再跑本脚本，
     结果比的是上一轮遗留的旧 fvm，把"已经改坏的基线"误判成 PASS
-    （见 CHANGELOG 一百三十五续的更正）。这里把"二进制比源码旧"变成硬失败。
+    （见 CHANGELOG 一百三十五续的更正）。
+
+    判据用 `make -q all`（make 自己的依赖图），而不是"源码 mtime"：
+    fvm 只链接 CORE_SRC + 存档/文本/计时那几个 .o，`hzc1.c` / `bin.c` /
+    `inflate.c` / `snd.c` 只进 bin/libfvp.a，改它们并不会让 fvm 过期 ——
+    按 mtime 比会误报（第 328 轮就踩到过）。
     """
     if not os.path.isfile(exe):
         return 'missing %s' % exe
+    make = _make_tool()
+    if make is not None:
+        try:
+            proc = subprocess.run([make, '-f', 'Makefile', '-q', 'all'],
+                                  cwd=FVP, stdout=subprocess.DEVNULL,
+                                  stderr=subprocess.DEVNULL, timeout=120)
+        except (OSError, subprocess.SubprocessError):
+            return ''
+        if proc.returncode == 1:
+            return ('%s is out of date (run: mingw32-make -f Makefile all)'
+                    % exe)
+        return ''
     src = newest_source_mtime()
     if src and os.path.getmtime(exe) + 1.0 < src:
         return ('%s is older than the newest source file '

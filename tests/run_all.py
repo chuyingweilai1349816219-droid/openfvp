@@ -1140,6 +1140,14 @@ def build_steps(args):
                            'ref-900k.txt byte for byte, --exe-frames follows '
                            '0x44473D (sp = marker - A)'))
 
+    # 6.62 HZC1 fmt-4（1-bit 掩码）的 alpha 语义：0 = 透明、1 = 白色字形
+    vgm = os.path.join(HERE, 'verify_gaiji_mask.py')
+    steps.append(Step('verify_gaiji_mask.py', [PY, '-X', 'utf8', vgm], 300,
+                      skip_reason=None,
+                      note='fmt-4 mask decodes with alpha (the black box around '
+                           'gaiji sprites); needs the local extract/graph/ '
+                           'directory, SKIPs without it'))
+
     # 7. asset fuzz
     fuzz_assets = os.path.join(HERE, 'fuzz_assets.py')
     fa_argv = [PY, fuzz_assets]
