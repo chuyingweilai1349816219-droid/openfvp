@@ -1954,7 +1954,7 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
                * 本引擎的 Dissolve(14) 还是空桩（没有屏幕淡出，见 docs/status.md），
                * 状态恒 0，所以查询立刻返回 false —— 脚本按原版的有序路径往下走，
                * 只是少了开场那层淡出画面。 */
-        if (dissolve_state != 0 && vm->faithful_ops) {
+        if (dissolve_state != 0) {
             if (argc >= 1 && args[0].type == (uint8_t)FVP_NULL) {
                 t->temp = fvp_value_bool();          /* 查询：还在溶解 */
             } else if (argc >= 1) {
@@ -1962,12 +1962,12 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             }
             return;
         }
-        if (vm->faithful_ops) {
-            return;                                  /* 状态 0：什么都不写 = false */
-        }
-        /* 历史行为（faithful_ops == 0）：不管实参一律写 int 1。冻结文本基线
-         * 就是这条路径产出的，所以默认保持不动。 */
-        t->temp = fvp_make_int(1);
+        /* 状态 0：原版 handler 第一条指令就 `je ret` —— **什么都不写**，
+         * 也就是返回槽保持"假"。历史行为（faithful_ops == 0）在这里写
+         * int 1（"还在溶解"），于是 `while (DissolveWait(pushfalse) ==
+         * pushtrue)`（prologue 0x59264..0x5928C）永远出不来。冻结文本
+         * 基线并不依赖这个 1（见 CHANGELOG 一百三十四续的实测），所以
+         * 默认路径按 exe 字节走：状态 0 → 不写 = 假。 */
         return;
     case 44:  /* MotionAlphaTest(id)：原版 0x43A9C0，容器 engine+0x651E04
                * （与 MotionAlpha(42) 同一个），id 1..0xFFF，1 = 还在跑。 */
@@ -1976,9 +1976,15 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             int aid = (int)args[0].i;
 
             if (aid >= 1 && aid <= 0xFFF) {
-                t->temp = fvp_make_int(
-                    gfx_motion_test(vm->gfx_bridge->gfx, aid,
-                                    (int)FVP_TWEEN_ALPHA) ? 1 : 0);
+                /* 原版 0x43A9C0：`call 0x422990 ; test eax,eax ; setne al ;
+                 * mov BYTE PTR [esi+0x814],al` —— 写的是**类型字节**，
+                 * 也就是 bool 变体（type 1 = 还在跑 / type 0 = 没在跑），
+                 * 不是 int。写成 int 会让 `eq(测试结果, pushtrue)` 落到
+                 * 7×7 表的 (2,1) 格 = 恒真，等待环永远出不来（① 的卡点）。 */
+                t->temp = gfx_motion_test(vm->gfx_bridge->gfx, aid,
+                                          (int)FVP_TWEEN_ALPHA)
+                              ? fvp_value_bool()
+                              : fvp_make_null();
                 return;
             }
         }
@@ -1991,9 +1997,10 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             int tid = (int)args[0].i;
 
             if (tid >= 1 && tid <= 0xFFF) {
-                t->temp = fvp_make_int(
-                    gfx_motion_test(vm->gfx_bridge->gfx, tid,
-                                    (int)FVP_TWEEN_MOVE_XY) ? 1 : 0);
+                t->temp = gfx_motion_test(vm->gfx_bridge->gfx, tid,
+                                          (int)FVP_TWEEN_MOVE_XY)
+                              ? fvp_value_bool()
+                              : fvp_make_null();
                 return;
             }
         }
@@ -2006,9 +2013,10 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
             int sid = (int)args[0].i;
 
             if (sid >= 1 && sid <= 0xFFF) {
-                t->temp = fvp_make_int(
-                    gfx_motion_test(vm->gfx_bridge->gfx, sid,
-                                    (int)FVP_TWEEN_SCALE) ? 1 : 0);
+                t->temp = gfx_motion_test(vm->gfx_bridge->gfx, sid,
+                                          (int)FVP_TWEEN_SCALE)
+                              ? fvp_value_bool()
+                              : fvp_make_null();
                 return;
             }
         }
@@ -2352,6 +2360,11 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
         break;
     case 114:
         t->temp = fvp_make_int(fvp_vm_font_count(vm));
+        if (getenv("FVP_DBG_FONT") != NULL) {
+            fprintf(stderr, "font count -> %lld (step %llu)\n",
+                    (long long)fvp_vm_font_count(vm),
+                    (unsigned long long)vm->steps);
+        }
         return;
     case 115:
         t->temp = fvp_make_int(fvp_vm_font_get(vm));
@@ -2362,6 +2375,12 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
 
         t->temp = fvp_make_str(fvp_arena_str(&vm->arena, name != NULL ? name : "",
                                              name != NULL ? strlen(name) : 0u));
+        if (getenv("FVP_DBG_FONT") != NULL) {
+            fprintf(stderr, "font name(%lld) -> '%s' (step %llu)\n",
+                    (long long)(argc >= 1 ? args[0].i : -1),
+                    name != NULL ? name : "",
+                    (unsigned long long)vm->steps);
+        }
         return;
     }
     case 117:

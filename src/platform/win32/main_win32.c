@@ -163,6 +163,9 @@ typedef struct Options {
      * 写进日志（诊断正文位置用，不影响渲染）。 */
     int dump_text_prims;
     int dump_prims; /* --dump-prims：退出时导出图元表（诊断） */
+    /* --pctrace FILE：把每条执行过的字节码 pc 写成一行十六进制（诊断用，
+     * 与 headless 的 --pctrace 同一个开关，用来比对两次运行在哪里分叉）。 */
+    wchar_t pctrace_path[PATH_CAP];
     int faithful_ops; /* --faithful-ops：0x08/0x09/pushtemp/*Test 按 exe 字节执行 */
     int cmp_matrix;   /* --cmp-matrix：eq/neq 走 exe 的 7x7 类型对矩阵 */
     int bool_type;    /* --bool-type：jmpcond 只认 type0 为假（原版语义） */
@@ -821,6 +824,9 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->auto_click_ms = ms < 50 ? 50 : (ms > 60000 ? 60000 : ms);
         } else if (wcscmp(a, L"--dump-prims") == 0) {
         o->dump_prims = 1;
+    } else if (wcscmp(a, L"--pctrace") == 0 && i + 1 < argc) {
+        wcsncpy(o->pctrace_path, argv[++i], PATH_CAP - 1);
+        o->pctrace_path[PATH_CAP - 1] = 0;
     } else if (wcscmp(a, L"--faithful-ops") == 0) {
         o->faithful_ops = 1;
     } else if (wcscmp(a, L"--cmp-matrix") == 0) {
@@ -3437,6 +3443,18 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     vm.faithful_ops = opts.faithful_ops;
     vm.cmp_matrix = opts.cmp_matrix;
     vm.bool_type = opts.bool_type;
+    if (opts.pctrace_path[0] != 0) {
+        char pc_u8[PATH_CAP];
+
+        if (wide_to_utf8(opts.pctrace_path, pc_u8, sizeof(pc_u8))) {
+            vm.pctrace = fopen(pc_u8, "wb");
+            if (vm.pctrace == NULL) {
+                fvp_logf("pctrace: cannot write %s", pc_u8);
+            } else {
+                fvp_logf("pctrace: writing %s", pc_u8);
+            }
+        }
+    }
     fvp_logf("semantics: faithful_ops=%d cmp_matrix=%d bool_type=%d",
              opts.faithful_ops, opts.cmp_matrix, opts.bool_type);
     fvp_logf("threads: coroutine slots %s", opts.threads ? "on" : "off (--no-threads)");

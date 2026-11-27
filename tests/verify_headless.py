@@ -178,13 +178,12 @@ def main():
         with open(text, encoding='utf-8', errors='replace') as f:
             n_lines = sum(1 for _ in f)
     check(os.path.isfile(text), 'text sink file written')
-    # 2026-11-27 更正：这里原来断言"至少一行"，但那依赖 fvm 旧行为 ——
-    # bin/fvm.exe 在 case 44/15 没有 gfx 时会写残留 temp，于是"骗过" 265 等待环
-    # 继续跑；带 gfx 的 headless 会忠实等待，故事段还没开始，所以 0 行才是**对的**。
-    # 现在把这条差异本身钉成断言：headless 0 行、同参数的 fvm > 0 行。
-    check(n_lines == 0,
-          'headless text is empty because the story is still behind the 265 wait '
-          'loop (got %d line(s))' % n_lines)
+    # 2026-11-27（第 326 轮）更正：以前这里钉的是"headless 0 行"——那是
+    # prim 265 等待环未修时的旧结论（当时是靠 case 44/15 写残留 temp 才骗过去的）。
+    # 单一栈帧模型 + 0x08/0x09 按 exe 字节改正之后，headless 也真的走进故事段，
+    # 所以真值是"至少 1 行"，而且要和 fvm 的方向一致（两者都 > 0）。
+    check(n_lines > 0,
+          'headless reached the story region (got %d line(s))' % n_lines)
     if os.path.isfile(fvm):
         ftext = os.path.join(OUT, 'fvm-text.txt')
         run([fvm, args.script, '--steps', str(args.steps), '--quiet',
@@ -194,7 +193,7 @@ def main():
             with open(ftext, encoding='utf-8', errors='replace') as f:
                 f_lines = sum(1 for _ in f)
         check(f_lines > 0,
-              'fvm (no gfx: stale temps let it slip past the wait loop) emits '
+              'fvm (same VM, no gfx bridge) emits '
               '%d line(s)' % f_lines)
 
     if fails:

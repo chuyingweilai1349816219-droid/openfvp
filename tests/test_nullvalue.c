@@ -43,10 +43,14 @@ static int g_pass = 0;
     } while (0)
 
 /* 最小 .hcb：u32 script_len | code | u32 main_start。
- * 只有一条指令 0x09(pushfalse)，于是 script_len = 5、main_start = 4。 */
+ * 只有一条指令 0x08(pushfalse)，于是 script_len = 5、main_start = 4。
+ *
+ * 注意：早先这份用例把 0x08/0x09 **写反了**（0x09 当 pushfalse）。
+ * 原版字节省：0x444940（op 0x08）只写类型 0，0x444960（op 0x09）只写类型 1，
+ * 所以 0x08 = false/null、0x09 = true。2026-11-27 第 326 轮按字节改正。 */
 static const unsigned char kPushFalseHcb[9] = {
     0x05, 0x00, 0x00, 0x00, /* script_len = 5 */
-    0x09,                   /* pushfalse */
+    0x08,                   /* pushfalse（0x444940 写 type 0） */
     0x04, 0x00, 0x00, 0x00  /* main_start = 4 */
 };
 
@@ -70,7 +74,7 @@ static const unsigned char kJmpIntZeroHcb[18] = {
     0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
 };
 
-/* 最小 .hcb #4：pushint8 0 ; pushfalse ; eq ; ret
+/* 最小 .hcb #4：pushint8 0 ; pushfalse(0x08) ; eq ; ret
  *   offset 4 : 0c 00   pushint8 0   → 6
  *   offset 6 : 09      pushfalse    → 7
  *   offset 7 : 22      eq           → 8
@@ -84,12 +88,12 @@ static const unsigned char kJmpIntZeroHcb[18] = {
 static const unsigned char kEqIntNullHcb[13] = {
     0x09, 0x00, 0x00, 0x00,             /* script_len = 9 */
     0x0c, 0x00,                         /* pushint8 0 */
-    0x09,                               /* pushfalse */
+    0x08,                               /* pushfalse（0x444940 写 type 0） */
     0x22,                               /* eq */
     0x04,                               /* ret */
     0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
 };
- /* 最小 .hcb #3：pushfalse ; jmpcond 12 ; pushint8 1 ; ret
+ /* 最小 .hcb #3：pushfalse(0x08) ; jmpcond 12 ; pushint8 1 ; ret
  *   offset 4 : 09               pushfalse        (size 1) → 5
  *   offset 5 : 07 <u32=12>      jmpcond 12        (size 5) → 10
  *   offset 10: 0c 01            pushint8 1        (size 2) → 12
@@ -98,14 +102,14 @@ static const unsigned char kEqIntNullHcb[13] = {
  */
 static const unsigned char kJmpNullHcb[17] = {
     0x0d, 0x00, 0x00, 0x00,             /* script_len = 13 */
-    0x09,                               /* pushfalse */
+    0x08,                               /* pushfalse（0x444940 写 type 0） */
     0x07, 0x0c, 0x00, 0x00, 0x00,       /* jmpcond 12 */
     0x0c, 0x01,                         /* pushint8 1 */
     0x04,                               /* ret */
     0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
 };
 
-/* 最小 .hcb #5：pushint8 1 ; pushfalse ; le(0x25) ; ret
+/* 最小 .hcb #5：pushint8 1 ; pushfalse(0x08) ; le(0x25) ; ret
  *   offset 4 : 0c 01   pushint8 1   → 6
  *   offset 6 : 09      pushfalse    → 7
  *   offset 7 : 25      le           → 8
@@ -119,7 +123,7 @@ static const unsigned char kJmpNullHcb[17] = {
 static const unsigned char kLeIntNullHcb[13] = {
     0x09, 0x00, 0x00, 0x00,             /* script_len = 9 */
     0x0c, 0x01,                         /* pushint8 1 */
-    0x09,                               /* pushfalse */
+    0x08,                               /* pushfalse（0x444940 写 type 0） */
     0x25,                               /* le (表 A + sete) */
     0x04,                               /* ret */
     0x04, 0x00, 0x00, 0x00              /* main_start = 4 */
@@ -473,7 +477,7 @@ static void test_bool_type_jmpcond(void)
 
 /* 最小 .hcb #0b：pushint8 0 ; jmpcond 13 ; pushint8 1 ; ret（同上注释） */
 
-/* 11. pushtrue（opcode 0x08）压的是**原版 Variant type 1**，不是 int 1。
+/* 11. pushtrue（opcode **0x09**，原版 0x444960）压的是 Variant type 1，不是 int 1。
  *
  * 为什么必须区分：原版 0x444960 只写类型字节 0x1；各 PrimSet* / Motion* handler
  * 只对 Variant type 2（int）写字段，所以脚本里的 `true` 是"这一维不改"的哨兵。
@@ -481,7 +485,7 @@ static void test_bool_type_jmpcond(void)
  * （用户报的"正文位置不对"根因）。数值语义必须与 int 1 等价，否则比较/算术全变。 */
 static const unsigned char kPushTrueHcb[9] = {
     0x05, 0x00, 0x00, 0x00, /* script_len = 5 */
-    0x08,                   /* pushtrue */
+    0x09,                   /* pushtrue（0x444960 写 type 1） */
     0x04, 0x00, 0x00, 0x00  /* main_start = 4 */
 };
 

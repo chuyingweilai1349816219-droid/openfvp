@@ -574,6 +574,30 @@ handler 依次读 `0x4` / `0xc` / `0x14` / `0x1c`，分别 = 先压的第 1/2/3/
 脚本侧 `syscall 109 (SysProjFolder)` 之前只压了 1 个 `pushstring ""`，handler 也取 `0x4`，吻合。
 **结论：先压 = arg1，不需要反转。**（这也是脚本编译器把参数从左到右依次 push 的直接结果。）
 
+### 2.1 帧与 `base`：`call` / `initstack` / `pushstack` / `ret`（2026-11-27 按字节钉住）
+
+原版只有**一条栈**，函数帧靠「标记槽」记录 `(A, B)`，其余一律是 `base + (int8)偏移`：
+
+| opcode | handler | 字节行为 |
+|---|---|---|
+| `call T` | `0x4458c0` | 把 `pc+4` 写进 `stack[sp]+4`、旧 `base`（`0x824`）写进 `stack[sp]+0xa`，**sp 不自增**；`pc = *(u32)code` |
+| `initstack A,B` | `0x445890` → `0x444580` | 只写这一格的 byte0=`A`、byte1=`B`，`sp++`（这一格成为标记槽），再压 **B** 个 `type 0` 空槽，`base = sp` |
+| `pushstack n` | `0x445c20` | `esi = (int8)operand`；`push stack[base + esi]`（`movsx` → 负偏移读实参） |
+| `copystack n` | `0x445e00` | `sp--`；`stack[base + (int8)n] = 旧栈顶` |
+| `pushtop` | `0x444980` | 把 `stack[sp-1]` 再压一份（**dup**，不是"取 0 号局部"） |
+| `ret` | `0x4448e0` → `0x444660` | 返回槽写 `type 0`；`base--` 得标记槽，先弹 **B** 个局部、再弹 **A** 个实参 |
+| `retvalue` | `0x444900` → `0x444660` | 先 `sp--`、把栈顶写进返回槽，再同上 |
+
+由此推出的实参位置：标记槽在 `base-1`，最后一个实参在 `base-2`，最前一个在 `base-1-N`。
+正文模板 `initstack 4,0` 用 `pushstack 251` 读 arg1 —— `251` 当有符号字节就是 **-5** = `base-1-4`，吻合。
+
+实现（`src/vm.c`，`FvpFrame` 见 `src/vm.h`）就是这一套：`sbase` / `nargs` / `nlocals`，
+`fvp_frameslot()` 只做 `sbase + (int8)operand`。
+以前那套"局部数组 + 实参数组 + `call` 时把 sp 清零 + 把操作数当绝对槽"的模型在正文模板上
+恰好等价（冻结文本基线一直是对的），但在 `initstack 0,1`（0 个参数、1 个局部）里
+`nlocals` 会被读成 0，局部写不进去 —— 字体枚举循环 `0x6D75B` 因此永远停在 `i = 0`
+（实测 132375 次），见 CHANGELOG 一百三十四续。
+
 ---
 
 ## 3. 返回值（pushtemp）

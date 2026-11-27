@@ -3795,6 +3795,17 @@ void gfx_debug_dump_prims(Gfx *g, FILE *out)
         } else {
             fputs("-", out);
         }
+        /* type-5 文本图元：把绑定的文本窗口最后一行也打出来，这样"图元在、
+         * 内容是不是正文"一眼能对（诊断用；不影响渲染）。 */
+        if (p->type == 5 && p->tw >= 0 && p->tw < GFX_TEXT_MAX) {
+            const GfxTextWin *tw = &g->tw[p->tw];
+
+            if (tw->nlines > 0 && tw->lines[tw->nlines - 1] != NULL) {
+                fprintf(out, " text=\"%s\"", tw->lines[tw->nlines - 1]);
+            } else {
+                fputs(" text=\"\"", out);
+            }
+        }
         fputc('\n', out);
     }
 }

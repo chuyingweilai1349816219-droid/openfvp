@@ -133,10 +133,13 @@ def main():
         check(i8 > 0 and i9 > i8, 'src/vm.c 有 case 0x08 / 0x09')
         blk8 = txt[i8:i9]
         blk9 = txt[i9:i9 + 900]
-        check('faithful_ops' in blk8 and 'fvp_make_null' in blk8,
-              'src/vm.c: --faithful-ops 下 case 0x08 压 null（= false）')
-        check('faithful_ops' in blk9 and 'fvp_value_bool' in blk9,
-              'src/vm.c: --faithful-ops 下 case 0x09 压 bool true')
+        # 2026-11-27 第 326 轮：0x08/0x09 不再分「历史/忠实」两套 —— exe 字节
+        # （0x444940 写 type 0 / 0x444960 写 type 1）就是唯一语义，而且冻结文本
+        # 基线在这套语义下逐字节不变（compare.py PASS）。
+        check('fvp_make_null' in blk8 and 'faithful_ops' not in blk8,
+              'src/vm.c: case 0x08 无条件压 null（= false，0x444940）')
+        check('fvp_value_bool' in blk9 and 'faithful_ops' not in blk9,
+              'src/vm.c: case 0x09 无条件压 bool true（= 0x444960）')
         i14 = txt.find('case 0x14:')
         check(i14 > 0 and 'faithful_ops' in txt[i14:i14 + 900] and
               'fvp_make_null' in txt[i14:i14 + 900],

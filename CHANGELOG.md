@@ -4,6 +4,73 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百三十四续）：窗口第一次真的画出正文图元 —— 帧/栈模型按 exe 字节重写
+
+### 1. 这一轮的净结果
+
+| 指标 | 一百三十三续 | 现在 |
+| --- | --- | --- |
+| 窗口命令覆盖（`--title-menu --pick 0`，20 s） | 63 条 | **85 条** |
+| 窗口文本行（shell 的 `text lines`） | 0 | **13** |
+| 卡住的 pc | `0x592E2`（`MotionAlphaTest(265)` 环） | 无（走过的环都退出了） |
+| `prim 551`（浮游旁白图元） | `alpha=0` | **`type=5 alpha=255 xy=461,435 tw=0`** |
+| 冻结文本基线 `ref/ref-900k.txt` | 6496 B / 195 行 | **逐字节不变**（sha256 `7f9837ff…`） |
+
+`prim 551` 的 `xy=461,435` 正是用户 2026-11-26 指定的浮游旁白面板原点 (461.25, 435.375)。
+
+### 2. 三处「为迁就基线而写反」的语义，按字节省改回来
+
+| 项 | 旧行为（默认路径） | exe 字节 | 现在 |
+| --- | --- | --- | --- |
+| op `0x08` pushfalse | 压 `bool(true)` | `0x444940` 只写 type **0** | 压 `null` |
+| op `0x09` pushtrue | 压 `null` | `0x444960` 只写 type **1** | 压 `bool(true)` |
+| `Motion*Test` / `V3D*Test` 返回值 | `int 0/1` | `0x43A9C0`：`setne al` + `mov BYTE [esi+0x814],al` | `bool true` / `null` |
+| `DissolveWait(15)` 状态 0 | `int 1`（"还在溶解"） | `0x437520` 第一条就 `je ret`，**不写返回槽** | 不写 = 假 |
+
+三处都曾被注释当成"冻结基线依赖"，实测**基线并不依赖**：改完之后
+`tests/compare.py --run` 仍然 `PASS -- byte-identical (6496 bytes, 195 lines)`。
+
+顺带解释了两个老症状：
+- `eq(测试结果, pushtrue)` 落到 7×7 表的 (2,1) 格 = 恒真 —— 于是 `0x592E2` 环永不出（先前在
+  `--faithful-ops` 下修好了这一格，但整条 `*Test` 分支跟着变，窗口只到 6 条命令）。
+- `DissolveWait(false)` 恒答"还在溶解" —— prologue `0x59264..0x5928C` 的第二个环。
+
+### 3. 帧/栈模型：按字节证据重写成原版的「单一栈」
+
+| 指令 | exe | 行为 |
+| --- | --- | --- |
+| `call` | `0x4458c0` | 返回地址写进 `stack[sp]+4`、旧 base 写进 `+0xa`，**sp 不自增** |
+| `initstack A,B` | `0x445890` → `0x444580` | 写该槽 byte0=`A`、byte1=`B`，sp++，再压 **B** 个 type0 局部槽 |
+| `pushstack n` | `0x445c20` | 读 `stack[base + (int8)n]`（负 = 实参） |
+| `copystack n` | `0x445e00` | 栈顶写进 `stack[base + (int8)n]` |
+| `pushtop` | `0x444980` | 把**栈顶再压一份**（dup），不是"取 0 号局部" |
+| `ret` / `retvalue` | `0x4448e0` / `0x444900` → `0x444660` | 弹 B 个局部、再弹 A 个实参，`base--` 恢复 |
+
+旧模型是"局部数组 + 实参数组 + call 时把 sp 清零"，在正文模板 `initstack 4,0` 上恰好等价
+（所以基线一直是对的），但在 `initstack 0,1` 这种"0 个参数、1 个局部"的函数里
+`nlocals` 被读成 0：局部变量写不进去。脚本 `0x6D75B` 的字体枚举
+`while (i < TextFontCount()) { if (TextFontName(i) == "メイリオ") break; i++ }`
+因此 `i` 永远是 0 —— 实测空转 **132375** 次（`--pctrace` 里 `0x6d76e` 出现次数）。
+
+### 4. 诚实负面（下一轮要做的）
+
+- **屏幕上只有一个 `」`**（`work/w_story1_real.png`）。图元位置/透明度/绑定都对，但文本窗口 0
+  的缓冲区内容不是正文 —— `text: [0]` 的拼接（`」` 从哪来）是下一步的第一件事。
+- 背景仍是暗转层（`graph/EF_e08`），没有 CG；`--dump-text-prims` 报 **1 drawn / 3 bound**。
+- `--faithful-ops` / `--cmp-matrix` / `--bool-type` 三个老开关现在与默认路径的差别更小了，
+  但它们**还没有删**：A/B 基线与 `ref/text-delta-faithful.json` 仍要能复现。
+
+### 5. 门禁与用例变更
+
+- `make check` **PASS**（`test_nullvalue` 92/0）。
+- `tests/compare.py --run` **PASS**（逐字节）。
+- `tests/run_all.py --fast`：109 passed / 0 failed / 1 skipped。
+- 三条**断言旧 bug 的用例**按新真值改写（都写成下界，没有放宽）：
+  `tests/test_nullvalue.c` 的夹具把 `0x08/0x09` 写反了（已按其自述语义改正）；
+  `verify_headless.py` 从"0 行才对"改成"≥1 行"；
+  `verify_load_restart.py` 从"重启后 0 行"改成"重启后 ≥1 行"。
+- `--dump-prims` 对 type-5 图元多打一个 `text="…"`（绑定窗口最后一行），方便一眼核对正文。
+
 ## [未发布] — 2026-11-27（一百三十三续）：动作环修好之后，窗口第一次走到故事区 —— 撞上 ① 的 265 环
 
 ### 1. 进展：真的往前走了

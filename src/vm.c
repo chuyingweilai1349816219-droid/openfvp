@@ -186,62 +186,14 @@ FvpValue fvp_thread_pop(FvpThread *t)
     return t->stack[t->sp];
 }
 
-/* 修正版帧槽模型（FVP_FRAME_SLOTS=1）：
- *   参数槽 = 绝对槽 255-A..254（A = initstack 第一个字节）；
- *   局部变量块 = 参数块下面紧挨的 B 个槽，同时允许 0..B-1 直接寻址。
- * 默认（环境变量没设）走旧行为，保持冻结文本基线不变。 */
-static int fvp_frame_slots_mode(void)
+/* 帧内寻址：照原版 exe 的 base + (int8)操作数（见 vm.h 的 FvpFrame 注释）。
+ * base 由 initstack 记下（= 标记槽下标 + 1）；负偏移是实参，0..nlocals-1 是局部。 */
+static int32_t fvp_frameslot(const FvpFrame *f, uint8_t oper)
 {
-    static int mode = -1;
-    if (mode < 0) {
-        const char *v = getenv("FVP_FRAME_SLOTS");
-        mode = (v != NULL && v[0] != '\0' && v[0] != '0') ? 1 : 0;
-    }
-    return mode;
-}
-
-static int fvp_frame_local_index(const FvpFrame *f, int32_t n)
-{
-    int32_t base;
-    if (f == NULL || f->nlocals <= 0) {
+    if (f == NULL) {
         return -1;
     }
-    if (n >= 0 && n < f->nlocals) {
-        return (int)n;
-    }
-    if (!fvp_frame_slots_mode()) {
-        return -1;
-    }
-    base = FVP_FRAME_ARG_END + 1 - f->ndecl - f->nlocals;
-    if (n >= base && n < base + f->nlocals) {
-        return (int)(n - base);
-    }
-    return -1;
-}
-
-static int fvp_frame_arg_index(const FvpFrame *f, int32_t n)
-{
-    int32_t start, idx;
-    if (f == NULL || f->nargs <= 0) {
-        return -1;
-    }
-    if (!fvp_frame_slots_mode()) {
-        /* 旧行为（冻结基线用）：槽号只按"离 255 多远"映射到实参数组。 */
-        idx = n - (255 - f->nargs);
-    } else {
-        if (f->ndecl <= 0) {
-            return -1;
-        }
-        start = FVP_FRAME_ARG_END + 1 - f->ndecl;
-        if (n < start || n > FVP_FRAME_ARG_END) {
-            return -1;
-        }
-        idx = f->nargs - f->ndecl + (n - start);
-    }
-    if (idx < 0 || idx >= f->nargs) {
-        return -1;
-    }
-    return (int)idx;
+    return f->sbase + (int32_t)(int8_t)oper;
 }
 
 static FvpFrame *fvp_frame_top(FvpThread *t)
@@ -263,12 +215,10 @@ static void fvp_frame_push(FvpThread *t, const FvpFrame *f)
 
 static void fvp_frame_release(FvpFrame *f)
 {
-    free(f->locals);
-    free(f->args);
-    f->locals = NULL;
-    f->args = NULL;
+    /* 单一栈模型：帧不持有数组，槽都在 t->stack 里由 sp 回收。 */
     f->nlocals = 0;
     f->nargs = 0;
+    f->sbase = 0;
 }
 
 static FvpFrame fvp_frame_pop(FvpThread *t)
@@ -711,35 +661,33 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
     case 0x00: /* nop: the reference has no branch for it -> thread dies */
         t->alive = 0;
         break;
-    case 0x01: { /* initstack locals, ? */
+    case 0x01: { /* initstack A, B（原版 0x445890 -> 0x444580）
+                 * 单栈模型：call 已经把调用记录写在 stack[sp] 这一格（sp 不自增），
+                 * initstack 只补 byte0 = A、byte1 = B，然后 sp++ 把这一格定成
+                 * 「标记槽」，接着压 B 个 type0 的局部槽。base = 标记槽 + 1。 */
         FvpFrame *top = fvp_frame_top(t);
-        if (top != NULL && top->pending) {
-            free(top->locals);
-            top->ndecl = (int32_t)ins->a;
-            top->nlocals = fvp_frame_slots_mode() ? (int32_t)ins->b
-                                                 : (int32_t)ins->a;
-            top->locals = top->nlocals != 0
-                              ? (FvpValue *)fvp_xcalloc((size_t)top->nlocals,
-                                                        sizeof(FvpValue))
-                              : NULL;
-            top->pending = 0;
-        } else {
+        int32_t k;
+
+        if (top == NULL || !top->pending) {
             FvpFrame f;
-            /* 栈底帧（没有 call 建它）：这是线程/函数的入口。返回地址必须指到
-             * 脚本末尾，这样末尾的 ret 会结束线程；早先写成 ins->pc（指向
-             * initstack 自己），ret 就会跳回入口，协程无限自循环。 */
+
+            /* 没有 call 建帧：线程/函数入口。返回地址指到脚本末尾，
+             * 这样末尾的 ret 会结束线程。 */
             f.ret = vm->hcb->script_len;
-            f.ndecl = (int32_t)ins->a;
-            f.nlocals = fvp_frame_slots_mode() ? (int32_t)ins->b
-                                               : (int32_t)ins->a;
-            f.locals = f.nlocals != 0
-                           ? (FvpValue *)fvp_xcalloc((size_t)f.nlocals,
-                                                     sizeof(FvpValue))
-                           : NULL;
+            f.sbase = 0;
             f.nargs = 0;
-            f.args = NULL;
-            f.pending = 0;
+            f.nlocals = 0;
+            f.pending = 1;
             fvp_frame_push(t, &f);
+            top = fvp_frame_top(t);
+        }
+        fvp_thread_push(t, fvp_make_null());   /* 标记槽占位（A/B 记在帧里） */
+        top->sbase = t->sp;                    /* base = 标记槽 + 1 */
+        top->nargs = (int32_t)(int8_t)ins->a;
+        top->nlocals = (int32_t)(int8_t)ins->b;
+        top->pending = 0;
+        for (k = 0; k < top->nlocals; ++k) {
+            fvp_thread_push(t, fvp_make_null());   /* 局部槽：type0 = null */
         }
         t->pc += 3u;
         break;
@@ -765,19 +713,11 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
             }
         }
         f.ret = ins->pc + 5u;
+        f.sbase = 0;
+        f.nargs = 0;
         f.nlocals = 0;
-        f.locals = NULL;
-        f.nargs = t->sp;
-        f.ndecl = 0;
-        if (t->sp > 0) {
-            f.args = (FvpValue *)fvp_xmalloc((size_t)t->sp * sizeof(FvpValue));
-            memcpy(f.args, t->stack, (size_t)t->sp * sizeof(FvpValue));
-        } else {
-            f.args = NULL;
-        }
         f.pending = 1;
         fvp_frame_push(t, &f);
-        t->sp = 0;
         t->pc = ins->u;
         break;
     }
@@ -786,10 +726,22 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         fvp_syscall(vm, t, ins->w);
         t->pc += 3u;
         break;
-    case 0x04:
-    case 0x05: /* ret / ret2 */
+    case 0x04: /* ret：原版 0x4448e0 —— 清返回槽（type 0），再走 0x444660 */
+    case 0x05: /* retvalue：原版 0x444900 —— 把栈顶写进返回槽，再走 0x444660 */
         if (t->nframes > 0) {
             FvpFrame f = fvp_frame_pop(t);
+
+            if (ins->op == 0x05) {
+                t->temp = fvp_thread_pop(t);
+            } else {
+                t->temp = fvp_make_null();
+            }
+            /* 0x444660：base-- 得标记槽，弹出 B 个局部、再弹出 A 个实参。
+             * 于是 sp = 标记槽 - B - A。 */
+            t->sp = f.sbase - 1 - f.nlocals - f.nargs;
+            if (t->sp < 0) {
+                t->sp = 0;
+            }
             t->pc = f.ret;
             fvp_frame_release(&f);
         } else {
@@ -813,14 +765,15 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         }
         break;
     }
-    case 0x08: /* 原版 0x444940：整段只写 Variant type **0**（= false，也代表 null）。
-                * 历史行为（faithful_ops == 0）把它当成 pushtrue，是为了保住冻结
-                * 文本基线；--faithful-ops 打开后按 exe 字节执行。 */
-        fvp_thread_push(t, vm->faithful_ops ? fvp_make_null() : fvp_value_bool());
+    case 0x08: /* 原版 0x444940：整段只写 Variant type **0**（= false / null）。
+                * 历史行为曾经把它当成 pushtrue 压 bool（为了迁就旧的文本基线），
+                * 实测基线并不依赖这个互换 —— 按字节改回之后
+                * ref/ref-900k.txt 仍逐字节相同（CHANGELOG 一百三十四续）。 */
+        fvp_thread_push(t, fvp_make_null());
         t->pc += 1u;
         break;
     case 0x09: /* 原版 0x444960：整段只写 Variant type **1**（= true） */
-        fvp_thread_push(t, vm->faithful_ops ? fvp_value_bool() : fvp_make_null());
+        fvp_thread_push(t, fvp_value_bool());
         t->pc += 1u;
         break;
     case 0x0a:
@@ -861,18 +814,16 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         }
         t->pc += 3u;
         break;
-    case 0x10: { /* pushstack：局部变量（两种写法）或绝对槽位的参数 */
+    case 0x10: { /* pushstack A：原版 0x445c20 —— 读 stack[base + (int8)A]
+                 * （负 = 实参，0..B-1 = 局部变量）。越界时按原版读到的是
+                 * 栈外内容；这里给 null 并计数，便于诊断。 */
         FvpFrame *f = fvp_frame_top(t);
-        int li = fvp_frame_local_index(f, (int32_t)ins->a);
-        if (li >= 0) {
-            fvp_thread_push(t, f->locals[li]);
+        int32_t abs = fvp_frameslot(f, ins->a);
+
+        if (abs >= 0 && abs < t->sp) {
+            fvp_thread_push(t, t->stack[abs]);
         } else {
-            int ai = fvp_frame_arg_index(f, (int32_t)ins->a);
-            if (ai >= 0) {
-                fvp_thread_push(t, f->args[ai]);
-            } else {
-                fvp_thread_push(t, fvp_make_int(0));
-            }
+            fvp_thread_push(t, fvp_make_null());
         }
         t->pc += 2u;
         break;
@@ -905,13 +856,12 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         t->pc += 2u;
         break;
     }
-    case 0x13: { /* pushtop */
-        FvpFrame *f = fvp_frame_top(t);
-        if (f != NULL && f->nlocals > 0) {
-            fvp_thread_push(t, f->locals[0]);
-        } else {
-            fvp_thread_push(t, fvp_make_int(0));
-        }
+    case 0x13: { /* pushtop：原版 0x444980 是把**栈顶再压一份**（dup），不是"取 0 号局部"。
+                 * 早先按 locals[0] 实现，因为局部数组模型里两者在单局部函数中
+                 * 恰好等价；单栈模型下必须按字节改成 dup。 */
+        FvpValue v = t->sp > 0 ? t->stack[t->sp - 1] : fvp_make_null();
+
+        fvp_thread_push(t, v);
         t->pc += 1u;
         break;
     }
@@ -945,17 +895,19 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         t->pc += 3u;
         break;
     }
-    case 0x16: { /* copystack：局部变量（两种写法）或绝对槽位的参数 */
+    case 0x16: { /* copystack A：原版 0x445e00 —— 弹栈顶写进 stack[base + (int8)A] */
         FvpValue v = fvp_thread_pop(t);
         FvpFrame *f = fvp_frame_top(t);
-        int li = fvp_frame_local_index(f, (int32_t)ins->a);
-        if (li >= 0) {
-            f->locals[li] = v;
-        } else if (fvp_frame_slots_mode()) {
-            int ai = fvp_frame_arg_index(f, (int32_t)ins->a);
-            if (ai >= 0) {
-                f->args[ai] = v;
+        int32_t abs = fvp_frameslot(f, ins->a);
+
+        if (abs >= 0 && abs < t->sp) {
+            t->stack[abs] = v;
+        } else if (abs >= 0 && abs < t->scap) {
+            /* 落在 sp 之上（局部槽数比脚本以为的少）：补空槽再写，保持可运行。 */
+            while (t->sp <= abs) {
+                fvp_thread_push(t, fvp_make_null());
             }
+            t->stack[abs] = v;
         }
         t->pc += 2u;
         break;

@@ -14,25 +14,34 @@
 #include "textattr.h"
 #include "timer.h"
 
+/* 栈帧：照原版 exe 的**单一栈**模型（不再是"局部数组 + 实参数组"）。
+ *
+ * 字节级证据（work/iroseka_HD.dis，全部由 tests/verify_vm_ops.py 的锚点钉住）：
+ *   call     0x4458c0：把"返回地址 = pc+4"写进 stack[sp]+4、"旧 base"写进
+ *                      stack[sp]+0xa（sp **不自增**）—— 这条记录就占着
+ *                      紧接着要压的那个槽。
+ *   initstack 0x445890 → 0x444580(a,b)：只写该槽的 byte0 = a、byte1 = b，
+ *                      然后 sp++，再压 b 个 type0 的空槽（局部变量）。
+ *   于是 base = 标记槽 + 1；实参在 base-2、base-3 …；局部在 base+0 …
+ *   pushstack 0x445c20：读 stack[base + (int8)操作数]（负偏移 = 实参）
+ *   copystack 0x445e00：把栈顶写进 stack[base + (int8)操作数]
+ *   返回     0x444660：base-- 得标记槽，弹出 b 个局部、再弹出 a 个实参
+ *
+ * 这解释了 `initstack 4,0` 的正文模板为什么用 pushstack 251（= -5）读 arg1：
+ * 4 个实参 + 1 个标记槽，arg1 正好在 base-5。 */
 typedef struct FvpFrame {
-    uint32_t ret;
-    int32_t nlocals;
-    FvpValue *locals;
-    int32_t nargs;
-    FvpValue *args;
-    int32_t ndecl;   /* `initstack A|B` 的 A（参数槽个数；FVP_FRAME_SLOTS=1 时用） */
-    int pending;
+    uint32_t ret;    /* 返回地址（call 记录里的 pc+5） */
+    int32_t sbase;   /* base = 标记槽下标 + 1（initstack 时记录） */
+    int32_t nargs;   /* 标记槽 byte0 = A：返回时要丢弃的实参槽数 */
+    int32_t nlocals; /* 标记槽 byte1 = B：initstack 压出来的局部槽数 */
+    int pending;     /* call 建了帧、还没执行 initstack */
 } FvpFrame;
 
-/* 帧槽模型开关：`FVP_FRAME_SLOTS=1` 打开修正版（参数槽 255-A..254、局部变量块在
- * 参数块下面）。默认关闭，保证 ref/ref-900k.txt 这份冻结文本基线逐字节不变。
- *
- * 2026-11-26 第 181 轮结论（tests/verify_text_from_hcb.py，run_all 6.49649）：
- * 修正版把正文窗口位置修对了（(431,880)），但文本通道会**每行多读一个字符**
- * （195 行里有 70 行在 HCB 字符串里找不到），所以**不能**切默认、也不能重新冻结
- * 文本基线——先找"多读一位"的根因再说。
- * 证据与遗留问题见 ref/script-window-geometry.json 的 frame_model 段。 */
-#define FVP_FRAME_ARG_END 254
+/* 旧的"帧槽模型"（参数槽 255-A..254、局部变量块在参数块下面，FVP_FRAME_SLOTS=1）
+ * 已由上面的单一栈模型取代 —— 它把参数槽当成绝对槽 255-A..254，而原版是
+ * base + (int8)操作数（见 FvpFrame 注释里的字节证据）。2026-11-27 第 326 轮起
+ * 只有这一套模型。 */
+#define FVP_FRAME_ARG_END 254 /* 保留：老代码/t 诊断里还引用这个上限 */
 
 #define FVP_THREAD_SLOTS 32 /* ThreadStart/ThreadExit 的 threadNo 0..31 */
 #define FVP_TIMER_COUNT 16  /* TimerSet/TimerGet 的 timerId 0..15 */

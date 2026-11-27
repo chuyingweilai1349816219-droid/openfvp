@@ -115,10 +115,10 @@ def main():
     check(total_steps > 30000, '重启后脚本继续执行（总步数 %d > 30000）'
           % total_steps)
     check('text lines' in text, '重启后 shell 仍在上报 text lines 统计')
-    # 2026-11-27 更正：原来断言"至少 1 行文本"。带 gfx 的外壳会忠实卡在 prim 265 的
-    # 等待环（见 docs/title-menu.md 附录与 bin/fvm.exe 的旧行为说明），重启之后脚本
-    # 继续执行、但故事段还没开始，所以 0 行才是**对的**。这里把"continue running but
-    # no text yet"钉成断言，而不是放宽成"文本无所谓"。
+    # 2026-11-27（第 326 轮）更正：以前这里钉的是"重启后 0 行文本"——那是
+    # prim 265 等待环还没修的**旧结论**。单一栈帧模型 + 0x08/0x09 按 exe 字节
+    # 改正之后，重启的脚本能走过 265 环并进入故事段，所以现在的真值是"至少 1 行"。
+    # 断言改成下界，不再接受"0 行"。
     text_lines = None
     for ln in text.splitlines():
         m2 = re.search(r'(\d+)\s+text lines', ln)
@@ -126,8 +126,8 @@ def main():
             text_lines = int(m2.group(1))
     check(text_lines is not None,
           '能解析出 text lines 计数（实际 %s）' % text_lines)
-    check(text_lines == 0,
-          '重启后脚本继续跑但文本为 0 行（卡在 265 等待环，实际 %s）' % text_lines)
+    check(text_lines is not None and text_lines >= 1,
+          '重启后脚本继续跑并进入故事段（text lines=%s，要求 >= 1）' % text_lines)
     px = bmp_pixels(shot)
     if px is not None:
         n = 0
