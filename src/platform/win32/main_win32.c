@@ -163,6 +163,9 @@ typedef struct Options {
      * 写进日志（诊断正文位置用，不影响渲染）。 */
     int dump_text_prims;
     int dump_prims; /* --dump-prims：退出时导出图元表（诊断） */
+    int faithful_ops; /* --faithful-ops：0x08/0x09/pushtemp/*Test 按 exe 字节执行 */
+    int cmp_matrix;   /* --cmp-matrix：eq/neq 走 exe 的 7x7 类型对矩阵 */
+    int bool_type;    /* --bool-type：jmpcond 只认 type0 为假（原版语义） */
     /* --auto-click MS：每 MS 毫秒注入一次合成点击（与 --no-input 一起用，
      * 让"推进对话"这件事可确定性复现）。 */
     int auto_click_ms;
@@ -818,6 +821,12 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             o->auto_click_ms = ms < 50 ? 50 : (ms > 60000 ? 60000 : ms);
         } else if (wcscmp(a, L"--dump-prims") == 0) {
         o->dump_prims = 1;
+    } else if (wcscmp(a, L"--faithful-ops") == 0) {
+        o->faithful_ops = 1;
+    } else if (wcscmp(a, L"--cmp-matrix") == 0) {
+        o->cmp_matrix = 1;
+    } else if (wcscmp(a, L"--bool-type") == 0) {
+        o->bool_type = 1;
     } else if (wcscmp(a, L"--dump-text-prims") == 0) {
             o->dump_text_prims = 1;
         } else if (wcscmp(a, L"--title-no-hover") == 0) {
@@ -3422,6 +3431,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     fvp_vm_set_stall_limit(&vm, (uint64_t)opts.stall_after);
     vm.timeline_on = opts.timeline;
     vm.threads_on = opts.threads;
+    /* 语义开关：窗口默认仍是历史语义（保冻结基线），但至少要能打开 ——
+     * 没有这三个开关时，窗口根本享受不到 --faithful-ops / --cmp-matrix 的修正，
+     * 于是 ① 的 Motion*Test 等待环在窗口里永远出不来。 */
+    vm.faithful_ops = opts.faithful_ops;
+    vm.cmp_matrix = opts.cmp_matrix;
+    vm.bool_type = opts.bool_type;
+    fvp_logf("semantics: faithful_ops=%d cmp_matrix=%d bool_type=%d",
+             opts.faithful_ops, opts.cmp_matrix, opts.bool_type);
     fvp_logf("threads: coroutine slots %s", opts.threads ? "on" : "off (--no-threads)");
     if (opts.timeline) {
         fvp_logf("time: virtual clock enabled (advanced by frame dt)");

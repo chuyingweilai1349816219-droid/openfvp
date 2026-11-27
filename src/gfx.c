@@ -948,7 +948,15 @@ int gfx_graph_load(Gfx *g, int slot, const char *name)
     t = tex_ref(g, name);
     if (t == NULL) {
         /* the engine/Python prototype keep the previous image on failure */
+        if (getenv("FVP_DBG_GRAPH") != NULL) {
+            fprintf(stderr, "graph_load slot=%d name=\"%s\" -> MISSING\n",
+                    slot, name);
+        }
         return -1;
+    }
+    if (getenv("FVP_DBG_GRAPH") != NULL) {
+        fprintf(stderr, "graph_load slot=%d name=\"%s\" -> %dx%d\n",
+                slot, name, t->img.w, t->img.h);
     }
     tex_unref(g, s->tex);
     free(s->name);
