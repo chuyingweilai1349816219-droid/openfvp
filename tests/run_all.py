@@ -907,6 +907,14 @@ def build_steps(args):
                            '#33 at pc 0x3A547, layer 0, g226 is a string by default '
                            'but int 0 under --faithful-ops --cmp-matrix'))
 
+    # 6.4966c6 正文构建器的调用站点（脚本站点 118 个，全部 pushstring + 3 个哨兵）
+    vbc = os.path.join(HERE, 'verify_text_builder_calls.py')
+    steps.append(Step('verify_text_builder_calls.py', [PY, '-X', 'utf8', vbc], 900,
+                      skip_reason=None,
+                      note='text builder 0x3A11F is reached only through the '
+                           'forwarder 0x3A2EE; the prologue calls it from 118 '
+                           'sites, each as pushstring <body> + 3 op-0x08 sentinels'))
+
     # 6.4966d 文本窗口默认值（来自 exe 构造函数 0x430EA0；缺 work/ 时 SKIP）
     vtd = os.path.join(HERE, 'verify_exe_text_defaults.py')
     steps.append(Step('verify_exe_text_defaults.py', [PY, '-X', 'utf8', vtd], 600,

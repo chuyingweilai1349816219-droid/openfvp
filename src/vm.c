@@ -590,6 +590,9 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
     FvpValue b = fvp_thread_pop(t);
     FvpValue a = fvp_thread_pop(t);
     FvpValue r = fvp_make_int(0);
+    if (getenv("FVP_DBG_CMP") != NULL && op == 0x1a && t->pc == 0x3a215u) {
+        fprintf(stderr, "add at 0x3A214: sp=%u\n", (unsigned)t->sp);
+    }
     if (getenv("FVP_DBG_CMP") != NULL && op == 0x22 &&
         t->pc >= 0x3a1b0u && t->pc <= 0x3a1f0u) {
         fprintf(stderr, "cmp pc=0x%x eq a.type=%u a.i=%lld b.type=%u b.i=%lld"
@@ -743,10 +746,12 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
     }
     case 0x02: { /* call */
         FvpFrame f;
-        if (getenv("FVP_DBG_CALL") != NULL && ins->u == 0x3A11Fu) {
+        if (getenv("FVP_DBG_CALL") != NULL &&
+            (ins->u == 0x3A11Fu || ins->u == 0x3A2EEu)) {
             uint32_t k = t->sp;
             uint32_t want = k > 4u ? 4u : k;
-            fprintf(stderr, "call 0x3A11F nargs=%u\n", (unsigned)k);
+            fprintf(stderr, "call 0x3A11F nargs=%u from=0x%x\n", (unsigned)k,
+                    (unsigned)ins->pc);
             for (uint32_t i = 0; i < want; ++i) {
                 const FvpValue *v = &t->stack[k - want + i];
                 fprintf(stderr, "   arg%u type=%u", (unsigned)(i + 1),
