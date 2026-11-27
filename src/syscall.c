@@ -1558,6 +1558,27 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     for (k = argc; k > 0; --k) {
         args[k - 1] = fvp_thread_pop(t);
     }
+    if (getenv("FVP_DBG_SYS") != NULL &&
+        (cid == 8u || cid == 9u || cid == 31u || cid == 34u ||
+         cid == 35u || cid == 36u || cid == 40u || cid == 44u ||
+         cid == 59u || cid == 62u || cid == 131u || cid == 133u)) {
+        uint32_t j;
+
+        fprintf(stderr, "sys %u pc=0x%x step=%llu", (unsigned)cid,
+                vm->cur != NULL ? (unsigned)vm->cur->pc : 0u,
+                (unsigned long long)vm->steps);
+        for (j = 0; j < argc && j < 4u; ++j) {
+            fprintf(stderr, " a%u(t%u", (unsigned)(j + 1),
+                    (unsigned)args[j].type);
+            if (args[j].type == (uint8_t)FVP_STR && args[j].str != NULL) {
+                fprintf(stderr, " \"%.20s\"", args[j].str->data);
+            } else {
+                fprintf(stderr, " %lld", (long long)args[j].i);
+            }
+            fputc(')', stderr);
+        }
+        fputc('\n', stderr);
+    }
 
     /* Rendering commands: forward to the attached gfx context, if any.
      * gfx_set_prim is the weak-symbol probe (all renderer symbols are weak,
