@@ -4,6 +4,43 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百二十三续）：把剩下的 2 行差异**结构化**，交给门禁看住
+
+### 1. 肉眼 diff 不能当门禁
+
+上一轮把 `」` 和 `~` 都修掉之后，忠实语义离冻结基线只剩 2 行。但"还剩 2 行"这句
+话本身太粗：改一行代码可能变成"还剩 5 行"而没人发现。所以新增
+`scripts/diff-text-baseline.py`：把两份 `--text-out` 逐行对齐，按**文本形状**
+给每个差异块打标签（`quote` / `tilde` / `null-text` / `nameplate` / `other`），
+输出 `ref/text-delta-faithful.json`。
+
+### 2. 当前差异的形状
+
+| 指标 | 值 |
+| --- | --- |
+| 行数 | 193 vs 195（净 **-2**） |
+| 差异块 | **18** |
+| `quote` / `tilde` | **0 / 0** |
+| `null-text` | 18 块 |
+| `nameplate` | 17 块 |
+
+18 块里 1 块是纯 `null-text`、17 块是 `nameplate + null-text` 成对 —— 也就是
+"名牌内容变了、紧跟的正文变成 null"这**同一个现象重复 17 次**：
+
+```text
+我们的：[8] 　　真紅　　，[0] 0
+基线的：[8]  真紅／悠馬 ，[0] どうした？　大丈夫なのか？
+```
+
+### 3. 门禁
+
+新增 `tests/verify_text_delta.py`（10 项）：跑一遍 `--faithful-ops --cmp-matrix`，
+重算差异并和 `ref/text-delta-faithful.json` 逐字段比较，同时断言
+"0 个 quote / 0 个 tilde / 只有 nameplate + null-text"。
+
+这样下一轮改动只要动了差异的块数或类别，门禁就会红 —— 必须重新分类（而不是
+悄悄漂移）。已注册进 `tests/run_all.py`。
+
 ## [未发布] — 2026-11-27（一百二十二续）：`~` 也走了 —— eq 表 C 里 11 格是**谓词**，不是三态比较器
 
 ### 1. 把比较的两个操作数打出来

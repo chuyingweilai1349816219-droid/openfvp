@@ -261,6 +261,35 @@ popglobal[226] pc=0x3a1eb str="~　"                      ← 却走进了"不�
 变成 `　真紅　`，紧跟的那行台词变成 `[0] 0`（null 被当文本）。那是下一段要查的
 "名牌与正文走同一个全局"的问题。
 
+### 0.4 剩下的差异被结构化了（`ref/text-delta-faithful.json`）
+
+肉眼 diff 不适合当门禁，所以加了一个只做对齐和分类的工具
+`scripts/diff-text-baseline.py`：把两份 `--text-out` 逐行对齐，按**文本形状**给
+每个差异块打标签（不做语义猜测）：
+
+| 分类 | 判据 |
+| --- | --- |
+| `quote` | 行里含 `」` |
+| `tilde` | 行里含 ASCII `~` |
+| `null-text` | 行形如 `[层号] 0` / `[层号] 1`（把 null/bool 当文本） |
+| `nameplate` | 层号 8（名牌窗口） |
+| `other` | 其余 |
+
+当前 `--faithful-ops --cmp-matrix` 对 `ref/ref-900k.txt` 的结果：
+
+| 指标 | 值 |
+| --- | --- |
+| 行数 | 193 vs 195（净 **-2**） |
+| 差异块 | **18** |
+| `quote` / `tilde` | **0 / 0** |
+| `null-text` | 18 块 |
+| `nameplate` | 17 块 |
+
+18 块里 1 块是纯 `null-text`、17 块是 `nameplate + null-text` 成对出现 —— 也就是
+"名牌换了内容、紧跟的正文变成 null"这同一个现象重复 17 次。门禁
+`tests/verify_text_delta.py` 把这份描述钉住：块数、净行数、分类集合一有变化就红，
+必须重新分类后才能过。
+
 **比较 opcode 用哪张表、`sete` 还是 `setne`（2026-11-24 钉死）**：六个 handler 除了
 "表 + setcc"两点外完全一样：
 

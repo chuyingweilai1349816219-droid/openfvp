@@ -1,0 +1,430 @@
+{
+ "schema": "fvp-text-delta/1",
+ "a": "faithful900k.txt",
+ "b": "ref-900k.txt",
+ "summary": {
+  "a_lines": 193,
+  "b_lines": 195,
+  "delta_lines": -2,
+  "blocks": 18,
+  "by_category": {
+   "null-text": 18,
+   "nameplate": 17
+  }
+ },
+ "blocks": [
+  {
+   "kind": "replace",
+   "a": [
+    33,
+    34
+   ],
+   "b": [
+    33,
+    34
+   ],
+   "a_lines": [
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[0] おはよう。大丈夫か？　……少し、うなされていたようだったけど"
+   ],
+   "categories": [
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    37,
+    39
+   ],
+   "b": [
+    37,
+    39
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] どうした？　大丈夫なのか？"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    42,
+    44
+   ],
+   "b": [
+    42,
+    44
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] 夢？　……そうか。それはいつものヤツか？"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    50,
+    52
+   ],
+   "b": [
+    50,
+    52
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] ん？　なんだ？"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    54,
+    56
+   ],
+   "b": [
+    54,
+    56
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] どうして？"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    62,
+    64
+   ],
+   "b": [
+    62,
+    64
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] ごめんな"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    66,
+    68
+   ],
+   "b": [
+    66,
+    68
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] 私は夢を見ないから……わからない。その相談には乗ってやれない。ごめんな、悠馬"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    71,
+    73
+   ],
+   "b": [
+    71,
+    73
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] なぁ、悠馬"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    76,
+    78
+   ],
+   "b": [
+    76,
+    78
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] 悠馬。[かのうえゆうま|鹿野上悠馬]……お前と私の願いが叶う日は、もう近い"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    80,
+    82
+   ],
+   "b": [
+    80,
+    82
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] ――ような気がする"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    85,
+    87
+   ],
+   "b": [
+    85,
+    87
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] だからそんな顔をしないでほしいんだ。悲しい夢に負けないでほしい"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    89,
+    91
+   ],
+   "b": [
+    89,
+    91
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] ……がんばろう、悠馬。私たちふたりで"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    93,
+    95
+   ],
+   "b": [
+    93,
+    95
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] そう。ふたりで、だ"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    103,
+    105
+   ],
+   "b": [
+    103,
+    105
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] ……おっと。人が来たみたいだな。私は消えてるよ"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    107,
+    109
+   ],
+   "b": [
+    107,
+    109
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] 気持ちの問題なんだ、こういうのは"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    111,
+    115
+   ],
+   "b": [
+    111,
+    115
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0",
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] そう。気持ちの問題",
+    "[8]  真紅／悠馬 ",
+    "[0] 誰かが近くにいるのに、その人に自分のことを全く見てもらえない、気にしてもらえないって言うのは、あんまり気持ちのいいことではないんだよ"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "replace",
+   "a": [
+    117,
+    119
+   ],
+   "b": [
+    117,
+    119
+   ],
+   "a_lines": [
+    "[8] 　　真紅　　",
+    "[0] 0"
+   ],
+   "b_lines": [
+    "[8]  真紅／悠馬 ",
+    "[0] そんなものさ"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  },
+  {
+   "kind": "insert",
+   "a": [
+    193,
+    193
+   ],
+   "b": [
+    193,
+    195
+   ],
+   "a_lines": [],
+   "b_lines": [
+    "[8] 　　 澪　　 ",
+    "[0] 0"
+   ],
+   "categories": [
+    "nameplate",
+    "null-text"
+   ]
+  }
+ ],
+ "note": "由 scripts/diff-text-baseline.py 生成；分类只看文本形状（quote/tilde/null-text/nameplate/other），不做语义猜测。"
+}

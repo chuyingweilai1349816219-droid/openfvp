@@ -891,6 +891,14 @@ def build_steps(args):
                            'iroseka_HD.exe; 0x08=pushfalse(type 0), 0x09=pushtrue'
                            '(type 1); --faithful-ops A/B on bin/fvm.exe'))
 
+    # 6.4966c4 忠实语义与冻结文本基线之间的差异（结构化 + 可分类）
+    vdt = os.path.join(HERE, 'verify_text_delta.py')
+    steps.append(Step('verify_text_delta.py', [PY, '-X', 'utf8', vdt], 900,
+                      skip_reason=None,
+                      note='delta between --faithful-ops --cmp-matrix and '
+                           'ref/ref-900k.txt: 18 blocks, net -2 lines, only '
+                           'nameplate + null-text categories (no quote, no tilde)'))
+
     # 6.4966d 文本窗口默认值（来自 exe 构造函数 0x430EA0；缺 work/ 时 SKIP）
     vtd = os.path.join(HERE, 'verify_exe_text_defaults.py')
     steps.append(Step('verify_exe_text_defaults.py', [PY, '-X', 'utf8', vtd], 600,
