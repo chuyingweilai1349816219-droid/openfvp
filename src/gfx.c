@@ -3772,10 +3772,22 @@ void gfx_debug_dump_prims(Gfx *g, FILE *out)
         }
         fprintf(out,
                 "prim id=%d type=%u draw=%u alpha=%u parent=%d xy=%d,%d "
-                "wh=%u,%u graph=%d tw=%d z=%u\n",
+                "wh=%u,%u graph=%d tw=%d z=%u tex=",
                 i, (unsigned)p->type, (unsigned)p->draw, (unsigned)p->alpha,
                 p->parent, p->x, p->y, (unsigned)p->w, (unsigned)p->h,
                 p->graph, p->tw, (unsigned)p->z);
+        if (p->graph >= 0 && p->graph < GFX_PRIM_MAX &&
+            g->slot[p->graph].tex != NULL &&
+            g->slot[p->graph].tex->img.rgba != NULL) {
+            fprintf(out, "%dx%d name=%s",
+                    g->slot[p->graph].tex->img.w,
+                    g->slot[p->graph].tex->img.h,
+                    g->slot[p->graph].name != NULL ? g->slot[p->graph].name
+                                                   : "?");
+        } else {
+            fputs("-", out);
+        }
+        fputc('\n', out);
     }
 }
 

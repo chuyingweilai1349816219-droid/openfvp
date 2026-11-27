@@ -28,7 +28,8 @@ GAME = os.path.join(r'C:\Users\Mechrevo\Downloads', '五彩斑斓的世界HD')
 
 RE_PRIM = re.compile(
     r'^prim id=(\d+) type=(\d+) draw=(\d+) alpha=(\d+) parent=(-?\d+) '
-    r'xy=(-?\d+),(-?\d+) wh=(\d+),(\d+) graph=(-?\d+) tw=(-?\d+) z=(\d+)$')
+    r'xy=(-?\d+),(-?\d+) wh=(\d+),(\d+) graph=(-?\d+) tw=(-?\d+) z=(\d+)'
+    r'(?: tex=(\S+))?')
 
 
 def dump_prims():
