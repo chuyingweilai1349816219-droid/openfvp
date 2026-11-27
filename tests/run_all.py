@@ -923,6 +923,14 @@ def build_steps(args):
                            'root group (0) so gfx_prim_hit parent chains reach '
                            'prim 0; only PrimGroupOut leaves a prim parentless'))
 
+    # 6.4966c8 标题动作等待环：Motion*Test 必须"问完就结束"（① 的真卡点）
+    vmw = os.path.join(HERE, 'verify_motion_wait.py')
+    steps.append(Step('verify_motion_wait.py', [PY, '-X', 'utf8', vmw], 300,
+                      skip_reason=None,
+                      note='title-stage command coverage via FVP_TRACE_CIDS: the '
+                           'MotionAlphaTest wait loop now exits (>=63 cids, new '
+                           'commands 4/0/1 after 44)'))
+
     # 6.4966d 文本窗口默认值（来自 exe 构造函数 0x430EA0；缺 work/ 时 SKIP）
     vtd = os.path.join(HERE, 'verify_exe_text_defaults.py')
     steps.append(Step('verify_exe_text_defaults.py', [PY, '-X', 'utf8', vtd], 600,

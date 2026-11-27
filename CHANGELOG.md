@@ -4,6 +4,48 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百三十二续）：① 的动作等待环修好了 —— 关补间时也要登记记录
+
+### 1. 根因
+
+外壳默认 `motion_on = 0`（`--motion` 才打开）。此时 `Motion*` handler 走的是
+"值直接落到位"的分支，**不登记补间记录**。而脚本的写法是：
+
+```text
+0x5830E  MotionAlpha(42, 252, 0, 255, 1200)
+0x5834A  while (MotionAlphaTest(252) == 1) yield;     ← 实测空转 22309 次
+```
+
+记录不存在 → `Motion*Test` 恒答 0 → 等待环永远出不来。这也解释了上一轮
+`FVP_DEBUG_MOTION` 里那行 `table=0`。
+
+### 2. 修法（两条一起）
+
+| 改动 | 说明 |
+| --- | --- |
+| `syscall.c` 的 `Motion*` 分支 | 补间关着时**仍然 `gfx_motion_add` 登记记录**，值照旧直接落位（画面不变） |
+| `motion.c` 的 `fvp_motion_test` | 只在**活跃**（`tween_progress < 1`）时答 1 —— 对应原版 `0x422990` 查的 `+0x4` 活跃标志 |
+
+### 3. 效果
+
+窗口标题阶段的命令覆盖：**60 → 63** 条，且 `44 MotionAlphaTest` 之后继续出现
+`4 / 0 / 1`（AudioStop / ? / AudioPlay），说明**已经越过等待环**。
+
+### 4. 门禁
+
+| 门禁 | 结果 |
+| --- | --- |
+| `make check` | 34 组、0 failed |
+| `verify_gfx.ps1 -SkipDump` | **PASS**：289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971（未变） |
+| `tests/compare.py --run` | PASS（6,496 B / 195 行） |
+| `tests/verify_motion_wait.py`（新） | PASS（4 项：覆盖 ≥63、44 出现、44 之后有新命令、其中有 0/1/4） |
+| `check-docs.py` | PASS（34 篇） |
+
+### 5. 还没到的
+
+越过等待环之后，脚本进入下一段（`AudioPlay` 一带），但**标题菜单图元仍然没加载**
+（`--dump-prims` 里没有 `title_start` 这一族）。画面还是只有标题背景。
+
 ## [未发布] — 2026-11-27（一百三十一续）：① 的真卡点不是"没纹理"，是"动作没登记 + 帧不推进"
 
 ### 1. 先用翻转开关验证方向

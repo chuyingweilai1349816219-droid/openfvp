@@ -403,7 +403,14 @@ static int fvp_sys_gfx(FvpVM *vm, FvpThread *t, const FvpValue *a,
                     (void)gfx_motion_add(g, id, FVP_TWEEN_ALPHA, from, 0, to, 0,
                                          ms, mode);
                 } else {
+                    /* 关掉补间（外壳 --motion 默认关）时，值直接落到位；
+                     * 但**记录仍然要登记**：脚本发完 Motion* 之后会
+                     * `while (Motion*Test(id) == 1) yield;` 等它跑完，
+                     * 没有记录 → 测试恒 0 → 等待环永远出不来（① 的真卡点）。
+                     * 登记之后 `fvp_motion_test` 只在"活跃"（没跑完）时答 1。 */
                     (void)gfx_set_prim(g, id, GFX_F_ALPHA, to);
+                    (void)gfx_motion_add(g, id, FVP_TWEEN_ALPHA, from, 0, to, 0,
+                                         ms, mode);
                 }
             }
         }

@@ -242,6 +242,12 @@ int fvp_motion_test(const FvpMotion *m, int prim_id, int kind)
                             "dur=%.1f prog=%.3f\n", prim_id, kind, m->now_ms,
                     t->start_ms, t->dur_ms, tween_progress(m, t));
         }
+        /* 原版查的是**活跃标志**（`cmpb $0x0,0x4(slot)`）：补间跑完后该字节被
+         * tick 清 0，于是这条记录"查不到"→ `*Test` 答 0。只看"记录存在"的话，
+         * 跑完的补间照样答 1，`while (Motion*Test(id) == 1) yield;` 就永远退不出来。 */
+        if (tween_progress(m, t) >= 1.0) {
+            continue;
+        }
         /* 诊断开关：翻转返回值，用来验证"这个 *Test 到底是
          * ‘有记录’还是‘没记录’"。默认关，不影响任何门禁。 */
         if (getenv("FVP_MOTION_TEST_INVERT") != NULL) {
