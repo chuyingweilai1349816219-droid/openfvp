@@ -162,6 +162,7 @@ typedef struct Options {
     /* --dump-text-prims：每 500 ms 把每个文本图元的 id/层号/位置/父链绝对位置
      * 写进日志（诊断正文位置用，不影响渲染）。 */
     int dump_text_prims;
+    int dump_prims; /* --dump-prims：退出时导出图元表（诊断） */
     /* --auto-click MS：每 MS 毫秒注入一次合成点击（与 --no-input 一起用，
      * 让"推进对话"这件事可确定性复现）。 */
     int auto_click_ms;
@@ -815,7 +816,9 @@ static int parse_args(int argc, wchar_t **argv, Options *o)
             int ms = _wtoi(argv[++i]);
 
             o->auto_click_ms = ms < 50 ? 50 : (ms > 60000 ? 60000 : ms);
-        } else if (wcscmp(a, L"--dump-text-prims") == 0) {
+        } else if (wcscmp(a, L"--dump-prims") == 0) {
+        o->dump_prims = 1;
+    } else if (wcscmp(a, L"--dump-text-prims") == 0) {
             o->dump_text_prims = 1;
         } else if (wcscmp(a, L"--title-no-hover") == 0) {
             o->title_no_hover = 1;
@@ -5151,6 +5154,14 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdline, int show)
     fvp_logf("exit: code=%d threads=%llu steps=%llu", exit_code,
              (unsigned long long)vm.nthreads,
              (unsigned long long)vm.steps);
+    if (opts.dump_prims) {
+        /* --dump-prims：退出时把"活着"的图元打一遍（id/type/draw/alpha/
+         * parent/xy/wh/graph/tw）。用来回答"标题菜单那几个图元到底在不在、
+         * 在不在组里、是不是可见"。 */
+        fvp_log_raw("--- prims ---\n");
+        gfx_debug_dump_prims(gfx, fvp_log_stream());
+        fvp_log_raw("--- end prims ---\n");
+    }
 
     /* ---------------- cleanup ---------------- */
     fvp_audio_stop(audio);

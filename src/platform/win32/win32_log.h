@@ -29,6 +29,9 @@ void fvp_log_raw(const char *text);
 /* Flush + close.  Safe to call when no log was opened. */
 void fvp_log_close(void);
 
+/* 底层日志文件（没开日志时是 stderr）；只给诊断导出用。 */
+FILE *fvp_log_stream(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -915,6 +915,14 @@ def build_steps(args):
                            'forwarder 0x3A2EE; the prologue calls it from 118 '
                            'sites, each as pushstring <body> + 3 op-0x08 sentinels'))
 
+    # 6.4966c7 图元树：`--dump-prims` 导出 + 都挂在根组下（PrimHit 的父链前提）
+    vpt = os.path.join(HERE, 'verify_prim_tree.py')
+    steps.append(Step('verify_prim_tree.py', [PY, '-X', 'utf8', vpt], 300,
+                      skip_reason=None,
+                      note='prim tree via --dump-prims: new prims default to the '
+                           'root group (0) so gfx_prim_hit parent chains reach '
+                           'prim 0; only PrimGroupOut leaves a prim parentless'))
+
     # 6.4966d 文本窗口默认值（来自 exe 构造函数 0x430EA0；缺 work/ 时 SKIP）
     vtd = os.path.join(HERE, 'verify_exe_text_defaults.py')
     steps.append(Step('verify_exe_text_defaults.py', [PY, '-X', 'utf8', vtd], 600,

@@ -117,6 +117,13 @@ void fvp_log_raw(const char *text)
     LeaveCriticalSection(&g_cs);
 }
 
+/* --dump-prims 用：拿到底层日志文件（没开日志时退回 stderr）。 */
+FILE *fvp_log_stream(void)
+{
+    ensure_cs();
+    return g_file != NULL ? g_file : stderr;
+}
+
 void fvp_log_close(void)
 {
     if (!g_cs_ready) {

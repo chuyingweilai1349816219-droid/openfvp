@@ -110,8 +110,11 @@ int main(void)
     CHECK(gfx_prim_hit(g, -3, 1, 0, 0) == 0, "负 id");
     CHECK(gfx_prim_hit(g, GFX_PRIM_MAX, 1, 0, 0) == 0, "id 越界");
 
-    /* ---- 2. 没有 parent（原版 prim+0x0A == 0xFFFF）→ 未命中 ---- */
+    /* ---- 2. 显式摘出组（原版 prim+0x0A == 0xFFFF）→ 未命中 ----
+     * 注意：新建图元现在默认挂在根组 0 下（见 gfx.c 的 prim_reset 注释），
+     * 所以要测"没有父"的规则，必须显式 PrimGroupOut。 */
     sprite(g, 5, 1, -1, 0, 0);
+    CHECK(gfx_prim_group_out(g, 5) == 0, "prim5 摘出组");
     CHECK(gfx_prim_hit(g, 5, 1, 10, 20) == 0, "无 parent 的图元不可命中");
 
     /* ---- 3. 挂到根（prim 0）上：矩形 = 图头(10,20) + prim(0,0) + 累加(0,0) ---- */

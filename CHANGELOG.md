@@ -4,6 +4,37 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百二十七续）：`--dump-prims` 与图元树 —— 默认父组从"没有"改成根组
+
+### 1. 新诊断：`--dump-prims`
+
+窗口构建退出时把"活着"的图元打一行一条（id/type/draw/alpha/parent/xy/wh/graph/
+tw/z），底层是 `gfx_debug_dump_prims()`（`src/gfx.c`，只读），日志走
+`fvp_log_stream()`（新加，没开日志时退回 stderr）。
+
+### 2. 一导出就看见问题
+
+标题画面实测 **135 个图元**，改动前绝大部分是 `parent=-1`（不在任何组里），
+包括标题背景 250..261。而 `gfx_prim_hit` 的判据（照原版 `0x43B904`/`0x43B8FB`）
+要求父链能走到 **prim 0**，`parent<0` 直接判未命中。
+
+所以把**新建图元的默认父改成根组 0**（0 号自己仍是 -1）。改完只剩 1 个
+`parent=-1` 的图元（250，被 `PrimGroupOut(75)` 显式摘出去，合理）。
+
+像素基线不变：**289 px / 0.0139% / PSNR 49.95 / SSIM 0.99971**，`verify_gfx` PASS。
+
+### 3. 但标题还是点不进去（诚实结论）
+
+这一改**没有**解决问题：日志显示 `prim hit 0 call(s), 0 hit(s)` —— 脚本在这个
+标题循环里**根本不调 PrimHit**。点击确实被 `InputGetDown` 读到
+（`click consumed by InputGetDown at steps=…`），但之后什么也没发生。所以卡点
+不在命中判定，得继续查这个循环到底在等什么。
+
+### 4. 门禁
+
+`tests/verify_prim_tree.py`（6 项）：导出可用、≥100 个图元、除 0 号外最多 2 个
+`parent<0`、父引用不悬空、250..261 在表里且有 draw/alpha。已注册进 `run_all`。
+
 ## [未发布] — 2026-11-27（一百二十六续）：序章 118 个调用点，形状全是「正文 + 3 个哨兵」
 
 ### 1. 用运行时日志数调用点

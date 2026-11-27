@@ -670,7 +670,10 @@ static void prim_init(GfxPrim *p, int id)
     p->scale_y = 1000;
     p->graph = -1;
     p->tw = -1;
-    p->parent = -1;
+    /* 新图元默认挂在**根组 0** 下（原版 prim+0x0A 的"不在任何组里"值是 0xFFFF，
+     * 但脚本创建的图元都在根组里 —— 否则 PrimHit 的父链走不到根，永远不命中，
+     * 标题菜单就点不进去）。0 号图元自己不能以 0 为父，用 -1 表示"没有父"。 */
+    p->parent = (id == 0) ? -1 : 0;
     p->clip_w = 0;
 }
 
@@ -3750,6 +3753,30 @@ static int prim_hit_rect(Gfx *g, int pid, int accx, int accy, int cx, int cy,
         return 1;
     }
     return 0; /* 0/3/5：原版同样返回 0（文本图元不可点） */
+}
+
+/* 诊断：把图元表里"活着"的项打成一行一条（--dump-prims / FVP_DBG_PRIMS）。
+ * 用来回答"标题菜单那 5 个图元到底有没有被创建、在不在组里、是不是可见"。 */
+void gfx_debug_dump_prims(Gfx *g, FILE *out)
+{
+    int i;
+
+    if (g == NULL || out == NULL) {
+        return;
+    }
+    for (i = 1; i < GFX_PRIM_MAX; ++i) {
+        const GfxPrim *p = &g->prim[i];
+
+        if (p->type == 0 && p->graph < 0 && p->tw < 0) {
+            continue;
+        }
+        fprintf(out,
+                "prim id=%d type=%u draw=%u alpha=%u parent=%d xy=%d,%d "
+                "wh=%u,%u graph=%d tw=%d z=%u\n",
+                i, (unsigned)p->type, (unsigned)p->draw, (unsigned)p->alpha,
+                p->parent, p->x, p->y, (unsigned)p->w, (unsigned)p->h,
+                p->graph, p->tw, (unsigned)p->z);
+    }
 }
 
 int gfx_prim_hit(Gfx *g, int prim_id, int ignore_draw, int cx, int cy)
