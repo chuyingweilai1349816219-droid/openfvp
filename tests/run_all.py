@@ -899,6 +899,14 @@ def build_steps(args):
                            'ref/ref-900k.txt: 18 blocks, net -2 lines, only '
                            'nameplate + null-text categories (no quote, no tilde)'))
 
+    # 6.4966c5 TextPrint 的第一处分歧（谁把正文弄丢了）
+    vdv = os.path.join(HERE, 'verify_text_divergence.py')
+    steps.append(Step('verify_text_divergence.py', [PY, '-X', 'utf8', vdv], 900,
+                      skip_reason=None,
+                      note='first TextPrint divergence between the two semantics: '
+                           '#33 at pc 0x3A547, layer 0, g226 is a string by default '
+                           'but int 0 under --faithful-ops --cmp-matrix'))
+
     # 6.4966d 文本窗口默认值（来自 exe 构造函数 0x430EA0；缺 work/ 时 SKIP）
     vtd = os.path.join(HERE, 'verify_exe_text_defaults.py')
     steps.append(Step('verify_exe_text_defaults.py', [PY, '-X', 'utf8', vtd], 600,

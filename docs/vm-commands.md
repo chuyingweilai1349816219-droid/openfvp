@@ -290,6 +290,33 @@ popglobal[226] pc=0x3a1eb str="~　"                      ← 却走进了"不�
 `tests/verify_text_delta.py` 把这份描述钉住：块数、净行数、分类集合一有变化就红，
 必须重新分类后才能过。
 
+### 0.5 第一处分歧点（`ref/text-print-divergence.json`）
+
+"差 18 块"还不够具体，所以再加一个只做对齐的工具
+`scripts/trace-text-prints.py`：两遍都开 `FVP_DBG_TEXT`，按行号对齐 `TextPrint`
+日志，**只看 `(pc, layer, text)`** 找第一处正文不同（只有栈槽类型不同的记录单独
+计数，避免被 `type 4 vs type 3` 这种噪声挡住）。
+
+当前结果：
+
+| 项 | 值 |
+| --- | --- |
+| `TextPrint` 条数 | 195（默认） vs 193（忠实） |
+| 第一处正文分歧 | 第 **33** 条 |
+| 调用点 | `pc = 0x3A547`，layer 0 |
+| 默认 | `g226` 是字符串 → `おはよう。大丈夫か？…` |
+| 忠实 | `g226` 是 **int 0** → 打出来是 `"0"` |
+| 只有类型不同的记录 | 30 条 |
+
+也就是：这一段对话的**正文根本没被组装出来**。调用点在 `0x3A52B..0x3A539`
+（`pushint16 551; pushint8 0; pushint16 255; pushstack 0; pushfalse ×4;
+call 0x3F389`），模板 8 个实参里**没有任何一个文本**，正文只能来自模板内部读的
+全局（`g1551` / `g245` / `g91` 那一串判据）。下一轮就从 `0x3F389` 的
+`pushglobal 1551 / 245 / 91` 三条判据往里推。
+
+门禁 `tests/verify_text_divergence.py`（12 项）把这条分歧的 pc、layer、两边的
+`g226` 类型与文本都钉住。
+
 **比较 opcode 用哪张表、`sete` 还是 `setne`（2026-11-24 钉死）**：六个 handler 除了
 "表 + setcc"两点外完全一样：
 

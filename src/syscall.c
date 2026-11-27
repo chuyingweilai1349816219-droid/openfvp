@@ -132,11 +132,12 @@ static void fvp_sys_text_print(FvpVM *vm, const FvpValue *args, uint32_t argc)
         /* 正文模板（HCB 0x3A1F3..0x3A2B0 / 0x3F389）用到的几个全局：
          * 222/226/231/233 与全局 226 的类型，看清哪一格带「~」/「」」。 */
         const FvpValue *g = vm->globals;
-        fprintf(stderr, "textprint layer=%d g222=%d g226=%d",
+        fprintf(stderr, "textprint pc=0x%x layer=%d g222=%d g226=%d",
+                vm->cur != NULL ? (unsigned)vm->cur->pc : 0u,
                 (int)layer.i, (int)g[222].i, (int)g[226].i);
-        fprintf(stderr, " t226=%d t233=%d t231=%d t225=%d | ",
+        fprintf(stderr, " t226=%d t233=%d t231=%d t225=%d t228=%d t230=%d | ",
                 (int)g[226].type, (int)g[233].type, (int)g[231].type,
-                (int)g[225].type);
+                (int)g[225].type, (int)g[228].type, (int)g[230].type);
         fwrite(txt.str->data, 1, txt.str->len, stderr);
         fputc('\n', stderr);
     }
