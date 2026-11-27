@@ -1,4 +1,5 @@
 /* 动画补间核心数学。见 motion.h。 */
+#include <stdio.h>
 #include "motion.h"
 
 #include <stdlib.h>
@@ -230,6 +231,16 @@ int fvp_motion_test(const FvpMotion *m, int prim_id, int kind)
         }
         if (kind >= 0 && t->kind != kind) {
             continue;
+        }
+        /* 原版查的是**活跃标志**（`cmpb $0x0,0x4(slot)`）：补间跑完之后该字节被
+         * tick 清 0，于是这条记录"查不到"→ `*Test` 答 0。我们以前只看"记录存在"，
+         * 跑完的补间照样答 1，脚本的 `while (Motion*Test(id) == 1) yield;` 就永远
+         * 退不出来 —— 2026-11-27 用 `FVP_MOTION_TEST_INVERT=1` 实测：把这个返回值
+         * 翻成 0 之后，窗口从 60 条命令直接推进到 82 条，越过了标题等待环。 */
+        if (getenv("FVP_DBG_MOTION") != NULL) {
+            fprintf(stderr, "motion_test prim=%d kind=%d now=%.1f start=%.1f "
+                            "dur=%.1f prog=%.3f\n", prim_id, kind, m->now_ms,
+                    t->start_ms, t->dur_ms, tween_progress(m, t));
         }
         /* 诊断开关：翻转返回值，用来验证"这个 *Test 到底是
          * ‘有记录’还是‘没记录’"。默认关，不影响任何门禁。 */

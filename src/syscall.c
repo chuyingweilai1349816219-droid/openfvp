@@ -1561,7 +1561,10 @@ void fvp_syscall(FvpVM *vm, FvpThread *t, uint16_t cid)
     if (getenv("FVP_DBG_SYS") != NULL &&
         (cid == 8u || cid == 9u || cid == 31u || cid == 34u ||
          cid == 35u || cid == 36u || cid == 40u || cid == 44u ||
-         cid == 59u || cid == 62u || cid == 131u || cid == 133u)) {
+         cid == 59u || cid == 62u || cid == 131u || cid == 133u ||
+         cid == 42u || cid == 48u || cid == 54u || cid == 57u ||
+         cid == 77u || cid == 80u || cid == 85u || cid == 86u ||
+         cid == 87u || cid == 22u)) {
         uint32_t j;
 
         fprintf(stderr, "sys %u pc=0x%x step=%llu", (unsigned)cid,
