@@ -128,6 +128,18 @@ static void fvp_sys_text_print(FvpVM *vm, const FvpValue *args, uint32_t argc)
     if (txt.type != (uint8_t)FVP_STR) {
         txt = fvp_make_str(fvp_value_to_str(&vm->arena, &txt));
     }
+    if (getenv("FVP_DBG_TEXT") != NULL) {
+        /* 正文模板（HCB 0x3A1F3..0x3A2B0 / 0x3F389）用到的几个全局：
+         * 222/226/231/233 与全局 226 的类型，看清哪一格带「~」/「」」。 */
+        const FvpValue *g = vm->globals;
+        fprintf(stderr, "textprint layer=%d g222=%d g226=%d",
+                (int)layer.i, (int)g[222].i, (int)g[226].i);
+        fprintf(stderr, " t226=%d t233=%d t231=%d t225=%d | ",
+                (int)g[226].type, (int)g[233].type, (int)g[231].type,
+                (int)g[225].type);
+        fwrite(txt.str->data, 1, txt.str->len, stderr);
+        fputc('\n', stderr);
+    }
     fvp_vm_add_text(vm, &layer, txt.str);
 }
 

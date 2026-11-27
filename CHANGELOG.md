@@ -4,6 +4,54 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百二十一续）：更正上一轮的卡点说法 —— `--cmp-matrix` 单独开不卡
+
+### 1. 上一轮写错了一句
+
+一百二十续里写"`--cmp-matrix` 单独开、或配 `--bool-type` 都会卡在 `0x235C9`"。
+那是**收窄之前**的构建：当时 `--cmp-matrix` 连带把 `0x24..0x27` 的极性也换了
+（`0x25` 的真实语义是 `a >= b`，不是 `a <= b`）。把它收窄成"只换 `eq`/`neq`"之后，
+单独开它**不卡**，跑出 196 行文本。
+
+`0x235C9` 也不是死循环。它是批量清图元的辅助函数：
+
+```text
+0x235C9  initstack 1|0
+0x235CC  pushstack 254
+0x235CE  pushfalse
+0x235CF  syscall 22          ← 按图元号取/建
+0x235D2  pushstack 254
+0x235D4  syscall 75          ← PrimGroupOut
+0x235D7  pushstack 254
+0x235D9  syscall 80          ← PrimSetNull
+0x235DC  ret
+```
+
+调用方 `0x2363E` 一路 `pushint16 774/768/773/772/…` 连打十几次，这是每帧清 UI 图元
+的例程。pctrace 里它占多数，只说明那一段整轮都在跑帧循环，不是卡住。
+
+### 2. 四种组合的实测表（900k 步、`--click 600`）
+
+| 组合 | 行数 | 行尾 `」` |
+| --- | ---: | --- |
+| 默认 | 195（与 `ref/ref-900k.txt` 逐字节一致） | 无 |
+| `--faithful-ops` | 184 | 每行都有 |
+| `--cmp-matrix` | 196 | 无 |
+| `--faithful-ops --cmp-matrix` | 196 | 无 |
+
+门禁 `tests/verify_vm_ops.py` 现在跑这四档并钉住行数与 `」` 的有无（69 项）。
+
+### 3. 为什么还不能当默认
+
+`--cmp-matrix` 的 196 行里，51 行前面多一个 ASCII `~`（`0x7E`），另外若干处本该是
+台词的位置变成了 `[0] 0` / `[0] 1`。用 `FVP_DBG_TEXT=1` 看 `TextPrint` 时的全局：
+`--faithful-ops --cmp-matrix` 下全局 231 的类型是 **4（bool）**，而默认模式下是 0；
+`fvp_value_to_str` 对 bool 给的是 `"1"`、对 null 是 `"0"`，所以那个 `~` 不是类型转换
+出来的，是模板在另一条分支上真的拼进去的字符串。
+
+结论不变：**比较语义不能只换一半**，但原因不是"会卡"，而是"模板的另一格会拿到
+bool"。下一轮把"值模型 + 比较 + 表示"一次换齐。
+
 ## [未发布] — 2026-11-27（一百二十续）：多出来的 `」` 找到了 —— 类型 0 和 int 0 在 exe 里不相等
 
 ### 1. 先把两种语义的差异逐行对齐
@@ -43,7 +91,7 @@ diff 之后，差异其实只有两类：多出来的行尾 `」`，和基线里
 `--cmp-matrix` 单独开、或配 `--bool-type` 都会卡在 `0x235C9`
 （`initstack 1|0; pushstack 254; pushfalse; syscall 22; syscall 75; syscall 80`），
 说明宽松 eq 在别处也被脚本当成"null 等于 0"在用 —— 比较模型不能只换一半。
-门禁 `tests/verify_vm_ops.py` 现在把这三档行数与 `」` 的有无都钉住（64 项）。
+门禁 `tests/verify_vm_ops.py` 现在把这三档行数与 `」` 的有无都钉住（69 项）。
 
 ### 4. 仍然没解决的
 
@@ -5640,7 +5688,7 @@ make check / verify_gfx / compare / check-docs 全部 PASS。
     点空白处回标题菜单；`--title-save-list` 可直接打开列表（截图/调试用）
   - 实测：五彩斑斓的世界 **6 个可读槽**（第 7 个 save.bin 是全局状态不是槽）、
     星空的记忆 **0 个**；汇总行补 `continue=enabled (6 slot(s), 6 readable)`
-  - `tests/test_savelist`（**66 项**）：合成真实格式槽文件 → 解析字段、
+  - `tests/test_savelist`（**69 项**）：合成真实格式槽文件 → 解析字段、
     行文本、命中、上限、坏文件/NULL；`make check` 现 24 个单测、run_all 39 步
   - 多游戏门禁第二次跑 `--title-menu --title-save-list`，断言两部作品的可读槽数
     与汇总行一致
@@ -5831,7 +5879,7 @@ make check / verify_gfx / compare / check-docs 全部 PASS。
     （`truth`/`eq`/`cmp`/`to_str` 都按 0 处理），脚本里高频的
     `syscall; pushtemp; pushfalse; eq` 结果不变。实测 `compare.py` 仍逐字节一致、
     `verify_gfx.ps1 -SkipDump` 仍 293 px / PSNR 49.94 / SSIM 0.99971
-  - 新增 `tests/test_nullvalue.c`（**66 项**）：null 的类型/真值/比较/字符串化、
+  - 新增 `tests/test_nullvalue.c`（**69 项**）：null 的类型/真值/比较/字符串化、
     LipSync 的 null 与显式 0 之别、LipAnim 只停分支不写 mode/arg、ControlMask、
     CursorShow，以及**端到端**跑一个只含 `pushfalse` 的最小 `.hcb`
     （9 字节：`u32 script_len=5 | 0x09 | u32 main_start=4`）证明栈顶类型是 `FVP_NULL`；

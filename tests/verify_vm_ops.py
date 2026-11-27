@@ -180,7 +180,8 @@ def main():
         outs = {}
         for tag, extra in (('legacy', []),
                            ('faithful', ['--faithful-ops']),
-                           ('matrix', ['--faithful-ops', '--cmp-matrix'])):
+                           ('matrix', ['--cmp-matrix']),
+                           ('matrix_faithful', ['--faithful-ops', '--cmp-matrix'])):
             fd, path = tempfile.mkstemp(suffix='.txt')
             os.close(fd)
             cmd = [fvm, hcb, '--steps', '900000', '--click', '600',
@@ -204,7 +205,13 @@ def main():
         check('」' not in outs['matrix'],
               '--cmp-matrix 之后「」」消失（eq 走类型对矩阵：(type0,type2) 恒假）')
         check(len(outs['matrix'].splitlines()) >= 100,
-              '--cmp-matrix 下流程仍往前走（%d 行）'
+              '--cmp-matrix 单独开**不卡**（%d 行）'
+              % len(outs['matrix'].splitlines()))
+        check('」' not in outs['matrix_faithful'],
+              '--faithful-ops --cmp-matrix 也没有「」」')
+        check(len(outs['matrix_faithful'].splitlines()) ==
+              len(outs['matrix'].splitlines()),
+              '两个 --cmp-matrix 组合行数相同（%d）'
               % len(outs['matrix'].splitlines()))
 
     print('== 重新抽取 exe 对账')
