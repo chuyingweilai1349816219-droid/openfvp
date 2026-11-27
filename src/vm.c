@@ -453,6 +453,75 @@ static FvpValue fvp_make_bool(FvpVM *vm, int b)
     return (vm != NULL && vm->bool_type) ? fvp_make_null() : fvp_make_int(0);
 }
 
+/* 把本站的 FvpType 折算成**原版**的类型号（栈槽 +0 的那个字节）。
+ *   FVP_INT 0 -> 2、FVP_FLOAT 1 -> 3、FVP_STR 2 -> 4（字面量；
+ *   动态串 5 / 表项 6 在本模型里也是 FVP_STR，见下面的说明）、
+ *   FVP_NULL 3 -> 0、FVP_BOOL 4 -> 1。 */
+static int fvp_exe_type(const FvpValue *v)
+{
+    switch (v->type) {
+    case (uint8_t)FVP_INT:
+        return 2;
+    case (uint8_t)FVP_FLOAT:
+        return 3;
+    case (uint8_t)FVP_STR:
+        return 4;
+    case (uint8_t)FVP_NULL:
+        return 0;
+    case (uint8_t)FVP_BOOL:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+/* exe 的 **eq 表 C**（0x481518）逐格照抄，直接返回"相等/不等"。
+ *
+ * 这张表和另外两张不一样：它把 11 个类型对**改写成"恒返回 1"的 helper**
+ * （0x444F70），不是三态比较器。所以
+ *   (0,0)                        -> 真（null == null）
+ *   (1,1)(1,2)(1,3)(1,4)(1,6)    -> 真（true 与它们都相等）
+ *   (2,1)(3,1)(4,1)(5,1)(6,1)    -> 真（对称的那几格也覆盖了）
+ *   (2,2) sete / (3,3) fucompp   -> 载荷真的相等才真
+ *   (4,4)(4,5)(5,4)(5,5)         -> 字符串相等
+ * 其余（含 (0,2) 即 null vs int 0）落默认 helper **0x444F50 → 恒 0 → 假**。
+ *
+ * 这里以前错在两处：一是把 (0,0) 当"未覆盖"，二是把 helper 的"1 = 相等"
+ * 当成 cmp 风格再取 `c == 0`，于是 `eq(null,null)` 反而为假 —— 正文模板
+ * （HCB 0x3A1F3）的 `g226 == pushfalse` 因此走错分支，每行多出一个 `~`。 */
+static int fvp_pair_eq_faithful(const FvpValue *a, const FvpValue *b)
+{
+    int ea = fvp_exe_type(a);
+    int eb = fvp_exe_type(b);
+
+    if (ea == 0 && eb == 0) {
+        return 1;                       /* (0,0)：恒 1 */
+    }
+    if (ea == 1 && eb != 0) {
+        return 1;                       /* (1,1)(1,2)(1,3)(1,4)(1,6) */
+    }
+    if (eb == 1 && ea != 0) {
+        return 1;                       /* (2,1)(3,1)(4,1)(5,1)(6,1) */
+    }
+    if (ea == 2 && eb == 2) {
+        return a->i == b->i;            /* (2,2)：0x444FA0 cmp + sete */
+    }
+    if (ea == 3 && eb == 3) {
+        return a->f == b->f;            /* (3,3)：0x444FC0 fucompp */
+    }
+    if (ea == 4 && eb == 4) {           /* (4,4)/(4,5)/(5,4)/(5,5) */
+        const FvpStr *s = a->str;
+        const FvpStr *t = b->str;
+
+        if (s == NULL || t == NULL) {
+            return s == t;
+        }
+        return s->len == t->len &&
+               (s->len == 0 || memcmp(s->data, t->data, s->len) == 0);
+    }
+    return 0;                           /* 默认 helper：恒 0 */
+}
+
 /* 忠实比较（bool_type 模式）：照原版 7×7 类型对表（0x481450 / 0x481388 /
  * 0x481518，索引 a.type*7 + b.type）的语义。
  *
@@ -514,6 +583,14 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
     FvpValue b = fvp_thread_pop(t);
     FvpValue a = fvp_thread_pop(t);
     FvpValue r = fvp_make_int(0);
+    if (getenv("FVP_DBG_CMP") != NULL && op == 0x22 &&
+        t->pc >= 0x3a1b0u && t->pc <= 0x3a1f0u) {
+        fprintf(stderr, "cmp pc=0x%x eq a.type=%u a.i=%lld b.type=%u b.i=%lld"
+                        " -> %d\n", (unsigned)t->pc,
+                (unsigned)a.type, (long long)a.i,
+                (unsigned)b.type, (long long)b.i,
+                fvp_value_eq(&a, &b));
+    }
     switch (op) {
     case 0x1a:
         r = fvp_op_add(vm, &a, &b);
@@ -547,20 +624,14 @@ static void fvp_binop(FvpVM *vm, FvpThread *t, uint8_t op)
         break;
     case 0x22:
         if (vm->bool_type || vm->cmp_matrix) {
-            int ok = 0;
-            int c = fvp_pair_cmp_faithful(&a, &b, &ok);
-
-            r = fvp_make_bool(vm, ok ? (c == 0) : 0);
+            r = fvp_make_bool(vm, fvp_pair_eq_faithful(&a, &b));
         } else {
             r = fvp_make_bool(vm, fvp_value_eq(&a, &b));
         }
         break;
     case 0x23:
         if (vm->bool_type || vm->cmp_matrix) {
-            int ok = 0;
-            int c = fvp_pair_cmp_faithful(&a, &b, &ok);
-
-            r = fvp_make_bool(vm, ok ? (c != 0) : 1);
+            r = fvp_make_bool(vm, !fvp_pair_eq_faithful(&a, &b));
         } else {
             r = fvp_make_bool(vm, !fvp_value_eq(&a, &b));
         }
@@ -831,6 +902,17 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         if (ins->w < FVP_GLOBAL_COUNT) {
             vm->globals[ins->w] = v;
             vm->globals_set[ins->w] = 1u;
+            if (getenv("FVP_DBG_POPGLOBAL") != NULL &&
+                ins->w >= 222 && ins->w <= 236) {
+                fprintf(stderr, "popglobal[%u] type=%u i=%lld pc=0x%x",
+                        (unsigned)ins->w, (unsigned)v.type,
+                        (long long)v.i,
+                        vm->cur != NULL ? (unsigned)vm->cur->pc : 0u);
+                if (v.type == (uint8_t)FVP_STR && v.str != NULL) {
+                    fprintf(stderr, " str=\"%.40s\"", v.str->data);
+                }
+                fputc('\n', stderr);
+            }
         }
         t->pc += 3u;
         break;

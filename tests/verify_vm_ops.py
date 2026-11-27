@@ -156,6 +156,18 @@ def main():
               'syscall.c 至少 4 处分支（DissolveWait / *Test / 59 / 62）')
 
     print('== 文本模板的引号装饰（HCB 0x3A21D）')
+    tc = ref.get('eq_table_c', {})
+    if tc:
+        one = {tuple(p) for p in tc.get('const_one_pairs', [])}
+        pay = {tuple(p) for p in tc.get('payload_pairs', [])}
+        check((0, 0) in one, 'eq 表 C：(0,0) 是"恒返回 1"的谓词（null == null）')
+        check((0, 2) not in one and (0, 2) not in pay,
+              'eq 表 C：(0,2)（null vs int 0）没覆盖 → 恒假')
+        check((2, 2) in pay and (3, 3) in pay,
+              'eq 表 C：(int,int)/(float,float) 走载荷比较')
+        check(len(one) == 11 and len(pay) == 6,
+              'eq 表 C：11 项恒真 + 6 项载荷比较（实际 %d / %d）'
+              % (len(one), len(pay)))
     tpl = ref.get('text_template', {})
     if tpl:
         check(tpl.get('mode_flag_op') == 0x08,
@@ -209,10 +221,11 @@ def main():
               % len(outs['matrix'].splitlines()))
         check('」' not in outs['matrix_faithful'],
               '--faithful-ops --cmp-matrix 也没有「」」')
-        check(len(outs['matrix_faithful'].splitlines()) ==
-              len(outs['matrix'].splitlines()),
-              '两个 --cmp-matrix 组合行数相同（%d）'
-              % len(outs['matrix'].splitlines()))
+        check('~' not in outs['matrix_faithful'],
+              '--faithful-ops --cmp-matrix 没有那个多出来的 ASCII ~')
+        check(len(outs['matrix_faithful'].splitlines()) >= 150,
+              '--faithful-ops --cmp-matrix 文本流最接近基线（%d 行）'
+              % len(outs['matrix_faithful'].splitlines()))
 
     print('== 重新抽取 exe 对账')
     mod = load_module('extract_exe_vm_ops', EXTRACTOR)

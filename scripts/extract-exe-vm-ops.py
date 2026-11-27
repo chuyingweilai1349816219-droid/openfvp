@@ -301,6 +301,10 @@ def build():
         helpers.append({'va': '0x%06x' % h['va'], 'what': h['what'],
                         'bytes': got})
 
+    eq = [m for m in mats if m['name'] == 'eq/neq'][0]
+    eq_const_one = [o['pair'] for o in eq['overrides'] if o['fn'] == '0x%06x' % CONST_ONE]
+    eq_payload = [o['pair'] for o in eq['overrides'] if o['fn'] != '0x%06x' % CONST_ONE]
+
     return {
         'schema': 'fvp-exe-vm-ops/1',
         'source': {
@@ -329,6 +333,14 @@ def build():
         'matrices': mats,
         'text_template': text_template([m for m in mats if m['name'] == 'eq/neq'][0]),
         'helpers': helpers,
+        'eq_table_c': {
+            'note': ('eq 表 C 的 17 项覆盖里，11 项是"恒返回 1"的谓词（不是三态'
+                     '比较器），4 项是载荷比较，2 项是字符串比较。把"恒 1"当成'
+                     'cmp 风格再取 `c == 0` 会让 eq(null,null) 变成假 —— 正文模板'
+                     '（HCB 0x3A1F3）正是靠这一格决定要不要加 `~` / `」`。'),
+            'const_one_pairs': eq_const_one,
+            'payload_pairs': eq_payload,
+        },
         'semantics': {
             'variant_slot': '线程栈槽 8 字节：+0 = 类型字节，+4 = 载荷（int/float/偏移）',
             'bool_encoding': '类型字节本身就是布尔值：0 = false（同时是 null）、'

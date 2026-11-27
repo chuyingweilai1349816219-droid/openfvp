@@ -4,6 +4,57 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百二十二续）：`~` 也走了 —— eq 表 C 里 11 格是**谓词**，不是三态比较器
+
+### 1. 把比较的两个操作数打出来
+
+新增诊断钩子 `FVP_DBG_CMP=1`（只在 `0x3A1B0..0x3A1F0` 生效），直接看到矛盾：
+
+```text
+cmp pc=0x3a1ce eq a.type=3 a.i=0 b.type=3 b.i=0 -> 1     ← 两个都是 null
+popglobal[226] pc=0x3a1eb str="~　"                      ← 却走进了"不相等"那一支
+```
+
+`fvp_value_eq(null,null)` 明明是 1，`jmpcond` 却跳了 —— 因为我们 `eq` 返回的是**假**。
+
+### 2. 根因：helper 的"1 = 相等"被当成 cmp 风格
+
+`fvp_pair_cmp_faithful` 是**三态**比较器（-1/0/1），而表 C 的 helper 里
+**11 格是"恒返回 1"的谓词**（`0x444F70`）。原来的 `eq` 写的是
+`ok ? (c == 0) : 0`，于是：
+
+* `(0,0)` 被当成"未覆盖" → `eq(null,null)` 假（原版是真）；
+* 那一格正是正文模板 `0x3A1CA` 的 `g226 == pushfalse` 判据 → 走错分支 → 每行多 `~`。
+
+表 C 逐格：
+
+| 覆盖格 | helper | 语义 |
+| --- | --- | --- |
+| (0,0) | `0x444F70` 恒 1 | `null == null` |
+| (1,1)(1,2)(1,3)(1,4)(1,6) | `0x444F70` | `true` 与它们都相等 |
+| (2,1)(3,1)(4,1)(5,1)(6,1) | `0x444F70` | 对称那几格也覆盖 |
+| (2,2) / (3,3) | `sete` / `fucompp` | 载荷相等 |
+| (4,4)(4,5)(5,4)(5,5) | 字符串比较 | 字符串相等 |
+| 其余（含 (0,2)） | `0x444F50` 恒 0 | 假 |
+
+### 3. 修法与实测
+
+`src/vm.c` 新增 `fvp_pair_eq_faithful()`：按上表逐格实现，`eq` 直接取它的布尔值、
+`neq` 取反；三态比较器只留给 `0x24..0x27`。`ref/exe-vm-ops.json` 新增 `eq_table_c`
+块（11 项恒真 + 6 项载荷比较，由矩阵自动算出）。
+
+| 组合 | 行数 | `」` | `~` |
+| --- | ---: | --- | --- |
+| 默认 | 195（与 `ref/ref-900k.txt` 逐字节一致） | 无 | 无 |
+| `--faithful-ops` | 184 | 有 | 无 |
+| `--cmp-matrix` | 146 | 无 | 无 |
+| `--faithful-ops --cmp-matrix` | **193** | 无 | 无 |
+
+### 4. 剩下的 2 行
+
+193 vs 195 的差异收敛成同一个模式：`[8]` 名牌从 ` 真紅／悠馬 ` 变成 `　真紅　`，
+紧跟的那行台词变成 `[0] 0`（null 被当文本）。下一轮查"名牌与正文共用同一个全局"。
+
 ## [未发布] — 2026-11-27（一百二十一续）：更正上一轮的卡点说法 —— `--cmp-matrix` 单独开不卡
 
 ### 1. 上一轮写错了一句
@@ -39,7 +90,7 @@
 | `--cmp-matrix` | 196 | 无 |
 | `--faithful-ops --cmp-matrix` | 196 | 无 |
 
-门禁 `tests/verify_vm_ops.py` 现在跑这四档并钉住行数与 `」` 的有无（69 项）。
+门禁 `tests/verify_vm_ops.py` 现在跑这四档并钉住行数与 `」` 的有无（74 项）。
 
 ### 3. 为什么还不能当默认
 
@@ -91,7 +142,7 @@ diff 之后，差异其实只有两类：多出来的行尾 `」`，和基线里
 `--cmp-matrix` 单独开、或配 `--bool-type` 都会卡在 `0x235C9`
 （`initstack 1|0; pushstack 254; pushfalse; syscall 22; syscall 75; syscall 80`），
 说明宽松 eq 在别处也被脚本当成"null 等于 0"在用 —— 比较模型不能只换一半。
-门禁 `tests/verify_vm_ops.py` 现在把这三档行数与 `」` 的有无都钉住（69 项）。
+门禁 `tests/verify_vm_ops.py` 现在把这三档行数与 `」` 的有无都钉住（74 项）。
 
 ### 4. 仍然没解决的
 
@@ -5688,7 +5739,7 @@ make check / verify_gfx / compare / check-docs 全部 PASS。
     点空白处回标题菜单；`--title-save-list` 可直接打开列表（截图/调试用）
   - 实测：五彩斑斓的世界 **6 个可读槽**（第 7 个 save.bin 是全局状态不是槽）、
     星空的记忆 **0 个**；汇总行补 `continue=enabled (6 slot(s), 6 readable)`
-  - `tests/test_savelist`（**69 项**）：合成真实格式槽文件 → 解析字段、
+  - `tests/test_savelist`（**74 项**）：合成真实格式槽文件 → 解析字段、
     行文本、命中、上限、坏文件/NULL；`make check` 现 24 个单测、run_all 39 步
   - 多游戏门禁第二次跑 `--title-menu --title-save-list`，断言两部作品的可读槽数
     与汇总行一致
@@ -5879,7 +5930,7 @@ make check / verify_gfx / compare / check-docs 全部 PASS。
     （`truth`/`eq`/`cmp`/`to_str` 都按 0 处理），脚本里高频的
     `syscall; pushtemp; pushfalse; eq` 结果不变。实测 `compare.py` 仍逐字节一致、
     `verify_gfx.ps1 -SkipDump` 仍 293 px / PSNR 49.94 / SSIM 0.99971
-  - 新增 `tests/test_nullvalue.c`（**69 项**）：null 的类型/真值/比较/字符串化、
+  - 新增 `tests/test_nullvalue.c`（**74 项**）：null 的类型/真值/比较/字符串化、
     LipSync 的 null 与显式 0 之别、LipAnim 只停分支不写 mode/arg、ControlMask、
     CursorShow，以及**端到端**跑一个只含 `pushfalse` 的最小 `.hcb`
     （9 字节：`u32 script_len=5 | 0x09 | u32 main_start=4`）证明栈顶类型是 `FVP_NULL`；
@@ -6261,7 +6312,7 @@ make check / verify_gfx / compare / check-docs 全部 PASS。
     （每次 `& 0x7FFF`），**同一进程内可复现**——基准对比依赖确定性，这点不能丢
   - `TextRepaint()`：handler **0x437a50** 是 `call 0x441790(engine)`（让文本重画）。
     本站每帧整张画布重画，所以它是**真空操作**，只记调用次数
-  - 单测 `tests/test_vmmisc.c` **2069 项**（范围、非恒定、可复现、NULL 安全、计数器）
+  - 单测 `tests/test_vmmisc.c` **2074 项**（范围、非恒定、可复现、NULL 安全、计数器）
   - `scripts/check-commands.py` 的棘轮从 28 收到 **26**；`make check` 现在 **19 个单测**、
     `run_all.py` **35 步**；两个外壳汇总各多一行 `rand state=... ; text repaint N call(s)`
 
