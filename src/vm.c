@@ -734,7 +734,12 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
             FvpFrame f;
 
             /* 没有 call 建帧：线程/函数入口。返回地址指到脚本末尾，
-             * 这样末尾的 ret 会结束线程。 */
+             * 这样末尾的 ret 会结束线程。
+             * 必须 memset：`locals` / `args` 只有 legacy 口径才会填，
+             * 忘了清零就会在 `fvp_frame_release()` 里 free 到野指针
+             * （fuzz_hcb 的 mirror-magic 检查抓到的就是这一条，
+             * 见 CHANGELOG 一百三十七续）。 */
+            memset(&f, 0, sizeof(f));
             f.ret = vm->hcb->script_len;
             f.sbase = 0;
             f.nargs = 0;
@@ -785,6 +790,12 @@ static void fvp_step(FvpVM *vm, FvpThread *t)
         f.sbase = 0;
         f.nargs = 0;
         f.nlocals = 0;
+        /* 同上：先把整帧清零，legacy 口径只填 locals/args/argn，
+         * exe 口径根本不碰这两个指针 —— 不清零会在 release 时 free 野指针。 */
+        f.locals = NULL;
+        f.args = NULL;
+        f.argn = 0;
+        f.ndecl = 0;
         if (vm->legacy_frames) {
             /* Python 参考实现口径：把当前栈上的实参拷进数组，再把 sp 清零
              * （那套模型没有跨调用的值栈）。 */

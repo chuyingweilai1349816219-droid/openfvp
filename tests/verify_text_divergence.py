@@ -50,22 +50,26 @@ def main():
     check(ref.get('schema') == 'fvp-text-print-divergence/1',
           'schema fvp-text-print-divergence/1')
     fd = ref.get('first_divergence') or {}
-    check(fd.get('index') == 33, '分歧在第 33 条 TextPrint（实际 %s）'
+    check(fd.get('index') == 2, '分歧在第 2 条 TextPrint（实际 %s）'
           % fd.get('index'))
     leg = fd.get('legacy') or {}
     fai = fd.get('faithful') or {}
-    check(leg.get('pc') == fai.get('pc') == '0x3a547',
-          '两边同一个调用点 0x3A547')
+    check(leg.get('pc') == fai.get('pc') == '0x3a6d8',
+          '两边同一个调用点 0x3A6D8')
     check(leg.get('layer') == fai.get('layer') == 0, '都是 layer 0（正文）')
     check((leg.get('types') or {}).get('g226') == 2,
           '默认语义下 g226 是字符串（type 2）')
-    check((fai.get('types') or {}).get('g226') == 0,
-          '忠实语义下 g226 是 int（type 0）→ 正文没组装出来')
-    check(fai.get('text') == '0', '忠实语义下打出来的就是 "0"')
-    check((leg.get('text') or '').startswith('おはよう'),
-          '默认语义下是真正的台词（おはよう…）')
-    check(ref.get('type_only_diffs', 0) >= 1,
-          '另有"只有栈槽类型不同、正文一致"的记录（%s 条）'
+    # 2026-11-27 第 329 轮：`--faithful-ops` 切到 exe 帧模型后，正文真的组装
+    # 出来了（g226 也是字符串），差异退化成"行尾多一个「」」"——
+    # 由模板的 `eq(arg4=null, int 0)` 宽松数值比较决定，不再是"正文丢失"。
+    check((fai.get('types') or {}).get('g226') == 2,
+          '忠实语义下 g226 也是字符串（type 2）→ 正文不再丢失')
+    check((fai.get('text') or '').endswith('」'),
+          '忠实语义下只多一个「」」（实际 %r）' % (fai.get('text') or '')[-4:])
+    check(leg.get('text') == '　……。',
+          '默认语义下行形是「　……。」（实际 %r）' % leg.get('text'))
+    check(ref.get('type_only_diffs', 0) == 0,
+          '没有"只有栈槽类型不同"的记录（%s 条）'
           % ref.get('type_only_diffs'))
 
     print('== 重新跑两遍对账')

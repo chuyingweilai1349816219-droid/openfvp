@@ -4,6 +4,54 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号语义化。
 
+## [未发布] — 2026-11-27（一百三十七续）：全量回归抓到一个野指针 + 五道门禁跟着双口径重钉
+
+### 1. P0：帧对象没清零 → `free` 野指针（fuzz_hcb 抓到的）
+
+跑 `run_all --fast` 时 `fuzz_hcb` 报
+`FAULT what=free of a bad pointer (magic mismatch) case=3 category=jump_target`。
+根因是 135 续那次"双口径"改造里，exe 口径建帧的两处（`initstack` 的线程入口分支、
+`call`）只赋了 `ret/sbase/nargs/nlocals/pending`，**没有清 `locals`/`args`**；
+`fvp_frame_release()` 却会 `free()` 它们 —— 于是把栈上垃圾当指针释放。
+现在两处都先 `memset(&f, 0, sizeof f)`（`call` 那处逐字段清指针）。
+
+| 项 | 修前 | 修后 |
+| --- | --- | --- |
+| `fuzz_hcb.py --fast` | FAIL，2 个 harness 各 1 次野指针 | **PASS**，4200 次变异全过 |
+| 变异覆盖 | in-process 3000 / guard 500 / fvm 1 / fvm_guard 1 | 同左 + fvm.exe 600 / fvm_guard 100 |
+
+野指针只在**畸形 HCB** 上进得去（正常脚本的帧刚好都走 legacy 分支），所以
+`make check` / `compare.py` 一直是绿的 —— 这也说明 fuzz 那道门禁有价值。
+
+### 2. 五道门禁按双口径重钉（都只是"跟上第 327 轮的新事实"）
+
+| 门禁 | 之前的断言 | 现在 |
+| --- | --- | --- |
+| `verify_frame_slots.py` | `FVP_FRAME_SLOTS=1` 的另类文本 | 改用 `--exe-frames`；默认仍逐字节命中基线 |
+| `verify_text_from_hcb.py` | "修正模型每行多读一字符" | 改成"exe 口径有 27 行在 HCB 里找不到，且**全部以 `」` 收尾**" |
+| `verify_text_delta.py` | 18 块 / 净 -2 / 无 `」` | 33 块 / 净 +25 / `」` 回来（`--faithful-ops` 现在含 exe 帧模型） |
+| `verify_text_divergence.py` | 第 33 条、`0x3A547`、g226 变 int | 第 **2** 条、`0x3A6D8`、g226 仍是字符串，只多一个 `」` |
+| `verify_text_builder_calls.py` | 118 个脚本站点 | **133** 个（范围 `0x7E810..0x809EE`，总调用 266） |
+
+配套的派生基线也重新生成了：`ref/text-delta-faithful.json`、
+`ref/text-print-divergence.json`、`ref/text-builder-calls.json`。
+冻结文本基线 `ref/ref-900k.txt` **没有被碰**。
+
+### 3. 一个值得记下的因果发现
+
+`--faithful-ops`（现在隐含 exe 帧模型）跑 900k 步的文本从 130 行变成 **187 行**，
+而且第一处分歧从"正文丢失（g226 变成 int 0）"退化成"行尾多一个 `」`"。
+也就是说：**第 134 轮那个"正文没组装出来"的症状，主因是帧/栈模型错位**，
+`」` 只是它剩下的尾巴。
+
+### 4. 诚实负面
+
+- exe 口径 900k 步只有 **32 行**（窗口里有动作时钟时是 9–13 行）—— headless
+  没有补间时钟，会停在真实的动作等待环上；这不影响窗口，但说明"exe 口径的
+  文本流"还不能当基线。
+- `」` 仍然存在（27/32 行），根因是模板 `0x3A21D` 的 `eq(arg4=null, int 0)`；
+  `--cmp-matrix` 能消掉它但会把 900k 行数打到 146（甚至 0 行，取决于组合）。
+
 ## [未发布] — 2026-11-27（一百三十六续）：外字黑底修掉 —— HZC1 fmt-4 是掩码，不是灰阶图
 
 ### 1. 用户现场报的"正文出现黑底水滴"

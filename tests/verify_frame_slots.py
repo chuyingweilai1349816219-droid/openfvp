@@ -66,18 +66,24 @@ def run(argv, env_extra=None, timeout=900):
     return p.returncode, p.stdout.decode('utf-8', 'replace')
 
 
-def text_sha(env_extra=None):
+def text_sha(env_extra=None, argv_extra=None):
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
     path = os.path.join(OUT, 'frame-slots-text.txt')
     if os.path.isfile(path):
         os.remove(path)
-    rc, out = run([FVM, HCB, '--steps', str(STEPS), '--click', '600',
-                   '--text-out', path, '--quiet'], env_extra)
+    argv = [FVM, HCB, '--steps', str(STEPS), '--click', '600',
+            '--text-out', path, '--quiet'] + list(argv_extra or [])
+    rc, out = run(argv, env_extra)
     if rc != 0 or not os.path.isfile(path):
         return None, 0, out
     data = open(path, 'rb').read()
     return hashlib.sha256(data).hexdigest(), len(data), out
+
+
+def text_sha_exe():
+    """exe 帧/栈模型口径（`--exe-frames`）的 900k 文本摘要。"""
+    return text_sha(None, ['--exe-frames'])
 
 
 def body_prim(env_extra=None):
@@ -123,23 +129,26 @@ def main():
               '默认模式 551 = 脚本几何（实际 %r）' % (xy,))
 
     print('== 3. 名字/章节窗口：true 哨兵修复的回归守卫 ==')
-    xy2, out2 = body_prim({'FVP_FRAME_SLOTS': '1'})
+    xy2, out2 = body_prim({'FVP_EXE_FRAMES': '1'})
     if xy2 is not None:
         check(xy2 != (1, 1),
-              'FVP_FRAME_SLOTS=1 的 551 也不是 (1,1)（实际 %r）' % (xy2,))
+              'exe 帧模型下的 551 也不是 (1,1)（实际 %r）' % (xy2,))
     for want in ('PrimSetText prim=552 tw=8 x=375 y=852',
                  'PrimSetText prim=553 tw=9 x=165 y=590'):
-        check(want in out or want in out2, '默认/修正模式下：%s' % want)
+        check(want in out or want in out2, '默认/exe 帧模型下：%s' % want)
     if 'PrimSetText prim=558' in (out + out2):
         check('PrimSetText prim=558 tw=10 x=0 y=0' in (out + out2),
               '同在：PrimSetText prim=558 tw=10 x=0 y=0')
 
-    print('== 4. FVP_FRAME_SLOTS=1 的文本输出与冻结基线不同 ==')
-    sha2, n2, _ = text_sha({'FVP_FRAME_SLOTS': '1'})
+    print('== 4. exe 帧/栈模型（--exe-frames）的文本输出与冻结基线不同 ==')
+    # 2026-11-27 第 329 轮：`FVP_FRAME_SLOTS` 那套"绝对槽 255-A..254"的模型已经
+    # 被 exe 字节口径取代（`0x44473D`：sp = 标记槽 - A，见 vm.h 的 FvpFrame）。
+    # fvm 走 exe 口径要显式加 --exe-frames（默认仍是冻结基线的口径）。
+    sha2, n2, _ = text_sha_exe()
     check(sha2 is not None and sha2 != FROZEN_SHA,
-          '修正模型的文本输出与基线不同（%s, %d B vs 冻结 6496 B）'
+          'exe 帧模型的文本输出与基线不同（%s, %d B vs 冻结 6496 B）'
           % ((sha2 or '?')[:16], n2))
-    print('     修正模型的文本输出：%d B, sha256 %s' % (n2, sha2))
+    print('     exe 帧模型的文本输出：%d B, sha256 %s' % (n2, sha2))
     if os.path.isfile(GEO):
         geo = io.open(GEO, encoding='utf-8').read()
         check('known_gap' in geo and '431' in geo,
@@ -148,7 +157,8 @@ def main():
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 默认路径保持冻结基线；FVP_FRAME_SLOTS=1 时正文窗口落到脚本要求的 (431,880)')
+    print('\nOK: 默认（Python 参考口径）保持冻结基线；'
+          '--exe-frames（0x44473D：sp = 标记槽 - A）给出另一套已知差异')
     return 0
 
 

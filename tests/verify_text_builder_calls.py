@@ -53,15 +53,15 @@ def main():
     sites = ref.get('sites') or []
     check(len(sites) == ref.get('site_count'),
           '站点数与 site_count 自洽（%d）' % len(sites))
-    check(ref.get('site_count') == 118,
-          '脚本站点 118 个（实际 %s）' % ref.get('site_count'))
+    check(ref.get('site_count') == 133,
+          '脚本站点 133 个（实际 %s）' % ref.get('site_count'))
     check(sites == sorted(sites), '站点按地址升序')
     check(ref.get('range') == [sites[0], sites[-1]] if sites else False,
           'range 与首尾一致')
     check(all(s.startswith('0x7e') or s.startswith('0x7f') or
               s.startswith('0x80') for s in sites),
-          '全部落在序章代码区 0x7E8xx..0x805xx')
-    check(ref.get('forwarder_calls') == 118,
+          '全部落在序章代码区 0x7E8xx..0x809xx')
+    check(ref.get('forwarder_calls') == 133,
           '转发器内部调用次数 = 站点数（每个站点各调一次）')
 
     print('== 重新跑一遍运行时日志')

@@ -4,12 +4,12 @@
  "builder": "0x3a11f",
  "forwarder": "0x3a2ee",
  "argc": 4,
- "total_calls": 236,
- "forwarder_calls": 118,
- "site_count": 118,
+ "total_calls": 266,
+ "forwarder_calls": 133,
+ "site_count": 133,
  "range": [
   "0x7e810",
-  "0x80512"
+  "0x809ee"
  ],
  "sites": [
   "0x7e810",
@@ -129,7 +129,22 @@
   "0x804b2",
   "0x804d4",
   "0x804ee",
-  "0x80512"
+  "0x80512",
+  "0x80570",
+  "0x80594",
+  "0x80600",
+  "0x8064e",
+  "0x806a4",
+  "0x80730",
+  "0x80766",
+  "0x807bb",
+  "0x807ef",
+  "0x8080d",
+  "0x80871",
+  "0x80895",
+  "0x808c3",
+  "0x8095b",
+  "0x809ee"
  ],
  "note": "运行时日志（FVP_DBG_CALL=1）去重得到；静态扫字节会命中数据段里的同形序列，不可用。每条脚本调用都是 `pushstring <正文>; pushfalse ×3; call 0x3A2EE`。"
 }

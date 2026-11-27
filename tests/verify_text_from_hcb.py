@@ -69,7 +69,7 @@ def lines_of(path):
         return [ln for ln in fp if ln.strip()]
 
 
-def run_fvm(env_extra=None):
+def run_fvm(env_extra=None, argv_extra=None):
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
     path = os.path.join(OUT, 'text-hcb-check.txt')
@@ -78,8 +78,9 @@ def run_fvm(env_extra=None):
     env = dict(os.environ)
     if env_extra:
         env.update(env_extra)
-    rc = subprocess.run([FVM, HCB, '--steps', str(STEPS), '--text-out', path,
-                         '--quiet'], timeout=600, env=env).returncode
+    argv = [FVM, HCB, '--steps', str(STEPS), '--text-out', path, '--quiet']
+    argv += list(argv_extra or [])
+    rc = subprocess.run(argv, timeout=600, env=env).returncode
     if rc != 0 or not os.path.isfile(path):
         return None
     return lines_of(path)
@@ -106,21 +107,27 @@ def main():
           '冻结基线 %d 行，编造 %d 行（示例 %r）'
           % (len(lines), len(bad), bad[:3]))
 
-    print('== 3. FVP_FRAME_SLOTS=1 的输出会多读字符 ==')
-    alt = run_fvm({'FVP_FRAME_SLOTS': '1'})
-    check(alt is not None, 'fvm（FVP_FRAME_SLOTS=1）跑出文本')
+    print('== 3. exe 帧/栈模型的输出会多出 `」`（在 HCB 里找不到）==')
+    # 2026-11-27 第 329 轮：`FVP_FRAME_SLOTS` 那套模型已被 `--exe-frames` 取代。
+    # exe 口径下正文能组装出来，但模板会在行尾追加「」」（`eq(null,int 0)` 的
+    # 宽松数值比较成立）—— 这些行在 HCB 里**不存在**，所以 exe 口径的文本
+    # 目前**不能**当成新的冻结基线。
+    alt = run_fvm(None, ['--exe-frames'])
+    check(alt is not None, 'fvm（--exe-frames）跑出文本')
     if alt:
         bad_alt = [ln for ln in alt if not in_hcb(data, norm(ln))]
-        check(len(alt) > 0, '修正模型输出 %d 行' % len(alt))
+        check(len(alt) > 0, 'exe 帧模型输出 %d 行' % len(alt))
         check(len(bad_alt) > 0,
-              '修正模型有 %d 行在 HCB 里找不到（例如 %r）'
+              'exe 帧模型有 %d 行在 HCB 里找不到（例如 %r）'
               % (len(bad_alt), bad_alt[:2]))
+        check(all(norm(ln).endswith('」') for ln in bad_alt),
+              '找不到的行全部以「」」收尾（模板追加，不是随机乱码）')
 
     if fails:
         print('\nFAIL: %d 项不满足' % len(fails))
         return 1
-    print('\nOK: 冻结文本基线的每一行都来自 HCB；修正帧模型的输出多读字符，'
-          '所以不能直接重新冻结')
+    print('\nOK: 冻结文本基线的每一行都来自 HCB；exe 帧/栈模型的输出会多出「」」，'
+          '所以那一套还不能直接重新冻结')
     return 0
 
 
